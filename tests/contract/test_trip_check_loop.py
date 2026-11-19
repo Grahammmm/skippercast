@@ -368,8 +368,29 @@ class TokenScopeTests(unittest.TestCase):
             self.assertNotIn('CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}', text, name)
 
     def test_deploy_keeps_the_full_token(self):
+        # Worker deploy/rollback keep their original credential. Giving STAGE a
+        # broad fallback or moving the R2 token to job env would widen exposure.
+        import yaml
+
         text = (ROOT / '.github' / 'workflows' / 'deploy-cloudflare.yml').read_text()
-        self.assertNotIn('R2_PUBLISH_TOKEN', text)
+        workflow = yaml.safe_load(text)
+        jobs = workflow['jobs']
+        broad, narrow = 'CLOUDFLARE_API_TOKEN', 'R2_PUBLISH_TOKEN'
+        for name in ('deploy', 'rollback'):
+            job = jobs[name]
+            self.assertEqual(job['env'][broad], '${{ secrets.CLOUDFLARE_API_TOKEN }}', name)
+            self.assertNotIn(narrow, repr(job), name)
+
+        stage = jobs['stage_relief']
+        final = stage['steps'][-1]
+        self.assertEqual(final['run'], 'python3 -I .stage-controller/scripts/relief/stage_release.py')
+        self.assertEqual(final['env'].get(narrow), '${{ secrets.R2_PUBLISH_TOKEN }}')
+        # Only the final env key and its exact secret reference may mention it.
+        # Check source and parsed uses (including inherited YAML aliases).
+        self.assertEqual(text.count(narrow), 2)
+        self.assertEqual(repr(workflow).count(narrow), 2)
+        self.assertNotIn(broad, repr(stage))
+        self.assertNotIn(broad, repr(workflow.get('env', {})))
 
 
 if __name__ == '__main__':

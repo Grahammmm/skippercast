@@ -198,7 +198,7 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
     legend: [{label: copy('planning-route', 'legend0', lang), swatch: 'amber'}],
     basis: copy('planning-route', 'basis', lang), task: 'SC1407-15'}),
   entry({id: 'marks', label: copy('marks', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
-    terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: t('layer.gate.marks', 'en'), sources: [DENSITY_SOURCE, MARKS_SOURCE],
+    terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 14}, gate: t('layer.gate.marks', 'en'), sources: [DENSITY_SOURCE, MARKS_SOURCE],
     legend: [{label: copy('marks', 'legend0', lang), swatch: 'markRing'}, {label: copy('marks', 'legend1', lang), swatch: 'depth1'}],
     basis: copy('marks', 'basis', lang), task: 'FE-18'}),
   entry({id: 'selection', label: copy('selection', 'label', lang), control: 'always', presentations: ['chart'], sources: [SELECTION_SOURCE],

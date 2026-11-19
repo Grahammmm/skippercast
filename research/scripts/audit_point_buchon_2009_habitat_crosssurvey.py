@@ -70,7 +70,7 @@ def audit(archive, class_zip):
         depth_metadata = extract_grids(archive, directory)
         habitat_metadata = extract_habitat(archive, directory)
         summaries = {}
-        with rasterio.open(original_tiff(class_zip)) as usgs:
+        with rasterio.open(original_tiff(class_zip, "character")[0]) as usgs:
             if str(usgs.crs) != "EPSG:32610" or usgs.res != (2, 2):
                 raise ValueError("Original USGS class reference changed")
             for grid_name, spacing, minimum_m, maximum_m in GRIDS:

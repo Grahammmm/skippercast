@@ -27,6 +27,7 @@ import {readPalette, type Palette} from './palette.ts';
 import {shownPresentation} from './stage.ts';
 import {sp, type StatusCopy} from './status-copy.ts';
 import {SWELL_LAYER} from './swell.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'sst-fronts' as const;
 /** SC1352-07: a catalogue id for this module's card and status words (mark.layer.fronts.<key>). */
@@ -105,11 +106,11 @@ export const ageLimit = (fileMs: number): number => Math.min(fileMs, MAX_AGE_MS)
 
 export function frontsBasis(d: DrawnFronts, now: Date): string {
   return `Offshore temperature fronts found in the ${d.product} daily analysis, observed ${ageWords(ageOf(d.observedAt, now))}, drawn as an edge with a band: the position is uncertain by the analysis's own stated error divided by the front's strength, either side of the line. `
-    + `Withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a front is an edge to search along, not a fish or catch location.${d.credit ? ` Credit: ${d.credit}.` : ''}`;
+    + `Withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a front is an edge to search along, not a fish or catch location.`;
 }
 /** The variables of the basis sentence, for the card and the legend's popover alike (a Spanish card or legend resolves them at render). */
 function basisVars(d: DrawnFronts, now: Date) {
-  return {product: d.product, age: ageVar(ageOf(d.observedAt, now)), hours: Math.round(d.limitMs / HOUR), credit: d.credit ? {id: fid('credit'), vars: {credit: d.credit}} : ''};
+  return {product: d.product, age: ageVar(ageOf(d.observedAt, now)), hours: Math.round(d.limitMs / HOUR)};
 }
 const none = (reason: string, note = NONE, copy?: StatusCopy): FrontsStatus => ({drawn: null, note, reason, basis: FRONTS_BASIS, ...(copy ? {copy} : {})});
 const OFF: FrontsStatus = {drawn: null, note: '', reason: '', basis: FRONTS_BASIS};
@@ -149,14 +150,20 @@ export function frontFeatures(d: Pick<DrawnFronts, 'fronts'>): {type: 'FeatureCo
   })};
 }
 /** The band under the line, both lines only: no fill, no point. */
-export function frontsOverlay(p: Palette): Overlay {
+function frontsLayers(p: Palette): Overlay['layers'] {
   const band: MapLibre.ExpressionSpecification = ['interpolate', ['exponential', 2], ['zoom'], 0, ['get', 'px0'], 24, ['*', ['get', 'px0'], 2 ** 24]];
+  return [
+    {id: FRONTS_BAND_LAYER, type: 'line', source: FRONTS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {'line-color': p.contrast1, 'line-opacity': 0.35, 'line-width': band}},
+    {id: FRONTS_LAYER, type: 'line', source: FRONTS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {'line-color': p.contrast2, 'line-opacity': 0.9, 'line-width': 1.5}},
+  ];
+}
+
+/** One shared function, so equal overlays stay equal. A live theme switch re-runs the same layer builder with the new palette; ids and sources stay. */
+const themePaint = (pal: Palette) => paintEdits(frontsLayers(pal));
+export function frontsOverlay(p: Palette): Overlay {
   return {
     sources: {[FRONTS_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}},
-    layers: [
-      {id: FRONTS_BAND_LAYER, type: 'line', source: FRONTS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {'line-color': p.contrast1, 'line-opacity': 0.35, 'line-width': band}},
-      {id: FRONTS_LAYER, type: 'line', source: FRONTS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {'line-color': p.contrast2, 'line-opacity': 0.9, 'line-width': 1.5}},
-    ],
+    layers: frontsLayers(p), themePaint,
   };
 }
 

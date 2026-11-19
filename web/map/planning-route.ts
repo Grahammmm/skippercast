@@ -11,6 +11,7 @@ import type {Engine, Overlay} from './engine.ts';
 import {MARK_PICK} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {PLANNING_ROUTE_SOURCE} from './layers.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 export const PLANNING_ROUTE_LINE = 'planning-route-line';
 const REGISTRY_ID = 'planning-route';
@@ -50,12 +51,10 @@ export function planningRouteFeatures(route: PlanningRoutePreview | null, region
 }
 
 /** One dashed line in the amber role; noninteractive (no hit layer is registered for it). */
+const routeLayers = (p: Palette): MapLibre.LayerSpecification[] => [{id: PLANNING_ROUTE_LINE, type: 'line', source: PLANNING_ROUTE_SOURCE, layout: {'line-join': 'round'},
+  paint: {'line-color': p.amber, 'line-width': 2.5, 'line-opacity': 0.95, 'line-dasharray': [2, 2]}}] as MapLibre.LayerSpecification[];
 export function planningRouteOverlay(p: Palette, data: Collection): Overlay {
-  return {
-    sources: {[PLANNING_ROUTE_SOURCE]: {type: 'geojson', data} as MapLibre.SourceSpecification},
-    layers: [{id: PLANNING_ROUTE_LINE, type: 'line', source: PLANNING_ROUTE_SOURCE, layout: {'line-join': 'round'},
-      paint: {'line-color': p.amber, 'line-width': 2.5, 'line-opacity': 0.95, 'line-dasharray': [2, 2]}}] as MapLibre.LayerSpecification[],
-  };
+  return {sources: {[PLANNING_ROUTE_SOURCE]: {type: 'geojson', data} as MapLibre.SourceSpecification}, layers: routeLayers(p), themePaint: q => paintEdits(routeLayers(q))};
 }
 
 export interface PlanningRouteLayerOptions {engine: ReadonlySignal<Engine | null>; palette?: () => Palette; host?: HTMLElement}

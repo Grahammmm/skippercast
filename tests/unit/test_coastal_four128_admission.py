@@ -1,8 +1,11 @@
 """Offline admission construction and refusal checks; never run a real mission."""
+import builtins
 import copy
 import importlib.util
+import io
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -14,13 +17,14 @@ import pytest
 from research.scripts import coastal_four128_admission as adm
 from research.scripts import coastal_four128_resources as resources
 from skippercast.coastal.output_writer import COMPACT_V3_PROFILE, declaration
-from tests._support import ROOT
+from tests._support import FIXTURES, ROOT
 from tests.unit.test_coastal_four128_budget import amendment, _load, V7_LIMITS
 from research.scripts import coastal_four128_mask_topology as topo
 from skippercast.coastal.authenticated_v1.profiles import PARTIAL_WINDOWS
 from skippercast.coastal.coordinator.ordered_trial import LARGER_WINDOWS, PARTIAL_BOUNDS
 
 CATALOG = ROOT / 'research/catalog/four128-admission'
+HISTORICAL_REPLAY = FIXTURES / 'four128-historical-replay.json'
 NOW = adm.epoch('2026-10-20T07:40:15.247665+00:00')
 
 
@@ -159,24 +163,110 @@ def test_prepare_inputs_verify_hashes_accounting_and_scope(tmp_path):
         adm.prepare_inputs(cfg, kwargs['package'])
 
 
-@pytest.mark.parametrize('label', ['e', 'f', 'g'])
-def test_historical_configs_and_local_byte_replay(tmp_path, label):
-    cfg, _ = adm.config_file(CATALOG / f'doc5{label}.json')
+def stage_historical_replay(tmp_path, layout):
+    bundle = json.loads(HISTORICAL_REPLAY.read_bytes())
+    files = bundle['files']
+    if layout == 6:
+        files.update(bundle['layout6'])
+    bindings = {}
+    for name, doc in files.items():
+        # Relocate paths and rebind references to previously staged files. The
+        # expected documents are frozen in the bundle, never rendered here.
+        target = tmp_path / name
+        assert target.resolve().is_relative_to(tmp_path)
+        if name.endswith('.py'):
+            raw = doc.encode()
+        else:
+            text = json.dumps(doc, sort_keys=True, separators=(',', ':'))
+            text = text.replace('@root@', json.dumps(str(tmp_path))[1:-1])
+            text = re.sub(r'"@bytes:([^@]+)@"', lambda m: str(bindings[m[1]]['bytes']), text)
+            text = re.sub(r'@sha:([^@]+)@', lambda m: bindings[m[1]]['sha256'], text)
+            raw = (text + '\n').encode()
+        bindings[name] = put_raw(target, raw)
+    return adm.config_file(tmp_path / 'config.json')[0]
+
+
+def fence_replay_io(patch, tmp_path):
+    allowed = (tmp_path, FIXTURES.resolve())
+
+    def guarded(op):
+        def checked(file, *args, **kwargs):
+            if not isinstance(file, int):
+                path = Path(file).expanduser().absolute()
+                assert any(path.is_relative_to(root) and path.resolve().is_relative_to(root)
+                           for root in allowed), 'historical replay attempted I/O outside tmp_path/fixtures'
+            return op(file, *args, **kwargs)
+        return checked
+
+    patch.setattr(builtins, 'open', guarded(builtins.open))
+    patch.setattr(io, 'open', guarded(io.open))
+    patch.setattr(Path, 'read_bytes', guarded(Path.read_bytes))
+
+
+@pytest.mark.parametrize('layout', [5, 6])
+def test_historical_configs_and_local_byte_replay(tmp_path, monkeypatch, layout):
+    with monkeypatch.context() as patch:
+        fence_replay_io(patch, tmp_path)
+        replay_historical(tmp_path, patch, layout)
+
+
+def replay_historical(tmp_path, patch, layout):
+    cfg = stage_historical_replay(tmp_path, layout)
+    assert cfg['layout'] == layout
     assert cfg['mode'] == 'historical-replay'
     with pytest.raises(ValueError, match='historical configs'):
         adm.fresh_run(cfg, stage_absent=True)
-    # Like the existing signed-amendment tests: CI covers synthetic construction;
-    # the maintainer machine additionally exercises the pinned archived inputs.
-    if not Path(cfg['inputs']['receipt']['path']).expanduser().is_file():
-        return
-    result = adm.replay(cfg, tmp_path / 'replay')
+
+    def git_show(action, spec):
+        head, rel = spec.split(':', 1)
+        assert (action, head) == ('show', cfg['head'])
+        return (tmp_path / 'code' / rel).read_bytes()
+
+    patch.setattr(adm, 'git', git_show)
+    out = tmp_path / 'replay'
+    result = adm.replay(cfg, out)
     assert result['status'] == 'HISTORICAL_BYTES_REPRODUCED_REVIEW_REQUIRED'
     assert len(result['files']) == 3
     assert all(item['byte_equal'] for item in result['files'])
     assert result['execution_authorized'] is False
-    assert (tmp_path / 'replay/REPLAY_ONLY.json').is_file()
+    assert (out / 'REPLAY_ONLY.json').is_file()
     with pytest.raises(ValueError, match='fresh replay root'):
-        adm.replay(cfg, tmp_path / 'replay')
+        adm.replay(cfg, out)
+
+    # Re-pin semantically equivalent JSON with different bytes. Replay must
+    # refuse even when the archived file still matches the issuance receipt.
+    receipt_path = Path(cfg['inputs']['receipt']['path'])
+    receipt = json.loads(receipt_path.read_bytes())
+    archived = Path(cfg['staging_root']) / receipt['live_index']['path']
+    assert (out / archived.name).read_bytes() == archived.read_bytes()
+    changed = put_raw(archived, archived.read_bytes() + b' ')
+    receipt['live_index'].update(bytes=changed['bytes'], sha256=changed['sha256'])
+    cfg['inputs']['receipt'] = put(receipt_path, receipt)
+    rejected = tmp_path / 'rejected'
+    with pytest.raises(ValueError, match='byte replay differs: live-index.json'):
+        adm.replay(cfg, rejected)
+    assert not rejected.exists()
+
+
+def test_historical_replay_fixture_stays_off_host_archive(tmp_path, monkeypatch):
+    # A relinked fixture or an accidental fallback to the host archive
+    # must not make replay depend on the maintainer machine.
+    assert HISTORICAL_REPLAY.resolve().is_relative_to(ROOT / 'tests/fixtures')
+    probe = 'synthetic-denial-probe.json'
+    archive_path = Path.home() / 'skippercast-data/2026-10-07-pge-south/outputs' / probe
+    with monkeypatch.context() as patch:
+        fence_replay_io(patch, tmp_path)
+        for read in (open, io.open, Path.read_bytes):
+            with pytest.raises(AssertionError, match='outside tmp_path/fixtures'):
+                read(archive_path)
+    # Once the replay-specific patch is gone, even an unrelated unmarked test
+    # opening a host receipt (directly or via a symlink) must fail before I/O.
+    alias = tmp_path / 'archive'
+    alias.symlink_to(archive_path.parent, target_is_directory=True)
+    for path in (archive_path, alias / probe, Path.home() / 'agent-work/t08a' / probe):
+        for read in (open, Path.read_bytes):
+            with pytest.raises(AssertionError, match='host archive access requires'):
+                read(path)
 
 
 def test_renderer_refuses_author_or_wrong_validity(tmp_path):
@@ -267,11 +357,14 @@ def test_bad_ledger_refused(tmp_path, bad):
         resources.load_charge_ledger(p)
 
 
-def test_signed_bytes_binding_and_original_projection():
-    p = Path(resources.CHARGE_LEDGER['head']['path']).expanduser()
-    # Always test refusal, even on CI without the archived signed document.
+def test_signed_bytes_binding_refuses_unsigned_document():
     with pytest.raises(ValueError, match='charge ledger head'):
         resources.budget_limits_bytes(adm.encoded(amendment()))
+
+
+@pytest.mark.host_archive
+def test_signed_bytes_binding_and_original_projection():
+    p = Path(resources.CHARGE_LEDGER['head']['path']).expanduser()
     if p.is_file():
         raw = p.read_bytes()
         assert resources.budget_limits_bytes(raw) == resources.budget_limits(amendment())
@@ -561,7 +654,11 @@ def test_config_support_policy_is_opt_in_live_only(tmp_path):
         with pytest.raises(ValueError):
             adm.config_file(write(bad))
     for label in 'efg':  # historical configs stay strict and unchanged
-        assert 'support_policy' not in adm.config_file(CATALOG / f'doc5{label}.json')[0]
+        cfg, _ = adm.config_file(CATALOG / f'doc5{label}.json')
+        assert cfg['mode'] == 'historical-replay'
+        assert 'support_policy' not in cfg
+        with pytest.raises(ValueError, match='historical configs'):
+            adm.fresh_run(cfg, stage_absent=True)
 
 
 def test_evidence_support_policy_must_match(tmp_path):

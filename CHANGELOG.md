@@ -4,6 +4,7 @@
 
 - SC2252-11: open an editable trip alert from the brief's lower-exposure window. Nothing is saved until you press Save.
 - SC-NEXT-09: the coverage and forecast skill pages follow your language choice. Published region and buoy names and forecast scoring are unchanged.
+- MAP-SOURCES-PAGE-1: the map no longer draws source, survey or credit text (attribution control, legend credits, card source lines, landing credits); one small "Sources" link in the map corner opens the Sources page. Measured/estimated/unsurveyed labels and no-data hatching are unchanged.
 - SC2037-15: upcoming saved trips show the season status for each target on the trip date, with the last rules check and an official link. Unconfirmed rules never show as open.
 - SC1607-08: download the complete private catch log as formula-safe CSV, up to 10 pages (2,000 entries); incomplete reads produce no file.
 - SC-NEXT-08: the data status page follows the saved or browser language, with Spanish headings, table labels and freshness notes; source names and freshness rules are unchanged.

@@ -477,7 +477,9 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('not a Morro Bay bar-current prediction');
   await page.locator('[data-reading="wind"] summary').click();
   await expect(page.locator('[data-reading="wind"] .ui-popover-body')).toContainText('about 56 nm WNW of Morro Bay harbor, out at sea: not a harbor or launch reading');
-  await expect(page.locator('.landing-credit')).toHaveText('Shoreline: NOAA National Geodetic Survey · CUSP shoreline, surveyed 1994–2010.');
+  // MAP-SOURCES-PAGE-1: no shoreline or basemap credit on the landing; the nav's Sources link lists them.
+  await expect(page.locator('#landing-credit')).not.toContainText('Shoreline');
+  await expect(page.locator('.landing-head a[href="/sources"]')).toHaveCount(1);
   await checkA11y(page, 'v2-landing', info.project.name);
   expect(requests.filter(url => THREE.test(new URL(url).pathname)), 'no three request').toEqual([]);
   expect(pageErrors).toEqual([]);
@@ -674,7 +676,7 @@ test('after first paint the night map draws the coastline and animated currents 
   // The SVG stays as the fallback, faded out under the drawn map.
   await expect(page.locator('.landing-shore path')).toHaveCount(2);
   await expect.poll(() => page.locator('.landing-shore').evaluate(el => getComputedStyle(el).opacity)).toBe('0');
-  await expect(page.locator('[data-credit="basemap"]')).toHaveText('Basemap: © OpenStreetMap contributors, © Protomaps.');
+  await expect(page.locator('[data-credit="basemap"]'), 'MAP-SOURCES-PAGE-1: no basemap credit; the Sources page lists it').toHaveCount(0);
   await expect(page.locator('[data-credit="currents"]')).toHaveText(/^Currents: NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative\.$/);
   // MapLibre is fetched only after the first paint and the load event (design § 13).
   const timing = await page.evaluate(() => ({
@@ -958,10 +960,9 @@ for (const {width, height} of COLD_PHONES) {
     near(mounted.readout!.y, before.readout!.y, 'readout y on mount'); near(mounted.readout!.h, before.readout!.h, 'readout height on mount');
     near(mounted.form!.y, before.form!.y, 'port form y on mount'); near(mounted.form!.h, before.form!.h, 'port form height on mount (the port list still loading)');
     expect(await page.locator('.landing-slot').count(), 'the mount replaced both placeholders').toBe(0);
-    // The layer dots and the credit mounted with the form; the footer that sat under the slots did not move.
-    const credit = await boxOf(page, '#landing-credit');
+    // The layer dots mounted with the form; the footer that sat under the slots did not move. MAP-SOURCES-PAGE-1: no shoreline credit is mounted.
     near(mounted.footer!.y, before.footer!.y, 'footer y on mount');
-    expect(credit && credit.h > 0, 'the shoreline credit is in the footer').toBeTruthy();
+    await expect(page.locator('#landing-credit')).not.toContainText('Shoreline');
     // Late data: the readings and the port list resolve; the form stays where the slot was, and below it only the verdict (a fresh block, not reserved) pushes the footer.
     await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
     await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();

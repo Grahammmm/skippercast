@@ -161,18 +161,29 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
 });
 
 // SC1722-10: actual mounted surfaces use the region calendar, including the repeated hour.
+// SCA-413: the two 1 am instants of the 25-hour day read apart (PDT, then PST) in both languages, and each one's
+// link restores its own UTC instant. Fails if the dock drops the zone and both read "1 am" again.
 for (const lang of ['en', 'es']) test(`day-qualified dock values across fall DST: ${lang}`, async ({page, v2, pageErrors}) => {
   await page.clock.setFixedTime(new Date('2026-10-31T19:00:00Z'));
   const cases = [
     ['2026-10-31T23:00Z', 'Today · 4 pm', 'Hoy · 16'],
-    ['2026-11-01T08:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
-    ['2026-11-01T09:00Z', 'Tomorrow · 1 am', 'Mañana · 1'],
+    ['2026-11-01T08:00Z', 'Tomorrow · 1 am PDT', 'Mañana · 1 PDT'],
+    ['2026-11-01T09:00Z', 'Tomorrow · 1 am PST', 'Mañana · 1 PST'],
+    ['2026-11-01T10:00Z', 'Tomorrow · 2 am', 'Mañana · 2'],
     ['2026-11-03T14:00Z', 'Tue · 6 am', 'mar · 6'],
     ['2026-11-07T14:00Z', 'Sat 7 · 6 am', 'sáb 7 · 6'],
   ];
   for (const [hour, en, es] of cases) {
     await v2.open('app', {...AREA, hour, lang});
     const expected = lang === 'es' ? es : en;
+    await expect(page.locator('.ui-dock-readout')).toHaveText(expected);
+    await expect(page.locator('input[type="range"].ui-dock-range')).toHaveAttribute('aria-valuetext', expected);
+    expect(new URL(page.url()).searchParams.get('hour')).toBe(hour);
+    if (!hour.startsWith('2026-11-01T0')) continue;
+    // The shared link alone brings back the same instant and label.
+    const shared = page.url();
+    await page.goto('about:blank');
+    await page.goto(shared);
     await expect(page.locator('.ui-dock-readout')).toHaveText(expected);
     await expect(page.locator('input[type="range"].ui-dock-range')).toHaveAttribute('aria-valuetext', expected);
     expect(new URL(page.url()).searchParams.get('hour')).toBe(hour);
