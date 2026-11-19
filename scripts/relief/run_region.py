@@ -91,6 +91,9 @@ REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skipperca
 HEX64 = re.compile(r'[0-9a-f]{64}')
 LOCK_NAME = '.run_region.lock'
 QA_SHA_KEY = 'qa-release-sha256'  # a key of the extras dict that is not a stage: the explicit --release-sha256
+# file-valued options: fixed once by parse() so the guard and the stage see the same spelling
+PATH_OPTIONS = ('source', 'region_config', 'coarse', 'water', 'manifest',
+                'qa_elevation', 'qa_contributor', 'qa_shots', 'qa_support')
 GB = 10 ** 9
 STOP_FILE_NAMES = ('LOCAL-STOP', 'UNITFEED-STOP')
 
@@ -151,8 +154,15 @@ def effective_norm(option, environ=None):
     return Path(os.path.abspath(os.path.expanduser(value)))
 
 
+def spelled(value):
+    """The absolute filesystem spelling of an input path, ``~`` expanded and made absolute against the
+    working directory WITHOUT collapsing ``..`` (a ``link/..`` must still be resolved by the OS, so it
+    is the same path the guard resolves and the stage opens)."""
+    return os.path.join(os.getcwd(), os.path.expanduser(str(value)))
+
+
 def real(path):
-    return Path(os.path.realpath(os.path.abspath(os.path.expanduser(str(path)))))
+    return Path(os.path.realpath(spelled(path)))
 
 
 def under(path, root):
@@ -618,6 +628,12 @@ def parse(argv):
     parser.add_argument('--dry-run', action='store_true', help='print the chain and the guard state; run nothing')
     args = parser.parse_args(argv)
     args.norm = effective_norm(args.norm)  # resolved once: guarded and forwarded as the very same path
+    # every file input is likewise fixed once here: the spelling the guard resolves is the spelling forwarded
+    for name in PATH_OPTIONS:
+        if getattr(args, name):
+            setattr(args, name, spelled(getattr(args, name)))
+    if args.qa_fine_proof:
+        args.qa_fine_proof = [(zoom, spelled(path)) for zoom, path in args.qa_fine_proof]
     return parser, args
 
 
@@ -641,10 +657,9 @@ def main(argv=None, cfg=None):
     if missing and not full_preview:
         parser.error('; '.join(f'the chain reaches {stage}, which needs {", ".join(flags)}' for stage, flags in missing))
     extra = stage_extras(args)
-    inputs = [Path(os.path.abspath(os.path.expanduser(p)))
-              for p in (args.source, args.region_config, args.coarse, args.water, args.manifest, args.qa_elevation,
-                        args.qa_contributor, args.qa_shots, args.qa_support,
-                        *(path for _, path in args.qa_fine_proof or ())) if p]
+    # the very spellings stage_extras forwards (parse fixed them), so guard and child see one path
+    inputs = [Path(p) for p in (*(getattr(args, name) for name in PATH_OPTIONS),
+                                *(path for _, path in args.qa_fine_proof or ())) if p]
     if args.dry_run:
         return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing)
     try:

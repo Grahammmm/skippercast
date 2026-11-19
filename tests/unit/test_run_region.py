@@ -503,6 +503,58 @@ def test_input_paths_under_the_vault_are_refused(box, capsys):
     assert box.ran() == [] and 'input-path' in capsys.readouterr().out
 
 
+QA_FILE_FLAGS = ('--qa-elevation', '--qa-contributor', '--qa-shots', '--qa-support', '--qa-fine-proof')
+
+
+def _qa_through(box, flag, value):
+    """Run through qa with every input fixed except one qa file option, whose value is ``value``."""
+    files = {'--qa-elevation': '/in/elev.tif', '--qa-contributor': '/in/contrib.tif', '--qa-shots': '/in/shots.json'}
+    extra = []
+    if flag == '--qa-fine-proof':
+        extra = [flag, 'z16', value]
+    else:
+        files[flag] = value
+    qa = [item for pair in files.items() for item in pair]
+    argv = ['morro-bay', '--out', str(box.out), '--through', 'qa', *SOURCE_ARGS, *ZONE_ARGS, *PACKAGE_ARGS, *qa, *extra,
+            '--generation', GEN, '--release-sha256', SHA]
+    return RR.main(argv, box.cfg)
+
+
+def _qa_child_args(box):
+    return next(call for call in box.calls() if call[0] == 'qa')
+
+
+@pytest.mark.parametrize('flag', QA_FILE_FLAGS)
+def test_qa_file_options_are_guarded_by_the_path_the_child_receives(box, monkeypatch, capsys, flag):
+    # Contract: the vault guard resolves the very spelling forwarded to qa, for every qa file option (the
+    # fine-proof pairs too). Bugs caught (review return on #2887): a literal ``~`` or a ``link/..`` alias
+    # was checked in one form (expanded / lexically collapsed) and handed to qa in another, so qa could open
+    # a path resolving into the vault. Refused aliases run nothing; the allowed controls check the real child argument.
+    vault = box.root / 'vault'
+    (vault / 'sub').mkdir(parents=True)
+    box.cfg.forbidden_root = str(vault)
+    work = box.root / 'work'
+    work.mkdir()
+    (work / 'link').symlink_to(vault / 'sub')
+    (work / '~').symlink_to(vault)  # a literal "~" directory that is an alias of the vault
+    monkeypatch.chdir(work)
+    home = box.root / 'home'
+    home.mkdir()
+    monkeypatch.setenv('HOME', str(vault))
+    for alias in ('link/../c.tif', '~/c.tif', str(vault / 'c.tif')):  # symlink-then-.., vault $HOME, direct
+        assert _qa_through(box, flag, alias) == 3, alias
+        assert box.ran() == [] and 'input-path' in capsys.readouterr().out
+    monkeypatch.setenv('HOME', str(home))
+    for spelling, forwarded in (('~/c.tif', str(home / 'c.tif')), ('inputs/c.tif', str(work / 'inputs' / 'c.tif')),
+                                ('inputs/../c.tif', str(work / 'inputs' / '..' / 'c.tif'))):
+        box.stub_dir.joinpath('calls.jsonl').unlink(missing_ok=True)
+        assert _qa_through(box, flag, spelling) == 0, spelling
+        child = _qa_child_args(box)
+        assert forwarded in child  # the absolute spelling the guard resolved, not the original ``~``/relative one
+        assert '~/c.tif' not in child and 'inputs/c.tif' not in child
+        assert not RR.under(forwarded, vault)
+
+
 def test_guards_pass_at_the_boundary_values(box):
     # Contract: some avg60 below 25 and exactly the decimal disk floors are allowed. Bug caught:
     # a different PSI window, rounding to 25 before comparing, or using binary GB / exclusive floors.
