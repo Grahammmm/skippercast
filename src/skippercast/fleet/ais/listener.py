@@ -45,9 +45,9 @@ Routing (design.md section 5): a position from a watched MMSI goes to
 it lies inside the region's AIS bbox and inside a harbor geofence of one of the
 region's ports; everything else is never written. Statics go to ``statics``
 for every vessel the subscription delivers, de-duplicated in memory: a static
-is queued only when its content differs from the last one queued for that MMSI
-and source, or the last one was queued on an earlier UTC day (so each day file
-holds each vessel's statics).
+is queued only when its content or UTC day differs from the last one queued
+for that MMSI and source. A failed batch forgets its static markers that have
+not been superseded, so an unchanged later transmission can be queued again.
 
 ``heartbeat.json`` (version 1)::
 
@@ -78,7 +78,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 from collections import deque
-from dataclasses import astuple, dataclass, field
+from dataclasses import astuple, dataclass, field, replace
 from datetime import datetime, timezone
 import logging
 import os
@@ -157,7 +157,7 @@ class Router:
         self.bbox = bbox
         self.geofences = tuple(geofences)
         self.table_days = retention.table_days()
-        self._statics: dict[tuple[int, str], tuple[int, tuple]] = {}
+        self._statics: dict[tuple[int, str], tuple[int, tuple, AisStatic]] = {}
 
     def in_harbor(self, lat: float, lon: float) -> bool:
         return bbox_contains(self.bbox, lat, lon) and any(g.contains(lat, lon) for g in self.geofences)
@@ -184,7 +184,13 @@ class Router:
         return seen is None or seen[1] != content or seen[0] != day_of(record.ts).toordinal()
 
     def remember_static(self, record: AisStatic) -> None:
-        self._statics[(record.mmsi, record.source)] = (day_of(record.ts).toordinal(), astuple(record)[2:])
+        self._statics[(record.mmsi, record.source)] = (day_of(record.ts).toordinal(), astuple(record)[2:], record)
+
+    def forget_failed_static(self, record: AisMessage) -> None:
+        key = (record.mmsi, record.source)
+        seen = self._statics.get(key)
+        if seen is not None and seen[2] is record:
+            del self._statics[key]
 
 
 @dataclass
@@ -315,14 +321,16 @@ class Listener:
         if self.router.expired(table, record.ts, int(now * 1000)):
             self.counters.stale += 1
             return None
-        if table == "statics" and not self.router.static_is_new(record):
+        if isinstance(record, AisStatic) and not self.router.static_is_new(record):
             return None
         depth, cap = len(self.queue), self.settings.queue_max
         if depth >= cap or (table == "discovery" and depth >= cap * self.settings.shed_discovery) or (
                 table == "statics" and depth >= cap * self.settings.shed_statics):
             self.counters.drops[table] += 1
             return None
-        if table == "statics":
+        if isinstance(record, AisStatic):
+            # Each enqueue has its own identity, even if the input object was reused.
+            record = replace(record)
             self.router.remember_static(record)
         self.queue.append((table, record))
         if len(self.queue) >= self.settings.batch_rows:
@@ -464,15 +472,17 @@ class Listener:
             except asyncio.CancelledError:
                 # A stop cancelled the writer mid-batch; the thread still writes these rows, so wait and count them.
                 await asyncio.wait([write])
-                self._record_write(write, rows)
+                self._record_write(write, rows, batch["statics"])
                 raise
-            self._record_write(write, rows)
+            self._record_write(write, rows, batch["statics"])
         return handed
 
-    def _record_write(self, write: asyncio.Future, rows: int) -> None:
+    def _record_write(self, write: asyncio.Future, rows: int, statics: Sequence[AisMessage]) -> None:
         try:
             counts = write.result()
         except Exception as error:   # disk full, a locked or corrupt day file
+            for record in statics:
+                self.router.forget_failed_static(record)
             self.counters.drops["write_error"] += rows
             self.last_error = f"write failed: {type(error).__name__}: {str(error)[:200]}"
             log.error("AIS batch of %d rows not written: %s", rows, error, extra={"region": self.region})

@@ -353,7 +353,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1722-04: explicit load/online retries stay unchanged; untracked commands prevent transport-state feedback in readers. No Reports/CatchCards paint change.
   // SCA-240: coast-data.ts now classifies a malformed or future X-SC-Offline header as invalid (no saved allowance,
   // no live label). Transport/cache-age logic only; no Reports/CatchCards markup, paint or contrast change.
-  "web/coast-data.ts": "bbcccb206c83693f5a85e4d06075efd1be7b249009e28a23e66fecdafe0c260e",
+  // SCA-294: coast-data.ts adds an optional onResponse observer called with each bridge response before its body is
+  // read (the landing verdict keeps the response provenance). Transport hook only; admission, statuses and cache are
+  // unchanged, and no Reports/CatchCards markup, paint or contrast change. Rebound from the final bytes.
+  "web/coast-data.ts": "4eb847082e54a104f5ba64c501943fa8df6099e9821b58f5229893789369bc21",
   // SC2007-02 (Protected areas Try again): check_contrast.mjs changes only the legendTsx surface hash and its
   // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
   // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in

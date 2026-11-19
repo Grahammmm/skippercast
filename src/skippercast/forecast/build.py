@@ -234,7 +234,11 @@ def fetch_model(model, cycle, workers=16, log=log_err):
         mask_grid = results[model.steps[0]].get(mask_key)
         if mask_grid is None:
             raise ValueError(f'{model.id} land-sea mask missing')
-        sea = mask_grid[0] < 0.5
+        fractions = mask_grid[0]
+        valid = np.isfinite(fractions) & (fractions >= 0.0) & (fractions <= 1.0)
+        if not valid.any():
+            raise ValueError(f'{model.id} land-sea mask has no valid fractions')
+        sea = valid & (fractions < 0.5)
     else:
         first_field = model.fields[0].name
         sea = np.isfinite(cubes[first_field]).any(axis=0)

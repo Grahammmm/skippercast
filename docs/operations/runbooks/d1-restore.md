@@ -39,6 +39,7 @@ Retention here is what the code does today, not a promise. "No automatic age-bas
 | `advisor_reports` | Skipper fish reports, the boat's record. | No automatic age-based deletion found in current code; retained until an explicit supported deletion/replacement. `forgetContact` keeps the report and clears `contact_id`. | `server/advisor/contacts.ts` `forgetContact` |
 | `advisor_report_edits` | Corrections to reports. | No automatic age-based deletion found in current code; retained until an explicit supported deletion/replacement: `forgetContact` deletes a contact's edits. | `server/advisor/contacts.ts` `forgetContact` |
 | `advisor_reviews` | The admin review queue. | Decided reviews are deleted 90 days after `decided_at`; open reviews stay; `forgetContact` deletes reviews about the contact's messages and media. | `server/advisor/retention.ts` `pruneReviews`; `server/advisor/contacts.ts` `forgetContact` |
+| `advisor_review_events` | Private moderation audit and retry state; no reply bodies or contact addresses. | Cascades when the parent `advisor_reviews` row is deleted. | `server/advisor/admin/review-store.ts`; migration `0019_advisor_review_events` |
 | `advisor_rules` | Regulation rows the advisor may quote. | No automatic age-based deletion found in current code; retained until an explicit supported deletion/replacement. Retired rows stay in the table. | `server/advisor/retention.ts` (no rule for this table) |
 | `advisor_daily_answers` | Cached daily answer per port and day. | Deleted 30 days after `generated_at`; also deleted for a port when a new report invalidates its answer. | `server/advisor/retention.ts` `pruneDaily`; `server/advisor/intake/reports.ts` `invalidateDailyAnswer` |
 | `advisor_posts` | Social posts in any state, with captions and Meta ids. | No automatic age-based deletion found in current code; retained until an explicit supported deletion/replacement: `forgetContact` deletes posts of a contact's photos that never went out; a posted one stays. | `server/advisor/contacts.ts` `forgetContact` |
@@ -134,6 +135,7 @@ UNION ALL SELECT 'advisor_media' AS table_name, COUNT(*) AS row_count FROM advis
 UNION ALL SELECT 'advisor_reports' AS table_name, COUNT(*) AS row_count FROM advisor_reports
 UNION ALL SELECT 'advisor_report_edits' AS table_name, COUNT(*) AS row_count FROM advisor_report_edits
 UNION ALL SELECT 'advisor_reviews' AS table_name, COUNT(*) AS row_count FROM advisor_reviews
+UNION ALL SELECT 'advisor_review_events' AS table_name, COUNT(*) AS row_count FROM advisor_review_events
 UNION ALL SELECT 'advisor_rules' AS table_name, COUNT(*) AS row_count FROM advisor_rules
 UNION ALL SELECT 'advisor_daily_answers' AS table_name, COUNT(*) AS row_count FROM advisor_daily_answers
 UNION ALL SELECT 'advisor_posts' AS table_name, COUNT(*) AS row_count FROM advisor_posts
@@ -184,6 +186,7 @@ If the restore point is before a migration that the deployed Worker needs, roll 
 DROP TABLE IF EXISTS advisor_post_stats;
 DROP TABLE IF EXISTS advisor_posts;
 DROP TABLE IF EXISTS advisor_report_edits;
+DROP TABLE IF EXISTS advisor_review_events;
 DROP TABLE IF EXISTS advisor_reviews;
 DROP TABLE IF EXISTS advisor_reports;
 DROP TABLE IF EXISTS advisor_crew;
