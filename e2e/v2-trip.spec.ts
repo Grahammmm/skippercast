@@ -133,6 +133,7 @@ test('the ranked export runs in v2: best reefs, complete outlines and a download
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({path: `test-results/${info.project.name}-v2-trip.png`});
   const gpx = await download(page);
+  expect(gpx).toMatch(/<time>[^<]+<\/time>/);
   expect(gpx.match(/<wpt /g)).toHaveLength(20);
   expect(gpx.match(/<trk>/g)).toHaveLength(20);
   expect(gpx).toContain('<name>01 Reef 90-120ft</name>');
@@ -184,18 +185,6 @@ test('the ranked plan survives a reload, shows its reefs as Chart pins, and chan
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
   await expect.poll(() => new URL(page.url()).hash, 'the dialog\'s close event drops the hash').toBe('');
-  expect(pageErrors).toEqual([]);
-});
-
-// FE-61: v1's planner, which this compared byte for byte, is gone; the v2 file keeps v1's 20 ranked reef spots.
-test('the ranked selection downloads a GPX of the 20 ranked reef spots', async ({page, pageErrors, v2, isMobile}) => {
-  const reefs = await rankedReefs(page);
-  await v2.open('app', AREA);
-  await openPlan(page, isMobile);
-  await rankBest(page, reefs.gate);
-  const fromV2 = await download(page);
-  expect(fromV2).toMatch(/<time>[^<]+<\/time>/);
-  expect(fromV2.match(/<wpt\b/g)?.length).toBe(20);
   expect(pageErrors).toEqual([]);
 });
 
@@ -258,17 +247,39 @@ test('a Chart click saves a categorized user waypoint, restores it and exports s
 
 test.describe('offline', () => {
   test.use({serviceWorkers: 'allow'});
-  test('a region saved from v2 opens offline from its pack, the app included', async ({page, context, pageErrors, v2, isMobile}) => {
+  test('a region saved from v2 opens offline with a pickable chart and dated tide predictions', async ({page, context, pageErrors, v2, isMobile, baseURL}) => {
     await stubLiveFeeds(page);
     const tideId = '9000002';
+    const date = '2026-10-08', clock = new Date(`${date}T18:00:00Z`);
+    const map = {...AREA, day: date, view: '35.38,-120.88,11', base: 'chart'};
+    const basemap = '/feeds/tiles/basemap/ca-coast-fixture.pmtiles';
+    const shoreline = '/regions/morro-bay/shoreline-overview.geojson';
+    const archive = await readFile(new URL('../tests/fixtures/basemap/tiny.pmtiles', import.meta.url));
+    await page.route('**/feeds/tiles/basemap/manifest.json', route => route.fulfill({json: {schema_version: 1, key: basemap.slice('/feeds/'.length)}}));
+    await page.route(`**${basemap}`, route => {
+      const range = /^bytes=(\d+)-(\d+)$/.exec(route.request().headers().range ?? '');
+      if (!range) return route.abort();
+      const start = Number(range[1]), end = Math.min(Number(range[2]), archive.length - 1);
+      return route.fulfill({status: 206, body: archive.subarray(start, end + 1),
+        headers: {'Content-Range': `bytes ${start}-${end}/${archive.length}`, 'Content-Type': 'application/octet-stream'}});
+    });
+    // An invented segment through the camera centre; its card names the picked fixture, not a real place.
+    await page.route(`**${shoreline}`, route => route.fulfill({json: {type: 'FeatureCollection', features: [{type: 'Feature',
+      geometry: {type: 'LineString', coordinates: [[-120.90, 35.38], [-120.86, 35.38]]},
+      properties: {SOURCE_ID: 'offline-segment', source_date: '2025-01-02', DATA_SOURC: 'Offline fixture shoreline'},
+    }]}}));
+    await page.clock.setFixedTime(clock);
     await page.addInitScript(id => localStorage.setItem('skippercast-tide-station-v1.morro-bay', id), tideId);
     await page.route('**/mdapi/prod/webapi/stations.json?*', route => route.fulfill({json: {stations: [
       {id: tideId, name: 'Offline fixture station', lat: 35.36, lng: -120.85, type: 'R'},
     ]}}));
-    await page.route('**/api/prod/datagetter?*', route => route.fulfill({json: {predictions: [
-      {t: '2026-10-08 21:00', v: '2.3', type: 'H'}, {t: '2026-10-08 22:00', v: '1.2'},
-    ]}}));
-    await v2.open('app', AREA);
+    await page.route('**/api/prod/datagetter?*', route => {
+      const params = new URL(route.request().url()).searchParams;
+      return route.fulfill({json: {predictions: params.get('interval') === 'hilo'
+        ? [{t: `${date} 21:00`, v: params.get('station') === tideId ? '7.3' : '2.3', type: 'H'}]
+        : [{t: `${date} 22:00`, v: '1.2'}]}});
+    });
+    await v2.open('app', map);
     await (await accountMenu(page, isMobile)).getByRole('button', {name: 'Save for offline'}).click();
     const dialog = page.getByRole('dialog', {name: 'Save for offline'});
     await expect(dialog.getByText('Nothing saved on this device yet.')).toBeVisible();
@@ -276,24 +287,66 @@ test.describe('offline', () => {
     await v2.a11y('v2-offline');
     await dialog.getByRole('button', {name: `Save ${NAME} for offline`}).click();
     await expect(dialog.getByRole('status').first()).toContainText(`Saved ${NAME} · `, {timeout: 90_000});
-    const tideKeys = await page.evaluate(async id => {
+    const pack = await page.evaluate(async id => {
       const cacheName = (await caches.keys()).find(name => name.startsWith('sc-pack-morro-bay-'));
-      if (!cacheName) return [];
-      return (await (await caches.open(cacheName)).keys()).map(request => request.url)
-        .filter(url => new URL(url).hostname === 'api.tidesandcurrents.noaa.gov' && new URL(url).pathname.endsWith('/datagetter'))
-        .map(url => new URL(url).searchParams).filter(params => params.get('station') === id)
-        .map(params => params.get('interval')).sort();
+      if (!cacheName) throw new Error('No saved region pack');
+      const urls = (await (await caches.open(cacheName)).keys()).map(request => new URL(request.url));
+      const tides = urls.filter(url => url.hostname === 'api.tidesandcurrents.noaa.gov' && url.pathname.endsWith('/datagetter') && url.searchParams.get('station') === id);
+      return {cacheName, intervals: tides.map(url => url.searchParams.get('interval')).sort(), highLow: tides.find(url => url.searchParams.get('interval') === 'hilo')?.href};
     }, tideId);
-    expect(tideKeys).toEqual(['6', 'hilo']);
+    expect(pack.intervals).toEqual(['6', 'hilo']);
     await expect(dialog.locator('.app-offline-list li').first()).toContainText(new RegExp(`^${NAME}Saved (just now|\\d+ min ago) · `));
-    await expect(dialog.locator('.app-offline-list li').first()).toContainText(/of 95 chart tiles · \d+ of 95 base map tiles \(zoom 8–12\)/);
-    // The save registered the worker; once it controls the page, the pack answers offline.
+    await expect(dialog.locator('.app-offline-list li').first()).toContainText(/of 95 chart tiles · [1-9]\d* of 95 base map tiles \(zoom 8–12\)/);
     await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, {timeout: 30_000});
+    const worker = await page.evaluate(() => navigator.serviceWorker.controller!.scriptURL);
+    // The last context route denies all network fallbacks, including the shared fixtures.
+    await context.route('**/*', route => route.abort('internetdisconnected'));
     await context.setOffline(true);
-    await page.goto(v2.url('app', AREA));
-    await expect(page).toHaveTitle(/SkipperCast/);
-    await expect(page.locator('.app-stage')).toBeAttached({timeout: 30_000});
-    await context.setOffline(false);
+    // Clear incidental recent data; close the saving page to discard its routes and in-memory state.
+    await page.evaluate(() => caches.delete('sc-data'));
+    await page.close();
+
+    const reopen = async () => {
+      const fresh = await context.newPage();
+      fresh.on('pageerror', error => pageErrors.push(String(error)));
+      await fresh.clock.setFixedTime(clock);
+      const seen = new Set<string>();
+      fresh.on('response', response => {
+        if (response.fromServiceWorker() && response.headers()['x-sc-offline']) {
+          seen.add(`${response.status()} ${new URL(response.url()).pathname}`);
+        }
+      });
+      const response = await fresh.goto(new URL(v2.url('app', map), baseURL).href);
+      expect(response?.fromServiceWorker()).toBe(true);
+      expect(await fresh.evaluate(() => [navigator.onLine, navigator.serviceWorker.controller?.scriptURL])).toEqual([false, worker]);
+      await expect(fresh).toHaveTitle(/SkipperCast/);
+      await expect(fresh.locator('.app-stage')).toBeVisible();
+      await expect.poll(() => [...seen]).toEqual(expect.arrayContaining([`200 ${shoreline}`, `206 ${basemap}`]));
+      return fresh;
+    };
+    const saved = await reopen();
+    const card = saved.getByRole('region', {name: 'Selected mark'});
+    await expect(async () => {
+      const {x, y} = await chartCentre(saved);
+      await saved.mouse.click(x, y);
+      await expect(card.getByRole('heading', {name: 'Shoreline', exact: true})).toBeVisible({timeout: 1500});
+    }).toPass({timeout: 15_000, intervals: [1000]});
+    await expect(card).toContainText('Offline fixture shoreline');
+    await card.getByRole('button', {name: 'Clear selection'}).click();
+
+    const prediction = (tab: Page) => tab.locator('.app-spark-events li').filter({hasText: 'High 2:00 pm · 7.3 ft MLLW'});
+    if (isMobile) await saved.locator('.ui-sheet-handle').press('End');
+    await expect(saved.locator('.app-verdict-window[data-day]:visible').first()).toHaveAttribute('data-day', date);
+    await expect(prediction(saved)).toBeVisible();
+
+    // Simulate losing just the saved high/low response. Keep the shell, chart, station and 6-minute series.
+    expect(await saved.evaluate(async ({cacheName, highLow}) => !!highLow && (await caches.open(cacheName)).delete(highLow), pack)).toBe(true);
+    await saved.close();
+    const partial = await reopen();
+    if (isMobile) await partial.locator('.ui-sheet-handle').press('End');
+    const warning = partial.locator('.app-tide-station').getByRole('status').filter({hasText: 'Some chosen-station predictions are unavailable. Missing readings stay blank rather than using the default station.'});
+    await expect(warning).toBeVisible();
+    await expect(prediction(partial)).toHaveCount(0);
     expect(pageErrors).toEqual([]);
   });
 

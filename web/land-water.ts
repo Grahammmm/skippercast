@@ -24,6 +24,8 @@ export type Place = (p: {readonly latitude: number; readonly longitude: number})
 interface Point {readonly latitude: number; readonly longitude: number}
 
 const UNIT = 100000;
+// Schema v1: keep in sync with EDGE_M in src/skippercast/platform/land_water.py.
+const EDGE_M = 25;
 const unknown = (reason: UnknownReason): Placement => ({state: 'unknown', reason});
 const UNAVAILABLE = unknown('unavailable');
 /** Fail-closed: every place is unknown. */
@@ -33,7 +35,7 @@ export const NO_LAND_WATER: Place = () => UNAVAILABLE;
 export interface LandWaterModel {
   readonly region: string;
   readonly bounds: readonly [number, number, number, number];
-  readonly edgeM: number; readonly zoom: number; readonly grid: number;
+  readonly edgeM: typeof EDGE_M; readonly zoom: number; readonly grid: number;
   readonly tiles: ReadonlyMap<string, string>;
   readonly source: string; readonly linesSha256: string;
 }
@@ -62,7 +64,8 @@ export function landWaterModel(index: unknown, region: string): LandWaterModel |
   const b = d.bounds as unknown[];
   if (!Array.isArray(b) || b.length !== 4 || !b.every(int) || !((b[0] as number) < (b[2] as number) && (b[1] as number) < (b[3] as number))) return null;
   const {edge_m: edgeM, tile_zoom: zoom, grid, unit} = c;
-  if (typeof edgeM !== 'number' || !(edgeM > 0) || !int(zoom) || !int(grid) || grid < 1 || unit !== UNIT) return null;
+  // Reject the whole index: even its preclassified cells were built using this distance.
+  if (edgeM !== EDGE_M || !int(zoom) || !int(grid) || grid < 1 || unit !== UNIT) return null;
   if (typeof from?.sha256 !== 'string' || typeof lines?.sha256 !== 'string') return null;
   const decoded = new Map<string, string>();
   for (const [key, runs] of Object.entries(tiles)) {
@@ -164,7 +167,7 @@ export function withheldNote(n: number): string {
   return n > 0 ? `${n} spot${n === 1 ? '' : 's'} withheld: land/water not confirmed.` : '';
 }
 /** What every ranked list says about the check. */
-export const LAND_WATER_BASIS = 'Places on land, within 25 m of the NOAA shoreline, or outside its served tiles are withheld; the shoreline is not a navigation boundary.';
+export const LAND_WATER_BASIS = `Places on land, within ${EDGE_M} m of the NOAA shoreline, or outside its served tiles are withheld; the shoreline is not a navigation boundary.`;
 
 /** Keep the water places, in order; count the others and note whether any waits on the lines file. */
 export function keepWater<T extends Point>(items: readonly T[], place: Place): {kept: T[]; withheld: number; pending: boolean} {

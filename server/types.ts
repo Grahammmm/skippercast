@@ -13,10 +13,12 @@ export interface Region {
   jurisdiction_id?: string; landing_names?: string[];
   harbor: {information_url: string};
 }
+export interface SchedulerIdentity {repository: string; repository_id: string; owner_id: string; ref: string; workflow?: string; workflows?: string[]}
 export interface Deployment {
   public_origin: string; allowed_origins: string[]; forecast_feed: string;
   // workflow: the trip check's (live-conditions.yml); workflows: every workflow allowed a job identity (TA-M1).
-  scheduler: {repository: string; repository_id: string; owner_id: string; ref: string; workflow: string; workflows?: string[]};
+  scheduler: SchedulerIdentity & {workflow: string};
+  fleet_scheduler?: SchedulerIdentity & {workflows: string[]};
 }
 
 /** Published feeds and upstream APIs are external JSON, not yet schema-validated (P2-02). */

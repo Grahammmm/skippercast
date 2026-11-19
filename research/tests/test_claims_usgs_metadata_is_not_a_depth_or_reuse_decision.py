@@ -22,7 +22,7 @@ class UsgsDs781MetadataTests(unittest.TestCase):
         eel = [row for row in data['records'] if row['map_area'] == 'Offshore of Eel River']
         self.assertTrue(eel and all(row['status'] == 'missing-metadata-link' for row in eel))
 
-    def test_xml_sibling_and_rights_require_explicit_source_words(self):
+    def test_xml_sibling_and_parsing_alone_does_not_grant_reuse(self):
         self.assertEqual(xml_sibling('https://pubs.usgs.gov/x_metadata.txt'),
                          'https://pubs.usgs.gov/x_metadata.xml')
         template = '''<metadata><idinfo><citation><citeinfo><title>Original grid</title></citeinfo></citation>
@@ -33,7 +33,7 @@ class UsgsDs781MetadataTests(unittest.TestCase):
         self.assertEqual(ambiguous['rights_evidence'], 'requires-review')
         self.assertEqual(ambiguous['horizontal_spacing_in_metadata'], [2.0, 5.0])
         explicit = parse_xml(template.format('public domain and freely redistributable').encode())
-        self.assertEqual(explicit['rights_evidence'], 'explicit-public-domain-redistribution')
+        self.assertEqual(explicit['rights_evidence'], 'requires-review')
         self.assertEqual(explicit['vertical_datum_declared'], 'NAVD88')
 
     def test_signature_detects_changed_metadata_but_ignores_retrieval_time(self):

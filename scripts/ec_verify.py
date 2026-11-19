@@ -6,12 +6,15 @@
 and filled cells `verified` (30) when they agree within `tol_m` or `unresolved-conflict` (41) otherwise, with the shallower
 reading in `shoal_hint.tif`. Datum-suspect pairs mark their footprint 43 unless a comparable pair verifies the cell. Depths
 are never changed and nothing is converted: `corrected.tif` is only hashed. Writes `provenance.tif`, `shoal_hint.tif` and
-`EC-VERIFY.json` (`ec-verify-v1`) into DIR, outside the work tree. Exit 0 with one JSON line; exit 2 on refusal.
+`EC-VERIFY.json` (`ec-verify-v1`) into DIR, outside the work tree. For comparison, both single-band GeoTIFFs
+must declare reviewed metre and elevation-up values, with identity GDAL scale and zero offset. Exit 0 with one
+JSON line; exit 2 on refusal.
 A pair whose overlap repeats A's values (MAD of A - B <= `COPY_MAX_MAD_M`) is `copy-overlap`, never a second survey.
 A machine-valid receipt is review-required; `verified` is agreement within a published tolerance, not a navigation claim.
 """
 import argparse
 import hashlib
+import importlib.util
 import json
 import shutil
 import sys
@@ -22,6 +25,11 @@ sys.path.insert(0, str(REPO / 'src'))
 
 from skippercast.platform.seafloor_ec import (  # noqa: E402
     CODES, DATUM_SUSPECT, EC_VERSION, PLAUSIBLE_M, check_receipt, copy_overlap, independent, tol_m)
+
+_spec = importlib.util.spec_from_file_location('preflight_native_grid', Path(__file__).with_name('preflight_native_grid.py'))
+assert _spec and _spec.loader
+preflight = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(preflight)
 
 OUTPUTS = ('provenance.tif', 'shoal_hint.tif', 'EC-VERIFY.json')
 UNDECLARED = ('undeclared', 'unverified source datum')
@@ -74,6 +82,13 @@ def signature(ds, values):
     return [ds.width, ds.height, ds.crs.to_string() if ds.crs else '', _r(ds.res[0]), *map(_r, stats)]
 
 
+def check_vertical(ds, label, *, require_declared=True):
+    try:
+        preflight.check_ec_vertical(ds, require_declared=require_declared)
+    except preflight.Refused as exc:
+        raise Refused(f'{label}: {exc}') from None
+
+
 def read_b(path, a_ds, max_pixels):
     """B on A's grid (nearest, the coast_qa call re-implemented: product code never imports research), sha256, signature."""
     import numpy as np
@@ -87,6 +102,7 @@ def read_b(path, a_ds, max_pixels):
             raise Refused(f'b crs not projected-metre: {Path(path).name}')
         if src.width * src.height > max_pixels:
             raise Refused(f'pixel cap: {Path(path).name}')
+        check_vertical(src, f'B ({Path(path).name})')
         values = src.read(1, masked=True).astype('float64').filled(np.nan)
         sig = signature(src, values)
         out = np.full((a_ds.height, a_ds.width), np.nan, dtype='float64')
@@ -135,10 +151,13 @@ def verify(args):
     if missing:
         raise Refused('catalog entry missing: ' + ', '.join(missing))
     with rasterio.open(corrected_path) as a_ds, rasterio.open(prov_path) as p_ds:
+        if a_ds.driver != 'GTiff':
+            raise Refused(f'A not GeoTIFF ({a_ds.driver})')
         if a_ds.width * a_ds.height > args.max_pixels:
             raise Refused('pixel cap: A')
         if (p_ds.shape != a_ds.shape or p_ds.crs != a_ds.crs or p_ds.transform != a_ds.transform):
             raise Refused('provenance grid differs from corrected grid')
+        check_vertical(a_ds, 'A (corrected.tif)', require_declared=bool(args.b))
         a = a_ds.read(1, masked=True).astype('float64').filled(np.nan)
         prov, profile, tags = p_ds.read(1), p_ds.profile, p_ds.tags()
         a_depth = np.isfinite(a) & ~np.isin(prov, (CODES['nodata'], CODES['masked-sentinel']))

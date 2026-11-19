@@ -46,7 +46,7 @@ export type TripStatus='draft'|'planned'|'done'|'cancelled';
 export const TRIP_STATUSES:readonly TripStatus[]=['draft','planned','done','cancelled'];
 export const EXPORT_FORMATS=['gpx','text','garmin','lowrance','simrad','raymarine','inavx','navionics'] as const;
 export interface TripSpot {id:string;name:string;lat:number;lon:number;order:number;notes:string;depth_ft:number|null}
-export interface TripLeg {from:string;to:string;nm:number;minutes:number}
+export interface TripLeg {from:string;to:string;nm:number;minutes:number;basis?:'water'|'straight';screen?:{inside:boolean;screened:boolean;near?:true}}
 export interface TripWindow {depart:string|null;return_by:string|null;hours:number[]}
 export interface TripExport {format:typeof EXPORT_FORMATS[number];sha256:string;exported_at:string}
 export interface TripPlanBody {spots:TripSpot[];legs:TripLeg[];window:TripWindow;exports:TripExport[]}
@@ -65,7 +65,14 @@ function validatePlanBody(plan:ExternalJSON):TripPlanBody|null{
   });
   const legs=list(plan.legs,PLAN_LIMITS.legs,'legs').map((l):TripLeg=>{
     if(!l||typeof l!=='object')throw new ClientError('invalid leg');
-    return {from:cleanText(l.from,80),to:cleanText(l.to,80),nm:num(l.nm,0,300,'leg distance'),minutes:num(l.minutes,0,1440,'leg minutes')};
+    const leg:TripLeg={from:cleanText(l.from,80),to:cleanText(l.to,80),nm:num(l.nm,0,300,'leg distance'),minutes:num(l.minutes,0,1440,'leg minutes')};
+    const {basis,screen}=l;
+    if(basis===undefined&&screen===undefined)return leg; // legacy, not assumed to be water-routed
+    if(basis!=='water'&&basis!=='straight')throw new ClientError('invalid leg basis');
+    if(!screen||typeof screen!=='object'||Array.isArray(screen)||typeof screen.inside!=='boolean'||typeof screen.screened!=='boolean'
+      ||(screen.inside&&!screen.screened)||(screen.near!==undefined&&(screen.near!==true||!screen.screened||screen.inside)))throw new ClientError('invalid leg screen');
+    // Save-time preview metadata only; never persist boundary names, offsets or geometry.
+    return {...leg,basis,screen:{inside:screen.inside,screened:screen.screened,...(screen.near===true?{near:true as const}:{})}};
   });
   const w=plan.window??{};if(typeof w!=='object'||Array.isArray(w))throw new ClientError('invalid window');
   const clock=(v:unknown,what:string):string|null=>{if(v===undefined||v===null||v==='')return null;if(typeof v!=='string'||!CLOCK.test(v))throw new ClientError('invalid '+what);return v;};
@@ -105,13 +112,10 @@ export async function sendPush(env:Env,s:SubscriptionRow,data:{title:string;body
 export function retryable(status:string,httpStatus:number|null,attempt:number):boolean{
   return status==='failed'&&(httpStatus===429||httpStatus!==null&&httpStatus>=500&&httpStatus<=599)&&attempt<3;
 }
-async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{
+async function deliver(env:Env,event:AlertEventRow,retryOnly=false):Promise<boolean>{
   const subscriptions=(await db(env).prepare('SELECT * FROM subscriptions WHERE owner=?').bind(event.owner).all<SubscriptionRow>()).results;
   if(subscriptions.length&&!pushConfigured(env)){
-    // No VAPID pair on this deployment: claim no receipts and leave the event 'pending'.
-    // checkTrip only calls deliver() for pending events, so the first check after the
-    // keys are set sends it. A 429/5xx receipt also leaves it pending (one retry per check,
-    // at most 3 attempts); a 'held' event is final and never retried.
+    // No VAPID pair: claim no receipts and leave event visibility unchanged.
     console.error(JSON.stringify({event:'push_unconfigured',alert:event.id}));
     return false;
   }
@@ -122,15 +126,19 @@ async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{
     const rows=(await db(env).prepare('SELECT id,status,http_status FROM delivery_receipts WHERE id IN (?,?,?)').bind(...ids).all<{id:string;status:string;http_status:number|null}>()).results;
     if(rows.some(r=>r.status==='accepted')){delivered=true;continue;}
     const last=Math.max(0,...rows.map(r=>ids.indexOf(r.id)+1)),prior=rows.find(r=>r.id===ids[last-1]);
-    if(prior&&!retryable(prior.status,prior.http_status,last))continue;
+    if(prior?!retryable(prior.status,prior.http_status,last):retryOnly)continue;
     const id=ids[last];
     const claim=await db(env).prepare('INSERT OR IGNORE INTO delivery_receipts(id,event_id,subscription_id,status,attempt_at) VALUES(?,?,?,?,?)').bind(id,event.id,s.id,'sending',new Date().toISOString()).run();
     if(!claim.meta.changes)continue;
-    let {status,httpStatus}=await sendPush(env,s,{title:'SkipperCast trip update',body:event.message.slice(0,1600),eventId:event.id,url:'/#forecast'});
+    // A visible event keeps its original assessment. A delayed push points to
+    // the trip without repeating a forecast that may no longer be current.
+    const body=retryOnly?'There is an update for your saved trip. Open SkipperCast to recheck current conditions.':event.message.slice(0,1600);
+    let {status,httpStatus}=await sendPush(env,s,{title:'SkipperCast trip update',body,eventId:event.id,url:'/#forecast'});
     if(status==='expired'){try{await db(env).prepare('DELETE FROM subscriptions WHERE id=?').bind(s.id).run();}catch{status='uncertain';}}
     await db(env).prepare('UPDATE delivery_receipts SET status=?,http_status=? WHERE id=?').bind(status,httpStatus,id).run();
     if(status==='accepted')delivered=true;else if(retryable(status,httpStatus,last+1))retry=true;
   }
+  if(retryOnly)return delivered; // Receipt updates must not touch read state or the first delivery time.
   if(delivered)await db(env).prepare('UPDATE alert_events SET status=?,delivered_at=? WHERE id=?').bind('delivered',new Date().toISOString(),event.id).run();
   else if(!retry)await db(env).prepare('UPDATE alert_events SET status=? WHERE id=?').bind(subscriptions.length?'held':'in-app',event.id).run();
   return delivered;
@@ -153,8 +161,25 @@ export interface CheckResult {checked:number;changes:number;delivered:number;hel
 export type TripOutcome = 'unchanged'|'skipped'|'delivered'|'held'|'in_app';
 /** Parsed public inputs, shared by the trips of one check run (or queue batch). */
 export type FeedCache = Map<string,Promise<ExternalJSON[]>>;
-// Trips still due a check: enabled, and not past their final alert.
-const DUE='enabled=1 AND final_delivered_at IS NULL';
+// Only devices with a known transient failure and attempts left make a visible
+// event due. All receipts for such a device must be transient: a later accepted,
+// uncertain or in-flight receipt closes it, even if an earlier attempt failed.
+const VISIBLE_RETRY=`e.status IN ('delivered','read') AND e.created_at>=? AND EXISTS (
+  SELECT 1 FROM delivery_receipts r JOIN subscriptions s ON s.id=r.subscription_id AND s.owner=e.owner
+  WHERE r.event_id=e.id GROUP BY r.subscription_id
+  HAVING COUNT(*)<3 AND COUNT(CASE WHEN r.status='failed' AND (r.http_status=429 OR r.http_status BETWEEN 500 AND 599) THEN 1 END)=COUNT(*)
+)`;
+// Follow up recent alerts, not the historical ledger. Limit each trip's work per check.
+const retryCutoff=(now:number)=>new Date(now-86400000).toISOString();
+const DUE=`enabled=1 AND (final_delivered_at IS NULL OR EXISTS (
+  SELECT 1 FROM alert_events e WHERE e.owner=trips.owner AND e.trip_id=trips.id AND ${VISIBLE_RETRY}
+))`;
+
+async function retryVisibleAlerts(env:Env,trip:TripRow,now:number):Promise<void>{
+  const events=(await db(env).prepare(`SELECT e.* FROM alert_events e WHERE e.owner=? AND e.trip_id=? AND ${VISIBLE_RETRY} ORDER BY e.created_at,e.id LIMIT 5`)
+    .bind(trip.owner,trip.id,retryCutoff(now)).all<AlertEventRow>()).results;
+  for(const event of events)await deliver(env,event,true);
+}
 type SlotTrip=Pick<TripRow,'date'|'created_at'|'final_delivered_at'>;
 /** Saved before its date in the region zone, so a day-before final slot existed. An unparsable created_at counts as saved before. */
 export function hadFinalSlot(trip:SlotTrip,zone:string):boolean{const saved=Date.parse(trip.created_at);return !Number.isFinite(saved)||dateInZone(saved,zone)<trip.date;}
@@ -181,6 +206,8 @@ async function tripInputs(feeds:FeedCache,feedKey:string,region:Region,zones:Mar
  */
 export async function checkTrip(env:Env,trip:TripRow,now:number,feeds:FeedCache):Promise<{outcome:TripOutcome;created:boolean}>{
   const region=regions[trip.region];if(!region)return {outcome:'skipped',created:false};
+  await retryVisibleAlerts(env,trip,now);
+  if(trip.final_delivered_at)return {outcome:'skipped',created:false};
   const today=dateInZone(now,region.timezone),tomorrow=plusDays(today,1);
   const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:region.timezone,hour:'2-digit',hourCycle:'h23'}).format(new Date(now)));
   let missed=false;
@@ -221,7 +248,7 @@ function tally(trips:TripRow[],results:{outcome:TripOutcome;created:boolean}[]):
 
 /** One page of 25 due trips after `cursor` (the manual and fallback path: POST /api/jobs/check). */
 export async function checkTrips(env:Env,cursor=''):Promise<CheckResult>{
-  const now=Date.now(),trips=(await db(env).prepare(`SELECT * FROM trips WHERE ${DUE} AND id>? ORDER BY id LIMIT 25`).bind(cursor).all<TripRow>()).results;
+  const now=Date.now(),trips=(await db(env).prepare(`SELECT * FROM trips WHERE id>? AND ${DUE} ORDER BY id LIMIT 25`).bind(cursor,retryCutoff(now)).all<TripRow>()).results;
   const feeds:FeedCache=new Map(),results=[];
   for(const trip of trips)results.push(await checkTrip(env,trip,now,feeds));
   await prune(env,now);
@@ -230,7 +257,7 @@ export async function checkTrips(env:Env,cursor=''):Promise<CheckResult>{
 
 /** Every due trip of one owner (the queue consumer's unit of work). */
 export async function checkOwnerTrips(env:Env,owner:string,now=Date.now(),feeds:FeedCache=new Map()):Promise<Omit<CheckResult,'next_cursor'>>{
-  const trips=(await db(env).prepare(`SELECT * FROM trips WHERE owner=? AND ${DUE} ORDER BY id`).bind(owner).all<TripRow>()).results;
+  const trips=(await db(env).prepare(`SELECT * FROM trips WHERE owner=? AND ${DUE} ORDER BY id`).bind(owner,retryCutoff(now)).all<TripRow>()).results;
   const results=[];
   for(const trip of trips)results.push(await checkTrip(env,trip,now,feeds));
   return tally(trips,results);
@@ -238,5 +265,5 @@ export async function checkOwnerTrips(env:Env,owner:string,now=Date.now(),feeds:
 
 /** Owners with due trips, in pages (the cron producer). */
 export async function ownersWithDueTrips(env:Env,after='',limit=500):Promise<string[]>{
-  return (await db(env).prepare(`SELECT DISTINCT owner FROM trips WHERE ${DUE} AND owner>? ORDER BY owner LIMIT ?`).bind(after,limit).all<{owner:string}>()).results.map(r=>r.owner);
+  return (await db(env).prepare(`SELECT DISTINCT owner FROM trips WHERE ${DUE} AND owner>? ORDER BY owner LIMIT ?`).bind(retryCutoff(Date.now()),after,limit).all<{owner:string}>()).results.map(r=>r.owner);
 }

@@ -24,7 +24,7 @@ async function load() {
   mod = await import(pathToFileURL(out).href);
   return mod;
 }
-const BASE = {name: 'Test', map: {center: [35.37, -120.86]}};
+const BASE = {id: 'test', name: 'Test', map: {center: [35.37, -120.86]}};
 /** One fresh reader per body, so no read is shared from a cache. */
 const read = async (body, id = 'test') => (await load()).createRegionReader(async () => new Response(body))(id);
 const readJson = (json, id) => read(JSON.stringify(json), id);
@@ -94,10 +94,10 @@ test('a malformed or out-of-range center is null (never a throw or REGION_MISSIN
     assert.equal(r, null, `center ${JSON.stringify(center)}`);
     assert.notEqual(r, REGION_MISSING);
   }
-  assert.equal(await readJson({name: 'No map'}), null);
-  const direct = center => createRegionReader(async () => ({ok: true, json: async () => ({name: 'T', map: {center}})}))('direct');
+  assert.equal(await readJson({id: 'test', name: 'No map'}), null);
+  const direct = center => createRegionReader(async () => ({ok: true, json: async () => ({id: 'direct', name: 'T', map: {center}})}))('direct');
   for (const center of [[NaN, 0], [0, Infinity], [-Infinity, 0]]) assert.equal(await direct(center), null);
   for (const center of [[-90, -180], [90, 180], [0, 0], [35.37, -120.86]]) {
-    assert.deepEqual((await readJson({...BASE, map: {center}}, 'edge')).center, center);
+    assert.deepEqual((await readJson({...BASE, map: {center}})).center, center);
   }
 });

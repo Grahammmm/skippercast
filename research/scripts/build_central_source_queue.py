@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlsplit
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
 from research.lib.receipts import locate
+from research.scripts.build_central_coverage_ledger import regions_without_qualified_targets
 
 
 SECTORS = (
@@ -432,7 +433,6 @@ def build(root):
                         for sid in row["rat_measured_survey_ids"]}
         historical_hydrography = sorted(sid for sid in upstream_ids if re.fullmatch(r"[BHW]\d{5}(?:_.*)?", sid))
         coastal_dem = sorted(upstream_ids - set(historical_hydrography))
-        region_gaps = [r["region_id"] for r in ledger["regions"] if not r["qualified_targets_at_or_under_200ft"]]
         # Priority is a *source-review* queue, not a predicted fish-density map.
         tier = 1 if paired else 2 if fine_leads or sector_id == "big-sur" else 3
         source_rows.append({
@@ -673,7 +673,7 @@ def build(root):
         "source_catalog_times": {"noaa_discovery": discovery["collected_at"],
                                  "noaa_products": products["collected_at"], "usgs": usgs["retrieved_at"]},
         "status": "research-only",
-        "region_gaps": region_gaps,
+        "region_gaps": regions_without_qualified_targets(ledger["regions"]),
         "sectors": source_rows,
         "method_note": "Catalog intersections, BAG links, BlueTopo contributor-table IDs, multibeam swath-footprint intersections and filename spacing hints are not measured 25–300 ft raster coverage or evidence of fish. The legacy fine-grid-leads field now requires reviewed native cells in the browse sector; it is still a source lead, not a fishing spot. CSUMB BSS native-band pixel counts are nominal NAVD88 source evidence, but lack chart-datum conversion, source uncertainty, independent rock confirmation and redistribution rights. Big Creek/Lopez Point counts are interpolated processed DEM output cells, not independent soundings or rock observations; they remain on chart-datum, uncertainty and rights hold. The Estero WGS84 direct-frame/2008 class join uses 100 m block-center VDatum offsets and tests class stability, not a cellwise chart-MLLW/error surface or exact fishable geometry; its registration, uncertainty, legal, chart and biological gates remain open. The 2010 SCC grids check only four of seven shallower Estero research blocks and none of the 53 deeper blocks. Re-run discovery and inspect original pixels before promotion.",
     }

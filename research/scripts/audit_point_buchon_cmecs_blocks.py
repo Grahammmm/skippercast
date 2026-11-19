@@ -29,7 +29,22 @@ BLOCK_FILES = {
     "original_csumb_depth": "point-buchon-2009-csumb-100m-blocks.geojson",
     "historical_rov": "point-buchon-rov-100m-blocks.geojson",
 }
+BLOCK_PRODUCERS = {
+    "original_csumb_depth": "research/scripts/audit_point_buchon_2009_access_blocks.py",
+    "historical_rov": "research/scripts/audit_point_buchon_rov_access_blocks.py",
+}
 EXPECTED_BLOCK_COUNTS = {"original_csumb_depth": 181, "historical_rov": 26}
+
+
+def block_paths(block_dir):
+    """Both private block files must exist before anything is hashed or compared."""
+    paths = {name: block_dir / file for name, file in BLOCK_FILES.items()}
+    missing = [f"{name} ({path.name}; produced by {BLOCK_PRODUCERS[name]})"
+               for name, path in paths.items() if not path.is_file()]
+    if missing:
+        raise FileNotFoundError("Private research block file missing; run its producer first: "
+                                + ", ".join(missing))
+    return paths
 
 
 def digest(path):
@@ -112,9 +127,9 @@ def group(source, features, polygons):
 
 
 def audit(archive, block_dir):
+    paths = block_paths(block_dir)
     source_hash = digest(archive)
-    block_paths = {name: block_dir / file for name, file in BLOCK_FILES.items()}
-    block_hashes = {name: digest(path) for name, path in block_paths.items()}
+    block_hashes = {name: digest(path) for name, path in paths.items()}
     with tempfile.TemporaryDirectory(prefix="skippercast-cmecs-") as work:
         with ZipFile(archive) as z:
             names = {STEM + ext for ext in (".shp", ".shx", ".dbf", ".prj", ".shp.xml")}
@@ -135,7 +150,7 @@ def audit(archive, block_dir):
         if not all(text in metadata for text in ("position accuracies are highly variable", "polygon boundaries cannot be quantified", "video-supervised", "66,987 polygons")):
             raise ValueError("USGS CMECS accuracy or lineage metadata changed")
         results = {}
-        for name, path in block_paths.items():
+        for name, path in paths.items():
             features, polygons = blocks(path, EXPECTED_BLOCK_COUNTS[name])
             results[name] = group(source, features, polygons)
         return {

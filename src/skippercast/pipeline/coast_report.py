@@ -11,7 +11,7 @@ collector, so they are fetched here with `fish` `src/providers/index.ts` rules
 `latest.json` (`live.py`); catches, sea-surface temperature and protected areas
 from the daily feed (`collect.py`), with `fish` `catches.ts` rules. Each source
 keeps its own status, outcome and clocks; a failed one has no rows. As in
-`fish`, a run with no populated forecast and no buoy reading under 3 h old
+`fish`, a run with no populated forecast and no buoy reading 0–3 h old
 writes nothing, so the Worker falls back to Fish once the last report is 2 h old.
 """
 
@@ -231,24 +231,40 @@ def tides(payload, events):
     return out
 
 
-def observation(data, station, url):
-    """`parseNdbc` over the live feed's rows: the newest with a wave height, else with wind; one time for every field."""
+def _current_observation(at, now):
+    return at is not None and now is not None and 0 <= now - at <= 3 * HOUR
+
+
+def observation(data, station, url, now):
+    """The newest current row with wave height, else wind; one time for every field."""
     if data.get("station") != station or any(_obj(data.get("units")).get(k) != u for k, u in NDBC_UNITS.items()):
         raise ValueError("NDBC columns unavailable")
-    rows = sorted((r for r in _list(data.get("observations")) if isinstance(r, dict) and _ms(r.get("time")) is not None
-                   and (_number(r.get("WVHT")) or _number(r.get("WSPD")))), key=lambda r: _ms(r["time"]), reverse=True)
-    row = next((r for r in rows if _number(r.get("WVHT"))), rows[0] if rows else None)
-    if row is None:
-        raise ValueError("No valid NDBC observations")
-    value = lambda k, scale=1, offset=0: row[k] * scale + offset if _number(row.get(k)) else None
-    return {"stationId": station, "observedAt": iso(_ms(row["time"])), "url": url, "waveFt": value("WVHT", FT),
+    candidates = []
+    for row in _list(data.get("observations")):
+        at = _ms(_obj(row).get("time"))
+        if at is None or not _current_observation(at, now):
+            continue
+        has_wave = _number(row.get("WVHT"))
+        if has_wave or _number(row.get("WSPD")):
+            candidates.append((has_wave, at, row))
+    if not candidates:
+        raise ValueError("No valid NDBC observations in the last three hours")
+    _, at, row = max(candidates, key=lambda candidate: candidate[:2])
+    def value(k, scale: float = 1, offset: float = 0):
+        return row[k] * scale + offset if _number(row.get(k)) else None
+
+    return {"stationId": station, "observedAt": iso(at), "url": url, "waveFt": value("WVHT", FT),
             "wavePeriodS": value("DPD"), "waterTempF": value("WTMP", 1.8, 32), "windKnots": value("WSPD", KT),
             "gustKnots": value("GST", KT), "directionDeg": value("MWD")}
 
 
 def buoys(live, fallback):
     """Each buoy's `Observation` and status from the live feed, with the live collector's fetch clock and outcome."""
-    feed = _obj(live.get("sources")) if _obj(live).get("schema_version") == 1 and live.get("region_id") == REGION else {}
+    live = _obj(live)
+    feed = _obj(live.get("sources")) if live.get("schema_version") == 1 and live.get("region_id") == REGION else {}
+    now = _ms(fallback)
+    if now is None:  # Without a report clock, evaluate at the live feed's own edition time.
+        now = _ms(live.get("generated_at"))
     rows, statuses = [], []
     for station, name in BUOYS:
         url = f"https://www.ndbc.noaa.gov/data/realtime2/{station}.txt"
@@ -256,9 +272,11 @@ def buoys(live, fallback):
         status = {"id": f"ndbc-{station}", "label": f"NDBC · {name}", "url": url, "kind": "observation"}
         try:
             fetched = _iso(record.get("data_retrieved_at"))
-            if record.get("status") not in ("ok", "stale") or not isinstance(record.get("data"), dict) or not fetched:
+            if record.get("status") == "stale":
+                raise ValueError("Upstream buoy record is stale")
+            if record.get("status") != "ok" or not isinstance(record.get("data"), dict) or not fetched:
                 raise ValueError(record.get("issue") or "No current record in the live buoy feed")
-            rows.append(observation(record["data"], station, url))
+            rows.append(observation(record["data"], station, url, now))
             statuses.append({**status, "outcome": "ok", "fetchedAt": fetched})
         except FAILURES as error:
             statuses.append(_error(status, error, fetchedAt=_iso(record.get("checked_at")) or fallback))
@@ -447,7 +465,7 @@ def assemble(session, live, now=None):
         row, status, zones[area[0]] = forecast(session, area, start, clock())
         forecasts.append(row)
         sources.append(status)
-    observations, statuses = buoys(live, clock())
+    statuses = []
     predicted = {}
     for product, ident in (("6", "coops-tides"), ("hilo", "coops-tide-events")):
         status = {"id": ident, "label": f"NOAA tides · {TIDE_NAME}", "url": tide_url(moment, product), "kind": "prediction", "fetchedAt": clock()}
@@ -471,18 +489,21 @@ def assemble(session, live, now=None):
         daily = error
     trips, status, catch_status, context = catches(daily, _ms(clock()), received)
     layers, spatial_statuses = spatial(daily, received)
-    return {"schemaVersion": 1, "countyId": COUNTY, "generatedAt": clock(), "forecasts": forecasts, "observations": observations,
+    generated = clock()
+    observations, buoy_statuses = buoys(live, generated)
+    return {"schemaVersion": 1, "countyId": COUNTY, "generatedAt": generated, "forecasts": forecasts, "observations": observations,
             "tides": predicted["coops-tides"], "tideEvents": predicted["coops-tide-events"], "alerts": active,
-            "sources": sources + statuses + spatial_statuses + [status], "catches": trips, "catchStatus": catch_status,
+            "sources": sources + buoy_statuses + statuses + spatial_statuses + [status], "catches": trips, "catchStatus": catch_status,
             **({"catchContext": context} if context else {}),
             "visibility": {"status": "unknown", "feet": None, "observedAt": None, "sourceUrl": None}, "habitatStatus": HABITAT,
             "spatial": layers}
 
 
 def publishable(report):
-    """`publicationDecision`, reduced: a populated forecast area or a buoy observation under three hours old."""
+    """A populated forecast area or a buoy observation 0–3 hours old."""
     now = _ms(report["generatedAt"])
-    return any(f["hours"] for f in report["forecasts"]) or any(now - _ms(o["observedAt"]) <= 3 * HOUR for o in report["observations"])
+    return any(f["hours"] for f in report["forecasts"]) or any(
+        _current_observation(_ms(o.get("observedAt")), now) for o in report["observations"])
 
 
 def main(argv=None, session=None, now=None):

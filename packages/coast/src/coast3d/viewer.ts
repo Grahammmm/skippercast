@@ -33,6 +33,7 @@ export class CoastViewer{
  private renderer:T.WebGLRenderer;private scene=new T.Scene();private camera:T.PerspectiveCamera|T.OrthographicCamera=new T.PerspectiveCamera(42,1,2,1000000);private controls:OrbitControls;
  private manifest!:RegionalManifest;private seams=new T.Group();private atlas:T.Texture|undefined;private detailImages=new Set<string>();private terrain=new T.Group();private waters=new T.Group();private habitat=new T.Group();private currents=new T.Group();private overview:Grid|null=null;private background:Grid|null=null;
  private loaded=new Map<string,Loaded>();private textures=new Map<string,Promise<T.Texture>>();private textureValues:T.Texture[]=[];private pending=new Set<string>();
+ private textureRetries=new Map<string,{after:number;delay:number}>();
  private coverage!:T.DataTexture;private harborCoverage!:T.DataTexture;private cols=0;private rows=0;
  private relief={value:5};private contours={value:1};private sourceColors={value:0};private waterOpacity={value:.5};
  // Presentation-only shading (shading.ts): ramp window in metres of depth, contour spacing, sun and the land photo blend.
@@ -131,7 +132,23 @@ export class CoastViewer{
   };m.customProgramCacheKey=()=>`coastal-${kind}-${water}-${!!texture}-${!!this.atlas}`;return m;
  }
  private imageryFor(grid:Grid,detail=true){const cx=grid.x+(grid.size-1)*grid.dx/2,cz=grid.z+(grid.size-1)*grid.dz/2;return this.manifest.imagery.filter(a=>(a.kind!=='detail'||(detail&&this.detailImages.has(a.url)))&&cx>=a.bounds[0]&&cx<=a.bounds[2]&&cz>=a.bounds[1]&&cz<=a.bounds[3]).sort((a,b)=>Number(b.kind==='detail')-Number(a.kind==='detail')||Number(b.kind==='harbor')-Number(a.kind==='harbor')||(b.bounds[2]-b.bounds[0])-(a.bounds[2]-a.bounds[0]))[0];}
- private async texture(asset:Asset){let pending=this.textures.get(asset.url);if(!pending){pending=(async()=>{const data=await verifiedAsset(asset),bitmap=await createImageBitmap(new Blob([data],{type:asset.url.endsWith('.png')?'image/png':'image/jpeg'}),{imageOrientation:'flipY',...(this.host.clientWidth<600&&asset.url.endsWith('/harbor.jpg')?{resizeWidth:2048,resizeHeight:2048}:{})});if(!this.alive){bitmap.close();throw Error('Viewer disposed');}const t=new T.CanvasTexture(bitmap);t.colorSpace=T.SRGBColorSpace;t.anisotropy=Math.min(8,this.renderer.capabilities.getMaxAnisotropy());t.name=asset.url;this.textureValues.push(t);return t;})();this.textures.set(asset.url,pending);}return pending;}
+ private async texture(asset:Asset){
+  const cached=this.textures.get(asset.url);if(cached)return cached;
+  const retry=this.textureRetries.get(asset.url);
+  // Refinement on later view changes may retry; neither a frame nor a timer starts a fetch.
+  if(retry&&performance.now()<retry.after)throw Error('Texture cooling down');
+  const pending=(async()=>{
+   const data=await verifiedAsset(asset),bitmap=await createImageBitmap(new Blob([data],{type:asset.url.endsWith('.png')?'image/png':'image/jpeg'}),{imageOrientation:'flipY',...(this.host.clientWidth<600&&asset.url.endsWith('/harbor.jpg')?{resizeWidth:2048,resizeHeight:2048}:{})});
+   if(!this.alive){bitmap.close();throw Error('Viewer disposed');}
+   const t=new T.CanvasTexture(bitmap);t.colorSpace=T.SRGBColorSpace;t.anisotropy=Math.min(8,this.renderer.capabilities.getMaxAnisotropy());t.name=asset.url;this.textureValues.push(t);this.textureRetries.delete(asset.url);return t;
+  })().catch(error=>{
+   // One rejection handler for the shared attempt, regardless of the number of tiles using it.
+   this.textures.delete(asset.url);
+   if(this.alive){const delay=Math.min((retry?.delay??500)*2,16000);this.textureRetries.set(asset.url,{after:performance.now()+delay,delay});}
+   throw error;
+  });
+  this.textures.set(asset.url,pending);return pending;
+ }
  private addSurface(grid:Grid,kind:number,child:boolean,texture?:T.Texture,extent?:number[]){const g=this.geometry(grid,false);const mesh=new T.Mesh(g,this.material(grid,kind,false,texture,extent)),water=new T.Mesh(g,this.material(grid,kind,true));mesh.frustumCulled=water.frustumCulled=false;mesh.userData.grid=grid;mesh.userData.kind=kind;mesh.userData.imageURL=texture?.name;water.renderOrder=2;this.terrain.add(mesh);this.waters.add(water);return {mesh,water};}
  private notifyView(){if(!this.alive||!this.visible)return;const [longitude,latitude]=coastLonLat(this.controls.target.x,this.controls.target.z),span=this.span();if([latitude,longitude,span].every(Number.isFinite)&&span>0)this.options.onView?.({latitude,longitude,span,...this.orbitAngles()});}
  /** Bearing and pitch (degrees) of the real perspective camera offset; nothing for an orthographic camera or a degenerate offset. */
@@ -143,7 +160,7 @@ export class CoastViewer{
  private removeLoaded(key:string,item:Loaded){this.setCoverage(item.tile,item.child,false);this.terrain.remove(item.mesh);this.waters.remove(item.water);item.mesh.geometry.dispose();(item.mesh.material as T.Material).dispose();(item.water.material as T.Material).dispose();this.loaded.delete(key);}
  private async loadTile(tile:RegionTile,level:number,child:boolean,rev:number){const key=(child?'h':'t')+tile.x+':'+tile.z;const old=this.loaded.get(key),centreGrid={x:tile.x,z:tile.z,size:2,dx:tile.width,dz:tile.width,values:new Float32Array(4)};const desired=this.imageryFor(centreGrid);if(this.pending.has(key)||(old?.level===level&&old.mesh.userData.imageURL===desired?.url))return;this.pending.add(key);
   try{const a=tile.lods[level],grid=old?.level===level?old.grid:decodeTerrain(await verifiedAsset(a),a.size,tile.x,tile.z,a.spacing,a.spacing,this.allowedSources);let image=desired,texture:T.Texture|undefined;try{if(image)texture=await this.texture(image);}catch{image=this.imageryFor(grid,false);try{if(image)texture=await this.texture(image);}catch{/* Geographic context remains available. */}}
-   if(!this.alive||rev!==this.revision)return;const previous=this.loaded.get(key);if(previous)this.removeLoaded(key,previous);const surfaces=this.addSurface(grid,child?2:1,child,texture,image?.bounds);this.loaded.set(key,{tile,grid,level,child,...surfaces});this.setCoverage(tile,child,true);
+   if(!this.alive||rev!==this.revision)return;const previous=this.loaded.get(key);if(previous?.level===level&&previous.mesh.userData.imageURL===texture?.name)return;if(previous)this.removeLoaded(key,previous);const surfaces=this.addSurface(grid,child?2:1,child,texture,image?.bounds);this.loaded.set(key,{tile,grid,level,child,...surfaces});this.setCoverage(tile,child,true);
   }catch(e){console.warn('Keeping regional context while detail is unavailable',e);}finally{this.pending.delete(key);}}
  private async refine(){if(!this.manifest||!this.alive||!this.visible)return;const rev=++this.revision;if(this.refining)return;this.refining=true;
   try{const span=this.span();if(this.perspective==='3d')this.scene.fog=new T.Fog(this.palette.ground,span*1.8,span*5);const x=this.controls.target.x,z=this.controls.target.z,mobile=this.host.clientWidth<600;this.detailImages=new Set(span<16000?this.manifest.imagery.filter(a=>a.kind==='detail').sort((a,b)=>Math.hypot((a.bounds[0]+a.bounds[2])/2-x,(a.bounds[1]+a.bounds[3])/2-z)-Math.hypot((b.bounds[0]+b.bounds[2])/2-x,(b.bounds[1]+b.bounds[3])/2-z)).slice(0,mobile?3:8).map(a=>a.url):[]);

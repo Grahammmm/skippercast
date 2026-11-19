@@ -246,6 +246,9 @@ class StationFailoverTests(TestCase):
         feed = {"generated_at": NOW.isoformat(), "sources": {"buoy-x": {
                 "id": "buoy-x", "status": "ok", "kind": "observation", "station": "46299",
                 "fallback_for": "46215", "data": {"sample_at": NOW.isoformat()}}}}
+        # The daily feed also requires its other critical kinds (F04-12); healthy ones leave the backup the only finding.
+        feed["sources"].update({kind: {"id": kind, "status": "ok", "kind": kind, "data": {"sample_at": NOW.isoformat()}}
+                                for kind in ("prediction", "advisory", "forecast")})
         bits, lines = source_verdict(feed, 6, "Synthetic feed")
         self.assertEqual(bits & FAILING, 0)
         self.assertIn("backup 46299 for 46215", "\n".join(lines))
