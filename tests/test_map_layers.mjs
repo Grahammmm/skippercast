@@ -710,7 +710,10 @@ test('FE-82: protected areas, reef marks and charter grounds drape on the terrai
   // Coast overlays retain their general UI roles; the Chart's independent roles have equal defaults.
   const ring = markStyle({...sentinel, mapInkHalo: sentinel.bg, markRing: sentinel.mint}).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
   assert.deepEqual([marks.kind, sentinel[marks.color], marks.opacity, sentinel[marks.outline]], ['point', ring['circle-color'], ring['circle-opacity'], ring['circle-stroke-color']]);
-  assert.equal(marks.size, ring['circle-radius'] * 2, 'the ring\'s diameter');
+  // MB-16: the Chart ring's radius is a cluster/spot expression; the terrain draws single spots, so it matches the spot (last, non-cluster) branch.
+  const spotRadius = ring['circle-radius'].at(-1);
+  assert.equal(typeof spotRadius, 'number', 'the non-cluster branch is a plain radius');
+  assert.equal(marks.size, spotRadius * 2, 'the ring\'s diameter');
   const grounds = groundsOverlay(sentinel, {outlines: {type: 'FeatureCollection', features: []}, hatch: {type: 'FeatureCollection', features: []}});
   const charter = layerEntry('charter-grounds').terrain;
   assert.deepEqual([sentinel[charter.color], sentinel[charter.outline]], [grounds.layers.find(l => l.id === 'charter-grounds-line').paint['line-color'], sentinel.amber]);
@@ -718,7 +721,7 @@ test('FE-82: protected areas, reef marks and charter grounds drape on the terrai
   assert.equal(drawsIn('fleet', '3d'), true);
   assert.equal(drawsIn('fleet', '2d'), true);
   assert.deepEqual(drapeStyle(mpas, OVERLAY_PALETTE), {color: 'mpaFill', opacity: 0.18, outline: 'mpaLine'}, 'roles stay roles; the opacity token is a number');
-  assert.deepEqual(drapeStyle(marks, OVERLAY_PALETTE), {color: 'bg', opacity: 0.75, outline: 'mint', size: 18});
+  assert.deepEqual(drapeStyle(marks, OVERLAY_PALETTE), {color: 'bg', opacity: 0.75, outline: 'mint', size: 14});
 });
 
 test('FE-82: the stage drapes each feed in § 9 order, replaces what changed, removes what went and survives a refusal', t => {
