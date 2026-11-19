@@ -103,12 +103,9 @@ def verify(root, run_manifest, *, now, minimum_valid_until=None):
             or document.get('synthetic') != source_manifest.get('synthetic')
             or document.get('publication_prohibited') is not True):
         raise ValueError('mapping source/prohibition lineage changed')
-    checked = mapping_input.verify(root, source_manifest, now=now,minimum_valid_until=minimum_valid_until)
-    facts, holds, _, valid, transform, crs, depth = mapping_input.observe(
-        root, source_manifest['source'], window=source_manifest['window'], vertical=source_manifest['declared_vertical'],
-        source_row=source_manifest.get('source_row'), metadata_sha256=source_manifest.get('metadata_sha256'))
-    mapping_input.bind_segment(root,source_manifest.get('segment'),source_manifest['segment_id'],facts)
-    facts.update(rights=source_manifest.get('rights'),synthetic=source_manifest.get('synthetic'))
+    checked, observation = mapping_input._verify_with_observation(
+        root, source_manifest, now=now, minimum_valid_until=minimum_valid_until)
+    facts, _, _, valid, transform, crs, depth = observation
     if facts['header'].get('horizontal_units') == 'degree':
         raise ValueError('native_geographic_grid_derivatives_unsupported')
     if facts['header']['resolution_m'][0] != facts['header']['resolution_m'][1]:
