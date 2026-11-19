@@ -20,7 +20,7 @@ const raw = await readFile(manifest);
 const release = JSON.parse(raw);
 const digest = sha(raw);
 const root = resolve(dirname(manifest), '../..');
-const archive = 'layers/public/relief.pmtiles';
+const archive = 'layers/public/tiles/relief.pmtiles'; // the tiles stage's own leaf (package.ARCHIVE)
 const index = 'layers/public/relief.digests/';
 const layers = new Map(release.layers.map(row => [row.path, row]));
 if (release.schema !== 'sc-relief-release/1' || release.private !== false ||
@@ -65,7 +65,7 @@ const pointer = {...release, sha256: archiveRef.sha256, bytes: archiveRef.bytes,
   release_sha256: digest, envelope_sha256: '0'.repeat(64)};
 const object = `/feeds/tiles/relief/${release.region}/${archiveRef.sha256}`;
 const digestBase = `${object}.digests/${release.digest_root_sha256}/`;
-const detailKey = 'layers/public/detail.geojson';
+const detailKey = 'layers/public/zone/detail.geojson'; // the zone stage's own leaf
 const detail = layers.has(detailKey) ? JSON.parse(await pinnedBytes(detailKey)) : undefined;
 const digestRoot = await pinnedBytes(`${index}root.json`);
 const [chart, worker] = await Promise.all([
