@@ -33,7 +33,7 @@ def make_root(tmp, regions, index=None):
         if data is None:
             continue
         (root / 'regions' / ident).mkdir()
-        text = data if isinstance(data, str) else json.dumps(data)
+        text = data if isinstance(data, str) else json.dumps({'region_id': ident, **data})
         (root / 'regions' / ident / 'regulations-health.json').write_text(text)
     return root
 
