@@ -14,18 +14,22 @@ import type {Engine, Overlay} from './engine.ts';
 import {layerEntry, setRailNote} from './layers.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {terrainHour} from './stage.ts';
+import {paintEdits} from './theme-restyle.ts';
 import {copyText} from '../mark-copy.ts';
 import {sp, type StatusPart} from './status-copy.ts';
 import {activeTideChoice, stationGeoJSON, stationPins, type StationPin, type StationRegion} from './station-model.ts';
 
 export const STATION_SOURCE = 'stations', STATION_DOTS = 'station-dots', STATION_HIT = 'station-hit';
 export const stationState = signal<{pins: readonly StationPin[]; note: string; copy?: readonly StatusPart[]}>({pins: [], note: ''});
+const stationLayers = (p: Palette): Overlay['layers'] => [
+  {id: STATION_HIT, type: 'circle', source: STATION_SOURCE, paint: {'circle-radius': 22, 'circle-color': p.blue, 'circle-opacity': 0}},
+  {id: STATION_DOTS, type: 'circle', source: STATION_SOURCE, paint: {'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': p.mapInkHalo,
+    'circle-color': ['case', ['get', 'stale'], p.mapLabel, ['==', ['get', 'kind'], 'coops'], p.mint, p.blue]}},
+];
+/** Same layer and source IDs in both themes; a theme switch re-runs `stationLayers` and edits paints in place. */
 export function stationOverlay(p: Palette): Overlay {
-  return {sources: {[STATION_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}, attribution: layerEntry('stations').attribution}}, layers: [
-    {id: STATION_HIT, type: 'circle', source: STATION_SOURCE, paint: {'circle-radius': 22, 'circle-color': p.blue, 'circle-opacity': 0}},
-    {id: STATION_DOTS, type: 'circle', source: STATION_SOURCE, paint: {'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': p.mapInkHalo,
-      'circle-color': ['case', ['get', 'stale'], p.mapLabel, ['==', ['get', 'kind'], 'coops'], p.mint, p.blue]}},
-  ]};
+  return {sources: {[STATION_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}, attribution: layerEntry('stations').attribution}},
+    layers: stationLayers(p), themePaint: q => paintEdits(stationLayers(q))};
 }
 export function createStations(o: {engine: ReadonlySignal<Engine | null>; feed: () => RegionalDailyFeed | null; zone: () => string;
   fetchFn?: typeof fetch; palette?: () => Palette; now?: () => Date}) {
