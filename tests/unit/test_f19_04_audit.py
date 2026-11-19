@@ -24,10 +24,11 @@ class Observation(NamedTuple):
 
 class Case(NamedTuple):
     name: str
-    second_group: bool
+    binding_order: tuple[int, ...]
     conflict: bool
     contributors: tuple[int, ...]
     expected: Observation
+    complete_conflict: int | None = None
 
 
 # A partial 8 m grid overlaps three cells of a complete 8 m grid. A later,
@@ -36,24 +37,29 @@ class Case(NamedTuple):
 # ownership, with the class/reason of those selected cells. With that group,
 # the first complete grid wins, including its cells and all their EC codes.
 CASES = (
-    Case('same-group-mixed', False, False, (0, 0, 0, 1), Observation(6.5, 0, 'filled', shoal_hint_m=-1.5)),
-    Case('same-group-unresolved', False, True, (0, 0, 0, 1), Observation(None, 0, 'unresolved', 'conflict', -1.5)),
-    Case('across-groups-complete', True, False, (1, 1, 1, 1), Observation(20, 1, 'verified')),
-    Case('across-groups-loser-conflict', True, True, (1, 1, 1, 1), Observation(20, 1, 'verified', shoal_hint_m=-18)),
+    Case('same-group-mixed', (0, 1), False, (0, 0, 0, 1), Observation(6.5, 0, 'filled', shoal_hint_m=-1.5)),
+    Case('same-group-unresolved', (0, 1), True, (0, 0, 0, 1), Observation(None, 0, 'unresolved', 'conflict', -1.5)),
+    Case('across-groups-complete', (0, 1, 2), False, (1, 1, 1, 1), Observation(20, 1, 'verified')),
+    Case('across-groups-loser-conflict', (0, 1, 2), True, (1, 1, 1, 1), Observation(20, 1, 'verified', shoal_hint_m=-18)),
+    # The 8 m group is visited first, but the 16 m grid precedes the complete
+    # 8 m grid in binding order. Its win must replace the old depth or reason.
+    Case('group-replacement-clears-depth', (0, 2, 1), False, (2,),
+         Observation(None, 1, 'unresolved', 'conflict'), complete_conflict=2),
+    Case('group-replacement-clears-reason', (0, 2, 1), False, (2,),
+         Observation(30, 1, 'measured'), complete_conflict=1),
 )
 
 
 def _inputs(case):
-    elevations = [(-2, -2, -2, None), (-20,) * 4]
+    elevations = [(-2, -2, -2, None), (-20,) * 4, (-30,)]
     codes = [
         ('unresolved-conflict' if case.conflict else 'filled-hole', 'measured', 'measured', 'nodata'),
         ('verified',) * 4,
+        ('measured',),
     ]
-    hints = [(-1.5, None, None, None), (-18, None, None, None) if case.conflict else None]
-    if case.second_group:
-        elevations.append((-30,))
-        codes.append(('measured',))
-        hints.append(None)
+    if (i := case.complete_conflict) is not None:
+        codes[i] = ('unresolved-conflict', *codes[i][1:])
+    hints = [(-1.5, None, None, None), (-18, None, None, None) if case.conflict else None, None]
     return elevations, codes, hints
 
 
@@ -66,7 +72,7 @@ def test_reference_cells_support_expected_depth_and_provenance(case):
     depths = [-elevations[owner][cell] for cell, owner in enumerate(case.contributors)]
     provenance = ec.block_class([ec.CODES[code] for code in selected])
     reason = 'conflict' if 'unresolved-conflict' in selected else None
-    owner = Counter(case.contributors).most_common(1)[0][0]
+    owner = case.binding_order.index(Counter(case.contributors).most_common(1)[0][0])
     selected_hints = [hints[owner][cell] for cell, owner in enumerate(case.contributors)
                       if hints[owner] is not None and hints[owner][cell] is not None]
     assert Observation(None if reason else mean(depths), owner, provenance, reason,
@@ -90,13 +96,14 @@ def _observe(case):
 
     classes = {index: name for name, index in builder.CLASS_INDEX.items()}
     elevations, codes, hints = _inputs(case)
-    sides = (2, 2, 1)[:len(elevations)]
+    sides = [(2, 2, 1)[i] for i in case.binding_order]
     with ExitStack() as stack:
-        grids = [raster(stack, values, n, 'float32', np.nan) for values, n in zip(elevations, sides)]
-        ecs = [[raster(stack, [ec.CODES[c] for c in values], n, 'uint8')] for values, n in zip(codes, sides)]
-        for files, values, n in zip(ecs, hints, sides):
-            if values is not None:
-                files.append(raster(stack, values, n, 'float32', np.nan))
+        grids, ecs = [], []
+        for i, n in zip(case.binding_order, sides):
+            grids.append(raster(stack, elevations[i], n, 'float32', np.nan))
+            ecs.append([raster(stack, [ec.CODES[c] for c in codes[i]], n, 'uint8')])
+            if hints[i] is not None:
+                ecs[-1].append(raster(stack, hints[i], n, 'float32', np.nan))
         blocks = builder.merged_blocks(
             grids, (0, 16, 1, 1), [(0, 0, n) for n in sides], [(n, 'synthetic-datum') for n in sides], ecs)
     assert len(blocks) == 5, 'EC replay must return provenance along with depths and owners'
