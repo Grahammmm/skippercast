@@ -1,33 +1,23 @@
 #!/usr/bin/env python3
 """Guarded per-region runner for the relief pipeline (DATA-LIVE-6; E2E-PIPELINE §1-§3).
 
-    run_region.py <region> --out <OUT> --through <stage> --source SRC [--norm <NORM>] [--family F]
+    run_region.py <region> --out <OUT> --through <stage> [--norm <NORM>]
                   [--scope public] [--region-config FILE]
                   [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
-                  [--manifest JSON --upstream STAGE[:SCOPE] ...] [--generation SHA256] [--dry-run]
-                  [--qa-elevation TIF --qa-contributor TIF --qa-shots JSON [--qa-support TIF]
-                   [--qa-fine-proof ZOOM TIF ...] [--release-sha256 SHA256]]
+                  [--basemap PMTILES] [--qa-support TIF] [--qa-fine-proof ZOOM TIF ...]
     run_region.py <region> --out <OUT> --dry-run  # preview the full chain without stage inputs
 
-Runs ``region.py <stage> --region <region> --out <OUT>`` for every stage of the chain up to
-and including ``--through``, in this order::
+Runs ``region.py <stage> --region <region> --out <OUT>`` through the requested stage::
 
-    normalize select mosaic tiles contours zone digests package qa envelope
+    select mosaic tiles zone digests inventory package contours shots qa envelope
 
-Each stage also gets the inputs its own command line requires, as the stage modules declare
-them: ``normalize`` gets ``--source`` (always required), ``--cache <NORM>`` (always: the
-effective cache, resolved once as normalize itself would, so the path the guard checks is the
-path normalize writes) and, when given, ``--family``; ``mosaic``, ``tiles`` and ``zone`` get ``--scope <scope>`` (default
-``public``) and, when given, ``--region-config FILE`` (the DL-5 seam); ``zone`` also gets
-``--coarse``, ``--water``, ``--coarse-source`` and ``--coarse-date``; ``package`` gets
-``--manifest`` and every ``--upstream``; ``qa`` gets ``--elevation``, ``--contributor`` and ``--shots``
-(from ``--qa-elevation``, ``--qa-contributor``, ``--qa-shots``), the optional ``--support`` and
-``--fine-proof``, every ``--upstream`` again (qa's public evidence producers) and ``--generation`` and
-``--release-sha256`` (the options, else the package receipt's generation and its release.json hash;
-no value stops the run before qa); ``envelope`` gets ``--generation`` (the option, else the
-generation of the package receipt left by the package stage of this chain). A chain that reaches
-a stage without its required inputs is a usage error before anything runs. Those input paths
-are checked against the private-vault guard like OUT.
+Normalize separately, per source. Select reads the resulting cache. Package reads the
+inventory and its public producer receipts. Contours supply QA evidence only; they are
+not part of the release. Shots needs a local basemap and performs receipt-bound MB-08
+capture. The runner checks ``region.py status --json`` after package and shots: QA uses
+the exact package release hash and the shots stage's own generation, while the envelope
+uses the package generation. No caller-supplied manifest, evidence path for shots, or
+release identity can replace these handoffs.
 
 Each stage is a subprocess under ``nice -n 19 ionice -c3``. The run stops at the first stage
 that exits non-zero, names that stage and its code, and exits with the same code (a code
@@ -42,7 +32,7 @@ Before every stage (and so before the first) the run is refused, exit 3, while a
 * free space is under 250 GB on ``/`` or under 400 GB on ``/mnt/agentorange-backup``
   (a backup path that is not a mounted filesystem counts as under the floor, whatever the
   free space of the directory's parent filesystem is);
-* ``--out`` or the effective normalize cache (``--norm``, else ``$SC_RELIEF_NORM`` even when
+* ``--out`` or the effective normalized cache (``--norm``, else ``$SC_RELIEF_NORM`` even when
   empty, i.e. the working directory, else the built-in default) is, or resolves to, a path under
   ``/mnt/privatevault``.
 
@@ -69,6 +59,7 @@ import argparse
 from dataclasses import dataclass, field
 import errno
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -79,21 +70,15 @@ import subprocess
 import sys
 import time
 
-DEFAULT_NORM = '/mnt/agentorange-backup/seafloor-relief-cache/_norm'  # normalize's own --cache default
-SCOPED_STAGES = ('mosaic', 'tiles', 'zone')  # DL-5 seam: these take --scope and --region-config
-STAGES = ('normalize', 'select', 'mosaic', 'tiles', 'contours', 'zone', 'digests', 'package', 'qa', 'envelope')
-# Inputs the stage modules require on their own command line (a chain that reaches the stage without
-# them is a usage error before anything runs). envelope's --generation is not here: it is read from
-# the package receipt when not given.
-STAGE_INPUTS = {'normalize': ('source',), 'zone': ('coarse', 'water', 'coarse-source'), 'package': ('manifest', 'upstream'),
-                'qa': ('qa-elevation', 'qa-contributor', 'qa-shots')}
+DEFAULT_NORM = '/mnt/agentorange-backup/seafloor-relief-cache/_norm'  # select's --cache default
+SCOPED_STAGES = ('mosaic', 'tiles', 'zone')
+STAGES = ('select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'package', 'contours', 'shots', 'qa', 'envelope')
+STAGE_INPUTS = {'zone': ('coarse', 'water', 'coarse-source'), 'shots': ('basemap',)}
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 HEX64 = re.compile(r'[0-9a-f]{64}')
 LOCK_NAME = '.run_region.lock'
-QA_SHA_KEY = 'qa-release-sha256'  # a key of the extras dict that is not a stage: the explicit --release-sha256
 # file-valued options: fixed once by parse() so the guard and the stage see the same spelling
-PATH_OPTIONS = ('source', 'region_config', 'coarse', 'water', 'manifest',
-                'qa_elevation', 'qa_contributor', 'qa_shots', 'qa_support')
+PATH_OPTIONS = ('region_config', 'coarse', 'water', 'basemap', 'qa_support')
 GB = 10 ** 9
 STOP_FILE_NAMES = ('LOCAL-STOP', 'UNITFEED-STOP')
 
@@ -131,6 +116,7 @@ class Config:
     backup_path: str = '/mnt/agentorange-backup'
     backup_floor: int = 400 * GB
     forbidden_root: str = '/mnt/privatevault'
+    basemap_roots: tuple = (Path.home(), Path('/mnt/agentorange-backup'))
     max_runs: int = 2  # run_region.py processes on the box, this one included
     slot_dir: Path = Path('/tmp') / f'run_region-slots-{os.getuid()}'  # box-wide: never TMPDIR
     proc_root: str = '/proc'
@@ -142,12 +128,12 @@ class Config:
 
 
 def effective_norm(option, environ=None):
-    """The normalised-cache root normalize will really write, resolved once.
+    """The normalised-cache root select will really read, resolved once.
 
-    Mirrors normalize's own ``--cache`` rule (``src/skippercast/relief/normalize.py``): the option
+    Mirrors select's own ``--cache`` rule: the option
     if given, else ``$SC_RELIEF_NORM`` whenever it is *set* (an empty value is kept, and resolves
-    to the working directory, exactly as normalize would have it), else ``DEFAULT_NORM``. The
-    result is absolute; the guard checks this path and it is passed to normalize as ``--cache``.
+    to the working directory, exactly as select would have it), else ``DEFAULT_NORM``. The
+    result is absolute; the guard checks this path and it is passed to select as ``--cache``.
     """
     environ = os.environ if environ is None else environ
     value = option if option is not None else environ.get('SC_RELIEF_NORM', DEFAULT_NORM)
@@ -194,42 +180,41 @@ def stage_command(cfg, stage, region, out, extra=None):
             *(extra or {}).get(stage, ())]
 
 
-def stage_extras(args):
-    """Per-stage extra arguments: the inputs the stage modules themselves require (normalize
-    ``--source``, zone ``--coarse``/``--water``/``--coarse-source``, package ``--manifest`` and
-    ``--upstream``, envelope ``--generation``), plus the DL-5 seam, ``--scope`` (default public)
-    and ``--region-config`` for mosaic, tiles and zone."""
-    extra = {'normalize': [] if args.source is None else ['--source', args.source]}
-    if args.family:
-        extra['normalize'] += ['--family', args.family]
-    # normalize writes its cache here; always passed (resolved by parse), so the path the guard
-    # checks is the path normalize uses, whatever $SC_RELIEF_NORM holds
-    extra['normalize'] += ['--cache', str(args.norm)]
+def steps_through(through):
+    for stage in chain_through(through):
+        yield stage, None
+        if stage in ('package', 'shots'):
+            yield 'status', stage
+
+
+def stage_extras(args, out):
+    """Static inputs and preview values; status binds the latter during a real run."""
+    root = out / args.region
+    mosaic = root / 'mosaic/public'
+    extra = {
+        'select': ['--cache', str(args.norm)],
+        'package': ['--manifest', str(root / 'inventory/manifest.json'),
+                    '--upstream', 'tiles:public', '--upstream', 'digests',
+                    '--upstream', 'zone:public', '--upstream', 'inventory'],
+        'shots': ['--basemap', args.basemap or '<basemap>'],
+        'status': ['--json'],
+        'qa': ['--generation', '<generation>', '--release-sha256', '<release-sha256>',
+               '--elevation', str(mosaic / 'elevation.tif'), '--contributor', str(mosaic / 'contributor.tif'),
+               '--upstream', 'mosaic:public', '--shots', str(root / 'shots/<shots-generation>/shots.json')],
+        'envelope': ['--generation', '<generation>'],
+    }
     for stage in SCOPED_STAGES:
         extra[stage] = ['--scope', args.scope]
-        if args.region_config:
+    if args.region_config:
+        for stage in ('select', *SCOPED_STAGES):
             extra[stage] += ['--region-config', args.region_config]
     for name in ('coarse', 'water', 'coarse-source', 'coarse-date'):
         if value := getattr(args, name.replace('-', '_')):
             extra['zone'] += [f'--{name}', value]
-    if args.manifest:
-        extra['package'] = ['--manifest', args.manifest]
-    for ref in args.upstream or ():
-        extra.setdefault('package', []).extend(['--upstream', ref])
-    if args.generation:
-        extra['envelope'] = ['--generation', args.generation]
-    # qa also takes --generation and --release-sha256 (explicit, else read from the package receipt when
-    # qa starts: see qa_release); the rest is fixed before the chain starts
-    extra['qa'] = [] if args.qa_elevation is None else ['--elevation', args.qa_elevation]
-    extra['qa'] += [] if args.qa_contributor is None else ['--contributor', args.qa_contributor]
-    extra['qa'] += [] if args.qa_shots is None else ['--shots', args.qa_shots]
     if args.qa_support:
         extra['qa'] += ['--support', args.qa_support]
     for zoom, path in args.qa_fine_proof or ():
         extra['qa'] += ['--fine-proof', zoom, path]
-    for ref in args.upstream or ():  # the public evidence producers: the same stages that fed package
-        extra['qa'] += ['--upstream', ref]
-    extra[QA_SHA_KEY] = args.release_sha256
     return extra
 
 
@@ -243,42 +228,38 @@ def missing_inputs(args, through):
     return rows
 
 
-def package_generation(out, region):
-    """The current package receipt's generation (envelope's ``--generation``), or None."""
-    try:
-        doc = json.loads((Path(out) / region / 'stages' / 'package.json').read_text(encoding='utf-8'))
-    except (OSError, ValueError):
-        return None
-    value = doc.get('generation') if isinstance(doc, dict) else None
-    return value if isinstance(value, str) and HEX64.fullmatch(value) else None
+def attested_generation(raw, region, stage):
+    doc = json.loads(raw)
+    if not isinstance(doc, dict) or doc.get('region') != region or not isinstance(doc.get('stages'), list):
+        raise ValueError('invalid status document')
+    rows = [r for r in doc['stages'] if isinstance(r, dict) and r.get('key') == stage]
+    if len(rows) != 1:
+        raise ValueError(f'expected one {stage} status row')
+    row = rows[0]
+    if row.get('state') != 'done':
+        raise ValueError(f'{stage} is not done ({row.get("state")}: {row.get("reason")})')
+    generation = row.get('generation')
+    if not isinstance(generation, str) or not HEX64.fullmatch(generation):
+        raise ValueError(f'invalid {stage} generation')
+    return generation
 
 
-def package_release_sha256(out, region, generation):
-    """The sha256 the package receipt records for ``release/<generation>/release.json``, or None."""
-    try:
-        doc = json.loads((Path(out) / region / 'stages' / 'package.json').read_text(encoding='utf-8'))
-    except (OSError, ValueError):
-        return None
-    rows = doc.get('outputs') if isinstance(doc, dict) else None
-    for row in rows if isinstance(rows, list) else ():
-        if isinstance(row, dict) and row.get('path') == f'release/{generation}/release.json':
-            value = row.get('sha256')
-            return value if isinstance(value, str) and HEX64.fullmatch(value) else None
-    return None
+def bind_handoff(cfg, out, region, extra, raw, stage):
+    generation = attested_generation(raw, region, stage)
+    if stage == 'package':
+        release = real(out) / region / 'release' / generation / 'release.json'
+        if real(release) != release or under(release, cfg.forbidden_root):
+            raise ValueError('release path is not a canonical local artifact')
+        values = {'<generation>': generation, '<release-sha256>': hashlib.sha256(release.read_bytes()).hexdigest()}
+        for downstream in ('qa', 'envelope'):
+            extra[downstream] = [values.get(arg, arg) for arg in extra[downstream]]
+    else:
+        # The capture stage is content-addressed separately from the package.
+        index = extra['qa'].index('--shots') + 1
+        extra['qa'][index] = str(out / region / 'shots' / generation / 'shots.json')
 
 
-def qa_release(out, region, extra):
-    """qa's ``--generation`` and ``--release-sha256``: the explicit values, else the package receipt's.
-    ``None`` when either cannot be established (the run stops before qa)."""
-    given = extra.get('envelope')
-    generation = given[1] if given else package_generation(out, region)
-    if generation is None:
-        return None
-    digest = extra.get(QA_SHA_KEY) or package_release_sha256(out, region, generation)
-    return None if digest is None else ['--generation', generation, '--release-sha256', digest]
-
-
-def check_guards(cfg, out, norm, inputs=()):
+def check_guards(cfg, out, norm, inputs=(), *, basemap=None):
     """Every start/continue guard as ``[(name, ok, detail)]``. Never raises on a host quirk:
     a value that cannot be read is a refusal."""
     checks = []
@@ -321,6 +302,16 @@ def check_guards(cfg, out, norm, inputs=()):
     for path in inputs:
         bad = under(path, cfg.forbidden_root)
         checks.append(('input-path', not bad, f'{path} is {"" if bad else "not "}under {cfg.forbidden_root}'))
+    if basemap is not None and not under(basemap, cfg.forbidden_root):
+        # Both the lexical/comparable path and its actual target must be inside admitted read roots.
+        roots = [real(p) for p in cfg.basemap_roots]
+        paths = (Path(os.path.abspath(basemap)), real(basemap))
+        allowed = all(any(path.is_relative_to(root) for root in roots) for path in paths)
+        try:
+            ok = allowed and Path(basemap).is_file()
+        except OSError:
+            ok = False
+        checks.append(('basemap', ok, f'{basemap} must be an existing file in an allowed read root'))
     return checks
 
 
@@ -469,22 +460,18 @@ def say(text):
     print(text, flush=True)
 
 
-def dry_run(cfg, region, out, norm, through, extra, inputs, missing):
+def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap):
     say(f'run_region dry run: region {region}, through {through}, out {out}')
     say('chain (in order, each as a subprocess under ' + ' '.join(cfg.prefix) + '):')
-    shown = dict(extra)
-    if 'envelope' not in shown:
-        shown['envelope'] = ['--generation', '<generation of the current package receipt>']
-    shown['qa'] = ['--generation', shown['envelope'][1], '--release-sha256',
-                   extra.get(QA_SHA_KEY) or '<sha256 of release.json in the current package receipt>', *shown['qa']]
-    for index, stage in enumerate(chain_through(through), 1):
-        say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, shown))}')
+    for index, (stage, attest) in enumerate(steps_through(through), 1):
+        note = f'  # verify {attest}' if attest else ''
+        say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, extra))}{note}')
     say('not run: ' + ', '.join(STAGES[STAGES.index(through) + 1:]) if through != STAGES[-1] else 'not run: (none)')
     say('guards (re-checked before every stage):')
     refused = bool(missing)
     for stage, flags in missing:
         say(f'  REFUSE {stage} inputs: a real run through {through} needs ' + ', '.join(flags))
-    for name, ok, detail in check_guards(cfg, out, norm, inputs):
+    for name, ok, detail in check_guards(cfg, out, norm, inputs, basemap=basemap):
         say(f'  {"ok     " if ok else "REFUSE "}{name}: {detail}')
         refused = refused or not ok
     held = lock_is_held(out, region)
@@ -505,8 +492,8 @@ def dry_run(cfg, region, out, norm, through, extra, inputs, missing):
     return 0
 
 
-def refusal(cfg, out, norm, inputs):
-    return [f'{name}: {detail}' for name, ok, detail in check_guards(cfg, out, norm, inputs) if not ok]
+def refusal(cfg, out, norm, inputs, basemap):
+    return [f'{name}: {detail}' for name, ok, detail in check_guards(cfg, out, norm, inputs, basemap=basemap) if not ok]
 
 
 def run_cap_refusal(cfg):
@@ -520,12 +507,12 @@ def run_cap_refusal(cfg):
     return None
 
 
-def run_chain(cfg, region, out, norm, through, extra, inputs):
+def run_chain(cfg, region, out, norm, through, extra, inputs, basemap):
     if cap := run_cap_refusal(cfg):
         code, detail = cap
         say(f'run_region: refused: {detail}')
         return code
-    problems = refusal(cfg, out, norm, inputs)  # before any lock, so a refused run leaves no file behind
+    problems = refusal(cfg, out, norm, inputs, basemap)  # before any lock, so a refused run leaves no file behind
     if problems:
         say('run_region: refused before ' + STAGES[0] + ': ' + '; '.join(problems))
         return EXIT_REFUSED
@@ -538,12 +525,12 @@ def run_chain(cfg, region, out, norm, through, extra, inputs):
         say(f'run_region: refused: {cfg.max_runs} runs already hold the box run slots; at most {cfg.max_runs} at once')
         return EXIT_RUNNING
     try:
-        return run_locked(cfg, region, out, norm, through, extra, inputs)
+        return run_locked(cfg, region, out, norm, through, extra, inputs, basemap)
     finally:
         os.close(slot)
 
 
-def run_locked(cfg, region, out, norm, through, extra, inputs):
+def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
     try:
         fd = acquire_lock(cfg, out, region)
     except (OSError, RuntimeError) as exc:
@@ -553,8 +540,8 @@ def run_locked(cfg, region, out, norm, through, extra, inputs):
         say(f'run_region: refused: region {region} already has a run (lock {lock_path(out, region)})')
         return EXIT_RUNNING
     try:
-        for stage in chain_through(through):
-            problems = refusal(cfg, out, norm, inputs)
+        for stage, attest in steps_through(through):
+            problems = refusal(cfg, out, norm, inputs, basemap)
             if problems:
                 say(f'run_region: refused before {stage}: ' + '; '.join(problems))
                 return EXIT_REFUSED
@@ -562,38 +549,32 @@ def run_locked(cfg, region, out, norm, through, extra, inputs):
                 code, detail = cap
                 say(f'run_region: refused before {stage}: {detail}')
                 return code
-            stage_args = extra
-            if stage == 'envelope' and 'envelope' not in extra:
-                generation = package_generation(out, region)
-                if generation is None:
-                    say('run_region: STOPPED before envelope: no --generation given and no valid generation in the '
-                        f'package receipt {Path(out) / region / "stages" / "package.json"}')
-                    return EXIT_USAGE
-                stage_args = {**extra, 'envelope': ['--generation', generation]}
-            if stage == 'qa':
-                release = qa_release(out, region, extra)
-                if release is None:
-                    say('run_region: STOPPED before qa: no --generation/--release-sha256 given and none readable '
-                        f'from the package receipt {Path(out) / region / "stages" / "package.json"}')
-                    return EXIT_USAGE
-                stage_args = {**extra, 'qa': [*release, *extra['qa']]}
-            command = stage_command(cfg, stage, region, out, stage_args)
-            say(f'run_region: stage {stage}: ' + ' '.join(command))
+            command = stage_command(cfg, stage, region, out, extra)
+            label = f'status for {attest}' if attest else stage
+            say(f'run_region: stage {label}: ' + ' '.join(command))
             started = time.monotonic()
             try:
-                code = subprocess.run(command, stdin=subprocess.DEVNULL).returncode
+                result = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=bool(attest))
             except OSError as exc:
-                say(f'run_region: STOPPED at {stage}: cannot start the command: {exc}')
+                say(f'run_region: STOPPED at {label}: cannot start the command: {exc}')
                 return 1
-            took = time.monotonic() - started
+            code = result.returncode
             if code == 0:
-                say(f'run_region: stage {stage}: exit 0 ({took:.1f}s)')
+                if attest:
+                    try:
+                        bind_handoff(cfg, out, region, extra, result.stdout, attest)
+                    except (OSError, ValueError) as exc:
+                        say(f'run_region: STOPPED at {label}: {exc}')
+                        return EXIT_REFUSED
+                say(f'run_region: stage {label}: exit 0 ({time.monotonic() - started:.1f}s)')
                 continue
+            if attest and result.stderr:
+                say(result.stderr.decode(errors='replace').rstrip())
             if code == EXIT_USAGE:
-                say(f'run_region: STOPPED at {stage}: not available (region.py exit 2: no such stage module '
+                say(f'run_region: STOPPED at {label}: not available (region.py exit 2: no such stage module '
                     f'on this checkout, or a usage error; see its message above)')
                 return EXIT_USAGE
-            say(f'run_region: STOPPED at {stage}: exit {code}')
+            say(f'run_region: STOPPED at {label}: exit {code}')
             return code if 0 < code < 256 else 1
         say(f'run_region: {region} complete through {through}')
         return 0
@@ -609,26 +590,15 @@ def parse(argv):
                         help='pipeline output root OUT (default $SC_RELIEF_OUT; must exist)')
     parser.add_argument('--through', help='last stage to run (required except for a full dry-run preview): '
                         + ', '.join(STAGES))
-    parser.add_argument('--norm', help='normalised-cache root NORM: checked against the private-vault guard and passed to '
-                        f'normalize as --cache (default $SC_RELIEF_NORM when set, else {DEFAULT_NORM})')
+    parser.add_argument('--norm', help='normalized cache NORM: checked against the private-vault guard and passed '
+                        f'to select as --cache (default $SC_RELIEF_NORM when set, else {DEFAULT_NORM})')
     parser.add_argument('--scope', default='public', choices=('public', 'private'),
                         help='scope of the scoped stages mosaic, tiles and zone (default public)')
-    parser.add_argument('--source', help='normalize input: the source file or directory (always needed: normalize is the first stage)')
-    parser.add_argument('--family', help='normalize option: inventory family key (default: normalize\'s own, dem)')
-    parser.add_argument('--manifest', help='package input: public layer inventory and metadata JSON (needed when the chain reaches package)')
-    parser.add_argument('--upstream', action='append',
-                        help='package input: a contributing stage[:scope]; repeat as needed (needed when the chain reaches package)')
-    parser.add_argument('--generation', help='qa and envelope input: release generation (default: the current package receipt\'s)')
-    parser.add_argument('--release-sha256', help='qa input: sha256 of release/<generation>/release.json (default: the one the current '
-                        'package receipt records)')
-    parser.add_argument('--qa-elevation', help='qa input: mosaic elevation TIFF (needed when the chain reaches qa)')
-    parser.add_argument('--qa-contributor', help='qa input: mosaic contributor-id TIFF (needed when the chain reaches qa)')
-    parser.add_argument('--qa-shots', help='qa input: shots.json from `region.py shots` for this release (needed when the chain reaches qa; '
-                        'take the shots after package, then run qa and envelope)')
+    parser.add_argument('--basemap', help='local basemap PMTiles (required for shots, qa and envelope)')
     parser.add_argument('--qa-support', help='qa option: mosaic support_class TIFF')
     parser.add_argument('--qa-fine-proof', nargs=2, action='append', metavar=('ZOOM', 'PATH'),
                         help='qa option: fine-support raster for zoom 16 or 17 (z16/z17 also accepted; qa receives 16/17); repeat per zoom')
-    parser.add_argument('--region-config', help='region config file for mosaic, tiles and zone (default: regions/<id>/region.json)')
+    parser.add_argument('--region-config', help='region config file for select, mosaic, tiles and zone (default: regions/<id>/region.json)')
     parser.add_argument('--coarse', help='zone input: EPSG:3310 coarse elevation TIFF (needed when the chain reaches zone)')
     parser.add_argument('--water', help='zone input: reviewed WGS84 ocean-water GeoJSON (needed when the chain reaches zone)')
     parser.add_argument('--coarse-source', help='zone input: provenance id of --coarse (needed when the chain reaches zone)')
@@ -655,6 +625,9 @@ def main(argv=None, cfg=None):
         parser.error('the following arguments are required: --through')
     if not REGION_ID.fullmatch(args.region):
         parser.error(f'bad region id {args.region!r}: lower-case letters, digits and hyphens')
+    if args.through == 'normalize':
+        parser.error('normalize is a separate, guarded per-source step: run region.py normalize --source PATH '
+                     'once per held source before starting run_region.py')
     if args.through not in STAGES:
         parser.error(f'unknown stage {args.through!r}; stages: {", ".join(STAGES)}')
     out = Path(os.path.abspath(os.path.expanduser(args.out)))
@@ -664,14 +637,14 @@ def main(argv=None, cfg=None):
     missing = missing_inputs(args, args.through)
     if missing and not full_preview:
         parser.error('; '.join(f'the chain reaches {stage}, which needs {", ".join(flags)}' for stage, flags in missing))
-    extra = stage_extras(args)
+    extra = stage_extras(args, out)
     # the very spellings stage_extras forwards (parse fixed them), so guard and child see one path
     inputs = [Path(p) for p in (*(getattr(args, name) for name in PATH_OPTIONS),
                                 *(path for _, path in args.qa_fine_proof or ())) if p]
     if args.dry_run:
-        return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing)
+        return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing, args.basemap)
     try:
-        return run_chain(cfg, args.region, out, norm, args.through, extra, inputs)
+        return run_chain(cfg, args.region, out, norm, args.through, extra, inputs, args.basemap)
     except KeyboardInterrupt:
         say('run_region: interrupted')
         return 130
