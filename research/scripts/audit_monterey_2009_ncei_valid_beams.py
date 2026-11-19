@@ -14,7 +14,6 @@ import hashlib
 import json
 from pathlib import Path
 import struct
-from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 import numpy as np
@@ -22,12 +21,15 @@ from pyproj import Geod
 from shapely import contains_xy
 from shapely.geometry import shape
 
+from research.scripts.audit_monterey_ncei_trackline_leads import arcgis_request, read_query_cache, write_query_cache
 from research.scripts.audit_point_buchon_ncei_beam_overlap import beam_positions
 from research.scripts.audit_point_buchon_ncei_beam_overlap import check_generated_companions
 
 
 ROOT = Path(__file__).resolve().parents[2]
 FILE_LAYER = "https://gis.ngdc.noaa.gov/arcgis/rest/services/multibeam_files/MapServer/0/query"
+FILE_FIELDS = "OBJECTID,DATASET_ID,DATASET_NAME,DATA_TYPE,FILE_ID,DATA_FILE,COLLECTION_DATE,SURVEY_NAME,NGDC_ID,MBIO_FORMAT_ID"
+FILE_FILTER = "NGDC_ID='NEW2895'"
 BASE = "https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/CentralMontereyBay/multibeam/data/version2/MB/reson7125_400/"
 PROCESSED = {
     "20091103_191445": (4181191, "6c2cbc1bf2b9557f44abd3dd15f6048ff300c124ef4681e06fb17c103f36dbbe", "c17f55c67e558747329fb98f6a6c29e12917bb00646cc8aaa3a732a4d496903c", "a17e71038a83be9178329df5a16e80264e7ec99836e9d6aaad9111704a8a0fef"),
@@ -58,26 +60,15 @@ def read_pinned(path, url, expected, fetch, limit):
 
 def query_file_layer(root, ident, geometry, fetch):
     path = root / "var/review/ncei-centralmontereybay-priority" / f"{ident}-file-layer.json"
+    request, fingerprint = arcgis_request(FILE_LAYER, geometry, FILE_FIELDS, FILE_FILTER,
+                                          "SkipperCast-original-survey-audit/1.0")
     if fetch:
-        polygon = {"rings": geometry["coordinates"], "spatialReference": {"wkid": 4326}}
-        data = urlencode({
-            "where": "NGDC_ID='NEW2895'", "geometry": json.dumps(polygon, separators=(",", ":")),
-            "geometryType": "esriGeometryPolygon", "inSR": "4326",
-            "spatialRel": "esriSpatialRelIntersects",
-            "outFields": "OBJECTID,DATASET_ID,DATASET_NAME,DATA_TYPE,FILE_ID,DATA_FILE,COLLECTION_DATE,SURVEY_NAME,NGDC_ID,MBIO_FORMAT_ID",
-            "returnGeometry": "false", "f": "json",
-        }).encode()
-        request = Request(FILE_LAYER, data=data, headers={
-            "User-Agent": "SkipperCast-original-survey-audit/1.0",
-            "Content-Type": "application/x-www-form-urlencoded",
-        })
         with urlopen(request, timeout=60) as response:
             raw = response.read(1_000_001)
         if len(raw) > 1_000_000:
             raise ValueError("NCEI file-layer response exceeds bound")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-    raw = path.read_bytes()
+    else:
+        raw = read_query_cache(path, fingerprint, 1_000_000)
     payload = json.loads(raw)
     if payload.get("error") or payload.get("exceededTransferLimit") or not isinstance(payload.get("features"), list):
         raise ValueError("Incomplete NCEI file-layer response")
@@ -98,6 +89,8 @@ def query_file_layer(root, ident, geometry, fetch):
                 or row.get("NGDC_ID") != "NEW2895"
                 or row.get("MBIO_FORMAT_ID") != "121"):
             raise ValueError(f"NCEI processed line metadata changed: {file_id}")
+    if fetch:
+        write_query_cache(path, fingerprint, raw)
     return sorted(processed), hashlib.sha256(raw).hexdigest()
 
 
