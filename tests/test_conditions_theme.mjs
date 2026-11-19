@@ -17,7 +17,9 @@ import {analysisStatus, createWaterTemp, waterTempOverlay} from '../web/map/sst.
 import {HEIGHT_SCALE, createSwell, swellOverlay, swellPartition, swellState} from '../web/map/swell.ts';
 import {windOverlay} from '../web/map/wind.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
-import {runThemePaintOracle, assertThemePaintOracle} from './theme-paint-oracle.mjs';
+import {runThemePaintOracle, assertThemePaintOracle, fakeMap} from './theme-paint-oracle.mjs';
+import {NEARSHORE_HIT, NEARSHORE_LAYER, ringHitLayer, ringLayer} from '../web/map/nearshore.ts';
+import {paintEdits, restyle} from '../web/map/theme-restyle.ts';
 
 const css = readFileSync(new URL('../web/tokens.css', import.meta.url), 'utf8');
 const colours = themes(css), controls = {'map-road-opacity': '0.65', 'map-label-opacity': '0.75'};
@@ -172,3 +174,46 @@ test('water temp: a switch repaints the texture only when the ramp changes, neve
   assert.ok(!same(e.images.at(-1)[1], e.images[0][1]));
   assert.deepEqual(e.calls.slice(before), [['image', 'water-temp']], 'only the image: no overlay, no setData');
 });
+
+// Contract: the nearshore rings are mounted inside Swell's overlay, so a live switch must restyle them through that
+// same overlay's `themePaint`, in field + rings and in rings-only mode. This drives the overlay createSwell actually
+// mounts (bound report, fake engine) through the engine's restyle and compares every layer with a fresh build.
+// Bug: ring layers built by ringHitLayer/ringLayer but left out of the overlay's themePaint (or only handled for the
+// field), so the rings keep the dark --blue on the light chart.
+async function mountedSwell(t, body) {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  browser(`${PAGE}?region=morro-bay&layers=swell&hour=2026-10-09T20:00Z`);
+  swellPartition.value = 'primary';
+  const first = Date.parse('2026-10-09T12:00:00Z'), iso = ms => new Date(ms).toISOString();
+  const site = {id: 'SL345', name: 'Morro Rock', areaId: 'central', lat: 35.36503, lon: -120.87659, sourceId: 'cdip-mop', issuedAt: iso(NOW - 6 * HOUR), fetchedAt: iso(NOW - HOUR),
+    url: 'https://example.test/cdip', kind: 'forecast', availability: 'available', freshness: 'current', temporalResolutionMinutes: 60, waterDepthM: 15, depthDatum: 'MSL',
+    directionConvention: 'from degrees true', modelInputCycleAt: null, validThrough: null,
+    hours: Array.from({length: 25}, (_, i) => ({at: iso(first + i * HOUR), waveFt: 3 + i * 0.1, periodS: 13, directionDeg: 290, qualityFlag: 0, secondaryFlag: 0}))};
+  const source = {id: 'cdip-mop', label: 'CDIP MOP · nearshore wave model', url: 'https://example.test/cdip', kind: 'forecast', outcome: 'ok', fetchedAt: iso(NOW - HOUR)};
+  const report = {schemaVersion: 1, countyId: 'slo', generatedAt: iso(NOW - HOUR), forecasts: [], observations: [], tides: [], tideEvents: [], alerts: [], sources: [source], catches: [], catchStatus: '',
+    habitatStatus: '', visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null}, nearshore: [site]};
+  const e = engine('swell');
+  const data = {coastReport: signal({data: report}), coastBinding: signal({areaId: 'central'}), setPlace() {}, load: async () => {}};
+  const s = createSwell({engine: signal(e), zone: () => TZ, fetchFn: async () => ({ok: true, json: async () => body}), page: () => PAGE, palette: () => palettes.dark, now: () => NOW,
+    place: () => ({regionId: 'morro-bay'}), data});
+  t.after(() => s.destroy());
+  await flush();
+  return {e};
+}
+for (const [name, body, field] of [['rings only', {region_id: 'morro-bay', retrieved: NOW.getTime() - HOUR, requested_points: [['a', 35.4, -121.0], ['b', 35.3, -121.1]], models: {}}, false],
+  ['field and rings', feed(), true]]) {
+  test(`swell ${name}: the mounted overlay restyles the nearshore rings with the rest`, async t => {
+    const {e} = await mountedSwell(t, body);
+    const mounted = e.overlay, ids = mounted.layers.map(l => l.id);
+    assert.ok(ids.includes(NEARSHORE_HIT) && ids.includes(NEARSHORE_LAYER), 'the rings are mounted');
+    assert.equal(ids.includes('swell'), field, 'the field is mounted only with a grid');
+    const map = fakeMap(mounted.layers);
+    restyle(map.target, palettes.light, [mounted]);
+    const fresh = swellOverlay(palettes.light, {field, rings: true}).layers;
+    assert.deepEqual(fresh.map(l => l.id), ids, 'the same layers a fresh light build has');
+    for (const {id, paint} of fresh) assert.deepEqual(map.paints.get(id), paint ?? {}, `${id} paints equal a fresh light build`);
+    const ringEdits = mounted.themePaint(palettes.light).filter(({layer}) => layer === NEARSHORE_HIT || layer === NEARSHORE_LAYER);
+    assert.deepEqual(ringEdits, paintEdits([ringHitLayer(palettes.light), ringLayer(palettes.light)]), 'exactly the ring builders\' paints');
+    assert.ok(ringEdits.length >= 6, 'ring edits are present');
+  });
+}
