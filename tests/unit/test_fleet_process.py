@@ -490,18 +490,7 @@ class WorkflowTests(unittest.TestCase):
         for trigger in ("push:", "pull_request"):
             self.assertNotIn(trigger, header)
 
-    def test_fleet_ais_runs_on_our_runner_every_30_minutes(self):
-        text, header = _header("fleet-ais.yml")
-        self.assertIn('cron: "17 * * * *"', header)
-        self.assertIn('cron: "47 * * * *"', header)
-        self.assertIn("permissions: {}", header)
-        self.assertIn("if: vars.ENABLE_FLEET == 'true' && vars.DATA_RUNNER != ''", text)
-        self.assertIn("group: fleet-ais", header)
-        self.assertIn("cancel-in-progress: false", header)
-        self.assertIn("id-token: write", text)
-        self.assertNotRegex(text, r"(contents|actions|issues|pull-requests): write")
-        for trigger in ("push:", "pull_request"):
-            self.assertNotIn(trigger, header)
+    def test_public_scheduler_lists_the_processor_and_health_check(self):
         policy = json.loads((ROOT / "deployments" / "production.json").read_text())
         self.assertTrue({"fleet-ais.yml", "fleet-health.yml"} <= set(policy["scheduler"]["workflows"]))
 

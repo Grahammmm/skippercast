@@ -236,27 +236,14 @@ SkipperCast.
 
 ## Q13. Self-hosted fleet jobs on a public repository
 
-**Context.** [docs/operations/runners.md](../../operations/runners.md) says
-self-hosted runners must be used only while the repository is private,
-because on a public repository anyone's pull request could run code on the
-box. The repository is public, and the fleet workflows run on Hermes through
-`DATA_RUNNER` (CF-18, CF-21, CF-42, CF-45, CF-47). The plan never triggers a
-fleet workflow on `pull_request`: they run on schedule or `workflow_dispatch`
-from `main` only, and CF-18 and CF-21 test that.
+**Resolved.** The four fleet workflows moved to private `Grahammmm/skippercast-ops`.
+They run on its self-hosted runners from its `main` only, without pull-request
+triggers, and check out public SkipperCast `main` for the fleet code. Public
+SkipperCast keeps only GitHub-hosted workflows, including `fleet-health.yml`,
+which can still report an outage when the private runners are down. See
+[where jobs run](../../operations/runners.md) and the [threat model](../../legal/threat-model.md).
 
-1. **Keep as planned (recommended).** No fork pull request can reach Hermes
-   through a fleet workflow; runners.md gains a line stating the condition
-   (no `pull_request` trigger on any `DATA_RUNNER` workflow) in CF-42, which
-   already edits that file.
-2. Make the repository private. Removes the exposure but, per the owner's
-   earlier decision, loses free branch protection, which `main` relies on.
-3. Run the fleet jobs on GitHub-hosted runners. Removes Hermes from the
-   path, but the listener's raw AIS store, run directories and the Claude
-   token live on Hermes, so the processor and OSINT jobs would need a new
-   design, and the minutes become paid if the repository ever goes private.
-
-**Plan assumes:** option 1.
-**Blocks:** nothing; CF-18, CF-21, CF-42, CF-45 and CF-47 build on it.
+**Blocks:** nothing.
 
 ## Q14. Commercial use and the deployment's data-use flags
 
