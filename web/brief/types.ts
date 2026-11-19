@@ -91,7 +91,7 @@ export interface Brief {
   /** The profile's one caveat (design § 8). */
   readonly caveat: string;
   readonly notice: BriefNotice | null;
-  readonly fleet: BriefFleet | null;
+  readonly fleet: BriefFleet | {readonly notAvailable: true; readonly lastSourceDay: string | null} | null;
   /** The local coast report line; unavailable outside a binding. */
   readonly localReport: {readonly available: boolean; readonly text: string};
   /** The spear reading (surge, clarity estimate, verdict per hour); null for the other profiles. */
@@ -141,6 +141,8 @@ export interface RegionalDailyFeed {
   readonly region_id: string;
   readonly sources: Readonly<Record<string, RegionalSource | undefined>>;
   readonly reports?: readonly LandingReport[];
+  /** A publisher outage, not a zero-trip count. An unmarked feed does not certify coverage. */
+  readonly charter_reports?: {readonly status: 'not_available'; readonly last_source_day: string | null};
   /** The region's landing names (data branch feed); the fleet line counts only trips from these ports. */
   readonly landing_names?: readonly string[];
 }
