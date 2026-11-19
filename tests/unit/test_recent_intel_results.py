@@ -13,8 +13,9 @@ spec.loader.exec_module(module)
 NOW = datetime(2026, 9, 22, 20, tzinfo=timezone.utc)
 GOOD_ROW = {"url": "https://www.reddit.com/r/fishing/comments/abc/morro-bay-lingcod/", "published_at": "2026-09-20T00:00:00+00:00",
             "title": "Morro Bay lingcod report", "summary": "Fishing the reef near Morro Bay this week"}
-RETAINED = {"id": "old", "url": "https://example.org/old", "published_at": "2026-09-15T00:00:00+00:00",
-            "review_status": "candidate", "status": "ok"}
+RETAINED = {"id": "ef5c821ff49a5c014237", "url": "https://example.org/old", "published_at": "2026-09-15T00:00:00+00:00",
+            "region_id": "morro-bay", "query_id": "earlier", "source": "reddit",
+            "title": "Morro Bay lingcod discussion", "summary": "An earlier synthetic search lead"}
 CONTRACT = "Unexpected last30days agent JSON contract"
 
 
@@ -93,9 +94,9 @@ class JobIsolationTests(unittest.TestCase):
                     self.assertEqual(result["health"]["jobs_total"], 2)
                     by_id = {c["id"]: c for c in result["candidates"]}
                     self.assertEqual(len(by_id), 2)
-                    self.assertEqual(by_id["old"]["published_at"], RETAINED["published_at"])
-                    self.assertTrue(by_id["old"]["retained"])
-                    self.assertEqual({c["query_id"] for c in result["candidates"] if "query_id" in c}, {"good"})
+                    self.assertEqual(by_id[RETAINED["id"]]["published_at"], RETAINED["published_at"])
+                    self.assertTrue(by_id[RETAINED["id"]]["retained"])
+                    self.assertEqual({c["query_id"] for c in result["candidates"]}, {"good", "earlier"})
 
 
 if __name__ == "__main__":
