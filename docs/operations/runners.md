@@ -25,39 +25,29 @@ $0.008 a minute (check GitHub's current price list). At the totals above that is
 
 ## Public hosted jobs and private fleet runners
 
-All workflows in public `Grahammmm/skippercast` use GitHub-hosted runners. No public
-workflow reads a runner-selection variable.
+Public `Grahammmm/skippercast` is GitHub-hosted only. Do not register runners to the
+public repository or use runner-selection variables there.
 
-Every public job uses `ubuntu-latest` except one monthly research-substrate job, which
-uses `macos-latest`.
+Every public job uses literal `ubuntu-latest` except `audit` in
+`research-substrate.yml`, which uses `macos-latest`.
 
 `deploy-cloudflare.yml`, `dco.yml` and `release.yml` stay on GitHub-hosted runners: they
 are short (about 1–3 minutes each) and the deploy holds the Cloudflare token, which we
 would rather not hand to a long-lived box. `fleet-health.yml` (under a minute, hourly) stays
 hosted too, so it can raise the `fleet-ais-stale` issue while the data runner is down.
 
-The fleet AIS processor and listener install, registry and OSINT workflows run on
-self-hosted runners registered to private `Grahammmm/skippercast-ops`. The jobs require
-`ENABLE_FLEET=true` and the private repo's `main`, and check out public SkipperCast `main`
-for the scripts and Python package. They have no `pull_request` or `pull_request_target`
-triggers. Their workflow and lock contracts are tested in `skippercast-ops` (charter fleet
+The AgentOrange jobs live in private `Grahammmm/skippercast-ops`: `fleet-ais`,
+`fleet-osint`, `fleet-registry`, `fleet-ais-listener`, and `fleet-ping`. They use the
+private self-hosted `skippercast-ops` runners, not GitHub-hosted minutes. The fleet
+jobs run from private `main` with `ENABLE_FLEET=true`; the operator's `fleet-ping`
+diagnostic uses its own gate. There are no pull request triggers. The data jobs check
+out public SkipperCast `main` for the scripts and Python package. Their workflow and
+lock contracts are tested in `skippercast-ops` (charter fleet
 [Q13](../plans/charter-fleet/open-questions.md#q13-self-hosted-fleet-jobs-on-a-public-repository),
 [threat model § 10.4](../legal/threat-model.md) row E).
 
-## Setting up the box
-
-One Ubuntu 24.04 machine with 4 vCPU, 8 GB memory and 80 GB disk is enough for four
-runner instances. Options, ranked:
-
-1. **Hetzner Cloud CX32** (4 vCPU, 8 GB, 80 GB, 20 TB traffic): about €7 a month. Any
-   region works; the jobs are batch downloads from NOAA and ECMWF, not latency-sensitive.
-2. A machine you already run at home, if it is on 24 hours a day and on a UPS. Free, but
-   a power cut interrupts jobs configured to use the box.
-3. Stay on GitHub-hosted runners and pay. Simplest; the most expensive by a factor of 50.
-
-Use the operator instructions in private `skippercast-ops` to register fleet runners.
-Do not register runners to the public repository. The stock `scripts/runner/setup.sh`
-defaults do not describe the private fleet setup.
+The fleet runner setup script (`scripts/runner/setup.sh`) lives in private
+`skippercast-ops`. Fleet runner registration and host maintenance are operator tasks.
 
 Separately, `ENABLE_QUEUES=true` (see `docs/cloudflare.md`) stops the hosted notify job
 from running all day; the Worker's cron queues trip checks itself.
@@ -65,9 +55,9 @@ from running all day; the Worker's cron queues trip checks itself.
 ## Keeping it healthy
 
 - The runner service updates itself. Upgrade the host with `apt-get upgrade` monthly.
-- Disk: jobs on the box write under `_work`; `df -h /opt/actions-runner`
+- Disk: jobs on the box write under `_work`; `df -h ~/actions-runner`
   should stay below 70%. The runner cleans job workspaces; toolchain caches persist.
-- If all four runners are busy, jobs assigned to the box queue instead of failing.
+- If both private runners are busy, jobs assigned to the box queue instead of failing.
 - Artifacts and caches (`actions/upload-artifact`, `actions/cache`) still count against
   GitHub storage (500 MB free on the Free plan). The research workflows upload the most;
   shorten their `retention-days` if the storage bill appears.
@@ -117,7 +107,8 @@ schedule or push trigger: the owner dispatches it in the private repo. It needs
 
 `scripts/fleet/install_listener.sh` copies the checked-out public revision to
 `~/.local/share/skippercast/app/<sha>` with its own virtualenv (the `fleet` extra, built on the
-box's `python3`, 3.11 or newer; Ubuntu 24.04 ships 3.12 and `setup.sh` installs `python3-venv`),
+box's `python3`, 3.11 or newer; Ubuntu 24.04 ships 3.12, and the private setup script
+installs `python3-venv`),
 points `app/current` at it, writes `~/.config/skippercast/fleet-ais.env` with mode 0600, restarts
 the unit and fails unless the heartbeat shows messages within 90 seconds. It keeps the three
 newest revisions for rollback. The raw store lives outside any checkout in
