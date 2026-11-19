@@ -184,7 +184,8 @@ test('mpa_fleet_es_caveats_and_drape', async t => {
     assert.match(es, /<p class="app-mpa-note">Detalles de la fuente \(en inglés\): <span lang="en">/);
     assert.match(es, /Áreas marinas protegidas/);
     assert.match(es, /no como delimitación legal/);
-    assert.match(es, /Selección regional de SkipperCast a partir de <a href="[^"]+"[^>]*>CDFW Marine Region GIS Lab, California MPAs ds582<\/a>, <a href="[^"]+"[^>]*>CC BY 4\.0<\/a>/);
+    assert.match(es, /Selección regional de SkipperCast\./);
+    assert.doesNotMatch(es, /ds582<\/a>|CC BY 4\.0|DS0582|creativecommons/, 'MAP-SOURCES-PAGE-1: no dataset or licence link in the legend; the Sources page names them');
     assert.equal(/Intentar de nuevo/.test(es), status === 'unavailable', `${status}: Try again only after a transient failure`);
     assert.equal(/Try again/.test(en), status === 'unavailable');
     assert.doesNotMatch(en, /Detalles|lang="en"/, 'English markup carries no Spanish disclosure');
@@ -207,7 +208,7 @@ test('mpa_fleet_es_caveats_and_drape', async t => {
   assert.match(es, /AIS comercial 2024/);
   assert.match(es, /muestra fechada, no una temporada continua ni una fuente en vivo de la flota/);
   assert.match(es, /No es prueba|no es prueba de pesca ni de capturas/);
-  assert.match(es, new RegExp(m.AIS_CREDIT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/&/g, '&amp;')), 'the Global Fishing Watch credit stays verbatim');
+  assert.doesNotMatch(es, /Global Fishing Watch/, 'MAP-SOURCES-PAGE-1: the legend carries no AIS source credit; the Sources page does');
   assert.match(es, /Jul &amp; Sep 2024 · depth unknown/, 'the producer note keeps its dates');
   m.groundsState.value = {drawn: 2, note: '', audit: '2026-09-21'};
   assert.match(legend(m, 'es'), /2 zonas con nombre · sin AIS chárter verificado/);

@@ -26,8 +26,11 @@ type Resolution = {status: 'ready'; archive: ReliefArchive} | {status: 'unavaila
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const RESTRICTED_LINEAGE = /\b(?:csumb|sfml|mbari)\b|california state university,? monterey bay|monterey bay aquarium research institute/i;
-const UNKNOWN_LICENCE = /^(?:unresolved|unknown|unlicensed|metadata-review-needed)$/i;
+// Rights basis (DATA-LIVE-9): G decision 2026-11-18 put all map data live, including CSUMB/SFML lineage
+// and sources with unconfirmed terms (owner-accepted risk; revisit when paid). Lineage names and an
+// unresolved licence are therefore not refusals. MBARI stays excluded until G answers DATA-LIVE-PLAN
+// §5 #2. Integrity checks below are unchanged.
+const EXCLUDED_MBARI = /\bmbari\b|monterey bay aquarium research institute/i;
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const text = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;
 const hash = (v: unknown): v is string => typeof v === 'string' && SHA256.test(v);
@@ -37,12 +40,12 @@ const count = (v: unknown): v is number => finite(v) && Number.isSafeInteger(v) 
 const refused = (reason: Refusal): Resolution => ({status: 'unavailable', reason});
 
 function publicSource(row: unknown): row is Record<string, unknown> & {rights: Record<string, unknown>} {
+  // Raw-file redistribution (publication_allowed, redistribution_reviewed, review_status) is a separate
+  // decision that stays off; it does not govern showing derived depth shading.
   return record(row) && row.rights_class === 'public' && record(row.rights) && row.rights.public_display === 'allowed' &&
-    row.private !== true && row.publication_allowed !== false && row.rights.redistribution_reviewed !== false &&
-    !(text(row.rights.license) && UNKNOWN_LICENCE.test(row.rights.license.trim())) &&
-    (row.review_status === undefined || row.review_status === 'approved') &&
+    row.private !== true &&
     ![row.id, row.provider, row.attribution, row.source_url, row.rights.attribution, row.rights.terms_url]
-      .some(v => text(v) && RESTRICTED_LINEAGE.test(v));
+      .some(v => text(v) && EXCLUDED_MBARI.test(v));
 }
 
 function publicSources(pointer: Record<string, unknown>) {

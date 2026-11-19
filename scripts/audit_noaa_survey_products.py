@@ -64,6 +64,13 @@ def inspect(lead, *, now, fetcher=fetch):
             'products': products, 'issue': None}
 
 
+def _discovery_incomplete(discovery):
+    # Older inputs may omit health; an explicit failure is not a withdrawal.
+    health = discovery.get('health')
+    return (isinstance(health, dict) and health.get('status', 'ok') != 'ok'
+            or any(sector.get('status', 'ok') != 'ok' for sector in discovery['sectors']))
+
+
 def audit(discovery, previous=None, *, now=None, inspector=inspect):
     now = now or datetime.now(timezone.utc)
     leads = {lead['id']: lead for sector in discovery['sectors'] for lead in sector['surveys']}
@@ -81,8 +88,17 @@ def audit(discovery, previous=None, *, now=None, inspector=inspect):
                             {'id': ident, 'status': 'failed', 'retrieved_at': None,
                              'catalog_url': leads[ident]['catalog_url'], 'catalog_sha256': None,
                              'products': {'bag': [], 'report': [], 'xyz': []}, 'issue': str(error)[:200]})
+    incomplete = _discovery_incomplete(discovery)
+    issue = 'incomplete NOAA survey discovery'
+    if incomplete:
+        # Product rows have no sector membership, so a partial scan cannot prove
+        # that any omitted survey was withdrawn.
+        rows.extend({**prior[ident], 'status': 'retained', 'issue': issue}
+                    for ident in prior.keys() - leads.keys())
     rows.sort(key=lambda row: row['id'])
     issues = [row['id'] for row in rows if row['status'] != 'ok']
+    if incomplete:
+        issues.insert(0, issue)
     return {'schema_version': 1, 'scope': 'noaa-survey-product-links', 'collected_at': now.isoformat(),
             'last_complete_scan_at': now.isoformat() if not issues else (previous or {}).get('last_complete_scan_at'),
             'source': 'NOAA NCEI individual survey catalog pages',
@@ -157,7 +173,8 @@ def main(argv=None):
     if reason:
         print(f'previous inventory ignored: {reason}', file=sys.stderr)
     ids = {lead['id'] for sector in discovery['sectors'] for lead in sector['surveys']}
-    if previous and isinstance(previous.get('health'), dict) and previous['health'].get('status') == 'ok':
+    if (not _discovery_incomplete(discovery) and previous
+            and isinstance(previous.get('health'), dict) and previous['health'].get('status') == 'ok'):
         age = now - datetime.fromisoformat(previous['last_complete_scan_at'])
         if timedelta(0) <= age < timedelta(days=args.max_age_days) and ids == {row['id'] for row in previous['surveys']}:
             args.output.parent.mkdir(parents=True, exist_ok=True)

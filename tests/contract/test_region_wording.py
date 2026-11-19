@@ -69,13 +69,6 @@ def test_nonstring_reason_not_hidden():
     assert forbidden_hits(region) == ['z coverage.a.reason is not a string']
 
 
-def test_malformed_json_is_visible(tmp_path):
-    bad = tmp_path / 'region.json'
-    bad.write_text('{not json')
-    with pytest.raises(json.JSONDecodeError):
-        json.loads(bad.read_text())
-
-
 def _published_files():
     files = sorted((ROOT / 'regions').glob('*/region.json'))
     files += sorted((ROOT / 'dist' / 'regions').glob('*/region.json'))

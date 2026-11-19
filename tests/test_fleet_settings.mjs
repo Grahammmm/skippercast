@@ -95,10 +95,11 @@ const jobClaims = (workflow, audiencePath = '/api/fleet/jobs') => {
 
 test('FLEET_JOB_SCOPE: every scoped fleet workflow is configured for a scheduler identity', () => {
   assert.equal(FLEET_JOB_SCOPE.audiencePath, '/api/fleet/jobs');
-  for (const workflow of FLEET_JOB_SCOPE.workflows) assert.ok(s.workflows.includes(workflow) || policy.fleet_scheduler.workflows.includes(workflow), workflow);
+  for (const workflow of FLEET_JOB_SCOPE.workflows) assert.ok(s.workflows.includes(workflow), workflow);
+  for (const workflow of FLEET_JOB_SCOPE.fleetSchedulerWorkflows) assert.ok(policy.fleet_scheduler.workflows.includes(workflow), workflow);
 });
 
-test('a signed fleet-ais.yml token reaches ping; advisor-media.yml, trip-check and wrong-audience tokens get 401', async () => {
+test('a signed public fleet-health token reaches ping; advisor-media, trip-check and wrong-audience tokens get 401', async () => {
   const pair = await crypto.subtle.generateKey({name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'}, true, ['sign', 'verify']);
   const jwk = {...await crypto.subtle.exportKey('jwk', pair.publicKey), kid: 'test', alg: 'RS256', use: 'sig'};
   const b64 = x => Buffer.from(JSON.stringify(x)).toString('base64url');
@@ -107,15 +108,13 @@ test('a signed fleet-ais.yml token reaches ping; advisor-media.yml, trip-check a
   globalThis.fetch = async url => { assert.equal(url, 'https://token.actions.githubusercontent.com/.well-known/jwks'); return Response.json({keys: [jwk]}); };
   console.warn = () => {};
   try {
-    for (const workflow of FLEET_JOB_SCOPE.workflows.filter(w => s.workflows.includes(w))) {
-      const response = await call('/api/fleet/jobs/ping?region=CA', env, {headers: bearer(await sign(jobClaims(workflow)))});
-      assert.equal(response.status, 200, workflow);
-    }
+    const token = await sign(jobClaims('fleet-health.yml'));
+    assert.equal((await call('/api/fleet/jobs/ping?region=CA', env, {headers: bearer(token)})).status, 200);
     const refused = [['advisor-media.yml', '/api/fleet/jobs'], ['advisor-media.yml', '/api/advisor/jobs'], ['live-conditions.yml', '/api/fleet/jobs'],
-      ['fleet-ais.yml', '/api/advisor/jobs'], ['fleet-ais.yml', '/api/jobs/check'], ['deploy-cloudflare.yml', '/api/fleet/jobs']];
+      ['fleet-health.yml', '/api/advisor/jobs'], ['fleet-health.yml', '/api/jobs/check'], ['deploy-cloudflare.yml', '/api/fleet/jobs']];
     for (const [workflow, aud] of refused)
       assert.equal((await call('/api/fleet/jobs/ping', env, {headers: bearer(await sign(jobClaims(workflow, aud)))})).status, 401, `${workflow} ${aud}`);
-    const token = await sign(jobClaims('fleet-ais.yml'));
+
     assert.equal((await call('/api/fleet/jobs/ping', {DB: adapter}, {headers: bearer(token)})).status, 404, 'a valid token is still dark while FLEET_ENABLED is off');
     // The fleet token is no advisor job either.
     assert.equal((await call('/api/advisor/jobs/media', {DB: adapter, TEXT_ADVISOR_ENABLED: 'true'}, {headers: bearer(token)})).status, 401);

@@ -18,9 +18,10 @@ One entry per exact (``vessel_id``, ``mmsi``): ``method`` (``METHODS``), ``confi
 evidence kept elsewhere; it is never a name, contact, path or URL. Recording a confirmation neither investigates
 nor authenticates that evidence.
 
-``add`` and ``withdraw`` read the selected registry first (staging: the SQLite file, read-only; worker: the
-snapshot pages) and refuse an MMSI the registry does not hold for that vessel. A stale binding (the registry no
-longer holds the pair) never counts and cannot be withdrawn either, so its evidence is never silently reassigned.
+``add`` reads the selected registry first (staging: the SQLite file, read-only; worker: the snapshot pages) and
+refuses an MMSI the registry does not hold for that vessel. A stale binding (the registry no longer holds the pair)
+never counts and is never silently reassigned. ``withdraw`` needs only the exact ledger pair, not the registry, so a
+stale confirmation can be revoked and stays withdrawn if the same binding returns; it rebinds and erases nothing.
 This is a current-state ledger, not an audit archive: re-confirming a withdrawn pair replaces its entry.
 Nothing printed contains an evidence reference, a name, a path or a rejected input.
 """
@@ -238,11 +239,14 @@ def add(region: str, sink: str, vessel_id: str, mmsi: str, method: str, confirme
 
 
 def withdraw(region: str, sink: str, vessel_id: str, mmsi: str, withdrawn_on: str,
-             held: Callable[[], Mapping[str, str]], *, var: Path | None = None, now: date | None = None) -> int:
-    """Withdraw a confirmation; 1 when the ledger changed, 0 for a repeat of the same withdrawal."""
+             *, var: Path | None = None, now: date | None = None) -> int:
+    """Withdraw a confirmation; 1 when the ledger changed, 0 for a repeat of the same withdrawal.
+
+    The registry is not read: the exact ledger pair is withdrawn even when it is stale (the registry no longer
+    holds it), so old evidence can always be revoked. Nothing is rebound or erased; only ``withdrawn_on`` is set.
+    """
     vessel_id, mmsi = _identity(region, sink, vessel_id, mmsi)
     when = _date(withdrawn_on, latest=now or today())
-    _held(held, vessel_id, mmsi)
 
     def change(entries: list[dict]) -> tuple[list[dict], int]:
         old = next((e for e in entries if (e["vessel_id"], e["mmsi"]) == (vessel_id, mmsi)), None)
@@ -357,7 +361,7 @@ def main(argv=None) -> int:
             affected = add(args.region, args.sink, args.vessel_id, args.mmsi, args.method, args.confirmed_on,
                            args.evidence_ref, held)
         else:
-            affected = withdraw(args.region, args.sink, args.vessel_id, args.mmsi, args.withdrawn_on, held)
+            affected = withdraw(args.region, args.sink, args.vessel_id, args.mmsi, args.withdrawn_on)
     except ConfirmError as error:
         print(f"confirm {args.action}: {error}", file=sys.stderr)
         return 1

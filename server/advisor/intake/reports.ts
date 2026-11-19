@@ -466,14 +466,21 @@ export const replacementFields = (f: ReportFields): ReportEditFields => ({counts
 
 /** job_state advisor.pages.version + 1: the boat and port pages' cache key (05 § boat page). */
 export async function bumpPagesVersion(db: D1Database, now: number): Promise<void> {
-  await db.prepare(`INSERT INTO job_state(key,value,updated_at) VALUES(?,'1',?) ON CONFLICT(key) DO UPDATE SET value=CAST(CAST(value AS INTEGER)+1 AS TEXT),updated_at=excluded.updated_at`)
-    .bind(PAGES_VERSION_KEY, iso(now)).run();
+  await pagesVersionWrite(db, now).run();
+}
+export function pagesVersionWrite(db: D1Database, now: number, when = '1', args: unknown[] = []): D1PreparedStatement {
+  return db.prepare(`INSERT INTO job_state(key,value,updated_at) SELECT ?,'1',? WHERE ${when}
+    ON CONFLICT(key) DO UPDATE SET value=CAST(CAST(value AS INTEGER)+1 AS TEXT),updated_at=excluded.updated_at`)
+    .bind(PAGES_VERSION_KEY, iso(now), ...args);
 }
 /** The port's daily answers are deleted, so TA-A1 regenerates them with the new report (05 step 4). */
 export async function invalidateDailyAnswer(db: D1Database, port: string, now: number): Promise<number> {
-  const r = await db.prepare('DELETE FROM advisor_daily_answers WHERE substr(key,1,?)=?').bind(port.length + 1, `${port}:`).run();
+  const r = await dailyAnswerWrite(db, port).run();
   void now;
   return r.meta.changes ?? 0;
+}
+function dailyAnswerWrite(db: D1Database, port: string, when = '1', args: unknown[] = []): D1PreparedStatement {
+  return db.prepare(`DELETE FROM advisor_daily_answers WHERE substr(key,1,?)=? AND (${when})`).bind(port.length + 1, `${port}:`, ...args);
 }
 /** Publishing or editing a published report: pages version and the daily answer. */
 async function republish(db: D1Database, port: string, now: number): Promise<void> {
@@ -527,15 +534,19 @@ export async function publishReport(db: D1Database, contact: Pick<AdvisorContact
   const row = await db.prepare('SELECT * FROM advisor_reports WHERE id=?').bind(reportId).first<ReportRow>();
   if (!row || !['pending_confirm', 'draft'].includes(row.status) || (!opts.team && !await postsFor(db, contact.id, row.boat_id))) return false;
   const at = iso(now);
-  const counts = countsOf(row.counts_json).map(({uncertain: _u, ...c}) => c);
-  const r = await db.prepare(`UPDATE advisor_reports SET status='published',verified=(SELECT CASE WHEN status='verified' THEN 1 ELSE 0 END FROM advisor_boats WHERE id=?),
-      counts_json=?,confirmed_at=?,published_at=?,updated_at=? WHERE id=? AND status IN ('pending_confirm','draft')`)
-    .bind(row.boat_id, JSON.stringify(counts), opts.auto ? null : at, at, at, reportId).run();
+  const r = await reportPublishWrite(db, row, at, Boolean(opts.auto)).run();
   if (!r.meta.changes) return false;
   if (!opts.auto && row.version === 1) await db.prepare('UPDATE advisor_boats SET clean_reports=clean_reports+1,updated_at=? WHERE id=?').bind(at, row.boat_id).run();
   await republish(db, row.port, now);
   advisorLog('info', 'advisor_report_published', {auto: Boolean(opts.auto), team: Boolean(opts.team), version: row.version});
   return true;
+}
+
+function reportPublishWrite(db: D1Database, row: ReportRow, at: string, auto: boolean, when = '1', args: unknown[] = []): D1PreparedStatement {
+  const counts = countsOf(row.counts_json).map(({uncertain: _u, ...c}) => c);
+  return db.prepare(`UPDATE advisor_reports SET status='published',verified=(SELECT CASE WHEN status='verified' THEN 1 ELSE 0 END FROM advisor_boats WHERE id=?),
+      counts_json=?,confirmed_at=?,published_at=?,updated_at=? WHERE id=? AND status IN ('pending_confirm','draft') AND (${when})`)
+    .bind(row.boat_id, JSON.stringify(counts), auto ? null : at, at, at, row.id, ...args);
 }
 
 /** Withdraw a pending report ("n"): nothing was public, so nothing else changes. */
@@ -565,12 +576,19 @@ export async function applyEdit(db: D1Database, contact: Pick<AdvisorContactRow,
   const fields = cleanFields(input);
   if (fields.report_date && fields.report_date !== row.report_date && await db.prepare('SELECT 1 AS x FROM advisor_reports WHERE boat_id=? AND report_date=? AND source=? AND id<>?')
     .bind(row.boat_id, fields.report_date, row.source, row.id).first()) { advisorLog('warn', 'advisor_report_date_taken', {}); return 'refused'; }
-  const before = fieldsOf(row);
-  const patch = patchOf(before, fields);
-  const at = iso(now);
-  const pending = row.status !== 'published';
   // Reopening brings a withdrawn (or draft) report of the day back for confirmation; a report the team rejected stays rejected.
   const status = opts.reopen && ['withdrawn', 'draft', 'pending_confirm'].includes(row.status) ? 'pending_confirm' : row.status;
+  const patch = patchOf(fieldsOf(row), fields);
+  await db.batch(reportEditWrites(db, row, fields, patch, status, iso(now), editId, opts.team ? null : contact.id, opts.team ? null : messageId));
+  if (row.status === 'published') await republish(db, row.port, now);
+  if (opts.publish && row.status !== 'published') await publishReport(db, contact, row.id, now, {auto: true, team: opts.team});
+  advisorLog('info', 'advisor_report_edited', {fields: patch.length, published: row.status === 'published'});
+  return 'edited';
+}
+
+function reportEditWrites(db: D1Database, row: ReportRow, fields: ReportEditFields, patch: ReportPatch[], status: string, at: string,
+  editId: string, contactId: string | null, messageId: string | null, when = '1', args: unknown[] = []): D1PreparedStatement[] {
+  const pending = row.status !== 'published';
   const sets: [string, unknown][] = [];
   if (fields.report_date !== undefined) sets.push(['report_date', fields.report_date]);
   if (fields.trip_type !== undefined) sets.push(['trip_type', fields.trip_type]);
@@ -578,18 +596,40 @@ export async function applyEdit(db: D1Database, contact: Pick<AdvisorContactRow,
   if (fields.notes !== undefined) sets.push(['notes', fields.notes]);
   if (fields.counts !== undefined) sets.push(['counts_json', JSON.stringify(row.status === 'published' ? fields.counts.map(({uncertain: _u, ...c}) => c) : fields.counts)]);
   const statements = [
-    db.prepare('INSERT INTO advisor_report_edits(id,report_id,contact_id,message_id,patch_json,created_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING')
-      .bind(editId, row.id, opts.team ? null : contact.id, opts.team ? null : messageId, JSON.stringify(patch), at),
-    db.prepare(`UPDATE advisor_reports SET ${sets.map(([k]) => `${k}=?,`).join('')}status=?,version=version+1,${pending ? 'confirmed_at=NULL,' : ''}updated_at=? WHERE id=?`)
-      .bind(...sets.map(([, v]) => v), status, at, row.id),
+    db.prepare(`INSERT INTO advisor_report_edits(id,report_id,contact_id,message_id,patch_json,created_at) SELECT ?,?,?,?,?,? WHERE ${when} ON CONFLICT(id) DO NOTHING`)
+      .bind(editId, row.id, contactId, messageId, JSON.stringify(patch), at, ...args),
+    db.prepare(`UPDATE advisor_reports SET ${sets.map(([k]) => `${k}=?,`).join('')}status=?,version=version+1,${pending ? 'confirmed_at=NULL,' : ''}updated_at=? WHERE id=? AND (${when})`)
+      .bind(...sets.map(([, v]) => v), status, at, row.id, ...args),
   ];
   // 05: clean_reports "reset to 0 on any edit before confirm".
-  if (pending) statements.push(db.prepare('UPDATE advisor_boats SET clean_reports=0,updated_at=? WHERE id=?').bind(at, row.boat_id));
-  await db.batch(statements);
-  if (row.status === 'published') await republish(db, row.port, now);
-  if (opts.publish && row.status !== 'published') await publishReport(db, contact, row.id, now, {auto: true, team: opts.team});
-  advisorLog('info', 'advisor_report_edited', {fields: patch.length, published: row.status === 'published'});
-  return 'edited';
+  if (pending) statements.push(db.prepare(`UPDATE advisor_boats SET clean_reports=0,updated_at=? WHERE id=? AND (${when})`).bind(at, row.boat_id, ...args));
+  return statements;
+}
+
+/** Moderator writes use the same report mutations but commit them with the review. */
+export async function prepareReportDecision(db: D1Database, reviewId: string, reportId: string, decision: 'approve' | 'edit' | 'reject',
+  fields: ReportEditFields | null, now: number) {
+  const row = await db.prepare('SELECT * FROM advisor_reports WHERE id=?').bind(reportId).first<ReportRow>();
+  if (!row) return {error: 'the report no longer exists'};
+  const at = iso(now), editId = fields ? (await sha256(`edit:${reviewId}:admin:${(await sha256(JSON.stringify(fields))).slice(0, 16)}`)).slice(0, 32) : null;
+  const edited = editId && await db.prepare('SELECT 1 FROM advisor_report_edits WHERE id=?').bind(editId).first();
+  const date = fields?.report_date;
+  const dateConflict = !edited && date && date !== row.report_date;
+  const dateTaken = 'SELECT 1 FROM advisor_reports other WHERE other.boat_id=? AND other.report_date=? AND other.source=? AND other.id<>?';
+  const dateArgs = dateConflict ? [row.boat_id, date, row.source, row.id] : [];
+  if (dateConflict && await db.prepare(dateTaken).bind(...dateArgs).first()) return {error: 'the boat already has a report for that date'};
+  const check = {sql: `EXISTS (SELECT 1 FROM advisor_reports WHERE id=? AND status=? AND version=? AND updated_at=? ${dateConflict ? `AND NOT EXISTS (${dateTaken})` : ''})`,
+    args: [row.id, row.status, row.version, row.updated_at, ...dateArgs]};
+  const effects = (won: {sql: string; args: unknown[]}): D1PreparedStatement[] => {
+    const purge = [pagesVersionWrite(db, now, won.sql, won.args), dailyAnswerWrite(db, row.port, won.sql, won.args)];
+    if (decision === 'approve') return ['draft', 'pending_confirm'].includes(row.status)
+      ? [reportPublishWrite(db, row, at, true, won.sql, won.args), ...purge] : [];
+    if (decision === 'reject') return [db.prepare(`UPDATE advisor_reports SET status='rejected',updated_at=? WHERE id=?
+      AND status IN ('draft','pending_confirm','published') AND (${won.sql})`).bind(at, row.id, ...won.args), ...(row.status === 'published' ? purge : [])];
+    return [...(fields && editId && !edited ? reportEditWrites(db, row, fields, patchOf(fieldsOf(row), fields), row.status, at, editId, null, null, won.sql, won.args) : []),
+      ...(row.status === 'published' ? purge : [])];
+  };
+  return {check, effects};
 }
 
 // ---- the Stage 2 flow (04 § stage 2) ----------------------------------------------------------

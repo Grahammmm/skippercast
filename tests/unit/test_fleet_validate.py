@@ -408,11 +408,7 @@ class ReportTests(SyncTestCase):
 
 
 class WiringTests(unittest.TestCase):
-    def test_the_processor_workflow_copies_after_each_scheduled_run(self):
-        text = (ROOT / ".github" / "workflows" / "fleet-ais.yml").read_text()
-        self.assertIn('python -m skippercast.fleet.ais validate --region "$REGION" --sync-only', text)
-        process = text.index("python -m skippercast.fleet.ais process")
-        self.assertLess(process, text.index("--sync-only"))
+    def test_the_ais_cli_registers_validate_and_label(self):
         from skippercast.fleet.ais.__main__ import COMMANDS
         self.assertIn("validate", COMMANDS)
         self.assertIn("label", COMMANDS)

@@ -39,6 +39,7 @@ import {readPalette, type Palette} from './palette.ts';
 import {pair, sp, type StatusCopy} from './status-copy.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {SWELL_LAYER} from './swell.ts';
+import {paintEdits} from './theme-restyle.ts';
 import {M_PER_NMI} from '../units.ts';
 
 const REGISTRY_ID = 'sst-contrast' as const;
@@ -125,7 +126,7 @@ export function contrastBasis(d: DrawnContrast, now: Date, tz: string): string {
   const grid = d.spacingDeg[0] > d.nativeResolutionDeg ? `${deg(d.nativeResolutionDeg)} grid sampled every ${deg(d.spacingDeg[0])}` : `${deg(d.nativeResolutionDeg)} grid`;
   return `${d.product} daily analysis on a ${grid}, for ${dayText(d.analysedAt, tz)} (${age(now.getTime() - Date.parse(d.analysedAt))} old), partly interpolated, with gaps under cloud filled. `
     + `Drawn in °F per nautical mile only in the ${d.cells.length} of ${d.judged} cells where the change across neighbouring cells exceeds their summed analysis error, `
-    + `and withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a contrast cell is not a fish or catch location.${d.credit ? ` Credit: ${d.credit}.` : ''}`;
+    + `and withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a contrast cell is not a fish or catch location.`;
 }
 
 const stale = (product: string, analysedAt: string, limit: number, tz: string): ContrastStatus => {
@@ -171,13 +172,19 @@ export function contrastFeatures(d: Pick<DrawnContrast, 'cells' | 'spacingDeg'>)
 }
 
 /** The cells as one fill layer on the fixed scale, under the swell field, the depth contours and the protected areas (§ 9 order). */
-export function contrastOverlay(p: Palette): Overlay {
+function contrastLayers(p: Palette): Overlay['layers'] {
   const [low, high] = CONTRAST_SCALE;
+  return [{id: CONTRAST_LAYER, type: 'fill', source: CONTRAST_SOURCE, paint: {
+    'fill-color': ['interpolate', ['linear'], ['get', 'f'], low, p.contrast0, (low + high) / 2, p.contrast1, high, p.contrast2] as MapLibre.ExpressionSpecification,
+    'fill-opacity': CONTRAST_OPACITY, 'fill-antialias': false}}];
+}
+
+/** One shared function, so equal overlays stay equal. A live theme switch re-runs the same layer builder with the new palette; ids and sources stay. */
+const themePaint = (pal: Palette) => paintEdits(contrastLayers(pal));
+export function contrastOverlay(p: Palette): Overlay {
   return {
     sources: {[CONTRAST_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}},
-    layers: [{id: CONTRAST_LAYER, type: 'fill', source: CONTRAST_SOURCE, paint: {
-      'fill-color': ['interpolate', ['linear'], ['get', 'f'], low, p.contrast0, (low + high) / 2, p.contrast1, high, p.contrast2] as MapLibre.ExpressionSpecification,
-      'fill-opacity': CONTRAST_OPACITY, 'fill-antialias': false}}],
+    layers: contrastLayers(p), themePaint,
   };
 }
 

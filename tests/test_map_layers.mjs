@@ -7,14 +7,14 @@ import util from 'node:util';
 import {existsSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {RAIL_IDS} from '../web/profile.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, reliefWanted, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
 import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
 import {groundsOverlay} from '../web/map/charter-grounds.ts';
 import {markData, markScreen, markStyle} from '../web/map/marks.ts';
 import {assessScreen, CHECKING} from '../web/map/habitat.ts';
 import {beginWaypointPlacement, cancelWaypointPlacement, placementRefused, waypointPlacement} from '../web/waypoint-placement.ts';
 import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, SHORELINE_DETAIL_ZOOM} from '../web/map/coastline.ts';
-import {VIEW_ZOOM, ZOOM_OFFSET, collapseAttribution, createEngine, mapOptions} from '../web/map/engine.ts';
+import {VIEW_ZOOM, ZOOM_OFFSET, SOURCES_HREF, SourcesLinkControl, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
@@ -171,7 +171,7 @@ function library() {
   const control = kind => class { constructor(options) { this.kind = kind; this.options = options; } };
   fake.module = {
     lib: {
-      Map: FakeMap, NavigationControl: control('navigation'), ScaleControl: control('scale'), AttributionControl: control('attribution'),
+      Map: FakeMap, NavigationControl: control('navigation'), ScaleControl: control('scale'),
       setWorkerUrl: url => fake.workerUrls.push(url), addProtocol: (name, fn) => fake.protocols.push([name, fn]),
     },
     workerUrl: '/assets/maplibre-gl-worker.0123456789.js',
@@ -211,7 +211,7 @@ test('MapLibre init: north up, nautical scale, worker and protocol once, and err
   assert.equal(map.options.maxPitch, 0);
   assert.equal(map.keyboardRotation, false);
   assert.equal(map.touchRotation, false);
-  assert.deepEqual(map.controls.map(([c, at]) => [c.kind, at]), [['navigation', 'bottom-right'], ['scale', 'bottom-right'], ['attribution', 'bottom-right']]);
+  assert.deepEqual(map.controls.map(([c, at]) => [c instanceof SourcesLinkControl ? 'sources' : c.kind, at]), [['navigation', 'bottom-right'], ['scale', 'bottom-right'], ['sources', 'bottom-right']]);
   assert.equal(map.controls[0][0].options.showCompass, false, 'no compass: the chart never rotates');
   assert.equal(map.controls[1][0].options.unit, 'nautical');
   assert.deepEqual(mapOptions(host, options.style, options.camera).locale, {'Map.Title': 'Chart'});
@@ -237,40 +237,27 @@ test('a still engine (the landing\'s night map, FE-25) takes no input, fades no 
   assert.equal(mapOptions({}, style, camera).interactive, undefined, 'the Chart keeps its gestures');
 });
 
-/** A fake attribution <details>: its classes and whether it is `open`. */
-function attribElement(...classes) {
-  const names = new Set(classes), attributes = new Set(['open']);
-  return {names, attributes, classList: {contains: n => names.has(n), remove: n => names.delete(n)}, removeAttribute: n => attributes.delete(n)};
-}
-const state = el => [[...el.names].sort().join(' '), el.attributes.has('open')];
-
-test('BL-SC-1: collapseAttribution folds an opened compact control and leaves a folded or desktop one alone', () => {
-  const opened = attribElement('maplibregl-ctrl-attrib', 'maplibregl-compact', 'maplibregl-compact-show');
-  collapseAttribution(opened);
-  assert.deepEqual(state(opened), ['maplibregl-compact maplibregl-ctrl-attrib', false]);
-  collapseAttribution(opened);
-  assert.deepEqual(state(opened), ['maplibregl-compact maplibregl-ctrl-attrib', false], 'a second fold changes nothing');
-  const minimized = attribElement('maplibregl-ctrl-attrib', 'maplibregl-compact'), desktop = attribElement('maplibregl-ctrl-attrib');
-  for (const el of [minimized, desktop]) { const before = state(el); collapseAttribution(el); assert.deepEqual(state(el), before); }
-});
-
-test('BL-SC-1: the Chart\'s attribution uses MapLibre\'s width rule and folds each time it turns compact, not while it stays so', () => {
+// Contract (MAP-SOURCES-PAGE-1, G 2026-11-18: no source labels on the map): the Chart draws no MapLibre attribution control and
+// no credit text; its one source-related control is a "Sources" link to the generated list. Believable bug: an
+// AttributionControl or a customAttribution creeping back in, which the fake library (it has no AttributionControl) makes throw.
+test('MAP-SOURCES-PAGE-1: the Chart has no attribution control; its only source control is a bare "Sources" link to /sources', () => {
   const fake = library(), style = {version: 8, sources: {}, layers: []}, camera = {latitude: 35.37, longitude: -120.86, zoom: 12};
   createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}});
-  createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}, attribution: '© OSM'});
-  assert.deepEqual(fake.maps.map(m => m.controls[2][0].options), [{}, {customAttribution: '© OSM'}], 'no compact: false; the credit text is unchanged');
-  const [map] = fake.maps, el = map.controls[2][0]._container = attribElement('maplibregl-ctrl-attrib', 'maplibregl-compact', 'maplibregl-compact-show');
-  map.fire('styledata');
-  assert.deepEqual(state(el), ['maplibregl-compact maplibregl-ctrl-attrib', false], 'opened on load at phone width → folded');
-  el.names.add('maplibregl-compact-show'); el.attributes.add('open'); // one tap opens it
-  map.fire('resize'); map.fire('sourcedata');
-  assert.equal(el.names.has('maplibregl-compact-show'), true, 'a resize while compact keeps the reader\'s open panel');
-  el.names.delete('maplibregl-compact'); el.names.delete('maplibregl-compact-show'); // MapLibre: wider than 640 px
-  map.fire('resize');
-  assert.deepEqual(state(el), ['maplibregl-ctrl-attrib', true], 'the desktop width stays expanded');
-  el.names.add('maplibregl-compact').add('maplibregl-compact-show'); // MapLibre reopens it on narrowing
-  map.fire('resize');
-  assert.deepEqual(state(el), ['maplibregl-compact maplibregl-ctrl-attrib', false], 'narrow → wide → narrow ends folded');
+  const [map] = fake.maps;
+  assert.equal(map.controls.length, 3, 'zoom, scale and the one Sources link');
+  assert.equal(map.controls.some(([c]) => c.kind === 'attribution' || 'customAttribution' in (c.options ?? {})), false, 'no attribution control, no credit text');
+  assert.ok(map.controls[2][0] instanceof SourcesLinkControl);
+  const made = [], saved = globalThis.document;
+  globalThis.document = {createElement: tag => { const el = {tag, className: '', textContent: '', attrs: {}, kids: [], setAttribute(n, v) { this.attrs[n] = v; }, append(...k) { this.kids.push(...k); }, remove() { this.removed = true; }}; made.push(el); return el; }};
+  try {
+    const control = new SourcesLinkControl(), box = control.onAdd(), link = box.kids[0];
+    assert.equal(SOURCES_HREF, '/sources#data-sources');
+    assert.deepEqual([link.tag, link.href, link.textContent], ['a', SOURCES_HREF, 'Sources'], 'one small link and no source name');
+    assert.equal(box.kids.length, 1);
+    assert.match(box.className, /\bmap-sources-link\b/);
+    control.onRemove();
+    assert.equal(box.removed, true);
+  } finally { globalThis.document = saved; }
 });
 
 test('the engine\'s style gate: calls before style.load wait, then apply once with the latest value per layer and source', () => {
@@ -359,7 +346,7 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
     'https://s.test/api/daily?region=morro-bay&part=mpa-boundaries', 'https://s.test/feeds/data/regions/morro-bay/latest.json',
   ].sort());
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
-  assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
+  assert.ok(map.controls[2][0] instanceof SourcesLinkControl, 'no basemap credit is drawn while it draws; the corner holds only the Sources link');
   // #617: the first view (?view= zoom 12, MapLibre 11) draws the overview shoreline.
   assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline-overview.geojson');
   // The startup budget: the style's own source loads the shoreline once (it is not set again for the
@@ -492,7 +479,7 @@ test('a failing source marks its layer unavailable and the rest of the Chart kee
   await tick(); await tick();
   const [map] = fake.maps;
   assert.deepEqual(unavailable.value, ['basemap'], 'no manifest: the basemap is unavailable');
-  assert.equal(map.controls[2][0].options.customAttribution, undefined, 'and is not credited');
+  assert.ok(map.controls[2][0] instanceof SourcesLinkControl, 'the Sources link stays when the basemap is unavailable');
   assert.ok(map.options.style.sources[COASTLINE_SOURCE], 'the coastline still draws');
   map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('503')});
   map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('503 again')});
@@ -1027,4 +1014,18 @@ test('chart_closed_pick_context_never_picks: with the Chart still mounted but an
     settlePicks();
     assert.equal(chartMark.value.name, 'Shoreline', 'back on the coast an isolated click selects');
   } finally { appView.value = 'coast'; cancelWaypointPlacement(); stage.destroy(); }
+});
+
+// Contract: DATA-LIVE-9. The bottom relief is public: the gate takes no admin/preview-access input, so a signed-out visitor is
+// asked for the same overlay as an owner, and the pointer (not a session) decides whether anything draws. Its honesty line is
+// fixed copy with no source names. Believable bugs: re-adding an admin gate; wording drifting to a source credit.
+test('relief gate is public on the coast Chart; the honesty line names no source', () => {
+  const base = {presentation: 'chart', view: 'coast', basemapAvailable: true, studyPreviewOn: false};
+  assert.equal(reliefWanted(base), true);
+  for (const edit of [{presentation: '2d'}, {presentation: '3d'}, {view: 'fleet'}, {basemapAvailable: false}, {studyPreviewOn: true}])
+    assert.equal(reliefWanted({...base, ...edit}), false, JSON.stringify(edit));
+  const row = JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['layer.relief.shading'];
+  assert.equal(row.en, 'Depth shading: estimated from survey grids · blank = no survey data · NOT FOR NAVIGATION');
+  assert.match(row.es, /NAVEGACI/);
+  assert.doesNotMatch(row.en + row.es, /csumb|sfml|mbari|usgs|noaa|planet|attribution|credit/i);
 });

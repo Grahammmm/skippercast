@@ -11,6 +11,7 @@ import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
+import {paintEdits} from './theme-restyle.ts';
 import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {runText, validText} from './swell.ts';
 
@@ -82,14 +83,20 @@ export function windGeometry(f: WindFrame) {
   return {arrows: {type: 'FeatureCollection' as const, features: arrows}, labels: {type: 'FeatureCollection' as const, features: labels}};
 }
 
-export function windOverlay(p: Palette): Overlay {
-  const empty = {type: 'geojson' as const, attribution: layerEntry('wind').attribution, data: {type: 'FeatureCollection' as const, features: []}};
-  return {sources: {[WIND_ARROWS]: empty, [WIND_LABELS]: empty}, layers: [
+function windLayers(p: Palette): Overlay['layers'] {
+  return [
     {id: 'wind-casing', type: 'line', source: WIND_ARROWS, paint: {'line-color': p.mapInkHalo, 'line-width': 4}},
     {id: WIND_ARROWS, type: 'line', source: WIND_ARROWS, paint: {'line-color': p.mapInk, 'line-width': 2}},
     {id: WIND_LABELS, type: 'symbol', source: WIND_LABELS, layout: {'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 11, 'text-offset': [0, 1.6]},
       paint: {'text-color': p.mapInk, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.5}},
-  ]};
+  ];
+}
+
+/** One shared function, so equal overlays stay equal. A live theme switch re-runs the same layer builder with the new palette; ids and sources stay. */
+const themePaint = (pal: Palette) => paintEdits(windLayers(pal));
+export function windOverlay(p: Palette): Overlay {
+  const empty = {type: 'geojson' as const, attribution: layerEntry('wind').attribution, data: {type: 'FeatureCollection' as const, features: []}};
+  return {sources: {[WIND_ARROWS]: empty, [WIND_LABELS]: empty}, layers: windLayers(p), themePaint};
 }
 
 export function createWind(o: {engine: ReadonlySignal<Engine | null>; zone: () => string; fetchFn?: typeof fetch; page?: () => string; palette?: () => Palette; now?: () => Date}) {

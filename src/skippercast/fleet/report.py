@@ -104,8 +104,21 @@ def coverage(vessels: Iterable[Mapping], watch: Iterable[Mapping], now_ms: int) 
         for port, classes in sorted(ports.items(), key=lambda item: _key(item[0]))]}
 
 
-def uptime(hours: Mapping[int, int], now_ms: int) -> dict:
-    """Uptime over 7 and 30 days of whole UTC hours, and runs of full UTC days in the 30."""
+NO_HOURLY_STORE = "hourly-store-absent"
+
+
+def uptime(hours: Mapping[int, int], now_ms: int, store_present: bool = True) -> dict:
+    """Uptime over 7 and 30 days of whole UTC hours, and runs of full UTC days in the 30.
+
+    ``store_present=False`` (no ``state.sqlite`` on this runner) is missing evidence, not a measured outage:
+    every figure is None and ``coverage`` says why. A store that exists but holds no rows, or zero-message
+    rows, is measured and stays 0.0%.
+    """
+    if not store_present:
+        return {"coverage": {"status": "unknown", "reason": NO_HOURLY_STORE},
+                "d7": {"pct": None, "up_hours": None, "hours": 7 * 24},
+                "d30": {"pct": None, "up_hours": None, "hours": 30 * 24},
+                "full_days": {"longest": None, "current": None, "days": None}, "hours_recorded": None}
     end = now_ms // HOUR * HOUR
     up = {h for h, messages in hours.items() if messages > 0}
 
@@ -119,7 +132,7 @@ def uptime(hours: Mapping[int, int], now_ms: int) -> dict:
     for ok in full:
         current = current + 1 if ok else 0
         longest = max(longest, current)
-    return {"d7": window(7), "d30": window(30), "full_days": {"longest": longest, "current": current, "days": len(full)},
+    return {"coverage": {"status": "measured", "reason": None}, "d7": window(7), "d30": window(30), "full_days": {"longest": longest, "current": current, "days": len(full)},
             "hours_recorded": len(hours)}
 
 
@@ -149,12 +162,12 @@ def cost(runs: Iterable[Mapping], now_ms: int, d1: str | None) -> dict:
 
 
 def build(region_id: str, *, vessels, watch, hours, runs, validation_doc=None, open_reviews: int | None = None,
-          d1: str | None = None, sink: str = "staging", now_ms: int | None = None) -> dict:
+          d1: str | None = None, sink: str = "staging", now_ms: int | None = None, hours_store: bool = True) -> dict:
     now = round(time.time() * 1000) if now_ms is None else now_ms
     runs = list(runs)
     return {"region": region_id, "generated_at": iso(now), "sink": sink, "seen_days": SEEN_DAYS,
             "groups": {g: list(c) for g, c in FIELD_GROUPS.items()}, **coverage(vessels, watch, now),
-            "uptime": uptime(hours, now), "validation": validation(validation_doc), "runs": runs_summary(runs, now),
+            "uptime": uptime(hours, now, hours_store), "validation": validation(validation_doc), "runs": runs_summary(runs, now),
             "open_reviews": open_reviews, "cost": cost(runs, now, d1)}
 
 
@@ -187,12 +200,18 @@ def markdown(r: Mapping) -> str:
                  f"{_p(t['completeness']['mean_pct'])} |")
     lines += ["", "### Field completeness", "", "| Group | Filled |", "| --- | --- |"]
     lines += [f"| {g} | {_p(value)} |" for g, value in t["completeness"]["groups"].items()]
-    lines += ["", "### AIS ingestion", "",
-              f"- Uptime: 7 days {_p(u['d7']['pct'])} ({u['d7']['up_hours']} of {u['d7']['hours']} hours), "
-              f"30 days {_p(u['d30']['pct'])} ({u['d30']['up_hours']} of {u['d30']['hours']} hours)",
-              f"- Full UTC days (all 24 hours up) of the last {u['full_days']['days']} complete days: longest run "
-              f"{u['full_days']['longest']}, current run {u['full_days']['current']}",
-              f"- Hourly counters on this runner: {u['hours_recorded']}", "", "### Classification validation", ""]
+    if u["coverage"]["status"] == "unknown":
+        lines += ["", "### AIS ingestion", "",
+                  f"- Uptime unknown: no hourly counters on this runner ({u['coverage']['reason']}); this is missing "
+                  "evidence, not a measured outage. Check that the AIS processor ran and its state database is here.",
+                  "", "### Classification validation", ""]
+    else:
+        lines += ["", "### AIS ingestion", "",
+                  f"- Uptime: 7 days {_p(u['d7']['pct'])} ({u['d7']['up_hours']} of {u['d7']['hours']} hours), "
+                  f"30 days {_p(u['d30']['pct'])} ({u['d30']['up_hours']} of {u['d30']['hours']} hours)",
+                  f"- Full UTC days (all 24 hours up) of the last {u['full_days']['days']} complete days: longest run "
+                  f"{u['full_days']['longest']}, current run {u['full_days']['current']}",
+                  f"- Hourly counters on this runner: {u['hours_recorded']}", "", "### Classification validation", ""]
     lines.append("- No validation report on this runner." if v is None else
                  f"- {v['trips_scored']} labelled trips scored; fishing precision {_ratio(v['precision'])}, recall "
                  f"{_ratio(v['recall'])}; target {'met' if v['target_met'] else 'not met'} "
@@ -221,10 +240,12 @@ def status_line(r: Mapping) -> str:
     checked = ("no validation report" if v is None else
                f"{v['trips_scored']} labelled trips, fishing precision {_ratio(v['precision'])}, recall {_ratio(v['recall'])}")
     reviews = "open reviews not counted" if r["open_reviews"] is None else f"{r['open_reviews']} open reviews"
+    ingestion = ("AIS ingestion uptime unknown (no hourly counters on this runner)"
+                 if u["coverage"]["status"] == "unknown" else
+                 f"AIS ingestion {u['full_days']['current']} consecutive full days (longest {u['full_days']['longest']}; "
+                 f"uptime 7 d {_p(u['d7']['pct'])}, 30 d {_p(u['d30']['pct'])})")
     return (f"- {r['generated_at'][:10]}: {r['region']} fleet report: {t['boats']} active boats ({ports or 'none'}); "
-            f"MMSI {_p(t['mmsi']['pct'])}, seen in 30 days {_p(t['seen_30d']['pct'])}; AIS ingestion "
-            f"{u['full_days']['current']} consecutive full days (longest {u['full_days']['longest']}; uptime 7 d "
-            f"{_p(u['d7']['pct'])}, 30 d {_p(u['d30']['pct'])}); {checked}; {reviews}.")
+            f"MMSI {_p(t['mmsi']['pct'])}, seen in 30 days {_p(t['seen_30d']['pct'])}; {ingestion}; {checked}; {reviews}.")
 
 
 # ---------------------------------------------------------------- inputs
@@ -291,6 +312,7 @@ def collect(region: FleetRegion, sink_kind: str = "staging", var: Path | None = 
     ais = var / region.id / "ais"
     validation_path = ais / "validation" / "report.json"
     return {"vessels": vessels, "watch": watch, "open_reviews": reviews, "hours": read_hours(ais / "state.sqlite"),
+            "hours_store": (ais / "state.sqlite").is_file(),
             "runs": read_runs(region, var), "sink": sink_kind,
             "validation_doc": json.loads(validation_path.read_text(encoding="utf-8")) if validation_path.is_file() else None}
 

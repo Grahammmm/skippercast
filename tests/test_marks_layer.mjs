@@ -91,15 +91,17 @@ test('a mark\'s card: fit, grade and depth range; source and age; the regulation
   assert.deepEqual({...card, basis: undefined, copy: undefined}, {
     id: 'spot:SC26-001', name: 'Southern rocky rise', kind: 'Reef mark · grade A · ~135–184 ft', reading: 'Fits lingcod habitat 3 of 3',
     position: {latitude: 35.164314, longitude: -120.843179},
-    source: 'Avila / Point Buchon · surveyed 2008 · atlas 2026-09-27',
+    source: 'surveyed 2008 · atlas 2026-09-27',
     rules: 'Screened against protected areas with 2992 m clearance in the atlas of 2026-09-27; check current rules before you fish.',
     regulations: {href: 'https://wildlife.ca.gov/Fishing/Ocean/Regulations', label: 'CDFW ocean fishing regulations'}, basis: undefined, copy: undefined,
   });
-  assert.match(card.basis, /^Raised, rough bedrock.*Research-only historical terrain candidate.*USGS; CSUMB Seafloor Mapping Lab.*U\.S\. public domain/);
+  // MAP-SOURCES-PAGE-1: a mark's basis carries no source credit or rights line; the Sources page does.
+  assert.match(card.basis, /^Raised, rough bedrock.*Research-only historical terrain candidate/);
+  assert.doesNotMatch(card.basis, /USGS|CSUMB|public domain/);
   const socal = atlasCard(SOCAL_ATLAS.targets[0], {region: SOCAL, atlas: SOCAL_ATLAS, survey: null, geology: null}, 'reef');
   assert.equal(socal.reading, 'Habitat fit unrated for this target');
-  assert.equal(socal.source, 'NOAA H13093: Vicinity of Anacapa Island · surveyed 2017 · atlas 2026-09-24');
-  assert.match(socal.basis, /CC0-1\.0/, 'each feature carries its own source\'s rights');
+  assert.equal(socal.source, 'surveyed 2017 · atlas 2026-09-24');
+  assert.doesNotMatch(socal.basis, /CC0-1\.0/, 'MAP-SOURCES-PAGE-1: rights live on the Sources page, not on the card');
   assert.equal(socal.rules, 'Screened against protected areas with 75 m clearance in the atlas of 2026-09-24; check current rules before you fish.', 'v1\'s terrain-evidence wording');
   assert.deepEqual(socal.regulations, {href: 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern', label: 'CDFW regional fishing regulations'}, 'the region\'s own CDFW page');
   assert.equal(regulationsLink({id: 'x', regulations_url: 'https://example.test/rules'}).href, CDFW_REGULATIONS, 'only an official CDFW page');
@@ -129,7 +131,7 @@ test('survey habitat fills and geology outlines carry their class; their cards n
   assert.equal(survey.rules, 'MPAs subtracted with a 102 m margin when built on 2026-09-26; check current rules before you fish.');
   assert.match(survey.basis, /^Compiled historical habitat, not a waypoint/);
   const unit = GEOLOGY.features[0].properties, geology = geologyCard(unit, GEOLOGY, CAMBRIA);
-  assert.deepEqual([geology.name, geology.kind, geology.source], ['Coast Range ophiolite', 'Geology · map unit Jo?', 'U.S. Geological Survey, Watt and others, SIM 3327 (2015)']);
+  assert.deepEqual([geology.name, geology.kind, geology.source], ['Coast Range ophiolite', 'Geology · map unit Jo?', 'Geological map']);
   assert.equal(geology.rules, 'MPAs excluded when the layer was built; check current rules before you fish.');
   assert.equal(geologyCard(unit, {...GEOLOGY, source: {}}, CAMBRIA).rules, 'Check current rules before you fish.', 'no screen claimed where the build states none');
   for (const c of [survey, geology]) assert.equal(c.regulations.href, CDFW_REGULATIONS, 'every card links the official rules');

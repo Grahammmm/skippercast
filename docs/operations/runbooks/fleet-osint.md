@@ -1,13 +1,13 @@
 # Runbook: the fleet OSINT run
 
-**Use when:** switching the charter fleet's OSINT step on (first run), a weekly *Fleet OSINT* run (`fleet-osint.yml`) failed or left batches failed, a run must be resumed, the subscription token expired, or the pinned Claude Code version must change.
+**Use when:** switching the charter fleet's OSINT step on (first run), a weekly *Fleet OSINT* run (`fleet-osint.yml`, in the private `Grahammmm/skippercast-ops`) failed or left batches failed, a run must be resumed, the subscription token expired, or the pinned Claude Code version must change.
 **Severity:** SEV4. Nothing user-facing changes in real time: boats keep their earlier facts and the next Sunday run catches up. Raise it to SEV3 if the run refuses to start (token, version) two weeks in a row.
-**Owner:** repository owner (the token, variables, the box). An agent can dispatch the workflow, read its summary and, given a shell on the box, the run directory; it opens fix PRs.
-**Setup reference:** [design.md § 8](../../plans/charter-fleet/design.md#8-the-osint-agent-step), [runners](../runners.md#the-fleet-osint-run), [fleet registry run](fleet-registry.md) (the pipeline it fills in), [threat model § 10.4](../../legal/threat-model.md).
+**Owner:** repository owner (the token, variables, the box). An agent with access to the private repository can dispatch the workflow, read its summary and, given a shell on the box, the run directory; it opens fix PRs.
+**Setup reference:** [design.md § 8](../../plans/charter-fleet/design.md#8-the-osint-agent-step), [runners](../runners.md#the-fleet-osint-run), [fleet registry run](fleet-registry.md) (the pipeline it fills in), [where each control lives](fleet-ais-down.md#where-the-controls-live), [threat model § 10.4](../../legal/threat-model.md).
 
 ## What runs where
 
-`fleet-osint.yml` runs every Sunday at 10:17 UTC and on dispatch, on `vars.DATA_RUNNER` (Hermes), only from `main`, only while `ENABLE_FLEET` is `true`. It never triggers on `pull_request`. One job, four steps:
+`fleet-osint.yml` lives in the private repository `Grahammmm/skippercast-ops` (operators only) and checks out this repository's `main`; every `gh workflow run` and `gh run list` for it takes `--repo Grahammmm/skippercast-ops`. It runs every Sunday at 10:17 UTC and on dispatch, on our own runners labelled `skippercast-ops`, only from `main`, only while the private repository's `ENABLE_FLEET` is `true`. It never triggers on `pull_request`. One job, four steps:
 
 1. **Plan.** `python -m skippercast.fleet plan-agent --region CA --sink worker --run-id <id> --mode full` reads the registry snapshot and writes batch manifests of at most 20 boats (new, stale or incomplete; removal-requested boats are never selected) to `<run dir>/manifests/batch-NNN.json`. A resumed run skips this step and keeps its manifests.
 2. **Research.** `python scripts/fleet/run_osint.py --region CA --run-id <id> --claude <pinned CLI>` runs each pending batch as one headless `claude -p` session with the `charter-osint` agent (`.claude/agents/charter-osint.md`), `FLEET_OSINT_PARALLEL` (default 3) at a time, 60 minutes each. Each session writes `profiles/<vessel_id>.json` and `summaries/<batch_id>.md` in the run directory. A failed batch is retried once; each batch's status goes to `state.json` under `osint`. The whole step stops at 300 minutes (`--deadline-min`, below the job's 360-minute timeout) so Ingest always runs: no batch starts with less than 5 minutes left, a session still running at the deadline is stopped, and the rest stay pending for a resume. A cancelled job (SIGTERM or SIGINT) stops every live session's process group, SIGTERM then SIGKILL after 5 seconds, and starts nothing more, so no `claude` process outlives the job.
@@ -22,7 +22,7 @@
 | `max_batches` | empty: all | Research at most this many pending batches; the rest stay pending for a resume. |
 | `run_id` | empty: a new run | Resume this run (same sink): done batches are skipped, failed and pending ones run. |
 
-The summary prints the run id first, then counts only (`plan-agent` counts, `{"batches", "done", "failed", "not_run", "skipped_done", "stopped", "profiles"}` (`stopped`: `deadline`, `SIGTERM`, `SIGINT` or null), ingest counts). Never boat names, contacts or agent output: workflow logs are readable by anyone who can read the repository.
+The summary prints the run id first, then counts only (`plan-agent` counts, `{"batches", "done", "failed", "not_run", "skipped_done", "stopped", "profiles"}` (`stopped`: `deadline`, `SIGTERM`, `SIGINT` or null), ingest counts). Never boat names, contacts or agent output: workflow logs are readable by anyone who can read the private repository.
 
 Files on the box (`~` is the runner user's home):
 
@@ -39,7 +39,7 @@ All of it is registry data: it stays on the box, never in git, an issue or a PR.
 
 ## First run (owner steps, once)
 
-1. **Registry first.** The [fleet registry run](fleet-registry.md) has run at least once (`FLEET_ENABLED` and `ENABLE_FLEET` are `true`, `DATA_RUNNER` is set), so there are boats to research.
+1. **Registry first.** The [fleet registry run](fleet-registry.md) has run at least once (`FLEET_ENABLED` is `true` here, `ENABLE_FLEET` is `true` in the private repository, and a `skippercast-ops` runner is online), so there are boats to research.
 2. **Subscription token, on Hermes as the runner user.** The OSINT run uses the Claude subscription only, never an API key. Run `claude setup-token` (here through `npx` at the pinned version, before the workflow has installed it) and save the token:
 
    ```bash
@@ -50,8 +50,8 @@ All of it is registry data: it stays on the box, never in git, an issue or a PR.
    ```
 
    The token is not a GitHub secret and must not be one. Do not put `ANTHROPIC_API_KEY` in that file, the runner's environment or the workflow: the runner exits 2 when it is set (also `ANTHROPIC_AUTH_TOKEN` and the Bedrock, Vertex and Foundry switches), so no run can bill the API.
-3. **Parallelism (optional).** [Repository variable](https://github.com/Grahammmm/skippercast/settings/variables/actions) `FLEET_OSINT_PARALLEL` (1–8, default 3). Lower it if the subscription's usage limits stop batches.
-4. **A small run first.** `gh workflow run fleet-osint.yml --repo Grahammmm/skippercast -f region=CA -f sink=worker -f max_batches=1`, then `gh run watch`. Check the summary: one batch `done`, `profiles` > 0, ingest `refused` 0. On the box, read `summaries/batch-001.md` and a profile or two before letting the schedule run every batch.
+3. **Parallelism (optional).** Private repository variable `FLEET_OSINT_PARALLEL` (1–8, default 3; `gh variable set FLEET_OSINT_PARALLEL --body 2 --repo Grahammmm/skippercast-ops`). Lower it if the subscription's usage limits stop batches.
+4. **A small run first.** `gh workflow run fleet-osint.yml --repo Grahammmm/skippercast-ops -f region=CA -f sink=worker -f max_batches=1`, then `gh run watch --repo Grahammmm/skippercast-ops`. Check the summary: one batch `done`, `profiles` > 0, ingest `refused` 0. On the box, read `summaries/batch-001.md` and a profile or two before letting the schedule run every batch.
 5. The schedule takes over from the next Sunday. Design § 9's order from an empty registry: registry `run`, then this run, then registry `run` again.
 
 ## Pinned Claude Code CLI and its flags
@@ -85,11 +85,11 @@ Each batch runs, with the prompt on stdin and the run directory as working direc
 
 These were checked against `claude --help` of 2.1.289 and the [CLI reference](https://code.claude.com/docs/en/cli-reference), [headless](https://code.claude.com/docs/en/headless), [authentication](https://code.claude.com/docs/en/authentication) and [permissions](https://code.claude.com/docs/en/permissions) pages (October 2026).
 
-**Changing the pin.** In a PR: set `CLAUDE_CODE_VERSION`, re-read `claude --help` and the pages above for every flag in the table (removed or renamed flags, changed defaults, the `--agents` file form, `authMethod` values), update this table, and run `python -m pytest tests/unit/test_fleet_run_osint.py`. After merging, dispatch with `max_batches=1` before the schedule runs.
+**Changing the pin.** In a PR: set `CLAUDE_CODE_VERSION`, re-read `claude --help` and the pages above for every flag in the table (removed or renamed flags, changed defaults, the `--agents` file form, `authMethod` values), update this table, and run `python -m pytest tests/unit/test_fleet_run_osint.py`. After merging, dispatch the private workflow with `max_batches=1` before the schedule runs.
 
 ## Reruns and resume
 
-- **Some batches failed** (the job is red, `failed` > 0): the batches that finished were ingested. Resume: `gh workflow run fleet-osint.yml --repo Grahammmm/skippercast -f region=CA -f sink=worker -f run_id=<id>`. Done batches are skipped; each failed one gets another try and one retry. Profiles written by a failed attempt that pass validation are ingested too.
+- **Some batches failed** (the job is red, `failed` > 0): the batches that finished were ingested. Resume: `gh workflow run fleet-osint.yml --repo Grahammmm/skippercast-ops -f region=CA -f sink=worker -f run_id=<id>`. Done batches are skipped; each failed one gets another try and one retry. Profiles written by a failed attempt that pass validation are ingested too.
 - **A batch that fails every time:** on the box, `jq '.osint.batches["batch-NNN"]' <run dir>/state.json` (status, attempts, exit code, error, profiles written, turns, denials) and `jq '{subtype, is_error, num_turns, permission_denials}' <run dir>/osint/batch-NNN.json`. `timed out after 60 min` or `error_max_turns`: the batch is too slow; lower `max_requests_per_boat` or the batch size in a PR. Many `permission_denials`: the agent keeps calling something the session denies (an off-limits host, a write outside `profiles/`); read `summaries/batch-NNN.md` and fix the agent file in a PR.
 - **`stopped` is `deadline`** (`not_run` > 0, a batch error `stopped at the run deadline`): the run had more batches than five hours hold. Resume it as above; if it happens every week, raise `FLEET_OSINT_PARALLEL` within the subscription's usage limits.
 - **A new run instead of a resume** plans again from the registry: boats a failed batch held are selected again (they are still unprofiled), so either works; a resume keeps the done batches' work and costs less.

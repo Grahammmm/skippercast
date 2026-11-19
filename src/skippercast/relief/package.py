@@ -15,7 +15,9 @@ RELEASE_SCHEMA = 'sc-relief-release/1'
 DISCLAIMER = 'NOT FOR NAVIGATION'
 METADATA = ('region', 'bounds', 'minzoom', 'maxzoom', 'sources', 'detail_summary', 'native_support_by_zoom')
 LAYERS = 'layers/public/'
-ARCHIVE = LAYERS + 'relief.pmtiles'
+# Each producer owns its own leaf (receipts rename a whole target), so the archive is the
+# tiles stage's own output, not a copy. The digest index is the digests stage's sibling leaf.
+ARCHIVE = LAYERS + 'tiles/relief.pmtiles'
 DIGEST_ROOT = LAYERS + 'relief.digests/root.json'
 _COMPONENT = re.compile(r'[A-Za-z0-9_-][A-Za-z0-9._-]*')
 _RESERVED = {'qa', 'qa.json', 'release.json', 'envelope.json', 'approval.json', 'shots', 'qwen.md'}
@@ -241,10 +243,13 @@ def main(argv=None) -> int:
         parser.error(str(exc))
 
     provenance = {}
+    inventory = []
 
     def plan(upstream):
         # Require every actual layer to come from a current producer receipt.
         provenance.update((row['path'], row) for doc in upstream.values() for row in doc['outputs'])
+        if 'inventory' in upstream:
+            inventory.extend(upstream['inventory']['outputs'])
         return receipts.Plan([receipts.Input(args.manifest, 'manifest'), receipts.Input(catalog, 'rights'),
                               receipts.Input(contract, 'region'), receipts.Input(schema, 'schema')],
                              params={'region': region.id})
@@ -254,6 +259,9 @@ def main(argv=None) -> int:
         if pending is None:
             raise ReleaseError('package attempt has no receipt')
         expected = {row['role']: row['sha256'] for row in pending['inputs']}
+        if any(ref.stage == 'inventory' for ref in refs) and not any(
+                row['path'].endswith('/manifest.json') and row['sha256'] == expected['manifest'] for row in inventory):
+            raise ReleaseError('layer inventory is not the current inventory stage output')
 
         def pinned(path, role):
             data = path.read_bytes()

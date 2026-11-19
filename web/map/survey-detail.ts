@@ -86,6 +86,12 @@ export function surveyHatch(palette: Pick<Palette, 'mapNosurvey'>, light: boolea
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
+/** Use the overlay's stable image ID and atlas scale for every theme. */
+export function surveyHatchPattern(id: string, palette: Palette, light: boolean) {
+  const image = surveyHatch(palette, light);
+  return image ? [{id, image, pixelRatio: SURVEY_HATCH_PIXEL_RATIO}] : [];
+}
+
 /** Bottom-to-top order, below the redraw of basemap land and parks. Only the
  * optional tint, outline and labels change visibility; the hatch is always on. */
 export function surveyDetailLayers(source: string, id: string, pattern: string, p: Palette, light: boolean): LayerSpecification[] {

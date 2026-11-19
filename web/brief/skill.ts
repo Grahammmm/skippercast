@@ -62,11 +62,29 @@ export function skillLine(s: SkillSummary, lang: Language | string = 'en'): stri
   return `${body} ${t('brief.skill.nav', lang)}`;
 }
 
-/** The parsed scorecard once fetched: undefined while loading, null when it could not be read. */
+/** The parsed scorecard once fetched: undefined while first loading, null when it could not be read. */
 export const skillFile = signal<unknown>(undefined);
-let started = false;
+const RETRY_DELAY_MS = 5_000;
+let pending = false;
+
+async function readSkill(): Promise<unknown> {
+  try {
+    const response = await fetch('/data/forecast-skill.json', {cache: 'no-store'});
+    return response.ok ? await response.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function loadSkill(): void {
-  if (started || typeof fetch === 'undefined') return;
-  started = true;
-  void fetch('/data/forecast-skill.json', {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null).then(j => { skillFile.value = j; });
+  if (pending || skillFile.peek() != null || typeof fetch === 'undefined') return;
+  pending = true;
+  void readSkill().then(async file => {
+    skillFile.value = file;
+    if (file === null) {
+      // Keep UNKNOWN visible during one delayed retry; no polling if it fails again.
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      skillFile.value = await readSkill();
+    }
+  }).finally(() => { pending = false; });
 }

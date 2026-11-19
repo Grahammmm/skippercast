@@ -87,9 +87,6 @@ def refresh_region(kind, region, output, previous_root, now, default, manifest=N
     """Collect and write one region; return its index row. Raises on failure."""
     started=time.monotonic()
     ident=region["id"]
-    prior_path=previous_root/"regions"/ident/"latest.json" if previous_root else None
-    if prior_path and not prior_path.exists() and ident==default: prior_path=previous_root/"latest.json"
-    prior=read_json(prior_path) if prior_path and prior_path.is_file() else None
     if kind in ('intelligence','habitat'):
         if kind=='intelligence':
             from skippercast.pipeline.intelligence import run
@@ -100,6 +97,9 @@ def refresh_region(kind, region, output, previous_root, now, default, manifest=N
         if manifest: record_region(manifest,kind,ident,data,output,previous_root,round((time.monotonic()-started)*1000))
         return {'region_id':ident,'status':data['health']['status'],'completed_at':data['completed_at'],'issues':data['health']['issues'],'coverage_gaps':data['health'].get('coverage_gaps',[]),
                 'forecast_coverage':data['health'].get('forecast_coverage') if kind=='intelligence' else None}
+    prior_path=previous_root/"regions"/ident/"latest.json" if previous_root else None
+    if prior_path and not prior_path.exists() and ident==default: prior_path=previous_root/"latest.json"
+    prior=read_json(prior_path) if prior_path and prior_path.is_file() else None
     data=(daily(now,prior,region_id=ident) if kind=="daily" else live(now,prior,region_id=ident))
     target=output/"regions"/ident
     if kind=="daily":  # computed before any write, so a failure leaves no partial region

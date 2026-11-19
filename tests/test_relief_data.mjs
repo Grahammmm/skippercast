@@ -83,16 +83,19 @@ test('held, unreviewed, malformed identities and changed whole-object receipts a
   assert.deepEqual(resolveRelief(morro, p, {...receipt, digest_root_sha256: sha('f')}), unavailable('identity'));
 });
 
-test('private, CSUMB SFML, MBARI and sources lacking explicit public-display rights never select', () => {
+// Contract: DATA-LIVE-9 rights basis. Lineage names and unconfirmed terms are not refusals (G 2026-11-18);
+// private rows, rows without explicit public-display rights and MBARI stay refused. Believable bugs: re-adding a
+// name regex that refuses CSUMB/SFML again, or dropping the private/MBARI refusals along with it.
+test('private, MBARI and sources lacking explicit public-display rights never select', () => {
   const clean = pointer();
   for (const p of [
     {...clean, private: true}, {...clean, private: undefined}, {...clean, sources: []},
     ...[
-      {id: 'csumb-ventresca-cc2-blocka01'}, {id: 'fixture-sfml-survey'},
-      {id: 'mbari-survey'}, {attribution: 'California State University, Monterey Bay Seafloor Mapping Lab'},
-      {provider: 'CSUMB SFML'}, {rights: {public_display: 'allowed', license: 'unresolved'}},
-      {rights: {public_display: 'allowed', terms_url: 'https://csumb.edu/undersea/sfml-data-library/'}},
-      {rights: {public_display: 'private'}}, {rights: {}}, {rights_class: 'excluded'}, {publication_allowed: false},
+      {private: true},
+      {id: 'mbari-survey'}, {attribution: 'Monterey Bay Aquarium Research Institute'}, {provider: 'MBARI'},
+      {rights: {public_display: 'allowed', terms_url: 'https://www.mbari.org/data/'}},
+      {rights: {public_display: 'excluded'}},
+      {rights: {public_display: 'private'}}, {rights: {}}, {rights_class: 'excluded'},
     ].map(edit => ({...clean, sources: [...clean.sources, {...source('other-survey'), ...edit}]})),
   ]) {
     const selected = selectReliefArchives([morro], new Map([[morro, p]]));
@@ -102,6 +105,36 @@ test('private, CSUMB SFML, MBARI and sources lacking explicit public-display rig
   const shared = selectReliefArchives([morro], new Map([[morro, clean], [draft, {...pointer(draft), private: true}]]));
   assert.deepEqual(shared.archives, []);
   assert.equal(shared.unavailable.get(morro), 'private', 'a public alias cannot admit the same held bytes');
+});
+
+test('CSUMB/SFML lineage, unresolved terms and withheld raw-file redistribution resolve ready under the G 2026-11-18 basis', () => {
+  // One source whose row carries the edit, with bands and zoom rows bound to its id: only the rights fields vary.
+  const withRow = edit => {
+    const id = edit.id ?? 'fixture-survey', p = pointer();
+    p.sources = [{...source(id), ...edit}];
+    p.detail_summary.depth_bands = [band(2, 0, 20, 3, id), band(2, 20, 91.44, 3, id)];
+    p.native_support_by_zoom = {13: zoom(), 14: zoom(2, {support_class: 3, id})};
+    return p;
+  };
+  for (const edit of [
+    {id: 'csumb-ventresca-cc2-blocka01'}, {id: 'fixture-sfml-survey'},
+    {attribution: 'California State University, Monterey Bay Seafloor Mapping Lab'}, {provider: 'CSUMB SFML'},
+    // Morro Bay's own USGS-CSUMB CSMP rows mention CSUMB.
+    {provider: 'USGS', attribution: 'USGS and CSUMB, CSMP'},
+    {rights: {public_display: 'allowed', license: 'unresolved'}},
+    {rights: {public_display: 'allowed', terms_url: 'https://csumb.edu/undersea/sfml-data-library/'}},
+    // Raw-file redistribution is a separate decision and stays off; it must not hide derived shading.
+    {publication_allowed: false, review_status: 'restricted', rights: {public_display: 'allowed', redistribution_reviewed: false}},
+    {review_status: 'candidate'},
+  ]) {
+    const archive = ready(withRow(edit));
+    assert.equal(archive.sources[0].public_display, 'allowed', JSON.stringify(edit));
+    // The relaxation changes rights only: depth-band tiering for this source is the usual integrity result.
+    assert.deepEqual(archive.depth_bands.map(({tier}) => tier), ['estimated', '2m'], JSON.stringify(edit));
+  }
+  // Still integrity-checked: a CSUMB-lineage row cannot skip the identity or resolution checks.
+  assert.deepEqual(resolveRelief(morro, {...withRow({id: 'csumb-x'}), sha256: 'etag'}), unavailable('identity'));
+  assert.deepEqual(resolveRelief(morro, {...withRow({id: 'csumb-x'}), detail_summary: {mask: 'transparent-nodata', depth_bands: []}}), unavailable('unknown-resolution'));
 });
 
 test('depth bands and native zoom detail preserve evidence, clocks and no-data distinctions', () => {

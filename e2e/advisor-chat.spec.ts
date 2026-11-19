@@ -42,7 +42,10 @@ test('the web chat opens, sends a message and shows the reply', async ({page, co
   await input.fill('And lingcod?');
   await input.press('Enter');
   await expect(panel.locator('.chat-line.is-skippercast')).toHaveCount(3);
-  expect((await context.cookies()).filter(c => c.name === 'sc_adv').map(c => c.value)).toEqual([cookie!.value]);
+  const cookies = (await context.cookies()).filter(c => c.name === 'sc_adv');
+  // Pass only scalars to the reporter: a matcher diff must never print a cookie value.
+  expect(cookies.length, 'advisor cookie count after the second reply').toBe(1);
+  expect(cookies[0]?.value === cookie!.value, 'advisor cookie is reused').toBe(true);
 
   await expect(panel.getByRole('link', {name: 'Save the number'})).toHaveAttribute('href', '/contact.vcf');
   await expect(panel.getByRole('link', {name: 'Text us'})).toHaveAttribute('href', '/text?s=web');

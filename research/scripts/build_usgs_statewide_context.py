@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import re
 import zipfile
 
 import numpy as np
@@ -24,13 +25,62 @@ DISPLAY_M = 20
 MIN_PATCH_M2 = 5_000
 
 
+# Historical CSMP legends name substrate independently of the depth/slope
+# offsets. Match the reviewed wording, not keywords in arbitrary prose.
+LEGACY_HARD = re.compile(
+    r'rock and boulders?(?:, rugose)?|'
+    r'high backscatter, and high rugosity, typically boulder and rugose bedrock'
+)
+MODERN_HARD = re.compile(
+    r'hard(?: and rugose)? (?:boulders?|bedrock)'
+    r'(?:, megaclast)?(?:(?:, and | and |, |/)(?:boulders?|bedrock))?(?: seafloor)?'
+)
+CLASS_NUMBER = re.compile(r'\bclass\s+([0-9]+)\b', re.I)
+
+
+def _class3_encoding(record):
+    """Return the supported encoding, or None on absent or conflicting evidence."""
+    composite = False
+    for item in record.get('substrate_definitions', []):
+        text = item['definition']
+        markers = list(CLASS_NUMBER.finditer(text))
+        for i, marker in enumerate(markers):
+            if int(marker[1]) != 3:
+                continue
+            end = markers[i + 1].start() if i + 1 < len(markers) else len(text)
+            clause = re.fullmatch(r'\s*[:,=]\s*(.+?)[.;]?\s*', text[marker.end():end], re.S)
+            if not re.search(r'(?:^|[.;\n])[^\S\n]*$', text[:marker.start()]) or not clause:
+                return None
+            if not LEGACY_HARD.fullmatch(' '.join(clause[1].lower().split())):
+                return None
+            composite = True
+
+    direct = False
+    for item in record.get('categorical_classes', []):
+        code = item['code']
+        if code == '3':
+            label = ' '.join(item['label'].lower().split()).rstrip('.')
+            if not MODERN_HARD.fullmatch(label):
+                return None
+            # The legacy SUBSTRATE attribute describes the base class, not
+            # the stored grid value. It does not override composite decoding.
+            direct |= not composite or item.get('field', '').upper() != 'SUBSTRATE'
+    if direct:
+        return 'direct'
+    if composite:
+        # An explicit non-hard value ending in 3 contradicts the legacy rule.
+        for item in record.get('categorical_classes', []):
+            code = item['code']
+            if code != '3' and re.fullmatch(r'[0-9]+3', code):
+                label = ' '.join(item['label'].lower().split()).rstrip('.')
+                if not (MODERN_HARD.fullmatch(label) or LEGACY_HARD.fullmatch(label)):
+                    return None
+        return 'composite'
+    return None
+
+
 def hard_class_review(record):
-    definitions=' '.join(item['definition'] for item in record['substrate_definitions']).lower()
-    legacy='class 3' in definitions and 'rock' in definitions and ('boulder' in definitions or 'rugose' in definitions)
-    modern=any(item['code']=='3' and 'hard' in item['label'].lower() and
-               ('boulder' in item['label'].lower() or 'bedrock' in item['label'].lower())
-               for item in record.get('categorical_classes',[]))
-    return legacy or modern
+    return _class3_encoding(record) is not None
 
 
 def mpa_union(snapshot):
@@ -46,7 +96,8 @@ def mpa_union(snapshot):
 
 
 def compile_block(row, source, cache, excluded):
-    if not hard_class_review(source):
+    encoding = _class3_encoding(source)
+    if encoding is None:
         raise ValueError('Original USGS XML does not define class 3 hard seabed')
     url=row['archive_url']
     archive=cache/(row['block_id']+'-'+row['kind']+'-'+hashlib.sha256(url.encode()).hexdigest()[:16]+'.zip')
@@ -70,9 +121,10 @@ def compile_block(row, source, cache, excluded):
         native=raster.read(1,out_shape=(height,width),resampling=Resampling.mode)
         # Codes add tens for depth zones and 50s for slope zones. The final
         # digit retains the reviewed substrate class; 0 is not hard seabed.
-        direct=any(item['code']=='3' and ('boulder' in item['label'].lower() or 'bedrock' in item['label'].lower())
-                   for item in source.get('categorical_classes',[]))
-        selected=((native.astype('int64')==3) if direct else ((native.astype('int64')%10)==3)).astype('uint8')
+        values = native.astype('int64')
+        if encoding == 'composite':
+            values %= 10
+        selected = (values == 3).astype('uint8')
         affine=raster.transform*raster.transform.scale(raster.width/width,raster.height/height)
         project=Transformer.from_crs(crs,'EPSG:4326',always_xy=True).transform
         candidates=[]

@@ -30,9 +30,9 @@ test('job token requires a valid RS256 signature from the fixed GitHub JWKS endp
 // TA-M1: the advisor-media job's identity (audience /api/advisor/jobs, workflow advisor-media.yml).
 const advisorScope={audiencePath:'/api/advisor/jobs',workflows:['advisor-media.yml']};
 const media={...claims,aud:policy.public_origin+'/api/advisor/jobs',workflow_ref:s.repository+'/.github/workflows/advisor-media.yml@'+s.ref,event_name:'workflow_dispatch'};
-test('deployments/production.json allows the trip check, the advisor-media job and the fleet jobs, and keeps the trip check workflow',()=>{
+test('the public scheduler lists only trip check, advisor media and fleet health',()=>{
   assert.equal(s.workflow,'.github/workflows/live-conditions.yml');
-  assert.deepEqual(s.workflows,['live-conditions.yml','advisor-media.yml','fleet-registry.yml','fleet-osint.yml','fleet-ais.yml','fleet-health.yml']);
+  assert.deepEqual(s.workflows,['live-conditions.yml','advisor-media.yml','fleet-health.yml']);
 });
 test('an advisor scope accepts the advisor-media job for its own audience only',()=>{
   assert.equal(validJobClaims(media,policy,now,advisorScope),true);
@@ -67,17 +67,18 @@ test('verifyJobToken takes a scope before the fetcher; the signature check is th
   assert.equal(await verifyJobToken(tampered.join('.'),policy,advisorScope,fetcher,now),false);
 });
 
-// CF-01: the charter fleet jobs (audience /api/fleet/jobs, the four fleet workflows).
-const fleetScope={audiencePath:'/api/fleet/jobs',workflows:['fleet-registry.yml','fleet-osint.yml','fleet-ais.yml','fleet-health.yml']};
+// CF-01: the public fleet health monitor uses the fleet jobs audience.
+const fleetScope={audiencePath:'/api/fleet/jobs',workflows:['fleet-health.yml']};
 const fleet=w=>({...claims,aud:policy.public_origin+'/api/fleet/jobs',workflow_ref:s.repository+'/.github/workflows/'+w+'@'+s.ref});
-test('a fleet scope accepts the fleet workflows for the fleet audience only, and no other scope accepts them',()=>{
-  for(const w of fleetScope.workflows)assert.equal(validJobClaims(fleet(w),policy,now,fleetScope),true,w);
+test('public fleet health needs the fleet audience and is refused by other scopes',()=>{
+  const health=fleet('fleet-health.yml');
+  assert.equal(validJobClaims(health,policy,now,fleetScope),true);
   assert.equal(validJobClaims({...media,aud:policy.public_origin+'/api/fleet/jobs'},policy,now,fleetScope),false,'advisor-media.yml is not a fleet job');
   assert.equal(validJobClaims({...claims,aud:policy.public_origin+'/api/fleet/jobs'},policy,now,fleetScope),false,'the trip workflow is not a fleet job');
-  assert.equal(validJobClaims({...fleet('fleet-ais.yml'),aud:policy.public_origin+'/api/advisor/jobs'},policy,now,fleetScope),false,'an advisor audience is refused');
-  assert.equal(validJobClaims({...fleet('fleet-ais.yml'),aud:policy.public_origin+'/api/advisor/jobs'},policy,now,advisorScope),false,'a fleet job is no advisor job');
-  assert.equal(validJobClaims({...fleet('fleet-ais.yml'),aud:claims.aud},policy,now),false,'nor a trip check');
-  for(const [key,value] of [['repository_id','1'],['ref','refs/heads/other'],['event_name','pull_request'],['exp',now-1]])assert.equal(validJobClaims({...fleet('fleet-ais.yml'),[key]:value},policy,now,fleetScope),false,key);
+  assert.equal(validJobClaims({...health,aud:policy.public_origin+'/api/advisor/jobs'},policy,now,fleetScope),false,'an advisor audience is refused');
+  assert.equal(validJobClaims({...health,aud:policy.public_origin+'/api/advisor/jobs'},policy,now,advisorScope),false,'a fleet job is no advisor job');
+  assert.equal(validJobClaims({...health,aud:claims.aud},policy,now),false,'nor a trip check');
+  for(const [key,value] of [['repository_id','1'],['ref','refs/heads/other'],['event_name','pull_request'],['exp',now-1]])assert.equal(validJobClaims({...health,[key]:value},policy,now,fleetScope),false,key);
 });
 
 // A second identity must not bypass issuer, subject, lifetime or replay-key checks.
@@ -88,7 +89,7 @@ test('the private fleet identity uses the same claim rules, including immutable 
   const c={...fleet('fleet-ais.yml'),repository:ops.repository,repository_id:ops.repository_id,repository_owner_id:ops.owner_id,ref,
     sub:`repo:${owner}@${ops.owner_id}/${repo}@${ops.repository_id}:ref:${ref}`,
     workflow_ref:`${ops.repository}/.github/workflows/fleet-ais.yml@${ref}`,exp:now+600};
-  const check=x=>validJobClaims(x,policy,now,fleetScope,ops);
+  const check=x=>validJobClaims(x,policy,now,{...fleetScope,workflows:['fleet-ais.yml']},ops);
   for(const event_name of ['schedule','workflow_dispatch','push'])assert.equal(check({...c,event_name}),true,event_name);
   for(const [key,value] of [['iss','https://untrusted.example'],['sub',claims.sub],['iat',now+31],['nbf',now+31],['exp',now+601],['exp',now],['jti','']])
     assert.equal(check({...c,[key]:value}),false,key);

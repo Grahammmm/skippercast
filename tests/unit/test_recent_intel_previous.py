@@ -34,7 +34,8 @@ def config():
 
 def runner(cmd, **kwargs):
     output = Path(next(x.split("=", 1)[1] for x in cmd if x.startswith("--output=")))
-    output.write_text(json.dumps({"schema_version": "1.3", "results": [], "source_status": {"reddit": "no-results"}}))
+    output.write_text(json.dumps({"schema_version": "1.3", "results": [],
+                                  "source_status": {"reddit": "no-results", "grounding": "no-results"}}))
     return type("Result", (), {"returncode": 0, "stderr": ""})()
 
 
