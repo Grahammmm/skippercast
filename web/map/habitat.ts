@@ -256,25 +256,25 @@ const isoDate = (value: unknown): string => {
 const joined = (...parts: unknown[]): string => parts.filter(p => typeof p === 'string' && p.trim()).join(' · ');
 const depthRange = (d: readonly number[] | undefined): string => d?.length === 2 ? `~${Math.round(d[0]!)}–${Math.round(d[1]!)} ft` : '';
 
-/** An atlas mark's card: fit, grade and nearby depth range; survey and atlas dates; credit and rights per feature in the basis. */
+/** An atlas mark's card: fit, grade and nearby depth range; survey and atlas dates (no source name: the Sources page lists them). */
 export function atlasCard(t: AtlasTarget, data: MarkData, target: string): ChartMark {
-  const source = data.atlas?.sources?.find(s => s.id === t.source_id), date = data.atlas?.source_validation_date;
+  const date = data.atlas?.source_validation_date;
   const screened = t.recorded_validation?.closed_or_screened_area_clearance_m ?? t.qualification?.closure_clearance_m;
   const fit = markFit(t, target), species = fitSpecies(target);
   return {
     id: `spot:${t.id}`, name: t.label, kind: joined('Reef mark', t.habitat_grade && `grade ${t.habitat_grade}`, depthRange(t.neighborhood_depth_ft)),
     reading: fit?.line ?? 'Habitat fit unrated for this target',
     position: {latitude: t.latitude, longitude: t.longitude},
-    source: joined(t.source_name ?? data.region.source_names?.[t.source_id ?? ''] ?? source?.name ?? t.source_id, t.survey_year && `surveyed ${t.survey_year}`, date && `atlas ${date}`),
+    source: joined(t.survey_year && `surveyed ${t.survey_year}`, date && `atlas ${date}`),
     // v1's wording (dist/terrain-evidence.js): a build-time screen with its measured clearance, never a promise.
     rules: rules(typeof screened === 'number' && screened > 0 && !!date && `Screened against protected areas with ${Math.round(screened)} m clearance in the atlas of ${date}`),
     regulations: regulationsLink(data.region),
-    basis: [t.terrain_interpretation, t.evidence_status, source && joined(source.credit, source.rights)].filter(Boolean).join(' '),
+    basis: [t.terrain_interpretation, t.evidence_status].filter(Boolean).join(' '),
     // Name, evidence and the basis's published prose stay as published; only the words the code wrote follow the language.
     copy: {
       kind: joinParts([[cp(hid('reefMark'))], t.habitat_grade && [cp(hid('grade'), {grade: t.habitat_grade})], depthRange(t.neighborhood_depth_ft)], ' · '),
       reading: fit && species ? [cp(hid('fit'), {species, n: fit.n})] : [cp(hid('fitUnrated'))],
-      source: joinParts([t.source_name ?? data.region.source_names?.[t.source_id ?? ''] ?? source?.name ?? t.source_id, !!t.survey_year && [cp(hid('surveyed'), {year: t.survey_year})], date && [cp(hid('atlas'), {date})]], ' · '),
+      source: joinParts([!!t.survey_year && [cp(hid('surveyed'), {year: t.survey_year})], date && [cp(hid('atlas'), {date})]], ' · '),
       rules: rulesCopy(typeof screened === 'number' && screened > 0 && !!date && [cp(hid('rules.screened'), {margin: Math.round(screened), date})]),
       regulationsLabel: regulationsCopy(data.region),
     },
@@ -328,12 +328,12 @@ export function geologyCard(p: Props, geology: Geology, region: RegionData): Cha
   const s = geology.source ?? {};
   return {
     id: `geology:${String(p.id)}`, name: String(p.label ?? 'Geology'), kind: `Geology · map unit ${String(p.unit ?? '—')}`,
-    reading: Number.isFinite(Number(p.area_km2)) ? `${Number(p.area_km2)} km²` : '—', source: s.attribution ?? 'Geological map',
+    reading: Number.isFinite(Number(p.area_km2)) ? `${Number(p.area_km2)} km²` : '—', source: 'Geological map',
     rules: rules(/MPA exclusion/i.test(s.derivation ?? '') && 'MPAs excluded when the layer was built'), regulations: regulationsLink(region),
     basis: [s.derivation, s.limitations].filter(Boolean).join(' '),
     copy: {
       ...p.label == null ? {name: [cp(hid('geology'))]} : {}, kind: [cp(hid('geologyKind'), {unit: String(p.unit ?? '—')})],
-      ...s.attribution == null ? {source: [cp(hid('geologicalMap'))]} : {},
+      source: [cp(hid('geologicalMap'))],
       rules: rulesCopy(/MPA exclusion/i.test(s.derivation ?? '') && [cp(hid('rules.mpaExcluded'))]), regulationsLabel: regulationsCopy(region),
     },
   };

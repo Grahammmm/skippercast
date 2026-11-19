@@ -40,8 +40,6 @@ export const mpaQuery = (bounds: readonly number[]): string => `${MPA_SERVICE}?$
 /** Official pages for the rules; the map never states them. */
 export const CDFW_MPA_PAGE = 'https://wildlife.ca.gov/Conservation/Marine/MPAs';
 export const NOAA_GEA_PAGE = 'https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas';
-export const DS582_METADATA = 'https://filelib.wildlife.ca.gov/public/BDB/GIS/BIOS/metadata/DS0582.html';
-export const CC_BY_4 = 'https://creativecommons.org/licenses/by/4.0/';
 const GEA_BASIS = 'NOAA Southern California groundfish exclusion areas, coordinates as published; the federal regulations control.';
 
 /** Designations as ds582 (and NOAA's closures file) code them. */
