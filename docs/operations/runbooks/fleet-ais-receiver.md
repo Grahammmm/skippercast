@@ -47,7 +47,7 @@ Nothing here is run by an agent, and nothing here restarts the live listener.
 1. Mount and connect the antenna through the cable to the receiver (dAISy HAT on the Pi, or the RTL-SDR dongle). Power the Pi.
 2. Option 1: read the dAISy HAT's serial output and forward the NMEA sentences over UDP or TCP on the local network. Option 2: run AIS-catcher and have it send NMEA to a UDP or TCP port.
 3. The listener reads that stream through `SKIPPERCAST_AIS_NMEA_URL` and the `ais.sources` list (AISLIVE-03 and AISLIVE-04, which define the source named `local-nmea`). If those units merged under other names, use the merged names.
-4. Turning the source on is a **region-config change made by a PR**, never a hand edit on the runner. After it merges, restart through the existing install path in [fleet AIS listener down](fleet-ais-down.md) (`fleet-ais-listener.yml` dispatch), not by hand.
+4. Turning the source on is a **region-config change made by a PR**, never a hand edit on the runner. After it merges, restart through the existing install path in [fleet AIS listener down](fleet-ais-down.md) (the private `fleet-ais-listener.yml` dispatch in `Grahammmm/skippercast-ops`), not by hand.
 
 ## 6. Drop own-ship sentences
 

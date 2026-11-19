@@ -88,14 +88,14 @@ export function aisMark(p: AisProps): ChartMark {
   return {
     id: `ais:${p.id}`, name: p.label, kind: 'Commercial AIS · historical 2024',
     reading: `${p.days_with_apparent_fishing} days with activity · ${hours(p.apparent_fishing_hours)} hr apparent fishing time. Apparent fishing activity, not a verified catch spot.`,
-    source: `${p.attribution} Activity dates (UTC): ${p.active_dates_utc.join(', ')}`,
+    source: `Activity dates (UTC): ${p.active_dates_utc.join(', ')}`,
     basis: `${layerEntry(REGISTRY_ID).basis} Depth and target species unknown. This offshore context is not qualified for the 200-foot fishing limit. ${p.resolution_note} `
       + `Gear classification: ${p.gear_label}. ${p.fishing_location_confidence}. Local sportfishing-charter identity remains unverified. ${p.vessel_count_note}`,
     // SC1352-07: Spanish wording, resolved by the card; the label, attribution, dates, gear, confidence and notes stay as published.
     copy: {
       kind: [cp(aid('kind'))],
       reading: [cp(aid('reading'), {days, hours: esHours(p.apparent_fishing_hours)})],
-      source: [cp(aid('source'), {attribution: p.attribution, dates: p.active_dates_utc.join(', ')})],
+      source: [cp(aid('source'), {dates: p.active_dates_utc.join(', ')})],
       basis: [cp(aid('basis'), {basis: cp('layer.commercial-ais.basis'), resolution: p.resolution_note, gear: p.gear_label, confidence: p.fishing_location_confidence, count: p.vessel_count_note})],
     },
   };
