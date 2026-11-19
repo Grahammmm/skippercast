@@ -189,8 +189,10 @@ def beam_cell_screen(pings, bathy, character):
 
 
 def audit(bathy_zip, class_zip, fetcher=fetch):
+    bathy_path, bathy_hash = original_tiff(bathy_zip, "bathy")
+    class_path, class_hash = original_tiff(class_zip, "character")
     results = []
-    with rasterio.open(original_tiff(bathy_zip)) as bathy, rasterio.open(original_tiff(class_zip)) as character:
+    with rasterio.open(bathy_path) as bathy, rasterio.open(class_path) as character:
         if (bathy.shape != character.shape or bathy.transform != character.transform
                 or str(bathy.crs) != "EPSG:32610" or bathy.transform.b or bathy.transform.d):
             raise ValueError("USGS Point Buchon original pair alignment changed")
@@ -204,8 +206,8 @@ def audit(bathy_zip, class_zip, fetcher=fetch):
                             **companions, **counts, **beam_cell_screen(pings, bathy, character)})
     return {"schema_version": 1, "scope": "point-buchon-2007-ncei-original-valid-beam-overlap",
             "gsf_specification_url": SPEC_URL,
-            "usgs_original_bathymetry_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
-            "usgs_original_character_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+            "usgs_original_bathymetry_sha256": bathy_hash,
+            "usgs_original_character_sha256": class_hash,
             "source_vertical_datum": "Unknown for both processed GSF lines and published USGS raster",
             "surveys": results, "qualified_waypoints": 0, "fishing_target": False,
             "exportable": False,
