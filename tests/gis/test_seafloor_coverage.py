@@ -247,15 +247,18 @@ class ReachRunTests(unittest.TestCase):
             self.assertTrue(resumed['physical_reused'])
             self.assertEqual(resumed['physical_input_hash'], first['physical_input_hash'])
             self.assertFalse(migrate_numeric_cache('fixture-r01', root=root, apply=True)['changed'])
-            # Legal review/freshness changes must not recalculate seafloor physics.
             deferred, _ = run('fixture-r01', root=root, physical_only=True)
             self.assertEqual(deferred['ledger_summary']['tier2_km2'], 0)
             self.assertEqual(deferred['inputs']['screen']['reasons'], ['screen-deferred'])
+            # Change the ordinary screen independently of the private run.
+            # A new screen identity must not recalculate ordinary physics.
+            atomic_json(root/'var/seafloor/screen/snapshot.json', {})
             with patch('skippercast.seafloor.run.footprint') as reading, \
                  patch('skippercast.seafloor.run.build_candidates') as extracting:
                 screened, unchanged = run('fixture-r01', root=root)
                 self.assertFalse(unchanged)
                 self.assertTrue(screened['physical_reused'])
+                self.assertEqual(screened['inputs']['screen']['reasons'], ['screen-invalid'])
                 reading.assert_not_called(); extracting.assert_not_called()
             # A large native habitat failure preserves measured coverage.
             with patch('skippercast.seafloor.run.build_candidates',

@@ -95,7 +95,7 @@ export type CoastStatus = 'unbound' | 'idle' | 'loading' | 'ready' | 'error' | '
 type Statuses = Readonly<Record<CoastProduct, CoastStatus>>;
 type Cache = {readonly [P in CoastProduct]: CoastSnapshot<P> | null};
 /** Events that tick the clock; the default is `window` when there is one. */
-export type CoastDataOptions = {clockEvents?: EventTarget | null};
+export type CoastDataOptions = {clockEvents?: EventTarget | null; /** Sees every bridge response (headers included) before its body is read, so a caller can keep its provenance. */ onResponse?: (response: Response) => void};
 const CLOCK_EVENTS = ['focus', 'pageshow', 'visibilitychange'] as const;
 const ONLINE_EVENT = 'online';
 
@@ -210,6 +210,7 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
       try {
         const signal = AbortSignal.any([entry.controller.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
         const response = await coastFetch('/api/' + product, {signal});
+        options.onResponse?.(response);
         outcome = response.ok ? admitSnapshot(product, await response.json(), response.headers.get('X-SC-Offline'), Date.now()) : 'error';
       } catch { outcome = 'error'; }
       // A response for a superseded place (or a destroyed client) is discarded.

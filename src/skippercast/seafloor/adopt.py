@@ -38,7 +38,6 @@ def scientific_row(row):
 
 def adopt_private(reach_id, *, root=REPO):
     """Adopt into a new public cache; never overwrite an existing reach."""
-    from .run import VERSION
     root = Path(root)
     from .source_scope import processing_scope
     if processing_scope(root) != 'all':
@@ -47,22 +46,40 @@ def adopt_private(reach_id, *, root=REPO):
     if not any(r['id'] == reach_id for r in reaches['reaches']):
         raise ValueError('Unknown reach')
     private = root/'var/seafloor/private-reaches'/reach_id
-    receipt = read_json(private/'run.json')
+    destination = root/'var/seafloor/reaches'/reach_id
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix='.adopt-', dir=destination.parent))
+    try:
+        # Pin one receipt, then check the actual bytes that will be adopted.
+        shutil.copyfile(private/'run.json', staging/'run.json')
+        for name in OUTPUTS:
+            shutil.copyfile(private/name, staging/name)
+        return _adopt_staged(reach_id, root, reaches, private, staging, destination)
+    finally:
+        if staging.exists():
+            shutil.rmtree(staging)
+
+
+def _adopt_staged(reach_id, root, reaches, private, staging, destination):
+    from .run import VERSION
+    receipt = read_json(staging/'run.json')
+    if set(receipt['outputs']) != set(OUTPUTS):
+        raise ValueError('Private output inventory is incomplete')
+    for name in OUTPUTS:
+        if sha256(staging/name) != receipt['outputs'][name]:
+            raise ValueError('Private output checksum mismatch')
     old = deepcopy(receipt['inputs'])
     old.pop('screen', None)
     old.pop('screen_implementation_sha256', None)
-    physical = read_json(private/'physical.json')
+    physical = read_json(staging/'physical.json')
     if (old.get('reach_id') != reach_id or not receipt.get('publication_prohibited')
             or receipt['ledger_summary'].get('processing_incomplete')
             or physical['input_hash'] != digest(old)
             or receipt['physical_input_hash'] != digest(old)):
         raise ValueError('Private physics receipt is incomplete or inconsistent')
-    if set(receipt['outputs']) != set(OUTPUTS) or set(physical['outputs']) != set(PHYSICAL):
+    if set(physical['outputs']) != set(PHYSICAL):
         raise ValueError('Private output inventory is incomplete')
-    for name in OUTPUTS:
-        if sha256(private/name) != receipt['outputs'][name]:
-            raise ValueError('Private output checksum mismatch')
-    if physical['outputs'] != {name: sha256(private/name) for name in PHYSICAL}:
+    if physical['outputs'] != {name: receipt['outputs'][name] for name in PHYSICAL}:
         raise ValueError('Private physical output checksum mismatch')
     module = Path(__file__).parent
     checks = {'rule_version': VERSION,
@@ -104,33 +121,27 @@ def adopt_private(reach_id, *, root=REPO):
     if bindings != old['substrate_bindings']:
         raise ValueError('Substrate inputs changed; recompute physics')
     verify_sources(bindings, root=root)
+    private_run_sha256 = sha256(staging/'run.json')
+    if sha256(private/'run.json') != private_run_sha256:
+        raise ValueError('Private run receipt changed during staging')
     current_inputs = dict(old, sources=selected)
     new_hash = digest(current_inputs)
-    destination = root/'var/seafloor/reaches'/reach_id
     if destination.exists():
         raise ValueError('Destination reach already exists; preserve it and review separately')
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    staging = Path(tempfile.mkdtemp(prefix='.adopt-', dir=destination.parent))
-    try:
-        for name in OUTPUTS:
-            shutil.copyfile(private/name, staging/name)
-        for name in ('cells.json', 'terrain.json'):
-            data = read_json(staging/name)
-            data['input_hash'] = new_hash
-            atomic_json(staging/name, data)
-        evidence = {'version': 'rights-only-physics-adoption-v1',
-                    'private_run_sha256': sha256(private/'run.json'),
-                    'previous_physical_hash': physical['input_hash'], 'physical_input_hash': new_hash,
-                    'scientific_inputs_unchanged': True, 'requires_current_screen': True}
-        atomic_json(staging/'physical.json', {'input_hash': new_hash,
-                    'outputs': {name: sha256(staging/name) for name in PHYSICAL}}, indent=2)
-        # Keep private sources and deferred screen in this transitional run
-        # receipt so publication explicitly refuses it until run() rescreens.
-        receipt['outputs'] = {name: sha256(staging/name) for name in OUTPUTS}
-        receipt['adoption'] = evidence
-        atomic_json(staging/'run.json', receipt, indent=2)
-        staging.rename(destination)
-        return evidence
-    finally:
-        if staging.exists():
-            shutil.rmtree(staging)
+    for name in ('cells.json', 'terrain.json'):
+        data = read_json(staging/name)
+        data['input_hash'] = new_hash
+        atomic_json(staging/name, data)
+    evidence = {'version': 'rights-only-physics-adoption-v1',
+                'private_run_sha256': private_run_sha256,
+                'previous_physical_hash': physical['input_hash'], 'physical_input_hash': new_hash,
+                'scientific_inputs_unchanged': True, 'requires_current_screen': True}
+    atomic_json(staging/'physical.json', {'input_hash': new_hash,
+                'outputs': {name: sha256(staging/name) for name in PHYSICAL}}, indent=2)
+    # Keep private sources and deferred screen in this transitional run
+    # receipt so publication explicitly refuses it until run() rescreens.
+    receipt['outputs'] = {name: sha256(staging/name) for name in OUTPUTS}
+    receipt['adoption'] = evidence
+    atomic_json(staging/'run.json', receipt, indent=2)
+    staging.rename(destination)
+    return evidence
