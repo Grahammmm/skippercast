@@ -284,7 +284,16 @@ def test_two_windows_map_lineage_keeps_foreign_and_render_untouched(world, synth
         assert window["stages"]["qualify"]["support"]["valid_cells"] == 16
         assert window["stages"]["map"]["depth_m"] == dict(count=16, min=1.0, max=16.0, mean=8.5, p80="unknown")
         assert window["stages"]["map"]["native_valid_count"] == 16
-    assert summary["store_status"] == driver.queue_status(w.root/driver.DATABASE)
+    # SCA-358: native v3 carries run-scoped counts, never the global queue dump or foreign rows.
+    db = w.ops.store.db
+    assert summary["schema"] == "coast-run-summary-v3" and summary["windows_sha256"] == driver.digest(summary["windows"])
+    assert summary["store_status"] == dict(
+        schema="coastal-coordinator-scope-v1", store="present", lineage_jobs=dict(done=6, queued=2),
+        lineage_charges=dict(rows=6, requests=0, bytes=6000000), foreign=dict(jobs=2, queued_jobs=2, charges=0),
+        events=db.execute("SELECT COUNT(*) FROM events").fetchone()[0],
+        last_tick_epoch=driver.queue_status(w.root/driver.DATABASE)["last_tick_epoch"])
+    raw = (w.p / "runs/run-00.json").read_bytes()
+    assert not any(job_id.encode() in raw for job_id in ids)
     with pytest.raises(ValueError, match="output exists"):
         run(w)
 
