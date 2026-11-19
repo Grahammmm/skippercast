@@ -169,6 +169,18 @@ test('acceptance 4: each profile yields its § 8 caveat; shore and spear read th
   assert.equal(tile(buildRegionalBrief({...regional, profile: 'spear', date, now}), 'swell').state, 'unavailable');
 });
 
+// A bound coast report supplies weather, but cannot override the regional publisher's outage.
+test('the coast brief keeps the charter outage even with a trip inside the fleet window', () => {
+  const trip = {date, boat: 'Fixture Tern', port: 'Morro Bay'};
+  const daily = {...montereyDaily, landing_names: ['Morro Bay'], reports: [trip]};
+  const input = {context: morroContext, coast: {report, county: slo}, regional: {...regional, daily}, profile: 'boat', date, now};
+  assert.equal(buildBrief(input).fleet?.count, 1);
+  const outage = {...daily, charter_reports: {status: 'not_available', last_source_day: '2026-10-07'}};
+  const brief = buildBrief({...input, regional: {...regional, daily: outage}});
+  assert.equal(brief.basis, 'coast-report');
+  assert.deepEqual(brief.fleet, {notAvailable: true, lastSourceDay: '2026-10-07'});
+});
+
 test('fleet line: absent with no report in seven days or no port', () => {
   assert.equal(fleetLine([{date: '2026-09-20', boat: 'A', port: 'Monterey'}], 'Monterey', 'America/Los_Angeles', now), null);
   assert.equal(fleetLine(montereyDaily.reports, '', 'America/Los_Angeles', now), null);
