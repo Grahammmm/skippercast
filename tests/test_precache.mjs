@@ -13,8 +13,9 @@ async function site() {
   const dir = await mkdtemp(join(tmpdir(), 'precache-'));
   await mkdir(join(dir, 'assets'), {recursive: true});
   await writeFile(join(dir, `index.${BUILD}.html`), '<script type="module" src="./assets/index.0123456789.js"></script>');
-  await writeFile(join(dir, 'assets/index.0123456789.js'), "import './app.abcdef0123.js';");
+  await writeFile(join(dir, 'assets/index.0123456789.js'), 'export {};');
   await writeFile(join(dir, 'assets/app.abcdef0123.js'), "navigator.serviceWorker.register('/sw.js');");
+  await writeFile(join(dir, 'assets/early.1111111111.js'), 'export {};');
   await writeFile(join(dir, 'assets/styles.fedcba9876.css'), 'body{}');
   await writeFile(join(dir, 'assets/notes.txt'), 'not a script or style');
   await writeFile(join(dir, 'sw.js'), `${BUILD_PLACEHOLDER}\nself.addEventListener('push',()=>{});`);
@@ -30,7 +31,7 @@ async function site() {
   return dir;
 }
 
-test('precache.json lists the shell, every hashed asset of the build and the static shell files', async () => {
+test('precache.json lists the shell, its installable hashed assets and static shell files', async () => {
   const dir = await site();
   const manifest = await writePrecache(dir, BUILD);
   assert.deepEqual(JSON.parse(await readFile(join(dir, 'precache.json'), 'utf8')), manifest);
