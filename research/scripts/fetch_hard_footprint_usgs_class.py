@@ -65,7 +65,7 @@ def main():
     if inventory.get('scope') != 'noaa-nbs-tiles-intersecting-displayed-usgs-hard-context':
         raise ValueError('Reviewed footprint inventory required')
     ids = {source for tile in inventory['tiles'] for source in tile['source_ids']}
-    sources = []
+    sources, audit_failures = [], []
     if ids:
         for path, cache, id_key in ((args.usgs_audit, args.usgs_cache, 'release_id'),
                                     (args.map_audit, args.map_cache, 'block_id')):
@@ -74,13 +74,21 @@ def main():
             except FileNotFoundError:
                 continue  # Unmatched requested IDs are recorded as holds below.
             for original in audit['products']:
-                if (original.get(id_key) in ids and original.get('kind') == 'seafloor_character'
-                        and original.get('status') == 'ok'):
+                if original.get(id_key) not in ids or original.get('kind') != 'seafloor_character':
+                    continue
+                if original.get('status') == 'ok':
                     sources.append(({**original, 'release_id': original[id_key]}, cache))
-    missing = ids - {row['release_id'] for row, _ in sources}
+                else:
+                    # A failed prerequisite archive holds its source even when
+                    # another archive of the same source audited successfully.
+                    audit_failures.append({
+                        'release_id': original[id_key], 'archive_sha256': original.get('archive_sha256'),
+                        'error': f"Original seafloor-character audit not successful: {original.get('status')}"})
+    missing = ids - {row['release_id'] for row, _ in sources} - {row['release_id'] for row in audit_failures}
     results = []
-    failures = [{'release_id': ident, 'archive_sha256': None,
-                 'error': 'No successful original seafloor-character audit'} for ident in sorted(missing)]
+    failures = audit_failures + [{'release_id': ident, 'archive_sha256': None,
+                                  'error': 'No successful original seafloor-character audit'}
+                                 for ident in sorted(missing)]
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         jobs = {executor.submit(fetch, row, cache): row for row, cache in sources}
         for future in as_completed(jobs):

@@ -70,6 +70,40 @@ def test_class_fetch_counts_inventory_ids(tmp_path, monkeypatch, selection, stat
     assert all('audit' in row['error'] for row in report['failures'])
 
 
+def test_class_fetch_holds_source_when_one_of_its_archives_failed_audit(tmp_path, monkeypatch):
+    # Contract: a source is verified only if every audited archive verifies.
+    # Bug caught: a successful row for the same source masked its failed row,
+    # reporting 'complete: 1 / 1 verified' despite a failed prerequisite.
+    ident = 'SYNTHETIC-A'
+    inventory = tmp_path / 'inventory.json'
+    inventory.write_text(json.dumps({
+        'scope': 'noaa-nbs-tiles-intersecting-displayed-usgs-hard-context',
+        'tiles': [{'source_ids': [ident]}]}))
+    cache = tmp_path / 'usgs'
+    cache.mkdir()
+    data = b'synthetic archive'
+    digest = hashlib.sha256(data).hexdigest()
+    (cache / f'{ident}-seafloor_character-{digest[:16]}.zip').write_bytes(data)
+    base = {'release_id': ident, 'kind': 'seafloor_character', 'archive_bytes': len(data),
+            'archive_url': f'https://pubs.usgs.gov/{ident}.zip', 'archive_sha256': digest}
+    (tmp_path / 'usgs.json').write_text(json.dumps({'products': [
+        {**base, 'status': 'ok'},
+        {**base, 'status': 'failed', 'archive_sha256': '1' * 64}]}))
+    output = tmp_path / 'receipt.json'
+    monkeypatch.setattr(class_fetch, 'urlopen', no_transport)
+    monkeypatch.setattr(sys, 'argv', [
+        'class-fetch', '--inventory', str(inventory), '--output', str(output),
+        '--usgs-audit', str(tmp_path / 'usgs.json'), '--usgs-cache', str(cache),
+        '--map-audit', str(tmp_path / 'absent.json'), '--map-cache', str(tmp_path / 'map')])
+    with pytest.raises(SystemExit) as exit_info:
+        class_fetch.main()
+    assert exit_info.value.code == 1
+    report = json.loads(output.read_text())
+    assert (report['status'], report['requested'], report['verified'], report['failed']) == ('partial', 1, 0, 1)
+    assert [row['archive_sha256'] for row in report['archives']] == [digest]
+    assert [(row['release_id'], row['archive_sha256']) for row in report['failures']] == [(ident, '1' * 64)]
+
+
 @pytest.fixture
 def raster_zip(tmp_path):
     import numpy as np
