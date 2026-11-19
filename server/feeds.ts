@@ -87,8 +87,7 @@ function releaseTable(selected: Pick<R2Bucket, 'get'>, prefix: string, generatio
     if (releases.get(name) === entry) releases.delete(name);
     throw error;
   });
-  releases.set(name, entry);
-  trimReleases();
+  releases.set(name, entry);  // not trimmed yet: its size is unknown, and an oversized table must not evict held ones
   return entry.table;
 }
 

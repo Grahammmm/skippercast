@@ -179,7 +179,8 @@ test('the cache is bounded by entries and bytes; a store that cannot be tagged r
   const f = fixture(), first = f.release('g0'); useBucket({FEEDS: f.bucket});
   try {
     await readBucketJSON(MANIFEST);
-    for (let i = 1; i <= RELEASE_CACHE_ENTRIES; i++) { f.release('g' + i); await readBucketJSON(MANIFEST); }
+    const gens = [first.generation];
+    for (let i = 1; i <= RELEASE_CACHE_ENTRIES; i++) { gens.push(f.release('g' + i).generation); await readBucketJSON(MANIFEST); }
     assert.equal(tableReads(f), RELEASE_CACHE_ENTRIES + 1);
     await readBucketJSON(MANIFEST);
     assert.equal(tableReads(f), RELEASE_CACHE_ENTRIES + 1, 'the newest generation is held');
@@ -198,6 +199,9 @@ test('the cache is bounded by entries and bytes; a store that cannot be tagged r
     assert.equal(tableReads(f), reads + 2, 'the oversized table is fetched each time');
     point(f, first.generation); await readBucketJSON(MANIFEST);
     assert.equal(tableReads(f), reads + 2, 'held tables survive an oversized one');
+    // The cache is full here (g2..g8 and g0): fetching the oversized table must not have evicted its least recently used entry.
+    point(f, gens[2]); assert.equal((await readBucketJSON(MANIFEST)).cycle, 'g2');
+    assert.equal(tableReads(f), reads + 2, 'a full cache keeps its least recently used table while an oversized one is fetched');
     const frozen = fixture(); frozen.release('cold'); useBucket({FEEDS: Object.freeze(frozen.bucket)});
     assert.equal((await readBucketJSON(MANIFEST)).cycle, 'cold');
     assert.equal((await readBucketJSON(MANIFEST)).cycle, 'cold');
