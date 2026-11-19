@@ -11,8 +11,10 @@ import {precacheManifest} from '../scripts/precache.mjs';
 const CHECK = new URL('../scripts/check_client.mjs', import.meta.url).pathname;
 const APP = 'assets/app.0123456789.js';
 const LANDING = 'assets/landing.0123456789.js';
+const EARLY = 'assets/app-early.0123456789.js';
 const CODE = 'export const x = ' + JSON.stringify(Array.from({length: 40}, (_, i) => `v${i}`)) + ';';
-const SIZE = gzipSync(Buffer.from(CODE), {level: 9}).length;
+const EARLY_CODE = 'export {};';
+const SIZE = [CODE, EARLY_CODE].reduce((total, code) => total + gzipSync(Buffer.from(code), {level: 9}).length, 0);
 
 async function run(t, budgetText, env = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'client-budget-'));
@@ -21,7 +23,11 @@ async function run(t, budgetText, env = {}) {
   await mkdir(join(dir, 'assets'));
   await writeFile(join(dir, APP), CODE);
   await writeFile(join(dir, LANDING), 'export {};');
-  await writeFile(join(dir, '.vite/manifest.json'), JSON.stringify({'app.html': {file: APP, isEntry: true}, 'landing.html': {file: LANDING, isEntry: true}}));
+  await writeFile(join(dir, EARLY), EARLY_CODE);
+  await writeFile(join(dir, '.vite/manifest.json'), JSON.stringify({
+    'app.html': {file: APP, isEntry: true}, 'landing.html': {file: LANDING, isEntry: true},
+    '../web/app/early.ts': {file: EARLY, isEntry: true},
+  }));
   for (const [p, f] of [['app', APP], ['landing', LANDING]]) await writeFile(join(dir, `${p}.fixture.html`), `<script type="module" src="/${f}"></script>`);
   await writeFile(join(dir, '.assetsignore'), '.vite\n');
   await writeFile(join(dir, 'sw.js'), "const BUILD = 'fixture';");

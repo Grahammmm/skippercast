@@ -12,20 +12,20 @@
 # Nothing else is touched: not Messages' own attachments or chat.db (Keep Messages governs
 # those), not BlueBubbles' settings, certificates or contacts.
 #
-#   bash scripts/advisor/relay-cleanup.sh            delete (prints each file and a total)
-#   bash scripts/advisor/relay-cleanup.sh --dry-run  list what would go, delete nothing
+#   bash scripts/advisor/relay-cleanup.sh            delete (counts by role and in total)
+#   bash scripts/advisor/relay-cleanup.sh --dry-run  count what would go, delete nothing
 #   bash scripts/advisor/relay-cleanup.sh --plist    print the launchd agent (Sundays 04:30)
+# An incomplete scan or removal logs a role-only diagnostic and exits nonzero.
 set -euo pipefail
 
 DAYS="${RELAY_CLEANUP_DAYS:-7}"
 [[ "$DAYS" =~ ^[0-9]{1,3}$ ]] || { echo "RELAY_CLEANUP_DAYS must be a whole number of days" >&2; exit 2; }
 BB="$HOME/Library/Application Support/bluebubbles-server"
-DIRS=("$BB/Attachments" "$BB/Convert" "$HOME/Library/Messages/Attachments/BlueBubbles")
 LABEL=com.skippercast.relay-cleanup
-SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 
 case "${1:-}" in
   --plist)
+    SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
     cat <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -47,17 +47,56 @@ PLIST
   *) echo "usage: relay-cleanup.sh [--dry-run | --plist]" >&2; exit 2 ;;
 esac
 
-echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) relay cleanup: files older than $DAYS days$([ "$DRY" = 1 ] && echo ' (dry run)')"
-total=0
-for dir in "${DIRS[@]}"; do
-  [ -d "$dir" ] || continue
-  # find -mtime +N: modified more than N whole days ago. -print0 keeps odd file names intact.
-  # A permission error (Full Disk Access missing for ~/Library/Messages) is printed, not hidden.
+count_files() {
+  local file count=0 failed=0
   while IFS= read -r -d '' file; do
-    echo "  ${file#"$HOME"/}"
-    if [ "$DRY" = 0 ]; then rm -f -- "$file"; fi
-    total=$((total + 1))
-  done < <(find "$dir" -type f -mtime +"$DAYS" -print0 || true)
-  if [ "$DRY" = 0 ]; then find "$dir" -mindepth 1 -type d -empty -delete 2>/dev/null || true; fi
-done
-echo "relay cleanup: $total file(s) $([ "$DRY" = 1 ] && echo 'would be deleted' || echo 'deleted')"
+    if [[ "$DRY" == 1 ]] || rm -f -- "$file" 2>/dev/null; then
+      count=$((count + 1))
+    else
+      failed=1
+    fi
+  done
+  printf '%s\n' "$count"
+  return "$failed"
+}
+
+clean_role() {
+  local role="$1" dir="$2" count suffix=''
+  if [[ ! -d "$dir" ]]; then
+    # A missing optional root is normal; an unsearchable ancestor is not.
+    local parent="$dir"
+    while [[ "$parent" != / && ! -d "$parent" ]]; do
+      parent="${parent%/*}"
+      parent="${parent:-/}"
+    done
+    if [[ -x "$parent" ]]; then
+      printf 'relay cleanup: %s: 0 file(s) %s (not present)\n' "$role" "$action"
+      return 0
+    fi
+  fi
+
+  # NUL-delimited paths stay in the pipe. pipefail retains both find and rm
+  # failures; neither command's raw (path-bearing) diagnostics reach the log.
+  if ! count=$(find "$dir" -type f -mtime +"$DAYS" -print0 2>/dev/null | count_files); then
+    printf 'relay cleanup: %s: scan or file removal incomplete\n' "$role" >&2
+    suffix=' (partial)'
+  elif [[ "$DRY" == 0 ]] && ! find "$dir" -mindepth 1 -type d -empty -delete >/dev/null 2>&1; then
+    printf 'relay cleanup: %s: empty-directory removal incomplete\n' "$role" >&2
+    suffix=' (partial)'
+  fi
+  printf 'relay cleanup: %s: %s file(s) %s%s\n' "$role" "$count" "$action" "$suffix"
+  total=$((total + count))
+  if [[ -n "$suffix" ]]; then partial="$suffix"; fi
+}
+
+action=deleted
+mode=''
+if [[ "$DRY" == 1 ]]; then action='would be deleted'; mode=' (dry run)'; fi
+printf '%s relay cleanup: files older than %s days%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$DAYS" "$mode"
+total=0
+partial=''
+clean_role attachments "$BB/Attachments"
+clean_role convert "$BB/Convert"
+clean_role messages-copies "$HOME/Library/Messages/Attachments/BlueBubbles"
+printf 'relay cleanup: %s file(s) %s%s\n' "$total" "$action" "$partial"
+if [[ -n "$partial" ]]; then exit 1; fi
