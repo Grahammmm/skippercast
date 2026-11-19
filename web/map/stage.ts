@@ -226,7 +226,9 @@ export interface TerrainOptions {
   /** Reefs and species pins; they also need the Seafloor entry on. */
   readonly habitat: boolean;
 }
-export const TERRAIN_DEFAULTS: TerrainOptions = Object.freeze({relief: 5, water: true, waterOpacity: 0.5, contours: true, sunAzimuth: 305, photoMix: 1, fixedRamp: false, sourceCoverage: false, habitat: true});
+export const TERRAIN_DEFAULTS: TerrainOptions = Object.freeze({relief: 2, water: true, waterOpacity: 0.5, contours: true, sunAzimuth: 305, photoMix: 1, fixedRamp: false, sourceCoverage: false, habitat: true});
+// The standalone coast embed still starts at 5×; apply the host's choice before load().
+const NATIVE_TERRAIN_DEFAULTS: TerrainOptions = {...TERRAIN_DEFAULTS, relief: 5};
 export const terrainOptions = signal<TerrainOptions>(TERRAIN_DEFAULTS);
 export function setTerrainOption<K extends keyof TerrainOptions>(name: K, value: TerrainOptions[K]): void {
   terrainOptions.value = {...terrainOptions.peek(), [name]: value};
@@ -324,8 +326,7 @@ export function createStage(options: StageOptions): Stage {
     const ids = LAYERS.map(e => e.id).filter(id => coarsened.has(id)), shown = terrainCoarsened.peek();
     if (ids.length !== shown.length || ids.some((id, i) => id !== shown[i])) terrainCoarsened.value = ids;
   };
-  // The native controls start at TERRAIN_DEFAULTS, so a fresh mount needs only the differences.
-  let shownOptions: TerrainOptions = {...TERRAIN_DEFAULTS};
+  let shownOptions = NATIVE_TERRAIN_DEFAULTS;
   let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined;
   // Without ?hour= the terrain shows the current whole hour; the shared clock moves it on at each hour boundary, with the dock.
   const clock = options.clock ?? (options.now ? createHourClock({read: options.now, doc}) : appClock);
@@ -362,7 +363,7 @@ export function createStage(options: StageOptions): Stage {
   const release = (): void => {
     const h = handle.peek();
     handle.value = null; applied = {}; draped = new Map(); coarsened.clear(); if (terrainCoarsened.peek().length) terrainCoarsened.value = []; terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
-    shownOptions = {...TERRAIN_DEFAULTS}; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
+    shownOptions = NATIVE_TERRAIN_DEFAULTS; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
     terrainHabitat.value = null; rankedReefs = null;
     h?.destroy();
   };

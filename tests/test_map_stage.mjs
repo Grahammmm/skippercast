@@ -142,7 +142,7 @@ test('the first terrain choice mounts the renderer once with the store\'s state;
     currentLayer: 'hfr-6', species: 'rockfish-reef', depthLimit: 60, location: {latitude: 35.37, longitude: -120.86, span: 7300},
     hour: new Date('2026-10-06T03:00:00Z'), perspective: '3d', habitat: 'reef:r1', visible: true,
   });
-  assert.equal(fake.calls.length, 0, 'the initial state is not sent twice');
+  assert.deepEqual(fake.calls.filter(([name]) => name !== 'setRelief'), [], 'the initial state is not sent twice');
   assert.equal(terrainBlocked.value, null, 'nothing blocks the terrain here');
 
   setParams({profile: 'boat'});
@@ -413,16 +413,19 @@ test('shared clock: stages on one clock share one timeout, and the last destroy 
   assert.equal(c.timers.size, 0);
 });
 
-test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readings and sources arrive as data, the view buttons drive the handle', async () => {
+test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readings and sources arrive as data, the view buttons drive the handle', async t => {
   const nav = browser(`${ORIGIN}?region=morro-bay&presentation=3d&layers=seafloor`);
   terrainOptions.value = TERRAIN_DEFAULTS;
   const fake = terrain();
   const {stage: s} = stage(fake);
+  t.after(() => { s.destroy(); terrainOptions.value = TERRAIN_DEFAULTS; });
   await tick();
   const o = fake.options;
   assert.equal(o.chrome, 'host', 'the renderer\'s own panels leave the scene');
   const setters = ['setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible', 'setSunAzimuth', 'setPhotoMix', 'setFixedRamp'];
-  assert.deepEqual(setters.map(n => fake.count(n)), [0, 0, 0, 0, 0, 0, 0, 0, 0], 'the defaults are the native controls\' own: nothing to send');
+  // The native renderer still starts at 5×. Changing only the stage's default would move the slider but not the seabed.
+  assert.deepEqual(fake.calls.filter(([name]) => setters.includes(name)), [['setRelief', 2]], 'only relief differs from the native defaults');
+  assert.equal(terrainOptions.value.relief, 2, 'the rail and the scene start at the same factor');
 
   setTerrainOption('relief', 9); setTerrainOption('water', false); setTerrainOption('waterOpacity', 0.3);
   setTerrainOption('contours', false); setTerrainOption('sourceCoverage', true);
@@ -430,7 +433,7 @@ test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readi
   setTerrainOption('sunAzimuth', 200); setTerrainOption('photoMix', 0.25); setTerrainOption('fixedRamp', true);
   assert.deepEqual(setters.slice(6).map(n => fake.last(n)), [200, 0.25, true]);
   setTerrainOption('relief', 9);
-  assert.equal(fake.count('setRelief'), 1, 'an unchanged option is not sent again');
+  assert.equal(fake.count('setRelief'), 2, 'an unchanged option is not sent again');
   setParams({layers: 'currents'});
   assert.equal(fake.last('setHabitatVisible'), false, 'turning Seafloor off hides the reefs and pins');
   setParams({layers: 'seafloor,currents'});
@@ -457,7 +460,12 @@ test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readi
   assert.equal(nav.params().get('view'), '35.37000,-120.86000,12', 'reset is the stage\'s home, as the scene\'s own button');
   s.destroy();
   assert.equal(terrainActions.value, null, 'no view buttons without a renderer');
-  terrainOptions.value = TERRAIN_DEFAULTS;
+  // A new stage (e.g. after a desktop/phone layout change) must apply the prior choice, not the new default.
+  const remounted = terrain(), second = stage(remounted);
+  try {
+    await tick();
+    assert.deepEqual(remounted.calls.filter(([name]) => name === 'setRelief'), [['setRelief', 9]]);
+  } finally { second.stage.destroy(); }
 });
 
 test('legacy_camera_links_are_byte_identical: three-field links parse to the old object and serialize unchanged', () => {
