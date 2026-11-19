@@ -39,7 +39,7 @@ def source_blocks(archive, class_zip):
         raise ValueError("Original CSUMB or USGS source bytes changed")
     with tempfile.TemporaryDirectory() as temp:
         extract_grids(archive, Path(temp))
-        with rasterio.open(original_tiff(class_zip)) as character:
+        with rasterio.open(original_tiff(class_zip, "character")[0]) as character:
             source = character.read(1)
             to_usgs = Transformer.from_crs("EPSG:26910", "EPSG:32610", always_xy=True)
             for name, spacing, minimum_m, maximum_m in GRIDS:
