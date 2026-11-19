@@ -39,6 +39,7 @@ import {markScreen} from './marks.ts';
 import {freshNearshore} from './nearshore-model.js';
 import {readPalette, type Palette} from './palette.ts';
 import {SEAFLOOR_CELLS} from './seafloor.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'shore-runs';
 const SID = (key: string): StringId => `mark.layer.shore.${key}` as StringId;
@@ -106,19 +107,24 @@ export function shoreCollections(runs: readonly ShownRun[]) {
 }
 
 /** Sources and layers: a wide soft run line (priority tint, Hold and Blocked muted and dashed), its hit line, then the pins and their hit circles. */
-export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollections>): Overlay {
+const shoreLayers = (p: Palette): MapLibre.LayerSpecification[] => {
   const held = ['==', ['get', 'held'], 1];
+  return [
+    {id: RUNS_HIT, type: 'line', source: RUNS_SOURCE, layout: {'line-cap': 'round'}, paint: {'line-color': p.amber, 'line-width': 22, 'line-opacity': 0}},
+    {id: RUNS_LINE, type: 'line', source: RUNS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {
+      'line-color': ['case', held, p.muted, p.amber], 'line-blur': 3,
+      'line-width': ['interpolate', ['linear'], ['zoom'], 8, 4, 13, 12],
+      'line-opacity': ['match', ['get', 'priority'], 3, PRIORITY_OPACITY[3], 2, PRIORITY_OPACITY[2], PRIORITY_OPACITY[0]]}},
+    {id: ACCESS_HIT, type: 'circle', source: ACCESS_SOURCE, paint: {'circle-radius': 22, 'circle-color': p.amber, 'circle-opacity': 0}},
+    {id: ACCESS_PIN, type: 'circle', source: ACCESS_SOURCE, paint: {'circle-radius': 5, 'circle-color': p.bg, 'circle-stroke-color': ['case', held, p.muted, p.amber], 'circle-stroke-width': 2}},
+  ] as MapLibre.LayerSpecification[];
+};
+
+/** A theme switch re-runs `shoreLayers` with the new palette and edits the paints in place (same IDs, same data). */
+export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollections>): Overlay {
   return {
     sources: {[RUNS_SOURCE]: {type: 'geojson', data: data.runs} as MapLibre.SourceSpecification, [ACCESS_SOURCE]: {type: 'geojson', data: data.access} as MapLibre.SourceSpecification},
-    layers: [
-      {id: RUNS_HIT, type: 'line', source: RUNS_SOURCE, layout: {'line-cap': 'round'}, paint: {'line-color': p.amber, 'line-width': 22, 'line-opacity': 0}},
-      {id: RUNS_LINE, type: 'line', source: RUNS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {
-        'line-color': ['case', held, p.muted, p.amber], 'line-blur': 3,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 4, 13, 12],
-        'line-opacity': ['match', ['get', 'priority'], 3, PRIORITY_OPACITY[3], 2, PRIORITY_OPACITY[2], PRIORITY_OPACITY[0]]}},
-      {id: ACCESS_HIT, type: 'circle', source: ACCESS_SOURCE, paint: {'circle-radius': 22, 'circle-color': p.amber, 'circle-opacity': 0}},
-      {id: ACCESS_PIN, type: 'circle', source: ACCESS_SOURCE, paint: {'circle-radius': 5, 'circle-color': p.bg, 'circle-stroke-color': ['case', held, p.muted, p.amber], 'circle-stroke-width': 2}},
-    ] as MapLibre.LayerSpecification[],
+    layers: shoreLayers(p), themePaint: q => paintEdits(shoreLayers(q)),
   };
 }
 
