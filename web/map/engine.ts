@@ -2,7 +2,7 @@
 // § 3, § 3A.2): the PMTiles protocol and the worker URL registered once, a
 // north-up map (no rotation or pitch by any gesture or key; only the first-view
 // flyover, #646, tilts and turns it and always returns it north up and flat), a nautical scale,
-// zoom buttons, the attribution control, resize with its host, and error
+// zoom buttons, the one "Sources" link (G 2026-11-18: no source text on the map), resize with its host, and error
 // routing: a failing source marks only the registry layer that owns it
 // (web/map/layers.ts), so one broken feed never blanks the chart.
 //
@@ -18,7 +18,7 @@ import {BASEMAP_SOURCE} from './style.ts';
 
 /** What web/map/maplibre.js provides: the ESM build, its worker's URL, the PMTiles protocol and its archive reader. */
 export interface MapLibraryModule {
-  readonly lib: Pick<typeof MapLibre, 'Map' | 'NavigationControl' | 'ScaleControl' | 'AttributionControl' | 'setWorkerUrl' | 'addProtocol'>;
+  readonly lib: Pick<typeof MapLibre, 'Map' | 'NavigationControl' | 'ScaleControl' | 'setWorkerUrl' | 'addProtocol'>;
   readonly workerUrl: string;
   readonly Protocol: new () => {tile: MapLibre.AddProtocolAction};
   /** Reads archives the Chart decodes itself (the seafloor publication, web/map/seafloor.ts). */
@@ -53,11 +53,9 @@ export interface EngineOptions {
   pickLayers?: readonly string[];
   /** Run-time layers asked before `pickLayers` (FE-27's nearshore rings, which draw under the protected areas); read at each click. */
   pickFirst?: () => readonly string[];
-  /** Credit always shown (the basemap's): MapLibre lists a tiled source's own credit only if it was drawn when its metadata arrived. */
-  attribution?: string;
   /** The map has settled and drawn every tile in view (MapLibre `idle`). */
   onIdle?(): void;
-  /** A still backdrop (the landing's night map, FE-25): no gesture, key, control or label fade; the page credits the basemap itself. */
+  /** A still backdrop (the landing's night map, FE-25): no gesture, key, control or label fade; no corner link either: the page carries the footer's Sources link. */
   still?: boolean;
 }
 
@@ -142,9 +140,24 @@ export function prepareLibrary(module: MapLibraryModule): void {
   prepared.add(module.lib);
 }
 
-/** Folds a compact attribution that MapLibre opened (BL-SC-1): the credits stay in the DOM behind its toggle. A no-op when collapsed or expanded. */
-export function collapseAttribution(container: Element): void {
-  if (container.classList.contains('maplibregl-compact-show')) { container.classList.remove('maplibregl-compact-show'); container.removeAttribute('open'); }
+/** Where the map's one Sources link goes: the generated list of every data source (dist/sources.html, scripts/build_sources_register.py). */
+export const SOURCES_HREF = '/sources#data-sources';
+
+/**
+ * The map's only source-related chrome (MAP-SOURCES-PAGE-1, G 2026-11-18): a small link to the Sources page.
+ * It replaces MapLibre's attribution control, so no source, survey or credit text is drawn on the map;
+ * the sources themselves are listed on /sources. It is a plain control object so MapLibre owns its place in the corner.
+ */
+export class SourcesLinkControl {
+  private container: HTMLElement | null = null;
+  onAdd(): HTMLElement {
+    const div = document.createElement('div'), link = document.createElement('a');
+    div.className = 'maplibregl-ctrl map-sources-link';
+    link.href = SOURCES_HREF; link.textContent = 'Sources'; link.setAttribute('data-sources-link', '');
+    div.append(link);
+    return this.container = div;
+  }
+  onRemove(): void { this.container?.remove(); this.container = null; }
 }
 
 /** The Map constructor's options: north up, no pitch, `?view=` zoom range, the stage's own accessible name; a still map takes no input. */
@@ -170,13 +183,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   if (!options.still) {
     map.addControl(new lib.NavigationControl({showCompass: false}), 'bottom-right');
     map.addControl(new lib.ScaleControl({unit: 'nautical', maxWidth: 120}), 'bottom-right');
-    // BL-SC-1: MapLibre's own rule makes the credits compact at ≤ 640 px; it opens them whenever they turn compact, so fold them once then.
-    const attribution = new lib.AttributionControl(options.attribution ? {customAttribution: options.attribution} : {});
-    map.addControl(attribution, 'bottom-right');
-    let wasCompact = false;
-    const fold = () => { const el = attribution._container; if (el && !wasCompact) collapseAttribution(el); wasCompact = !!el?.classList.contains('maplibregl-compact'); };
-    fold();
-    for (const type of ['resize', 'styledata', 'sourcedata'] as const) map.on(type, fold);
+    map.addControl(new SourcesLinkControl(), 'bottom-right');
   }
 
   // The overlays drawn now, by registry layer (FE-22), so their source errors route to that layer.

@@ -69,7 +69,7 @@ class JobIsolationTests(unittest.TestCase):
             text = cmd[2]
             order.append(text)
             output = Path(next(x.split("=", 1)[1] for x in cmd if x.startswith("--output=")))
-            payload = bad_payload if text == "bad" else envelope([GOOD_ROW])
+            payload = bad_payload if text == "bad" else envelope([GOOD_ROW], {"reddit": "ok", "grounding": "no-results"})
             output.write_text(json.dumps(payload))
             return type("Result", (), {"returncode": 0, "stderr": ""})()
 

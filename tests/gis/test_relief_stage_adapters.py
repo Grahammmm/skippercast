@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from skippercast.relief import mosaic, receipts
+from skippercast.relief import envelope, mosaic, package, receipts
 from tests._support import FIXTURES, ROOT
 
 pytestmark = pytest.mark.gis
@@ -160,3 +160,63 @@ def test_public_stage_chain(tmp_path, monkeypatch, capsys):
         assert stage_receipt(stage)['generation'] != old[stage]['generation']
         recorded_outputs(stage)
     assert region.receipt_path('select').read_bytes() == selector
+
+    # Release handoff (R6): the digest index, inventory and package read the producers' own
+    # leaves through their receipts. A package fixture with a layout no producer writes, or an
+    # inventory that drops a producer, breaks here.
+    pytest.importorskip('jsonschema')
+    repo = tmp_path / 'repo'
+    write_json(_mkdir(repo / 'catalog') / 'sources.json', {'sources': [{
+        'id': 'tiny-grid', 'review_status': 'approved', 'provider': 'Fixture survey',
+        'rights': {'public_display': 'allowed', 'license': 'public-domain', 'attribution': 'Fixture survey'}}]})
+    write_json(_mkdir(repo / 'regions/tiny') / 'region.json', {'id': region.id, 'bounds': bounds})
+    shutil.copy(ROOT / 'catalog/relief/pointer.schema.json', _mkdir(repo / 'catalog/relief') / 'pointer.schema.json')
+    for module in (package, envelope):
+        monkeypatch.setattr(module, 'repo_root', lambda: repo)
+
+    def step(name, *args, rc=0):
+        capsys.readouterr()
+        actual = main([name, '--region', region.id, '--out', str(region.out_root), *map(str, args)])
+        message = capsys.readouterr().out
+        assert actual == rc, message
+        return message
+
+    manifest = region.dir / 'inventory/manifest.json'
+    producers = ['--upstream', 'tiles:public', '--upstream', 'digests', '--upstream', 'zone:public']
+    step('inventory', rc=3)  # no digest index yet
+    step('digests')
+    step('inventory')
+    doc = json.loads(manifest.read_bytes())
+    assert package.ARCHIVE in doc['layer_paths'] and package.DIGEST_ROOT in doc['layer_paths']
+    assert {'layers/public/zone/zone.geojson', 'layers/public/zone/detail.geojson'} <= set(doc['layer_paths'])
+    assert [s['id'] for s in doc['sources']] == ['tiny-grid'] and doc['sources'][0]['estimated'] is True
+
+    # A hand-edited copy of the manifest, or a missing producer, is refused.
+    copy = tmp_path / 'edited.json'
+    copy.write_bytes(receipts.canonical(dict(doc, layer_paths=[p for p in doc['layer_paths'] if '/zone/' not in p])))
+    assert 'not the current inventory stage output' in step(
+        'package', '--manifest', copy, *producers, '--upstream', 'inventory', rc=1)
+    assert 'not in the current upstream outputs' in step(
+        'package', '--manifest', manifest, '--upstream', 'tiles:public', '--upstream', 'digests', rc=1)
+    step('package', '--manifest', manifest, *producers, '--upstream', 'inventory')
+    gen = receipts.check(region, 'package').receipt['generation']
+    release = region.dir / f'release/{gen}/release.json'
+    report = {'status': 'PASS', 'release_sha256': receipts.sha256_file(release)}
+    assert receipts.run_stage(receipts.StageRun(region, 'qa', lambda out: write_json(out / 'qa.json', report), 'b' * 64,
+                                                upstream=[receipts.Ref('package')], target=f'qa/{gen}')).state == 'ok'
+    step('envelope', '--generation', gen)
+    assert json.loads((region.dir / f'review/{gen}/envelope.json').read_bytes())['layers'] == \
+        json.loads(release.read_bytes())['layers']
+
+    # A new archive makes every downstream receipt stale; nothing reuses the old inventory.
+    select('second revision')
+    for name in outputs:
+        run(name)
+    for name in ('inventory', 'package', 'envelope'):
+        assert receipts.check(region, name).state == 'stale'
+    step('inventory', rc=3)
+
+
+def _mkdir(path):
+    path.mkdir(parents=True, exist_ok=True)
+    return path

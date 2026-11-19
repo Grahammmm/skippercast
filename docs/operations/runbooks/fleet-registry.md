@@ -1,19 +1,19 @@
 # Runbook: the fleet registry run
 
-**Use when:** switching the charter fleet registry on (first run), a weekly *Fleet registry* run (`fleet-registry.yml`) failed or ended `partial`, a run must be repeated or resumed, or a region needs a staging (dry) run.
+**Use when:** switching the charter fleet registry on (first run), a weekly *Fleet registry* run (`fleet-registry.yml`, in the private `Grahammmm/skippercast-ops`) failed or ended `partial`, a run must be repeated or resumed, or a region needs a staging (dry) run.
 **Severity:** SEV4 for a failed or partial weekly run. Nothing user-facing changes in real time: the registry keeps last week's values, and the next Monday run catches up. Raise it to SEV3 if two weekly runs in a row fail.
-**Owner:** repository owner (variables, secrets, the box). An agent can dispatch the workflow, read its summary and, given a shell on the box, the run directory; it opens fix PRs.
-**Setup reference:** [design.md § 9](../../plans/charter-fleet/design.md#9-ingest-and-refresh), [runners](../runners.md#the-fleet-registry-run), [fleet AIS listener down](fleet-ais-down.md) for the box itself.
+**Owner:** repository owner (variables, secrets, the box). An agent with access to the private repository can dispatch the workflow, read its summary and, given a shell on the box, the run directory; it opens fix PRs.
+**Setup reference:** [design.md § 9](../../plans/charter-fleet/design.md#9-ingest-and-refresh), [runners](../runners.md#the-fleet-registry-run), [fleet AIS listener down](fleet-ais-down.md) for the box itself and for [where each control lives](fleet-ais-down.md#where-the-controls-live).
 
 ## What runs where
 
-`fleet-registry.yml` runs every Monday at 09:47 UTC and on dispatch, on `vars.DATA_RUNNER` (Hermes), only from `main`. It installs the `fleet` extra and runs
+`fleet-registry.yml` lives in the private repository `Grahammmm/skippercast-ops` (operators only). It runs every Monday at 09:47 UTC and on dispatch, on our own runners labelled `skippercast-ops`, only from `main`, and checks out this repository's `main`. Every `gh workflow run` and `gh run list` for it takes `--repo Grahammmm/skippercast-ops`; this public repository has no registry job. It installs the `fleet` extra and runs
 
 ```bash
 python -m skippercast.fleet run --region CA --sink worker --run-id <id>
 ```
 
-which chains `discover → resolve → enrich-code → ingest → refresh` in one run and stops at the first failed step. A discovery binding that fails is recorded and makes the run `partial`; the other steps still run. With `--sink worker` the operations go to `POST /api/fleet/jobs/registry` (D1) with a GitHub OIDC token; the Worker accepts it only from this workflow on `main` (`server/routes/fleet.ts` `FLEET_JOB_SCOPE`, `deployments/production.json` `scheduler.workflows`). A last step prints `coverage-status` (counts per coastal region, no names) into the summary. It never runs `--apply`: region files change only through a PR (below).
+which chains `discover → resolve → enrich-code → ingest → refresh` in one run and stops at the first failed step. A discovery binding that fails is recorded and makes the run `partial`; the other steps still run. With `--sink worker` the operations go to `POST /api/fleet/jobs/registry` (D1) with a GitHub OIDC token; the Worker accepts it only from this private workflow on `main` (`server/routes/fleet.ts` `FLEET_JOB_SCOPE`, `deployments/production.json` `fleet_scheduler`). A last step prints `coverage-status` (counts per coastal region, no names) into the summary. It never runs `--apply`: region files change only through a PR (below).
 
 | Dispatch input | Default (and the schedule's value) | What |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ which chains `discover → resolve → enrich-code → ingest → refresh` in on
 | `steps` | empty: all five | A comma-separated subset, run in pipeline order. |
 | `run_id` | empty: a new run | Resume this run (same sink). |
 
-The summary's first line names the run id; the CLI then prints `{"run_id", "dir", "status", "steps"}` with per-step counts. Neither prints registry rows, names or contacts: workflow logs are readable by anyone who can read the repository.
+The summary's first line names the run id; the CLI then prints `{"run_id", "dir", "status", "steps"}` with per-step counts. Neither prints registry rows, names or contacts: workflow logs are readable by anyone who can read the private repository.
 
 Files on the box (`~` is the runner user's home):
 
@@ -39,13 +39,13 @@ If the runner's environment sets `SKIPPERCAST_FLEET_VAR`, that path replaces `~/
 
 ## First run (owner steps, once)
 
-Order (design.md § 16): Worker flag, then the workflow switch, then the first run.
+Order (design.md § 16): Worker flag, then the workflow switch, then the first run. The Worker flag is in this repository; the workflow switch and every dispatch are in the private one.
 
 1. **Worker flag.** In [repository variables](https://github.com/Grahammmm/skippercast/settings/variables/actions) set `FLEET_ENABLED` to `true` (or `gh variable set FLEET_ENABLED --body true --repo Grahammmm/skippercast`). It reaches the Worker with the next deploy: dispatch *Deploy to Cloudflare* (`gh workflow run deploy-cloudflare.yml --repo Grahammmm/skippercast -f action=deploy`) or wait for the next merge to `main`. Until then every `/api/fleet/jobs/*` call answers 404.
-2. **Places key (optional).** `gh secret set GOOGLE_PLACES_API_KEY --repo Grahammmm/skippercast` with a key restricted to the Places API and a daily quota cap ([Q5](../../plans/charter-fleet/open-questions.md#q5-google-places-api-key)). Without it the `google-places` adapter makes no request and reports `skipped`; the run is still `ok`.
-3. **Workflow switch.** On the same page set `ENABLE_FLEET` to `true` (`gh variable set ENABLE_FLEET --body true --repo Grahammmm/skippercast`). `DATA_RUNNER` is already set for the data jobs. The job is skipped while either is unset, and on any branch but `main`.
-4. **Dry run first (recommended).** `gh workflow run fleet-registry.yml --repo Grahammmm/skippercast -f region=CA -f sink=staging`, then `gh run watch`. Read the summary: every binding's counts, `status` `ok` (or `partial` with the failing bindings named in `discover.json` on the box), and the coverage statuses. Nothing reaches D1.
-5. **First registry run.** `gh workflow run fleet-registry.yml --repo Grahammmm/skippercast -f region=CA -f sink=worker`, then `gh run watch`. From an empty registry `refresh` records `new` for every boat. The schedule takes over from the next Monday.
+2. **Places key (optional, not wired).** The private workflow passes no `GOOGLE_PLACES_API_KEY`, so the `google-places` adapter makes no request and reports `skipped`; the run is still `ok`. Wiring a key ([Q5](../../plans/charter-fleet/open-questions.md#q5-google-places-api-key): restricted to the Places API, with a daily quota cap) needs a reviewed change to the private workflow plus a secret in the private repository: an owner decision.
+3. **Workflow switch.** Set `ENABLE_FLEET` to `true` in the private repository (`gh variable set ENABLE_FLEET --body true --repo Grahammmm/skippercast-ops`). The job is skipped while it is unset, and on any branch but `main`. This repository's `ENABLE_FLEET` switches only the hosted `fleet-health.yml` monitor.
+4. **Dry run first (recommended).** `gh workflow run fleet-registry.yml --repo Grahammmm/skippercast-ops -f region=CA -f sink=staging`, then `gh run watch --repo Grahammmm/skippercast-ops`. Read the summary: every binding's counts, `status` `ok` (or `partial` with the failing bindings named in `discover.json` on the box), and the coverage statuses. Nothing reaches D1.
+5. **First registry run.** `gh workflow run fleet-registry.yml --repo Grahammmm/skippercast-ops -f region=CA -f sink=worker`, then `gh run watch --repo Grahammmm/skippercast-ops`. From an empty registry `refresh` records `new` for every boat. The schedule takes over from the next Monday.
 6. **Fill the gaps.** design.md § 9: `run`, then `fleet-osint` (CF-21, once it exists), then `run` again fills the registry; the review queue in the admin is the only human step.
 
 ## Scout CSV input
@@ -85,7 +85,7 @@ unscouted ports remain separate backlog.
 - **Failed** (the job is red): the step that failed and its error are in the log and in `state.json`. Common causes, in order:
   - `fleet run: region ... is dry-run: only the staging sink is allowed`: a `dry-run` region dispatched with `sink=worker`. Use `sink=staging` until the region is promoted.
   - `HTTPError: HTTP Error 404` reading `/api/fleet/jobs/snapshot` (at `resolve`, the first Worker call): `FLEET_ENABLED` is off or not yet deployed (first run, step 1).
-  - `HTTP Error 401` or `403` there: the OIDC token was refused. The workflow file name must be in `FLEET_JOB_SCOPE` and `deployments/production.json` `scheduler.workflows`, and the run must be from `main`.
+  - `HTTP Error 401` or `403` there: the OIDC token was refused. The workflow file name must be in `FLEET_JOB_SCOPE` and `deployments/production.json` `fleet_scheduler.workflows`, and the run must be the private workflow's, from `main`.
   - `fleet run: batch N: HTTP 400 invalid operations`: an operation failed the Worker's checks, which the sink runs first, so this means the Python and Worker checks differ (`tests/test_fleet_sink_parity.mjs`). Nothing of that batch was written. Open a fix PR; do not rerun until it merges.
   - `BatchTooLarge` (HTTP 413): the sink's batching is wrong; a code fix, not a rerun.
   - HTTP 429 or 5xx after five attempts, or a timeout: the Worker or D1 was unavailable. Resume the run (below).
@@ -94,8 +94,8 @@ unscouted ports remain separate backlog.
 
 Every step is idempotent: ids are deterministic, upserts change only what differs, a decided review is never reopened and a change id includes its after-value. Running the same input twice writes zero rows the second time.
 
-- **Repeat the whole run** (a transient failure early on, or to pick up a fix): dispatch again with no `run_id`. It is a new run with its own id and `fleet_runs` rows.
-- **Resume a failed run**: dispatch with `run_id=<the id from the failed run's summary>`, the **same sink**, and `steps` from the failed step on, for example `-f run_id=20261012T094712Z-a1b2c3 -f steps=ingest,refresh`. The run reuses its saved candidates and facts (no second fetch of every source), and the Worker batch counter continues from `state.json`, so batch numbers never repeat. Each rerun step updates its `fleet_runs` row (`<run_id>:<step>`) to the latest attempt's status and counts, keeping the first start time.
+- **Repeat the whole run** (a transient failure early on, or to pick up a fix): dispatch the private workflow again with no `run_id`. It is a new run with its own id and `fleet_runs` rows.
+- **Resume a failed run**: dispatch the private workflow with `run_id=<the id from the failed run's summary>`, the **same sink**, and `steps` from the failed step on, for example `-f run_id=20261012T094712Z-a1b2c3 -f steps=ingest,refresh`. The run reuses its saved candidates and facts (no second fetch of every source), and the Worker batch counter continues from `state.json`, so batch numbers never repeat. Each rerun step updates its `fleet_runs` row (`<run_id>:<step>`) to the latest attempt's status and counts, keeping the first start time.
 - **Ingest failed part way**: the batches before the failure are already in D1. Resuming at `ingest` takes a fresh snapshot that includes them, so `refresh` records no change for the boats in those batches (a `new` or `moved` written before the failure is applied but not logged). The registry values are right; only the change log misses them.
 - **A step fixed by a code change**: merge the fix, then resume with `run_id` so the run uses the new code on its saved inputs.
 
@@ -106,8 +106,8 @@ Do not dispatch from another branch with `--ref`: the job is skipped off `main`,
 Use `sink=staging` for a new region (its `fleet.json` has `status: "dry-run"`, design.md § 21), to try an adapter change after it merges, or before the first registry run. A staging run never calls the Worker. It writes the box's `fleet-staging/staging/<REGION>.sqlite` (the committed migrations applied, the same operations and checks as the Worker) and its own run directories.
 
 ```bash
-gh workflow run fleet-registry.yml --repo Grahammmm/skippercast -f region=OR -f sink=staging
-gh workflow run fleet-registry.yml --repo Grahammmm/skippercast -f region=OR -f sink=staging -f steps=discover,resolve,enrich-code,ingest
+gh workflow run fleet-registry.yml --repo Grahammmm/skippercast-ops -f region=OR -f sink=staging
+gh workflow run fleet-registry.yml --repo Grahammmm/skippercast-ops -f region=OR -f sink=staging -f steps=discover,resolve,enrich-code,ingest
 ```
 
 The summary's per-step counts and coverage statuses are the dry-run report; `report.json` and the SQLite file on the box hold the rest (boats by port and class, sources per boat). Promote a region with `status: "active"` in its own PR after the owner has read that report. To start a staging registry over, delete `fleet-staging/staging/<REGION>.sqlite` and `fleet-staging/<REGION>/runs/` on the box; the next staging run rebuilds it.
@@ -150,9 +150,9 @@ python -m skippercast.fleet confirm list --region CA --sink staging
 
 - `--method` is one of `operator-statement`, `uscg-documentation-matched-to-operator`, `cdfw-cpfv-licence-matched-to-operator`. Name similarity, AIS type or a home port are not methods.
 - `--evidence-ref` is an opaque token (1-128 of letters, digits, `_`, `-`) that points at evidence you keep elsewhere. Never put a name, contact, path or URL in it; the ledger only records that you say you confirmed it, it does not check the evidence.
-- `add` and `withdraw` read the sink's registry first (read-only) and refuse an MMSI the registry does not hold for that vessel. `--sink worker` reads the Worker's snapshot, so like `coverage-status --sink worker` it works only where the job's OIDC token exists.
+- `add` reads the sink's registry first (read-only) and refuses an MMSI the registry does not hold for that vessel; `withdraw` does not read it (it needs only the exact ledger pair). `--sink worker` reads the Worker's snapshot, so like `coverage-status --sink worker` it works only where the job's OIDC token exists.
 - Dates are `YYYY-MM-DD` and not in the future. An identical `add` or a repeated `withdraw` changes nothing; a different `add` for a standing confirmation is refused (withdraw it first). A withdrawn pair is re-confirmed with a later `add`, which replaces its entry: the ledger holds the current state, not a history.
-- If the registry's MMSI for a vessel changes, the entry is `stale`: it counts for nothing and `withdraw` refuses it too; the evidence is never silently reassigned to the new MMSI. Confirm the new pair separately.
+- If the registry's MMSI for a vessel changes, the entry is `stale`: it counts for nothing and the evidence is never silently reassigned to the new MMSI. Confirm the new pair separately. `withdraw` still accepts the exact stale pair, so old evidence can be revoked and stays withdrawn if the registry's MMSI later returns.
 - `list` prints vessel id, MMSI, method, dates and `active`/`withdrawn`/`stale` only; evidence references are never printed. A corrupt or unreadable ledger stops `coverage-status` before anything is written; it is never read as zero.
 
 ## NAIS transmit check

@@ -105,11 +105,11 @@ export const ageLimit = (fileMs: number): number => Math.min(fileMs, MAX_AGE_MS)
 
 export function frontsBasis(d: DrawnFronts, now: Date): string {
   return `Offshore temperature fronts found in the ${d.product} daily analysis, observed ${ageWords(ageOf(d.observedAt, now))}, drawn as an edge with a band: the position is uncertain by the analysis's own stated error divided by the front's strength, either side of the line. `
-    + `Withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a front is an edge to search along, not a fish or catch location.${d.credit ? ` Credit: ${d.credit}.` : ''}`;
+    + `Withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a front is an edge to search along, not a fish or catch location.`;
 }
 /** The variables of the basis sentence, for the card and the legend's popover alike (a Spanish card or legend resolves them at render). */
 function basisVars(d: DrawnFronts, now: Date) {
-  return {product: d.product, age: ageVar(ageOf(d.observedAt, now)), hours: Math.round(d.limitMs / HOUR), credit: d.credit ? {id: fid('credit'), vars: {credit: d.credit}} : ''};
+  return {product: d.product, age: ageVar(ageOf(d.observedAt, now)), hours: Math.round(d.limitMs / HOUR)};
 }
 const none = (reason: string, note = NONE, copy?: StatusCopy): FrontsStatus => ({drawn: null, note, reason, basis: FRONTS_BASIS, ...(copy ? {copy} : {})});
 const OFF: FrontsStatus = {drawn: null, note: '', reason: '', basis: FRONTS_BASIS};

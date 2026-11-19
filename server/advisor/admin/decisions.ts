@@ -3,13 +3,10 @@
 // queue (POST /api/admin/reviews/<id>, server/routes/admin.ts) and the text
 // admin fallback ("ok <code>" / "no <code>", consumer.ts applyAdminReview).
 //
-//   open review -> the kind's effect (idempotent on its own) -> the kind's text
-//   (deterministic outbound id, so a repeat never texts twice) -> the review
-//   closed with a conditional UPDATE ... WHERE status='open'.
-//
-// The review is closed last, so a decision interrupted half-way is finished by
-// a repeat of the same request; a repeat after it closed changes nothing and
-// answers 'repeated'.
+// Atomically commit one decision and its D1 effects. A reply reserves its
+// intent before sending; retries use the existing outbound idempotency keys.
+// Closed decisions have one durable, redacted audit record. Console telemetry
+// does not determine whether the decision took effect.
 //
 //   kind          approve                         edit                            reject
 //   media         publish_state approved (a       credit set, approved (the       publish_state rejected,
@@ -37,11 +34,13 @@ import {t} from '../strings.ts';
 import {resolveLinks} from '../links.ts';
 import {sha256} from '../ids.ts';
 import {advisorLog} from '../log.ts';
-import {publishReport, applyEdit, bumpPagesVersion, invalidateDailyAnswer, cleanFields} from '../intake/reports.ts';
+import {bumpPagesVersion, pagesVersionWrite, prepareReportDecision, cleanFields} from '../intake/reports.ts';
 import {requestMediaJob, videoHold} from '../media.ts';
 // TA-S1: social drafts and post decisions.
-import {ensureMediaDraft, rejectPostsForMedia} from '../social/drafts.ts';
-import {decidePost} from './posts.ts';
+import {ensureMediaDraft} from '../social/drafts.ts';
+import {preparePostDecision} from './posts.ts';
+import {claimReply, commitReview, finishReviewWork, reviewWork} from './review-store.ts';
+import type {Predicate} from './review-store.ts';
 import type {Env} from '../../env.ts';
 import type {AdvisorContactRow, ReportEditFields, ReviewKind} from '../types.ts';
 
@@ -112,75 +111,77 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
   if (!DECISIONS.includes(input.decision)) return {status: 'invalid', error: 'decision must be approve, edit or reject'};
   const review = await reviewRow(db, input.reviewId);
   if (!review || (input.kinds && !input.kinds.includes(review.kind))) return {status: 'not-found'};
-  if (review.status !== 'open') return {status: 'repeated', review};
-  const at = iso(deps.now);
+  const now = deps.now, at = iso(now), status = DECIDED[input.decision];
   const sendsEnabled = deps.sendsEnabled ?? true;
+  const dispatch = deps.dispatch ? {dispatch: deps.dispatch} : {};
+  const skipperIntent = () => sha256(JSON.stringify([input.by, input.inId, input.key]));
+  const repeated = async (row: ReviewRow): Promise<DecisionOutcome> => {
+    if (row.status === status) await resume(row);
+    return {status: 'repeated', review: row};
+  };
+  async function resume(row: ReviewRow): Promise<number> {
+    if (!row.decided_at) return 0;
+    const work = await reviewWork(db!, row.id, row.decided_at);
+    if (!work) return 0;
+    let sends = 0;
+    if (work.followup === 'skipper') {
+      if (work.intent !== await skipperIntent() || !sendsEnabled) return 0;
+      await notifyBoat(env, row.ref_id, row.status === 'approved', async (owner, body) => {
+        sends += await deps.send(owner, input.inId, `${input.key}.skipper`, body, row.decided_by);
+      }, true);
+    } else {
+      // The media rows already carry the work for the scheduled job. This is
+      // the existing throttled nudge; retry at the committed decision's time.
+      await requestMediaJob(env, Date.parse(row.decided_at), dispatch);
+      if (work.followup === 'media') {
+        const draft = await ensureMediaDraft(env, row.ref_id, {now: Date.parse(row.decided_at),
+          ...(row.decided_by ? {createdBy: row.decided_by} : {}), ...(deps.fetcher ? {fetcher: deps.fetcher} : {})});
+        if (draft.status === 'skipped') advisorLog('info', 'advisor_post_draft_skipped', {reason: draft.reason});
+      }
+    }
+    await finishReviewWork(db!, work.id);
+    return sends;
+  }
+  if (review.status !== 'open') return repeated(review);
   const note = input.note === undefined ? null : clean(input.note, NOTE_MAX);
-  const reply = input.reply === undefined || input.reply === null ? null : clean(input.reply, REPLY_MAX);
+  const reply = input.reply == null ? null : clean(input.reply, REPLY_MAX);
   if (input.reply != null && !reply) return {status: 'invalid', error: 'reply must be text'};
   if (reply && (review.kind !== 'conversation' || input.decision !== 'approve')) return {status: 'invalid', error: 'only a conversation can be answered'};
+  const close: Parameters<typeof commitReview>[2] = {decision: status, at, by: input.by, note};
+  let plan: NonNullable<Parameters<typeof commitReview>[3]> = {};
   let sends = 0, held: 'replies-off' | undefined;
-  const text = async (contact: AdvisorContactRow, inId: string, key: string, body: string): Promise<void> => {
-    if (!sendsEnabled) { held = 'replies-off'; return; }
-    sends += await deps.send(contact, inId, key, body, input.by);
-  };
+  async function lost(): Promise<DecisionOutcome> {
+    const after = await reviewRow(db!, input.reviewId);
+    if (!after) return {status: 'not-found'};
+    if (after.status !== 'open') return repeated(after);
+    return {status: 'conflict', error: 'the review, its subject, or a pending decision changed; reload and retry the winning decision'};
+  }
 
   switch (review.kind) {
     case 'media': {
-      // 00 principle 7: a video is approved only once the media job has removed its location metadata.
-      if (input.decision !== 'reject') {
-        const media = await db.prepare('SELECT kind,derived_at,derived_error FROM advisor_media WHERE id=?').bind(review.ref_id)
-          .first<{kind: string; derived_at: string | null; derived_error: string | null}>();
-        const hold = media ? videoHold(media) : null;
-        if (hold) return {status: 'conflict', error: hold};
-      }
-      if (input.decision === 'edit') {
-        const credit = clean((input.patch as {credit?: unknown} | undefined)?.credit, CREDIT_MAX);
-        if (!credit) return {status: 'invalid', error: 'an edit sets the credit'};
-        await db.prepare('UPDATE advisor_media SET credit=? WHERE id=?').bind(credit, review.ref_id).run();
-      }
-      const ok = input.decision !== 'reject';
-      const prior = (await db.prepare('SELECT publish_state FROM advisor_media WHERE id=?').bind(review.ref_id).first<{publish_state: string}>())?.publish_state;
-      const r = await db.prepare(`UPDATE advisor_media SET publish_state=? WHERE id=? AND publish_state IN (${ok ? "'private','queued'" : "'private','queued','approved'"})`)
-        .bind(ok ? 'approved' : 'rejected', review.ref_id).run();
-      // TA-W1: a photo approved, re-credited or taken back after approval changes the boat page (the pages
-      // version is the purge); rejecting a photo that was never public changes no page.
-      if (input.decision === 'edit' || (r.meta.changes && (ok || prior === 'approved'))) await bumpPagesVersion(db, deps.now);
-      // TA-M1: an approved photo needs its public.jpg (upright, 07 § orientation) for the pages and Meta.
-      if (ok) await requestMediaJob(env, deps.now, deps.dispatch ? {dispatch: deps.dispatch} : {});
-      // TA-S1: an approved angler share becomes its post draft (06 § Angler photos); a boat photo approved after a
-      // has_person hold already has one (ensureMediaDraft makes it if not, with consent re-checked). A rejected
-      // photo takes its unposted posts with it.
-      if (ok) {
-        const draft = await ensureMediaDraft(env, review.ref_id, {now: deps.now, ...(input.by ? {createdBy: input.by} : {}), ...(deps.fetcher ? {fetcher: deps.fetcher} : {})});
-        if (draft.status === 'skipped') advisorLog('info', 'advisor_post_draft_skipped', {reason: draft.reason});
-      } else {
-        await rejectPostsForMedia(db, review.ref_id, deps.now);
-      }
+      const prepared = await prepareMediaDecision(db, review.ref_id, input, now);
+      if (prepared.status) return prepared;
+      plan = prepared;
+      if (input.decision !== 'reject') close.followup = 'media';
       break;
     }
     case 'report': {
-      const row = await db.prepare('SELECT id,port,status FROM advisor_reports WHERE id=?').bind(review.ref_id).first<{id: string; port: string; status: string}>();
-      if (!row) return {status: 'conflict', error: 'the report no longer exists'};
-      if (input.decision === 'approve') {
-        await publishReport(db, {id: ''}, row.id, deps.now, {auto: true, team: true});
-      } else if (input.decision === 'edit') {
-        const fields = reportPatch(input.patch);
-        if (!fields) return {status: 'invalid', error: 'an edit needs report fields'};
-        const key = `admin:${(await sha256(JSON.stringify(fields))).slice(0, 16)}`;
-        const result = await applyEdit(db, {id: ''}, review.id, key, row.id, fields, {team: true}, deps.now);
-        if (result === 'refused') return {status: 'conflict', error: 'the boat already has a report for that date'};
-      } else {
-        const r = await db.prepare("UPDATE advisor_reports SET status='rejected',updated_at=? WHERE id=? AND status IN ('draft','pending_confirm','published')").bind(at, row.id).run();
-        if (r.meta.changes && row.status === 'published') { await bumpPagesVersion(db, deps.now); await invalidateDailyAnswer(db, row.port, deps.now); }
-      }
+      const fields = input.decision === 'edit' ? reportPatch(input.patch) : null;
+      if (input.decision === 'edit' && !fields) return {status: 'invalid', error: 'an edit needs report fields'};
+      const prepared = await prepareReportDecision(db, review.id, review.ref_id, input.decision, fields, now);
+      if (prepared.error) return {status: 'conflict', error: prepared.error};
+      plan = prepared;
       break;
     }
     case 'skipper': {
       if (input.decision === 'edit') return {status: 'invalid', error: 'boat fields are edited in the Skippers view'};
-      if (review.reason !== 'new_skipper') break;   // owner_forgotten and the like: the review only records that someone looked
-      await setBoatVerification(env, {boatId: review.ref_id, ok: input.decision === 'approve', by: input.by, now: deps.now,
-        text: (owner, body) => text(owner, input.inId, `${input.key}.skipper`, body)});
+      if (review.reason !== 'new_skipper') break;
+      const ok = input.decision === 'approve';
+      plan.effects = won => [boatVerificationWrite(db, review.ref_id, ok, input.by, at, won), pagesVersionWrite(db, now, 'changes()=1')];
+      if (sendsEnabled) {
+        close.followup = 'skipper';
+        close.intent = await skipperIntent();
+      } else if (await boatOwner(db, review.ref_id)) held = 'replies-off';
       break;
     }
     case 'conversation': {
@@ -190,15 +191,28 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
       const contact = await conversationContact(db, review.ref_id);
       if (!contact) return {status: 'conflict', error: 'the contact no longer exists'};
       if (contact.status !== 'active') return {status: 'conflict', error: `the contact is ${contact.status}`};
-      // in_reply_to is the flagged inbound message when the review points at one.
+      // Bind the recipient and original request to the winner without storing
+      // extra copies of reply text, note, or the recipient's address.
       const inId = contact.message_id ?? review.id;
-      await text(contact, inId, `team.${(await sha256(reply)).slice(0, 16)}`, reply);
+      const digest = await sha256(JSON.stringify([contact.id, inId, input.by, note, reply]));
+      const claim = await claimReply(db, review, digest, input.by, contact.id);
+      if (!claim) return lost();
+      const current = await conversationContact(db, review.ref_id);
+      if (!current || current.id !== contact.id || current.status !== 'active') return {status: 'conflict', error: 'the contact changed or is not active'};
+      // Keep the existing outbound key, including when an older Worker already
+      // wrote the message before leaving this review open.
+      sends = await deps.send(current, inId, `team.${(await sha256(reply)).slice(0, 16)}`, reply, input.by);
+      plan.replyId = claim;
       break;
     }
     case 'post': {
-      // TA-S1 (09 § Drafts): admin/posts.ts checks the patch and the holds; the text admin never reaches here (its kinds).
-      const outcome = await decidePost(env, review.ref_id, input.decision, input.patch, input.by, deps.now, deps.dispatch ? {dispatch: deps.dispatch} : {});
-      if (outcome.status !== 'ok') return outcome;
+      const prepared = await preparePostDecision(db, review.ref_id, input.decision, input.patch, input.by, now);
+      if (prepared.status !== 'ok') {
+        const after = await reviewRow(db, review.id);
+        return after && after.status !== 'open' ? repeated(after) : prepared;
+      }
+      plan = prepared;
+      if (input.decision !== 'reject') close.followup = 'post';
       break;
     }
     case 'rule':
@@ -208,13 +222,67 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
       return {status: 'invalid', error: 'unknown review kind'};
   }
 
-  const status = DECIDED[input.decision];
-  const closed = await db.prepare("UPDATE advisor_reviews SET status=?,decided_at=?,decided_by=?,note=COALESCE(?,note) WHERE id=? AND status='open'")
-    .bind(status, at, input.by, note, review.id).run();
-  const after = (await reviewRow(db, review.id))!;
-  if (!closed.meta.changes) return {status: 'repeated', review: after};
+  if (!await commitReview(db, review, close, plan)) return lost();
+  const after: ReviewRow = {...review, status, decided_at: at, decided_by: input.by, note: note ?? review.note};
+  sends += await resume(after);
+  // The event is telemetry only. The transaction above is the audit record.
   advisorLog('info', 'advisor_review_decided', {kind: review.kind, decision: status, by: input.by ? 'admin' : 'text', sends});
   return {status: 'applied', review: after, sends, ...(held ? {held} : {})};
+}
+
+async function prepareMediaDecision(db: D1Database, id: string, input: DecisionInput, now: number) {
+  const row = await db.prepare('SELECT kind,derived_at,derived_error,publish_state FROM advisor_media WHERE id=?').bind(id)
+    .first<{kind: string; derived_at: string | null; derived_error: string | null; publish_state: string}>();
+  const ok = input.decision !== 'reject', at = iso(now);
+  const hold = row && ok ? videoHold(row) : null;
+  if (hold) return {status: 'conflict' as const, error: hold};
+  const credit = input.decision === 'edit' ? clean((input.patch as {credit?: unknown} | undefined)?.credit, CREDIT_MAX) : null;
+  if (input.decision === 'edit' && !credit) return {status: 'invalid' as const, error: 'an edit sets the credit'};
+  const check = row ? {sql: 'EXISTS (SELECT 1 FROM advisor_media WHERE id=? AND kind=? AND derived_at IS ? AND derived_error IS ? AND publish_state=?)',
+    args: [id, row.kind, row.derived_at, row.derived_error, row.publish_state]}
+    : {sql: 'NOT EXISTS (SELECT 1 FROM advisor_media WHERE id=?)', args: [id]};
+  const effects = (won: Predicate) => {
+    const eligible = ok ? ['private', 'queued'] : ['private', 'queued', 'approved'];
+    const change = row && eligible.includes(row.publish_state);
+    const writes: D1PreparedStatement[] = [];
+    if (row && (credit || change)) writes.push(db.prepare(`UPDATE advisor_media SET credit=COALESCE(?,credit),publish_state=? WHERE id=? AND (${won.sql})`)
+      .bind(credit, change ? (ok ? 'approved' : 'rejected') : row.publish_state, id, ...won.args));
+    if (credit || (change && (ok || row?.publish_state === 'approved'))) writes.push(pagesVersionWrite(db, now, won.sql, won.args));
+    if (!ok) {
+      // Close the affected reviews against the same set of draft/approved posts
+      // before updating the statuses of those posts, all inside the batch.
+      const hasPhoto = "p.status IN ('draft','approved') AND EXISTS (SELECT 1 FROM json_each(p.media_json) WHERE value=?)";
+      // Each such post review is a decision of its own: write its audit event
+      // in this batch, before the review stops being open, so the two commit or
+      // roll back together and a retry (which sees the media review closed)
+      // never has to recreate one.
+      const openPostReview = `FROM advisor_reviews r WHERE r.kind='post' AND r.status='open' AND r.ref_id IN (SELECT p.id FROM advisor_posts p WHERE ${hasPhoto}) AND (${won.sql})`;
+      writes.push(db.prepare(`INSERT INTO advisor_review_events(id,review_id,kind,decision,actor,decided_at)
+        SELECT lower(hex(randomblob(16))),r.id,r.kind,'rejected',?,? ${openPostReview}`).bind(input.by ? 'admin' : 'text', at, id, ...won.args),
+      db.prepare(`UPDATE advisor_reviews SET status='rejected',decided_at=?,decided_by=?,note=COALESCE(note,'photo rejected')
+        WHERE kind='post' AND status='open' AND ref_id IN (SELECT p.id FROM advisor_posts p WHERE ${hasPhoto}) AND (${won.sql})`).bind(at, input.by, id, ...won.args),
+      db.prepare(`UPDATE advisor_posts AS p SET status='rejected',error='media_rejected',updated_at=?
+        WHERE ${hasPhoto} AND (${won.sql})`).bind(at, id, ...won.args));
+    }
+    return writes;
+  };
+  return {check, effects};
+}
+
+function boatVerificationWrite(db: D1Database, boatId: string, ok: boolean, by: string | null, at: string, when: Predicate): D1PreparedStatement {
+  return ok
+    ? db.prepare(`UPDATE advisor_boats SET status='verified',verified_at=?,verified_by=?,updated_at=? WHERE id=? AND status<>'verified' AND (${when.sql})`).bind(at, by, at, boatId, ...when.args)
+    : db.prepare(`UPDATE advisor_boats SET status='rejected',updated_at=? WHERE id=? AND status<>'rejected' AND (${when.sql})`).bind(at, boatId, ...when.args);
+}
+
+async function boatOwner(db: D1Database, boatId: string, status?: string) {
+  return db.prepare(`SELECT c.*,b.name AS boat_name,b.slug AS boat_slug FROM advisor_boats b JOIN advisor_contacts c ON c.id=b.owner_contact_id
+    WHERE b.id=? AND c.status='active' AND (? IS NULL OR b.status=?)`).bind(boatId, status ?? null, status ?? null)
+    .first<AdvisorContactRow & {boat_name: string; boat_slug: string}>();
+}
+async function notifyBoat(env: Env, boatId: string, ok: boolean, text: (owner: AdvisorContactRow, body: string) => Promise<void>, checkStatus = false): Promise<void> {
+  const owner = await boatOwner(env.DB!, boatId, checkStatus ? (ok ? 'verified' : 'rejected') : undefined);
+  if (owner) await text(owner, resolveLinks(t(owner.language, ok ? 'boat_verified' : 'boat_rejected', {name: owner.boat_name, slug: owner.boat_slug}), advisorSettings(env).publicBase).text);
 }
 
 /**
@@ -226,14 +294,10 @@ export async function decideReview(env: Env, input: DecisionInput, deps: Decisio
  */
 export async function setBoatVerification(env: Env, args: {boatId: string; ok: boolean; by: string | null; now: number;
   text: (owner: AdvisorContactRow, body: string) => Promise<void>}): Promise<boolean> {
-  const db = env.DB!, at = iso(args.now), settings = advisorSettings(env);
-  const r = args.ok
-    ? await db.prepare("UPDATE advisor_boats SET status='verified',verified_at=?,verified_by=?,updated_at=? WHERE id=? AND status<>'verified'").bind(at, args.by, at, args.boatId).run()
-    : await db.prepare("UPDATE advisor_boats SET status='rejected',updated_at=? WHERE id=? AND status<>'rejected'").bind(at, args.boatId).run();
+  const db = env.DB!;
+  const r = await boatVerificationWrite(db, args.boatId, args.ok, args.by, iso(args.now), {sql: '1', args: []}).run();
   if (r.meta.changes) await bumpPagesVersion(db, args.now);
-  const boat = await db.prepare('SELECT name,slug,owner_contact_id FROM advisor_boats WHERE id=?').bind(args.boatId).first<{name: string; slug: string; owner_contact_id: string | null}>();
-  const owner = boat?.owner_contact_id ? await db.prepare("SELECT * FROM advisor_contacts WHERE id=? AND status='active'").bind(boat.owner_contact_id).first<AdvisorContactRow>() : null;
-  if (boat && owner) await args.text(owner, resolveLinks(t(owner.language, args.ok ? 'boat_verified' : 'boat_rejected', {name: boat.name, slug: boat.slug}), settings.publicBase).text);
+  await notifyBoat(env, args.boatId, args.ok, args.text);
   return Boolean(r.meta.changes);
 }
 

@@ -61,7 +61,9 @@ Layers are directories. `tests/conftest.py` and `research/tests/conftest.py` add
 
 **Live scope.** `scripts/run_core_tests.py --scope live` runs the product test modules (under `tests/`, never the claims pins) whose source matches `LIVE_CODE` (`skippercast.pipeline`, `refresh_regions`, `check_saved_trips`, `prune_habitat_tiles`, `live_loop`, `report_conditions`, `publish_branch_snapshot`) locally. The live cycle in `live-conditions.yml` no longer runs it; the gate is the CI `check` and `survey-science` jobs on `main`, so an unrelated test can never stop the feed.
 
-**CI reporting.** Each Python job writes JUnit XML (uploaded as the `pytest-core-<python>` and `pytest-survey` artifacts) and appends a per-layer table and the slowest tests to the job summary with `scripts/pytest_report.py`; the survey-science job runs it with `--strict-skips`. Coverage is not collected yet.
+**Hosted full suite (CI policy R12).** Every PR runs the same three full Python parts as `main`: `close-safety`, `segment-close` and `rest` (which includes the coast sign-off graph). The required `survey-science` check passes only when all three parts, the selector and both non-GIS `check` legs succeed. The four browser shards remain separately required and run on every PR. Test the changed area locally; use the hosted checks for full-suite results before merge.
+
+**CI reporting.** The Python test jobs write JUnit XML (`pytest-core-<python>` and `pytest-survey-<part>` artifacts) and append a per-layer table and the slowest tests to the job summary with `scripts/pytest_report.py`. Each `survey-tests` part uses `--strict-skips`. Coverage is not collected yet.
 
 ## Other checks
 

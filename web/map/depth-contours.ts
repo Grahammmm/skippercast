@@ -289,14 +289,14 @@ export function contourMark(properties: Record<string, unknown> | null | undefin
   if (!s || !KINDS.includes(p.kind as string)) return null;
   const v2 = v2Zoom !== undefined;
   if (v2 && !visibleV2(p, v2Zoom)) return null;
-  const source = `${s.name} · ${s.attribution || 'survey grid'} · surveyed ${s.survey_date} · ${s.vertical_datum}`;
+  const source = `Surveyed ${s.survey_date} · ${s.vertical_datum}`;
   // The v1 basis describes 16 m blocks and the old 600 ft shelf limit; neither applies to v2.
   const basis = v2 ? 'Not for navigation.' : layerEntry(REGISTRY_ID).basis;
   const terms = /^https:\/\//.test(s.url) ? [{href: s.url, label: 'Survey data release'}] : undefined;
   const note = omittedNote(omitted), more = note ? ` ${note}` : '';
   // The card's words as catalogue parts: the registry's own basis sentence, the code's wrappers; names, ids and dates stay as published.
   const moreCopy: MarkCopyPart[] = note ? [' ', ...omittedCopy(omitted)] : [];
-  const sourceCopy = [cp(cid('source'), {name: s.name, attribution: s.attribution || {id: cid('surveyGrid')}, date: s.survey_date, datum: s.vertical_datum})];
+  const sourceCopy = [cp(cid('source'), {date: s.survey_date, datum: s.vertical_datum})];
   const common = {source: sourceCopy, basis: [cp(v2 ? 'brief.skill.nav' : 'layer.depth-contours.basis')]};
   const copyTerms = terms ? {copyTerms: [[cp(cid('release'))]]} : {};
   if (p.kind === 'unresolved-area') {

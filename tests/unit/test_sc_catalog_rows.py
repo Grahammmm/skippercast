@@ -73,7 +73,12 @@ def row(source_id, **fields):
 
 
 def catalog(rows, schema=ld.CATALOG, **fields):
-    return dict(schema=schema, candidates=rows, **fields)
+    scope = dict(region="synthetic", bbox=[0, 0, 1, 1], plan_sha256="a" * 64,
+                 source_revision="source-1", policy_revision="policy-1", method_revision="method-1",
+                 bounded_plan_finished=True, discovery_complete=True, unattempted_queries=[])
+    if schema == SOURCE_SCHEMA:
+        scope["status"] = "FINALIZED"
+    return {**scope, "schema": schema, "candidates": rows, **fields}
 
 
 def load(path):
@@ -93,7 +98,8 @@ def assert_duplicate_rejected(document, source_id, index):
 
 
 def assert_unique_diff():
-    old = load(UNIQUE_FIXTURE)
+    fixture = load(UNIQUE_FIXTURE)
+    old = catalog(fixture['candidates'], catalog_id=fixture['catalog_id'])
     new = copy.deepcopy(old)
     new['catalog_id'] = 'synthetic-unique-next'
     new['candidates'] = [copy.deepcopy(new['candidates'][2]), copy.deepcopy(new['candidates'][0]),
@@ -101,7 +107,8 @@ def assert_unique_diff():
     new['candidates'][0]['metadata'] = dict(crs='EPSG:3857')
     change = ld.diff(old, new, previous_ref='ref')
     assert change == dict(schema=ld.DIFF, previous='ref', current_catalog_id='synthetic-unique-next',
-                          added=['synthetic:delta'], removed=['synthetic:bravo'],
+                          comparison_scope='complete', added=['synthetic:delta'],
+                          removed=['synthetic:bravo'], not_rechecked=[],
                           changed=[dict(source_id='synthetic:charlie', fields=['metadata'])],
                           unchanged=1, note=NOTE)
 
@@ -112,8 +119,9 @@ def assert_unique_diff():
 def test_a1_empty_catalogs_diff_to_nothing():
     for previous in (None, catalog([]), catalog([], schema=SOURCE_SCHEMA)):
         change = ld.diff(previous, catalog([], catalog_id='empty'))
-        assert change == dict(schema=ld.DIFF, previous=None, current_catalog_id='empty', added=[], removed=[],
-                              changed=[], unchanged=0, note=NOTE)
+        assert change == dict(schema=ld.DIFF, previous=None, current_catalog_id='empty',
+                              comparison_scope='no_previous' if previous is None else 'complete',
+                              added=[], removed=[], not_rechecked=[], changed=[], unchanged=0, note=NOTE)
     assert ld._candidates(catalog([])) == {}
 
 
@@ -160,7 +168,8 @@ def test_a1_previous_none_lists_every_current_id():
 
 
 def test_a1_inputs_are_not_mutated():
-    old, new = load(UNIQUE_FIXTURE), load(UNIQUE_FIXTURE)
+    old = catalog(load(UNIQUE_FIXTURE)['candidates'])
+    new = copy.deepcopy(old)
     new['candidates'][1]['unknowns'] = ['crs']
     before = copy.deepcopy((old, new))
     change = ld.diff(old, new)

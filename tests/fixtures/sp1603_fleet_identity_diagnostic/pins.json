@@ -10,5 +10,9 @@
     "tests/test_fleet_jobs.mjs": "e4347f4f7014a21f2c17a58fdc5a2615e0f6329e80cd2fac4bc6a149f1da3e51",
     "tests/unit/test_fleet_sinks.py": "6a4aed8988851587e3407c7357c9e3c88f9bbbf03be1f899f034f983b19f72a0"
   },
+  "successor": {
+    "server/fleet/ids.ts": "0638adbf3297c5f15fe44d0b76213c929cf85d730368b39028e0907856c33af6",
+    "src/skippercast/fleet/ops.py": "31cef6b9150ac93c1e7a80d49e7fbfffe14c05aa55778d8a0c23ce3fcb5e2184"
+  },
   "corpus_sha256": "0996d41dade791ac9d3a1e352a14ff5dff506e6edb284e50847cdedda2a2999c"
 }

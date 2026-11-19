@@ -3,7 +3,7 @@
 The runner is driven against a fake ``claude`` executable written into a temporary
 directory: it answers ``--version`` and ``auth status``, reads the prompt from stdin,
 records each call (argument list, working directory, environment names) next to itself and
-writes empty profiles for the manifest's boats, or fails, hangs or writes nothing as the
+writes synthetic profiles for the manifest's boats, or fails, hangs or writes nothing as the
 test's plan says. Manifests come from ``agent.manifests`` over invented vessels; nothing
 here reaches the network or a real CLI.
 
@@ -76,8 +76,17 @@ def record(kind, row):
 before = len(list((here / "calls").glob(batch + "-*.json")))
 record("calls", {{"batch": batch, "argv": args, "cwd": os.getcwd(), "env": sorted(os.environ),
                  "token": os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"), "prompt": prompt,
-                 "config_dir": os.environ.get("CLAUDE_CONFIG_DIR"), "pid": os.getpid(),
+                 "config_dir": os.environ.get("CLAUDE_CONFIG_DIR"), "pid": os.getpid(), "boats": len(doc["boats"]),
                  "start": time.monotonic()}})
+barrier = plan.get("_barrier")
+if barrier:
+    # Rendezvous: do not finish until `barrier` sessions have started, so overlap never depends on timing.
+    marks = here / "barrier"
+    marks.mkdir(exist_ok=True)
+    (marks / str(os.getpid())).write_text("")
+    give_up = time.monotonic() + 30
+    while len(list(marks.iterdir())) < int(barrier) and time.monotonic() < give_up:
+        time.sleep(0.01)
 time.sleep(float(plan.get("_sleep", 0)))
 if behaviour == "hang-tree":
     import subprocess
@@ -95,8 +104,16 @@ if behaviour == "error-result":
     print(json.dumps({{"type": "result", "subtype": "error_max_turns", "is_error": True, "num_turns": 200}}))
     sys.exit(0)
 if behaviour != "no-profiles":
+    template = json.loads((here / "profile.json").read_text())
+    # If a completed boat is targeted again, make the overwrite visible even with identical JSON values.
+    indent = 2 if before and behaviour in ("fail-after-write", "fail-once-after-write") else None
     for boat in doc["boats"]:
-        Path(doc["output_dir"], boat["vessel_id"] + ".json").write_text("{{}}")
+        output = dict(template, region=doc["region"], run_id=doc["run_id"], batch_id=batch, vessel_id=boat["vessel_id"])
+        Path(doc["output_dir"], boat["vessel_id"] + ".json").write_text(json.dumps(output, indent=indent))
+if behaviour == "fail-after-write" or (behaviour == "fail-once-after-write" and before == 0):
+    # Every profile is on disk, then the session dies: the failure must still be retried and reported.
+    print(json.dumps({{"type": "result", "subtype": "error_max_turns", "is_error": True, "num_turns": 200}}))
+    sys.exit(1)
 record("ends", {{"batch": batch, "end": time.monotonic()}})
 print(json.dumps({{"type": "result", "subtype": "success", "is_error": False, "num_turns": 7, "result": "done",
                   "permission_denials": []}}))
@@ -123,6 +140,19 @@ def vessel(i):
             "vessel_class": "six-pack", "aliases": [], "offerings": [], "last_profiled_at": None}
 
 
+def profile_template():
+    """A schema-valid profile without any account, contact, or location values."""
+    fields = json.loads((ROOT / "schemas/fleet-profile.schema.json").read_text())["properties"]["boat"]
+    boat: dict[str, object] = {
+        key: [] if fields["properties"][key].get("type") == "array" else None for key in fields["required"]
+    }
+    boat.update(social=dict.fromkeys(("instagram", "facebook", "youtube", "tiktok")),
+                catch_reporting={"sources": [], "frequency": None},
+                reputation={"google_rating": None, "google_reviews": None, "other": []},
+                ais=dict.fromkeys(("mmsi", "match_method", "confidence", "last_seen_source", "notes")))
+    return {"schema_version": "1.0.0", "boat": boat, "conflicts": [], "notes": "Synthetic profile"}
+
+
 class Harness:
     """A fleet var with one planned run, a fake claude and the runner's environment."""
 
@@ -143,6 +173,7 @@ class Harness:
         self.claude = self.bin / "claude"
         self.claude.write_text(FAKE.format(python=sys.executable, version=run_osint.CLAUDE_CODE_VERSION))
         self.claude.chmod(0o755)
+        (self.bin / "profile.json").write_text(json.dumps(profile_template()))
         self.environ = {"PATH": f"{self.bin}:{os.environ.get('PATH', '/usr/bin:/bin')}", "HOME": str(self.tmp),
                         "SKIPPERCAST_FLEET_VAR": str(self.var), "CLAUDE_CODE_OAUTH_TOKEN": "test-token-not-real",
                         "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "oidc-request", "ACTIONS_ID_TOKEN_REQUEST_URL": "https://oidc.example/",
@@ -221,7 +252,7 @@ class BatchTests(unittest.TestCase):
 
     def test_batches_run_in_parallel_up_to_the_limit(self):
         h = Harness(Path(self._tmp.name) / "wide", boats=8, batch_size=2)
-        h.plan(_sleep=0.6)
+        h.plan(_sleep=0.3, _barrier=2)  # two sessions must be running together before either ends
         code, _counts = h.run(parallel=2)
         self.assertEqual(code, 0)
         starts = sorted(c["start"] for c in h.calls())
@@ -299,6 +330,41 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(batches["batch-001"]["error"], "no profiles written")
         self.assertEqual(batches["batch-002"]["error"], "session ended error_max_turns")
         self.assertEqual(batches["batch-003"]["status"], "done")
+
+    def test_a_failed_session_that_wrote_every_profile_is_still_retried_and_reported(self):
+        # Contract: a failed session is retried once and its failure stays on record. Believable bug: the retry
+        # sees every profile valid, marks the batch done without a session and clears exit_code/error.
+        # A retry that reuses the full manifest instead of targeting nothing can overwrite every valid profile.
+        h = self.h
+        h.plan(**{"batch-001": "fail-after-write", "batch-002": "fail-once-after-write"})
+        code, counts = h.run()
+        self.assertEqual(code, 1)
+        self.assertEqual([len(h.calls(b)) for b in ("batch-001", "batch-002")], [2, 2],
+                         "the retry launches a session although every profile is valid")
+        batches = h.state()["osint"]["batches"]
+        one = batches["batch-001"]
+        self.assertEqual((one["status"], one["attempts"], one["exit_code"], one["subtype"], one["error"]),
+                         ("failed", 2, 1, "error_max_turns", "claude exited 1"))
+        self.assertEqual((one["profiles"], one["missing"]), (one["boats"], []))
+        self.assertEqual((batches["batch-002"]["status"], batches["batch-002"]["error"]), ("done", None))
+        self.assertEqual((counts["failed"], counts["done"]), (1, 2))
+        originals = {}
+        for doc in h.docs[:2]:
+            for boat in doc["boats"]:
+                vessel_id = boat["vessel_id"]
+                first = dict(profile_template(), region=doc["region"], run_id=doc["run_id"],
+                             batch_id=doc["batch_id"], vessel_id=vessel_id)
+                originals[h.run_dir / "profiles" / f"{vessel_id}.json"] = json.dumps(first).encode()
+        self.assertTrue(all(path.read_bytes() == expected for path, expected in originals.items()),
+                        "the retry preserves every profile byte-for-byte")
+        for doc in h.docs[:2]:
+            self.assertEqual([c["boats"] for c in h.calls(doc["batch_id"])], [len(doc["boats"]), 0])
+
+        # A re-run tries the failed batch again even though its profiles are complete.
+        h.run()
+        self.assertEqual([c["boats"] for c in h.calls("batch-001")], [len(h.docs[0]["boats"]), 0, 0, 0])
+        self.assertTrue(all(path.read_bytes() == expected for path, expected in originals.items()),
+                        "resume preserves every profile byte-for-byte")
 
     def test_max_batches_limits_the_batches_attempted(self):
         code, counts = self.h.run(max_batches=1)

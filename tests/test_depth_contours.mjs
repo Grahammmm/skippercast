@@ -109,7 +109,7 @@ test('the overlay: a dashed survey edge, contours heavier at the index, a click 
   assert.ok(o.layers.filter(l => l.type === 'line').every(l => l.minzoom === undefined), 'lines draw at every zoom');
 });
 
-test('the card names the depth, interval, survey, date and datum; the edge says no reviewed grid continues', () => {
+test('the card names the depth, interval, survey date and datum, and no source name (MAP-SOURCES-PAGE-1); the edge says no reviewed grid continues', () => {
   const sources = assessContours(FULL, 'morro-bay', TODAY).sources;
   const f150 = FULL.features.find(f => f.properties.kind === 'contour' && f.properties.depth_ft === 150);
   const m = contourMark(f150.properties, sources);
@@ -117,7 +117,8 @@ test('the card names the depth, interval, survey, date and datum; the edge says 
   assert.equal(m.kind, `Index contour · every ${INDEX_FT} ft`);
   assert.match(m.reading, /150 ft below the survey's unverified source datum/);
   assert.match(m.reading, /not a sounding or a chart depth/);
-  assert.match(m.source, /surveyed 2008 · unverified source datum$/);
+  assert.equal(m.source, 'Surveyed 2008 · unverified source datum', 'the date and datum stay; the survey name and credit are on the Sources page');
+  for (const s of sources) { assert.ok(!m.source.includes(s.name)); if (s.attribution) assert.ok(!m.source.includes(s.attribution)); }
   assert.equal(m.basis, layerEntry('depth-contours').basis);
   assert.ok(m.terms?.[0].href.startsWith('https://doi.org/'));
   const f60 = FULL.features.find(f => f.properties.kind === 'contour' && f.properties.depth_ft === 60);
