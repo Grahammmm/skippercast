@@ -4,24 +4,39 @@
 // with its status, owner, last report, reports in 30 days, posts, consent and
 // crew; verify or reject, edit the fields with the registration's rules, keep a
 // consent note, remove a crew member. Contacts open by id (#contact/<id>).
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
-import {ApiError, contactHref, editBoat, getBoats, invite, removeCrew, when} from './api.ts';
-import type {Boat, BoatEdit, BoatFields, BoatResult} from './api.ts';
+import {ApiError, contactHref, editBoat, getBoat, getBoats, invite, removeCrew, when} from './api.ts';
+import type {Boat, BoatEdit, BoatFields, BoatResult, BoatSummary} from './api.ts';
+import {AdminDisclosure} from './queue.tsx';
 
 const errorText = (e: unknown): string => (e instanceof ApiError && e.status !== 500 ? e.message : COPY.decisionFailed);
 
 export function Skippers() {
-  const [boats, setBoats] = useState<Boat[]>([]);
+  const [boats, setBoats] = useState<BoatSummary[]>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const request = useRef(0);
+  const [paging, setPaging] = useState(false);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [notice, setNotice] = useState('');
 
-  async function load(): Promise<void> {
-    try { setBoats((await getBoats()).boats); setState('ready'); } catch { setState('failed'); }
+  async function load(cursor: string | null = null): Promise<void> {
+    const seq = ++request.current;
+    setPaging(true);
+    try {
+      const page = await getBoats(cursor);
+      if (seq !== request.current) return;
+      setBoats(all => cursor ? [...all, ...page.boats.filter(b => !all.some(a => a.id === b.id))] : page.boats);
+      setNext(page.next);
+      setState('ready');
+    } catch {
+      if (seq !== request.current) return;
+      if (cursor) setNotice(COPY.loadFailed);
+      else setState('failed');
+    } finally { if (seq === request.current) setPaging(false); }
   }
-  useEffect(() => { void load(); }, []);
-  const replace = (boat: Boat): void => setBoats(all => all.map(b => (b.id === boat.id ? boat : b)));
+  useEffect(() => { void load(); return () => { request.current += 1; }; }, []);
 
   return (
     <section class="admin-view" aria-labelledby="skippers-heading">
@@ -30,9 +45,32 @@ export function Skippers() {
       <p class="admin-notice" role="status">{notice}</p>
       {state === 'loading' ? <p>{COPY.loading}</p> : state === 'failed' ? <p class="admin-error" role="alert">{COPY.loadFailed}</p> : boats.length === 0 ? <p>{COPY.boatsNone}</p> : (
         <ol class="admin-queue" aria-label={COPY.boatsCaption}>
-          {boats.map(boat => <li key={boat.id}><BoatCard boat={boat} onChanged={(next, text) => { replace(next); setNotice(text); }} /></li>)}
+          {boats.map(boat => <li key={boat.id}>
+            <article class={`admin-card is-boat is-${boat.status}`} aria-labelledby={`boat-${boat.id}-title`}>
+              <header class="admin-card-head">
+                <h2 id={`boat-${boat.id}-title`}>{boat.name} <span class="admin-reason">{COPY.boatStatus[boat.status]}</span></h2>
+                <p class="admin-meta">{COPY.opened(when(boat.created_at))}{boat.review_open ? ` · ${COPY.reviewOpen}` : ''}</p>
+              </header>
+              <dl class="admin-fields">
+                <Field label={COPY.port}>{boat.port}</Field>
+                <Field label={COPY.lastReport}>{boat.last_report_date ?? COPY.never}</Field>
+                <Field label={COPY.reports30}>{boat.reports_30d}</Field>
+                <Field label={COPY.posts}>{boat.posts}</Field>
+                <Field label={COPY.consent}>{COPY.consentState[boat.consent]}</Field>
+                <Field label={COPY.crew}>{boat.crew_count}</Field>
+              </dl>
+              <AdminDisclosure load={() => getBoat(boat.id)}>
+                {detail => <BoatCard initial={detail} onChanged={(updated, text) => {
+                  const {owner, crew, consent_note, ...summary} = updated;
+                  setBoats(all => all.map(b => b.id === updated.id ? {...summary, crew_count: crew.length, has_note: Boolean(consent_note)} : b));
+                  setNotice(text);
+                }} />}
+              </AdminDisclosure>
+            </article>
+          </li>)}
         </ol>
       )}
+      {next && state === 'ready' ? <button type="button" class="admin-button" disabled={paging} onClick={() => void load(next)}>{COPY.more}</button> : null}
     </section>
   );
 }
@@ -81,11 +119,11 @@ function Field({label, children}: {label: string; children: ComponentChildren}) 
   return <><dt>{label}</dt><dd>{children}</dd></>;
 }
 
-function BoatCard({boat, onChanged}: {boat: Boat; onChanged: (boat: Boat, notice: string) => void}) {
+function BoatCard({initial, onChanged}: {initial: Boat; onChanged: (boat: Boat, notice: string) => void}) {
+  const [boat, setBoat] = useState(initial);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const headingId = `boat-${boat.id}-title`;
 
   async function apply(run: () => Promise<BoatResult | {boat: Boat}>, done: string): Promise<void> {
     if (busy) return;
@@ -95,6 +133,7 @@ function BoatCard({boat, onChanged}: {boat: Boat; onChanged: (boat: Boat, notice
       const sent = 'sends' in result && result.sends ? ` ${COPY.sentTexts(result.sends)}` : '';
       const held = 'held' in result && result.held ? ` ${COPY.heldTexts}` : '';
       setEditing(false);
+      setBoat(result.boat);
       onChanged(result.boat, `${done}${sent}${held}`);
     } catch (e) { setError(errorText(e)); }
     finally { setBusy(false); }
@@ -102,20 +141,12 @@ function BoatCard({boat, onChanged}: {boat: Boat; onChanged: (boat: Boat, notice
   const decide = (status: 'verified' | 'rejected'): Promise<void> => apply(() => editBoat(boat.id, {status}), COPY.saved);
 
   return (
-    <article class={`admin-card is-boat is-${boat.status}`} aria-labelledby={headingId}>
-      <header class="admin-card-head">
-        <h2 id={headingId}>{boat.name} <span class="admin-reason">{COPY.boatStatus[boat.status]}</span></h2>
-        <p class="admin-meta">{COPY.opened(when(boat.created_at))}{boat.review_open ? ` · ${COPY.reviewOpen}` : ''}</p>
-      </header>
+    <>
       <dl class="admin-fields">
         <Field label={COPY.port}>{boat.port}{boat.landing ? ` · ${boat.landing}` : ''}</Field>
         <Field label={COPY.owner}>{boat.owner
           ? <a href={contactHref(boat.owner.id)}>{boat.owner.display_name || COPY.unnamed}</a>
           : COPY.noOwner}{boat.owner ? ` · ${boat.owner.channel} · ${boat.owner.status}` : ''}</Field>
-        <Field label={COPY.lastReport}>{boat.last_report_date ?? COPY.never}</Field>
-        <Field label={COPY.reports30}>{boat.reports_30d}</Field>
-        <Field label={COPY.posts}>{boat.posts}</Field>
-        <Field label={COPY.consent}>{COPY.consentState[boat.consent]}</Field>
         {boat.consent_note ? <Field label={COPY.consentNote}>{boat.consent_note.note}</Field> : null}
         {boat.instagram ? <Field label={COPY.instagram}>@{boat.instagram}</Field> : null}
         {boat.booking_url ? <Field label={COPY.booking}>{boat.booking_url}</Field> : null}
@@ -141,7 +172,7 @@ function BoatCard({boat, onChanged}: {boat: Boat; onChanged: (boat: Boat, notice
         </div>
       )}
       {error ? <p class="admin-error" role="alert">{error}</p> : null}
-    </article>
+    </>
   );
 }
 

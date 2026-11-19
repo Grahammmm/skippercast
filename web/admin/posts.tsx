@@ -8,10 +8,10 @@
 // other scheduled or posted posts). Per-post stats come with TA-S7.
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
-import {POST_KINDS, POST_STATUSES, getCalendar, getPosts} from './api.ts';
-import type {CalendarWeek, DecisionResult, Post, QueueItem, WeekPost} from './api.ts';
+import {POST_KINDS, POST_STATUSES, getCalendar, getPost, getPosts, when} from './api.ts';
+import type {CalendarWeek, DecisionResult, Post, PostSummary, QueueItem, WeekPost} from './api.ts';
 import {PostActions, PostDetail} from './post-card.tsx';
-import {ReviewCard} from './queue.tsx';
+import {AdminDisclosure, ReviewCard} from './queue.tsx';
 
 /** A draft with an open review as the queue item its card decides. */
 export const draftItem = (post: Post): QueueItem => ({id: post.review_id!, kind: 'post', ref_id: post.id, reason: 'social_draft', status: 'open', note: null,
@@ -73,8 +73,16 @@ export function WeekCalendar({refresh}: {refresh: unknown}) {
   );
 }
 
-interface PostsPage {key: string; posts: Post[]; next: string | null; state: 'loading' | 'ready' | 'failed'}
-const NO_POSTS: Post[] = [];
+type ListedPost = PostSummary | Post;
+interface PostsPage {key: string; posts: ListedPost[]; next: string | null; state: 'loading' | 'ready' | 'failed'}
+const NO_POSTS: ListedPost[] = [];
+
+function OpenPost({post, decided, changed}: {post: Post; decided: (result: DecisionResult) => void; changed: (post: Post, message: string) => void}) {
+  return post.status === 'draft' && post.review_id ? <ReviewCard item={draftItem(post)} onDecided={decided} /> : <>
+    <PostDetail post={post} />
+    <PostActions post={post} onChanged={changed} />
+  </>;
+}
 
 export function PostsView() {
   const [status, setStatus] = useState('draft');
@@ -144,16 +152,17 @@ export function PostsView() {
         <ol class="admin-queue">
           {posts.map(post => (
             <li key={post.id}>
-              {post.status === 'draft' && post.review_id ? <ReviewCard item={draftItem(post)} onDecided={decided} /> : (
-                <article class="admin-card is-post" aria-labelledby={`post-${post.id}-title`}>
-                  <header class="admin-card-head">
-                    <h2 id={`post-${post.id}-title`}>{COPY.postKinds[post.kind] ?? post.kind} <span class="admin-reason">{COPY.postStatuses[post.status] ?? post.status}</span></h2>
-                    <p class="admin-meta">{post.boat?.name ?? COPY.angler}</p>
-                  </header>
-                  <PostDetail post={post} />
-                  <PostActions post={post} onChanged={changed} />
-                </article>
-              )}
+              <article class="admin-card is-post" aria-labelledby={`post-${post.id}-title`}>
+                <header class="admin-card-head">
+                  <h2 id={`post-${post.id}-title`}>{COPY.postKinds[post.kind] ?? post.kind} <span class="admin-reason">{COPY.postStatuses[post.status] ?? post.status}</span></h2>
+                  <p class="admin-meta">{post.region} · {when(post.updated_at)}</p>
+                </header>
+                {'media' in post ? <OpenPost post={post} decided={decided} changed={changed} /> : (
+                  <AdminDisclosure key={`${generation}:${post.updated_at}:${post.status}`} load={() => getPost(post.id)}>
+                    {detail => <OpenPost post={detail} decided={decided} changed={changed} />}
+                  </AdminDisclosure>
+                )}
+              </article>
             </li>
           ))}
         </ol>

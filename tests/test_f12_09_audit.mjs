@@ -94,6 +94,7 @@ test('Queue renders empty only for a valid empty page', async t => {
     fetchMock.mockImplementation(async (path, init) => {
       if (path === queuePath && !init.method) return Response.json({items: [review], next: 'synthetic-next'});
       assert.equal(path, `/api/admin/reviews/${review.id}`);
+      if (!init.method) return Response.json({review});
       assert.equal(init.method, 'POST');
       assert.deepEqual(JSON.parse(init.body), {decision: 'approve'});
       return nonJson();
@@ -102,12 +103,16 @@ test('Queue renders empty only for a valid empty page', async t => {
       await act(() => render(h(Queue), root));
       await flush();
       assert.ok(find(root, node => node.localName === 'button' && node.textContent === COPY.more));
+      const expand = find(root, node => node.localName === 'button' && node.textContent === 'Details');
+      assert.equal(fetchMock.callCount(), 1, 'closed summaries do not fetch any detail');
+      await act(() => expand.handlers.click.call(expand, {type: 'click'}));
+      await flush();
       const button = find(root, node => node.localName === 'button' && node.textContent === COPY.done);
       await act(() => button.handlers.click.call(button, {type: 'click'}));
       await flush();
       assert.ok(find(root, node => node.attrs.role === 'alert')?.textContent.includes('did not confirm'));
       assert.ok(find(root, node => node.localName === 'article'));
-      assert.equal(fetchMock.callCount(), 2); // one read, one user-initiated write
+      assert.equal(fetchMock.callCount(), 3); // list, explicit expansion, user-initiated write
     } finally { render(null, root); }
   });
   await t.test('Fleet capability still requires 204, not a 200 JSON response', async () => {
