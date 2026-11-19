@@ -86,9 +86,9 @@ export function Chat({defaultOpen = false}: {defaultOpen?: boolean}) {
       const response = await post('/api/advisor/web/message', JSON.stringify({text: message, ...(sentPhoto ? {media_ids: [sentPhoto.id]} : {})}), controller.signal);
       if (!response.ok) { setNotice(errorText(response.status)); return; }
       const data = await response.json() as ChatResponse;
-      if (data.pending) { setNotice(COPY.pending); return; }
       const replies = (data.replies ?? []).filter(r => r.text || r.media.length);
-      setLines(all => [...all, ...replies.map(r => ({id: nextId(), from: 'skippercast' as const, text: r.text, media: r.media}))]);
+      if (replies.length) setLines(all => [...all, ...replies.map(r => ({id: nextId(), from: 'skippercast' as const, text: r.text, media: r.media}))]);
+      if (data.pending) setNotice(COPY.pending);
     } catch { setNotice(controller.signal.aborted ? COPY.pending : COPY.failed); }
     finally { clearTimeout(still); clearTimeout(stop); setBusy('idle'); input.current?.focus(); }
   }
