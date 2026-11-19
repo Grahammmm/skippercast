@@ -4,9 +4,11 @@
 //
 // Contract it protects: after the theme goes dark -> light -> dark through
 // `restyle`, every layer the pure builder makes holds exactly the paint a fresh
-// build of that theme has, and a pattern image is added once, then updated in
+// build of that theme has, every pattern image a layer paint references is
+// registered on the map, and a pattern image is added once, then updated in
 // place. The believable bug: a provider that omits a palette-dependent paint
-// (or names a layer/image id the build does not use) leaves stale colours.
+// (or names a layer/image id the build does not use) leaves stale colours, or
+// registers a pattern under another id so the layer's `fill-pattern` has no image.
 import assert from 'node:assert/strict';
 import {restyle} from '../web/map/theme-restyle.ts';
 
@@ -43,16 +45,18 @@ export function fakeMap(layers) {
  * Run dark (install) -> light -> dark and report what differs.
  * `build(palette)` is the pure builder returning `{layers}`; `provider` has
  * `themePaint` and/or `themePatterns`; `palettes` is `{dark, light}`.
- * Returns `{steps, missing, addImage, updateImage, addedIds}`:
+ * Returns `{steps, missing, missingImages, addImage, updateImage, addedIds, imageIds}`:
  * - `steps[i].mismatches` lists `{layer, property, actual, expected}` for each
  *   built layer paint that differs from the fresh build of that step's theme;
  * - `missing` lists layer IDs a build has that the map lacks, or a provider
  *   edited that the map lacks (each once);
+ * - `missingImages` lists pattern IDs (string values of any `*-pattern` paint of a
+ *   built layer) that are not registered on the map after a step's restyle;
  * - `addImage`/`updateImage` count image calls over the whole run.
  */
 export function runThemePaintOracle({build, provider, palettes}) {
   const map = fakeMap(build(palettes.dark).layers);
-  const missing = new Set(), steps = [];
+  const missing = new Set(), missingImages = new Set(), steps = [];
   for (const theme of ['dark', 'light', 'dark']) {
     const fresh = build(palettes[theme]).layers;
     for (const id of restyle(map.target, palettes[theme], [provider]).skipped) missing.add(id);
@@ -60,6 +64,9 @@ export function runThemePaintOracle({build, provider, palettes}) {
     for (const {id, paint} of fresh) {
       if (!map.paints.has(id)) { missing.add(id); continue; }
       const actual = map.paints.get(id), expected = paint ?? {};
+      for (const [property, value] of Object.entries(expected)) {
+        if (property.endsWith('-pattern') && typeof value === 'string' && !map.images.has(value)) missingImages.add(value);
+      }
       for (const property of new Set([...Object.keys(actual), ...Object.keys(expected)])) {
         try {
           assert.deepEqual(actual[property], expected[property]);
@@ -72,19 +79,20 @@ export function runThemePaintOracle({build, provider, palettes}) {
   }
   const count = kind => map.imageCalls.filter(([call]) => call === kind).length;
   return {
-    steps, missing: [...missing], addImage: count('add'), updateImage: count('update'),
+    steps, missing: [...missing], missingImages: [...missingImages], addImage: count('add'), updateImage: count('update'),
     addedIds: map.imageCalls.filter(([call]) => call === 'add').map(([, id]) => id),
     imageIds: [...map.images.keys()],
   };
 }
 
-/** Run the oracle and assert: no mismatch, no missing layer, each pattern added once then updated in place. */
+/** Run the oracle and assert: no mismatch, no missing layer, no unregistered pattern id, each pattern added once then updated in place. */
 export function assertThemePaintOracle(options) {
   const report = runThemePaintOracle(options);
   for (const {theme, mismatches} of report.steps) {
     assert.deepEqual(mismatches, [], `paint differs from a fresh ${theme} build`);
   }
   assert.deepEqual(report.missing, [], 'layers missing from the map');
+  assert.deepEqual(report.missingImages, [], 'pattern images referenced by a layer paint but not registered');
   assert.equal(new Set(report.addedIds).size, report.addImage, 'an image was added more than once');
   assert.equal(report.addImage, report.imageIds.length, 'every registered image is added exactly once');
   // Install (dark), light, dark: each id is added on the first pass, then updated twice.

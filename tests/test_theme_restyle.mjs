@@ -234,3 +234,25 @@ test('the paint oracle accepts basemapThemePaint in both directions and catches 
   const hatch = assertThemePaintOracle({build: basemapBuild, palettes, provider: {themePaint: basemapThemePaint, ...pattern}});
   assert.deepEqual([hatch.addImage, hatch.updateImage, hatch.addedIds], [1, 2, ['hatch']]);
 });
+
+// Contract: the oracle checks that every pattern ID a built layer paint references is
+// registered on the map. Bug: a provider registering 'wrong-id' while the builder's layer
+// uses `fill-pattern: 'hatch'` passes every paint and image-count check, yet the pattern
+// is missing on the real map.
+test('the paint oracle reports a layer pattern whose image is registered under another id', () => {
+  const palettes = tokenPalettes();
+  const build = palette => {
+    const style = basemapBuild(palette);
+    return {...style, layers: [...style.layers, {id: 'survey', type: 'fill', source: 'earth', paint: {'fill-pattern': 'hatch'}}]};
+  };
+  const image = {width: 1, height: 1, data: Uint8ClampedArray.of(0, 0, 0, 255)};
+  const providerWith = id => ({themePaint: basemapThemePaint, themePatterns: () => [{id, image, pixelRatio: 2}]});
+
+  const wrong = runThemePaintOracle({build, palettes, provider: providerWith('wrong-id')});
+  assert.deepEqual(wrong.missingImages, ['hatch']);
+  assert.deepEqual(wrong.imageIds, ['wrong-id']);
+  assert.throws(() => assertThemePaintOracle({build, palettes, provider: providerWith('wrong-id')}), /not registered/);
+
+  const right = assertThemePaintOracle({build, palettes, provider: providerWith('hatch')});
+  assert.deepEqual([right.missingImages, right.imageIds], [[], ['hatch']]);
+});
