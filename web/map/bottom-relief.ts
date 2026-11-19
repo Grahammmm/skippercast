@@ -7,12 +7,19 @@ import {chartMark} from './chart.ts';
 import type {Engine} from './engine.ts';
 import {BOTTOM_RELIEF} from './layers.ts';
 import {chartPick} from './marks.ts';
+import {language, t, type StringId} from '../i18n.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {resolveRelief} from './relief-data.ts';
 import {reliefVerifier} from './relief-verify.ts';
 import {BASEMAP_SOURCE, basemapStyle} from './style.ts';
 import {decodeSurveyDetail, surveyDetailLayers, surveyHatchPattern} from './survey-detail.ts';
 import {paintEdits} from './theme-restyle.ts';
+
+export interface SurveyDetailView {
+  readonly classes: ReadonlySet<string>;
+  readonly shown: boolean;
+  toggle(): void;
+}
 
 const SCHEME = 'bottom-relief';
 const readers = new Map<string, (z: number, x: number, y: number, signal: AbortSignal) => ReturnType<AddProtocolAction>>();
@@ -39,6 +46,7 @@ interface ReliefOptions {
   /** Already verified against the selected archive's release binding. Until
    * that handoff exists only the synthetic acceptance fixture supplies this. */
   surveyDetail?: unknown;
+  surveyView?(view: SurveyDetailView | null): void;
 }
 
 /** The caller creates this on the Chart (web/map/layers.ts `reliefWanted`; signed-out users included) and destroys it on a
@@ -49,11 +57,13 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
   const abort = new AbortController(), token = String(++serial), source = `${BOTTOM_RELIEF}-${token}`;
   const survey = `${source}-survey`, pattern = `${survey}-pattern`, hit = `${survey}-hit`;
   const isLight = () => document.documentElement.dataset.theme === 'light';
-  let disposePaint: (() => void) | undefined, drawn = false;
+  let disposePaint: (() => void) | undefined, disposeSurvey: (() => void) | undefined, drawn = false;
   function destroy() {
     abort.abort();
     readers.delete(token);
     disposePaint?.();
+    disposeSurvey?.();
+    o.surveyView?.(null);
     if (drawn) { drawn = false; o.engine.setOverlay(BOTTOM_RELIEF, null); }
     if (chartMark.peek()?.id === survey) chartMark.value = null;
   }
@@ -133,10 +143,26 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
 
     // Do not read a pointer field or infer a footprint from a blank raster tile.
     const detail = o.surveyDetail === undefined ? null : decodeSurveyDetail(o.region, o.surveyDetail, new Set(a.sources.map(s => s.id)));
-    const control = detail?.type === 'FeatureCollection' && detail.features.length && surveyHatchPattern(pattern, readPalette(), isLight()).length
-      ? document.createElement('div') : null;
+    const hasDetail = detail?.type === 'FeatureCollection' && !!detail.features.length &&
+      !!surveyHatchPattern(pattern, readPalette(), isLight()).length;
+    const control = hasDetail && !o.surveyView ? document.createElement('div') : null;
     let detailOn = false, detailIds: string[] = [];
     const setDetail = () => { for (const id of detailIds) o.engine.setVisible(id, detailOn); };
+    const updateView = () => {
+      if (!o.surveyView || !hasDetail || signal.aborted) return;
+      // MB-09 already encodes source certification and the shallow-water rules
+      // in tier. A compiled grid is estimated but can also be keyed as compiled.
+      const classes = new Set(o.engine.renderedValues(hit, 'tier'));
+      for (const grid of o.engine.renderedValues(hit, 'grid_tier')) classes.add(grid);
+      o.surveyView({classes, shown: detailOn, toggle});
+    };
+    function toggle() {
+      if (signal.aborted) return;
+      detailOn = !detailOn;
+      setDetail();
+      updateView();
+    }
+    if (hasDetail && o.surveyView) disposeSurvey = o.engine.view.on('idle', updateView);
     if (control) {
       control.className = 'maplibregl-ctrl';
       const button = document.createElement('button');
@@ -144,7 +170,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       button.className = 'ui-button ui-button--ghost';
       button.textContent = 'Show survey detail';
       button.setAttribute('aria-pressed', 'false');
-      button.onclick = () => { detailOn = !detailOn; button.setAttribute('aria-pressed', String(detailOn)); setDetail(); };
+      button.onclick = () => { toggle(); button.setAttribute('aria-pressed', String(detailOn)); };
       control.append(button);
     }
     const buildLayers = (p: Palette, light: boolean, seafloor: boolean, field: boolean) => {
@@ -153,8 +179,8 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
         paint: {'raster-resampling': 'linear', 'raster-fade-duration': 0, 'raster-opacity': field ? 0.6 : 1,
           'raster-saturation': seafloor ? -0.8 : 0, 'raster-brightness-min': seafloor && light ? 0.30 : 0,
           'raster-brightness-max': seafloor && !light ? 0.75 : 1}}];
-      const detailLayers = control ? surveyDetailLayers(survey, survey, pattern, p, light) : [];
-      if (control) layers.push(...detailLayers, {id: hit, type: 'fill', source: survey, paint: {'fill-opacity': 0}});
+      const detailLayers = hasDetail ? surveyDetailLayers(survey, survey, pattern, p, light) : [];
+      if (hasDetail) layers.push(...detailLayers, {id: hit, type: 'fill', source: survey, paint: {'fill-opacity': 0}});
       layers.push(...land.map(l => ({...l, id: `${source}-${l.id}`} as LayerSpecification)),
       {id: `${source}-coast`, type: 'line', source: BASEMAP_SOURCE, 'source-layer': 'earth',
         paint: {'line-color': p.mapCoast, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, light ? 0.7 : 0.5, 13, light ? 1.8 : 1.4],
@@ -174,19 +200,25 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       // No source or attribution text on the map (G 2026-11-18); credits live on the sources page.
       o.engine.setOverlay(BOTTOM_RELIEF, {stopOnError: true, sources: {[source]: {type: 'raster', tileSize: 256,
         tiles: [`${SCHEME}://${token}/{z}/{x}/{y}`], minzoom: a.minzoom, maxzoom: a.maxzoom, bounds: [...a.bounds]},
-        ...control && detail ? {[survey]: {type: 'geojson', data: detail}} : {}}, layers,
+        ...hasDetail && detail ? {[survey]: {type: 'geojson', data: detail}} : {}}, layers,
         themePaint: p => paintEdits(buildLayers(p, isLight(), seafloor, field).layers),
-        ...control ? {control, themePatterns: p => surveyHatchPattern(pattern, p, isLight()),
+        ...control ? {control} : {},
+        ...hasDetail ? {themePatterns: p => surveyHatchPattern(pattern, p, isLight()),
           inspect: {layer: hit, show(properties) {
             // Refused waypoints remain armed; successful ones change the
             // engine's pick context. Neither may open a survey card instead.
-            if (chartMark.peek() || waypointPlacement.peek() || typeof properties.label !== 'string') return;
-            chartMark.value = chartPick(null, null, {id: survey, name: 'Survey detail', kind: '', reading: properties.label,
-              source: typeof properties.source === 'string' ? properties.source : '',
+            if (chartMark.peek() || waypointPlacement.peek() || typeof properties.tier !== 'string') return;
+            const lang = language.peek();
+            const reading = properties.tier === 'estimated' && typeof properties.grid_m === 'number'
+              ? t('legend.surveyDetail.estimateGrid', lang, {grid: properties.grid_m})
+              : t(`legend.surveyDetail.chip.${properties.tier}` as StringId, lang);
+            chartMark.value = chartPick(null, null, {id: survey, name: t('legend.surveyDetail.title', lang), kind: '', reading,
+              source: '',
               basis: typeof properties.date === 'string' ? properties.date : ''});
           }}} : {}}, 'boundaries');
       setDetail();
     });
+    updateView();
     if (!signal.aborted) o.ready?.();
   }
   void start().catch(fail);
