@@ -23,6 +23,7 @@ from shapely.ops import transform
 from shapely.strtree import STRtree
 
 from research.scripts.audit_cdfw_substrate_tiles import BASE, LEVEL, ORIGIN, RESOLUTION_M
+from skippercast.platform.contracts import atomic_json
 
 CRUISES = ('f208nc', 'c210nc')
 SURVEY = 'H11730'
@@ -148,12 +149,11 @@ def main():
                     json.loads(args.tile_audit.read_text()), args.tile_cache,
                     json.loads(args.usgs_context.read_text()))
     result['reviewed_at'] = datetime.now(timezone.utc).isoformat()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, indent=2) + '\n')
     if args.verify:
         prior = json.loads(args.verify.read_text())
         if any(result[field] != prior[field] for field in VERIFY_FIELDS):
             raise ValueError('Point Arena camera/substrate evidence changed; review new receipt before promotion')
+    atomic_json(args.output, result, indent=2, unique_tmp=True)
     print(json.dumps({'windows': result['camera_windows_deduplicated'],
                       'cdfw_class_counts': result['cdfw_class_counts'],
                       'nearest_usgs_context_m': result['nearest_existing_usgs_hard_context_m_range']}))

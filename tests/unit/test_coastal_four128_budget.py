@@ -28,6 +28,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from tests._support import ROOT
 
 SCRIPTS = ROOT / "research" / "scripts"
@@ -287,6 +289,7 @@ class BudgetAmendment(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "carry the failed charges"):
             self.resources.budget_limits(doc)
 
+    @pytest.mark.host_archive
     def test_signed_documents_on_this_machine(self):
         """The real signed revision 7 is admitted with the ruled numbers; revisions 1-6 and the
         superseded revision-5 draft are refused.
@@ -510,6 +513,7 @@ class RetainedOutputCarry(unittest.TestCase):
         self.assertEqual(ATTEMPT_LEDGERS["mission-attempt3-failed-driver-envelope-deadline"][3],
                          PRIOR_RETAINED_BASE + first_two)
 
+    @pytest.mark.host_archive
     def test_attempt_ledgers_on_this_machine(self):
         """Recompute from the preserved ledgers when present (read-only; CI uses the pins)."""
         for name, (sha256, complete, reserved, plan_prior) in ATTEMPT_LEDGERS.items():
