@@ -255,10 +255,11 @@ def test_checkpoint_contradicting_a_complete_receipt_holds_without_truncating(tm
 
 
 @pytest.mark.parametrize('validator', ['"v1"', None])
-@pytest.mark.parametrize('bad', ['missing', 'null', 'blank', 'not-a-url'])
+@pytest.mark.parametrize('bad', ['missing', 'null', 'blank', 'not-a-url', 'no-host', 'bad-port', 'port-range',
+                                  'unclosed-ipv6', 'inner-space'])
 def test_receipts_without_a_valid_final_url_hold_even_when_they_agree(tmp_path, validator, bad):
     # Guards review return 6 (11b94bde): meta.get('final_url') == record.get('final_url') passed when both
-    # were None, so a .part with no redirect-target evidence was promoted. Absent or malformed final URLs
+    # were None, so a .part with no redirect-target evidence was promoted. Absent, hostless, bad-port or malformed final URLs
     # in the checkpoint and both manifest copies (all equal to each other) must hold, request nothing.
     server, run, partial, meta = crash_before_rename(tmp_path, validator=validator)
     primary, mirror = run.root / 'noaa-nos/manifest.jsonl', run.mirror / 'noaa-nos.jsonl'
@@ -267,7 +268,12 @@ def test_receipts_without_a_valid_final_url_hold_even_when_they_agree(tmp_path, 
         data = json.loads(path.read_text())
         data.pop('final_url', None)
         if bad != 'missing':
-            data['final_url'] = {'null': None, 'blank': '', 'not-a-url': 'no-scheme/path'}[bad]
+            data['final_url'] = {
+                'null': None, 'blank': '', 'not-a-url': 'no-scheme/path',
+                'no-host': 'https://:80/file', 'bad-port': 'https://example.test:http/file',
+                'port-range': 'https://example.test:99999/file', 'unclosed-ipv6': 'https://[::1/file',
+                'inner-space': 'https://exa mple.test/file',
+            }[bad]
         return data
 
     for path in (primary, mirror):

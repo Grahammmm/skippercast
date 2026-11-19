@@ -208,10 +208,15 @@ def valid_final_url(value):
 
     Two missing (None == None) or malformed values must never count as agreeing.
     """
-    if not isinstance(value, str) or value != value.strip() or not value:
+    if not isinstance(value, str) or not value or any(c.isspace() or not c.isprintable() or c == '\\' for c in value):
         return False
-    parts = urlsplit(value)
-    return parts.scheme in ('http', 'https') and bool(parts.netloc) and not parts.fragment
+    try:
+        parts = urlsplit(value)
+        host = parts.hostname
+        parts.port  # parsed lazily: a non-numeric or out-of-range port raises ValueError here
+    except ValueError:
+        return False
+    return parts.scheme in ('http', 'https') and bool(host) and not parts.fragment
 
 
 def raw_receipts(path, *, strict):
