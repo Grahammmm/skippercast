@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 import pytest
+import yaml
 
 from tests._support import ROOT
 
@@ -23,6 +24,22 @@ def load(name):
 
 cpb = load("check_perf_budget")
 bd = load("budget_drift")
+
+
+def test_bot_refreshes_every_six_hours_and_dispatches_only_for_changed_prs():
+    # A push trigger recreates the full-CI churn; a missing guard dispatches even for a no-op refresh.
+    workflow = yaml.load((ROOT / ".github/workflows/budget-drift.yml").read_text(), Loader=yaml.BaseLoader)
+    assert workflow["on"] == {"schedule": [{"cron": "17 */6 * * *"}], "workflow_dispatch": ""}
+    dispatches = [
+        (step.get("run"), step.get("if"))
+        for job in workflow["jobs"].values()
+        for step in job["steps"]
+        if "gh workflow run ci.yml" in step.get("run", "")
+    ]
+    assert dispatches == [(
+        'gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref bot/budget-drift',
+        "steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'",
+    )]
 
 
 def test_warn_ratio_is_the_same_in_both_checkers():
@@ -139,7 +156,7 @@ def test_apply_raises_only_budgets_at_97_percent_and_is_then_quiet(repo_copy, tm
     perf_meas = {n: {"bytes": spec["max_bytes"] // 2, "files": []} for n, spec in perf["budgets"].items()}
     perf_meas["landing_js"]["bytes"] = perf["budgets"]["landing_js"]["max_bytes"] - 12
     monkeypatch.setattr(bd.cpb, "measure", lambda root, budget: perf_meas)
-    props = bd.propose(tmp_path, meas, "abc1234567 Some feature")
+    props = bd.propose(tmp_path, meas, "main abc1234567")  # scheduled runs have no push subject
     assert {p["key"] for p in props} == {"landing_js", "precache/pack_shell_raw_max", "bundles/app.html/css_gzip_max"}
     bd.apply_perf(props)
     bd.apply_startup(props)
@@ -147,7 +164,7 @@ def test_apply_raises_only_budgets_at_97_percent_and_is_then_quiet(repo_copy, tm
     new_perf = json.loads(bd.PERF_FILE.read_text())
     js = new_perf["budgets"]["landing_js"]
     assert js["max_bytes"] == bd.ceiling_for(perf_meas["landing_js"]["bytes"]) == js["history"][-1]["max_bytes"]
-    assert "abc1234567 Some feature" in js["history"][-1]["reason"] and len(js["history"]) == len(perf["budgets"]["landing_js"]["history"]) + 1
+    assert "main abc1234567" in js["history"][-1]["reason"] and len(js["history"]) == len(perf["budgets"]["landing_js"]["history"]) + 1
     assert new_perf["budgets"]["app_css"] == perf["budgets"]["app_css"]  # untouched groups are byte-identical
     assert cpb.validate_budget(new_perf) == []
 
@@ -158,7 +175,11 @@ def test_apply_raises_only_budgets_at_97_percent_and_is_then_quiet(repo_copy, tm
     assert new_startup["bundles"]["app.html"]["css_gzip_max"] == bd.ceiling_for(css_max + 7)
     assert new_startup["bundles"]["app.html"]["js_gzip_max"] == startup["bundles"]["app.html"]["js_gzip_max"]
     assert new_startup["bundles"]["landing.html"] == startup["bundles"]["landing.html"]
-    assert {e["budget"] for e in new_startup["drift_history"]} == {"precache/pack_shell_raw_max", "bundles/app.html/css_gzip_max"}
+    prior_history = startup.get("drift_history", [])
+    assert new_startup["drift_history"][:len(prior_history)] == prior_history
+    assert sorted(e["budget"] for e in new_startup["drift_history"][len(prior_history):]) == [
+        "bundles/app.html/css_gzip_max", "precache/pack_shell_raw_max",
+    ]
     # Everything else in the file, including the long comments and the one-line page budgets, is untouched.
     assert new_startup["morro-bay"] == startup["morro-bay"]
     assert new_startup["precache"]["comment"] == startup["precache"]["comment"]
