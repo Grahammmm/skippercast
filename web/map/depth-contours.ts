@@ -98,6 +98,7 @@ export interface ContourAssessment {
 }
 export interface ContourState {
   readonly status: ContourStatus; readonly note: string; readonly sources: readonly ContourSource[]; readonly omitted: readonly OmittedSource[];
+  readonly set?: ContourCollection['set'];
 }
 
 export const NOTES = {
@@ -411,7 +412,8 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       if (!l || l.region !== id) return;
       const r = l.result;
       contourState.value = r === 'none' ? {status: 'none', note: NOTES.none, sources: [], omitted: []}
-        : {status: r.status, note: r.status === 'drawn' ? omittedNote(r.omitted) : NOTES[r.status], sources: r.sources, omitted: r.omitted};
+        : {status: r.status, note: r.status === 'drawn' ? omittedNote(r.omitted) : NOTES[r.status], sources: r.sources, omitted: r.omitted,
+          ...r.data?.set ? {set: r.data.set} : {}};
     }),
     effect(() => {
       const e = engine.value, l = loaded.value, id = region.value;

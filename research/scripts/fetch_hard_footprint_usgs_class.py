@@ -84,6 +84,13 @@ def main():
                     audit_failures.append({
                         'release_id': original[id_key], 'archive_sha256': original.get('archive_sha256'),
                         'error': f"Original seafloor-character audit not successful: {original.get('status')}"})
+            # Archives the native audit never inspected (no successful metadata
+            # audit) live in `omissions`, not `products`; they hold the source too.
+            for omitted in audit.get('omissions', []):
+                if omitted.get(id_key) in ids and omitted.get('kind') == 'seafloor_character':
+                    audit_failures.append({
+                        'release_id': omitted[id_key], 'archive_sha256': None,
+                        'error': f"Original seafloor-character audit omitted archive: {omitted.get('issue')}"})
     missing = ids - {row['release_id'] for row, _ in sources} - {row['release_id'] for row in audit_failures}
     results = []
     failures = audit_failures + [{'release_id': ident, 'archive_sha256': None,
