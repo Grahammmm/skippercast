@@ -14,8 +14,11 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
+from shutil import rmtree
 import sys
+from tempfile import mkdtemp
 import urllib.request
 
 import h5py
@@ -322,6 +325,46 @@ def compile_source(spec, path, config, habitat_features, closed, out, bottom):
     return targets,areas,views,summary
 
 
+class PackageRollbackError(RuntimeError):
+    """An install failed and the previous package could not be restored."""
+
+
+def install_package(staged, output, views):
+    """Install the validated build, rolling back ordinary installation errors."""
+    files = []
+    for target_id, receipt in views.items():
+        name = target_id + ".json"
+        tile = staged / "bottom" / name
+        if tile.stat().st_size != receipt["bytes"] or sha256(tile) != receipt["sha256"]:
+            raise ValueError("Staged tile differs from its receipt")
+        files.append((tile, output.parent / "bottom" / name))
+    files.extend((staged / name, output / name) for name in (
+        "atlas.json", "quality.json", "bottom-index-fragment.json", "manifest.json", "health.json"))
+    backup = staged / "previous"
+    backup.mkdir()
+    installed = []
+    try:
+        for i, (source, destination) in enumerate(files):
+            destination.parent.mkdir(exist_ok=True)
+            saved = backup / str(i)
+            try:
+                os.link(destination, saved, follow_symlinks=False)
+            except FileNotFoundError:
+                saved = None
+            source.replace(destination)
+            installed.append((destination, saved))
+    except Exception:
+        try:
+            for destination, saved in reversed(installed):
+                if saved is None:
+                    destination.unlink()
+                else:
+                    saved.replace(destination)
+        except OSError as exc:
+            raise PackageRollbackError(f"Could not restore the previous target build; backups retained in {backup}") from exc
+        raise
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config",type=Path,default=ROOT/"regions/southern-california/bottom-sources.reviewed.json")
@@ -332,6 +375,8 @@ def main():
         help="Allow held surveys only in an unpublished var/ output directory")
     args=parser.parse_args();config=read_json(args.config)
     now=datetime.now(timezone.utc).isoformat()
+    staged = None
+    keep_backups = False
     try:
         if config.get("status")!="reviewed":raise ValueError("Input manifest is not reviewed")
         target_prefix(config)
@@ -354,11 +399,15 @@ def main():
             closure_receipts.append({"path":item["path"],"checked_at":data["checked_at"],"sha256":sha256(path),"features":len(data["features"]),"source_url":data["source_url"]})
         closed=unary_union(closure_polys)
         targets,areas,views,summaries,receipts=[],[],{},[],[]
-        # Tiles are new stable IDs. No existing index changes until the final manifest.
-        bottom=args.output.parent/"bottom";bottom.mkdir(exist_ok=True)
+        # Stable target IDs can repeat with different bytes. Do not write to an
+        # indexed path while the remaining sources or artifacts can still fail.
+        staged = Path(mkdtemp(prefix=".target-build-", dir=args.output.parent))
+        bottom = staged / "bottom"
         for spec in config["sources"]:
             path,receipt=acquire(spec,args.cache,args.fetch);receipts.append(receipt)
-            ts,aa,vv,summary=compile_source(spec,path,config,habitat["features"],closed,args.output,bottom)
+            ts,aa,vv,summary=compile_source(spec,path,config,habitat["features"],closed,staged,bottom)
+            if views.keys() & vv.keys():
+                raise ValueError("Duplicate qualified target ID")
             targets.extend(ts);areas.extend(aa);views.update(vv);summaries.append(summary)
         if not targets:raise ValueError("No qualified targets; existing release retained")
         targets.sort(key=lambda t:(-t["habitat_score"],t["id"]))
@@ -378,14 +427,19 @@ def main():
             "sources":{s["id"]:{"source_id":s["id"],"sha256":s["sha256"],"url":s["url"],"survey_year":int(s["survey_start"][:4]),"vertical_datum":"MLLW"} for s in config["sources"]}}
         artifacts={}
         for name,value in [("atlas.json",atlas),("quality.json",quality),("bottom-index-fragment.json",index)]:
-            artifacts[name]=atomic_json(args.output/name,value)
-        atomic_json(args.output/"manifest.json",{"schema_version":1,"region_id":config["region_id"],"status":"ready",
+            artifacts[name]=atomic_json(staged/name,value)
+        atomic_json(staged/"manifest.json",{"schema_version":1,"region_id":config["region_id"],"status":"ready",
             "generated_at":now,"transformation_version":VERSION,"artifacts":artifacts})
-        atomic_json(args.output/"health.json",{"checked_at":now,"status":"ready","targets":len(targets)})
-        print(json.dumps({"targets":len(targets),"areas":len(areas),"bottom_views":len(views),"output":str(args.output)}))
+        atomic_json(staged/"health.json",{"checked_at":now,"status":"ready","targets":len(targets)})
+        install_package(staged, args.output, views)
     except Exception as exc:
-        atomic_json(args.output/"health.json",{"checked_at":now,"status":"held","reason":str(exc),"previous_release_retained":True})
+        keep_backups = isinstance(exc, PackageRollbackError)
+        atomic_json(args.output/"health.json",{"checked_at":now,"status":"held","reason":str(exc),"previous_release_retained":not keep_backups})
         raise
+    finally:
+        if staged is not None and not keep_backups:
+            rmtree(staged)
+    print(json.dumps({"targets":len(targets),"areas":len(areas),"bottom_views":len(views),"output":str(args.output)}))
 
 
 if __name__=="__main__":
