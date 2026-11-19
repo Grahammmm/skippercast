@@ -300,7 +300,7 @@ dbTest('one surface failing leaves the post partial with the error; the cron doe
   const first = await quiet(() => P.publish(s.env, 'p1', deps(s, fake).deps));
   assert.deepEqual(first.value, {outcome: 'partial', error: 'facebook: meta photos failed: HTTP 400 code 100 subcode 2069019'});
   let row = postRow(s.sql);
-  assert.deepEqual([row.status, row.ig_media_id, row.fb_post_id, row.posted_at], ['partial', '17890000000000202', null, null]);
+  assert.deepEqual([row.status, row.ig_media_id, row.fb_post_id, row.posted_at], ['partial', '17890000000000202', null, iso(T0)]);
   assert.ok(!first.lines.join('\n').includes('EAAB-PLACEHOLDER-TOKEN'), 'no token in a log line');
   assert.equal(outbound(s.sql).length, 1, 'Instagram went out, so the skipper has the link');
   // The cron leaves a partial post alone.
