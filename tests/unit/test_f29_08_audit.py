@@ -89,6 +89,18 @@ def test_fine_hint_needs_exact_file_native_evidence(tmp_path, review, status, fi
     assert file_evidence(row) == {NEW: {"status": status}}
 
 
+def test_vr_overview_negative_does_not_hide_uninspected_sibling():
+    # A valid no-refinement receipt is not lost just because no sector screen was needed.
+    old_vr = OLD.replace("_1m_", "_VR_")
+    new_vr = NEW.replace("_2m_", "_VR_")
+    surveyed = {SID: {"products": {"bag": [old_vr, new_vr]}}}
+    row = queue.noaa_bag_evidence([SID], surveyed, SECTOR, {}, {}, {}, {}, {}, {
+        old_vr: {"fine_refinement_grids": 0, "resolution_m": [20, 20]},
+    }, None)
+    assert row["noaa_native_audit_refuted_fine_hint"] == []
+    assert file_evidence(row) == {old_vr: {"status": "inspected-negative"}, new_vr: {"status": "unknown"}}
+
+
 def test_duplicate_review_paths_cannot_stand_in_for_another_bag(review_root):
     # Two distinct paths containing one URL cannot count as two independently reviewed BAGs.
     duplicate = review_root / "duplicate.json"

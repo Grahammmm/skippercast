@@ -89,13 +89,16 @@ def noaa_bag_evidence(original_bag, surveyed, sector_id, depth_reviews, sector_r
                 file.update(status="inspected-negative", depth_refutation_path=negative_depth_paths[url])
             elif "_VR_" in url:
                 sectors = vr_by_url.get(url, {}).get("sectors")
+                overview = native_links.get(url, {})
                 if sectors is not None:
                     fine = sectors.get(sector_id, {}).get("fine_native_grids", 0) > 0
                     file["status"] = "inspected-positive" if fine else "inspected-negative"
-                    if not fine and native_links.get(url, {}).get("fine_refinement_grids", 0) > 0:
+                    if not fine and overview.get("fine_refinement_grids", 0) > 0:
                         outside.append(url)
-                elif url == extra_bag_url:
-                    file["status"] = "inspected-negative"  # Exact review found no fine refinements.
+                elif (url == extra_bag_url
+                      or (overview.get("fine_refinement_grids") == 0
+                          and overview.get("resolution_m") and max(overview["resolution_m"]) > 4)):
+                    file["status"] = "inspected-negative"  # Reviewed file has no fine native grids.
             elif (review := regular_by_url.get(url)) and review.get("sectors") is not None:
                 fine = (max(review["native_resolution_m"]) <= 4
                         and review["sectors"].get(sector_id, {}).get("measured_native_cells", 0) > 0)
