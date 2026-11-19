@@ -23,6 +23,128 @@ def read(path):
     return json.loads(Path(path).read_text())
 
 
+def fine_bag_hint(url):
+    return bool(re.search(r"_(?:VR|50cm|[1-4]m)_MLLW", url))
+
+
+def depth_review_paths(root, bindings, surveyed):
+    depth_reviews = {}
+    sector_reviews = {}
+    for binding in bindings:
+        sid = binding["survey_id"]
+        catalog_urls = surveyed.get(sid, {}).get("products", {}).get("bag", [])
+        paths = binding.get("review_paths", [])
+        if not paths or len(paths) != len(set(paths)):
+            raise ValueError(f"Missing or duplicate native depth receipts for {sid}")
+        reviews = {}
+        for path in paths:
+            receipt = read(locate(path, root))
+            url = receipt.get("source_url")
+            if (receipt.get("survey_id") != sid or url not in catalog_urls or url in reviews
+                    or receipt.get("scope") != "original-regular-bag-300-depth-source-review"
+                    or receipt.get("vertical_datum") != "MLLW"
+                    or receipt.get("fishing_target") is not False
+                    or receipt.get("counts", {}).get("measured_native_cells", 0) <= 0):
+                raise ValueError(f"Unreviewed native depth receipt for {sid}")
+            reviews[url] = (path, receipt)
+        if binding.get("claim") == "no-eligible-25-300ft-anywhere":
+            if sid in depth_reviews or any(r["counts"]["eligible_25_300ft_cells_with_margin"] != 0
+                                           for _, r in reviews.values()):
+                raise ValueError(f"Original depth refutation failed for {sid}")
+            depth_reviews[sid] = {url: path for url, (path, _) in reviews.items()}
+        elif binding.get("claim") == "no-eligible-200-300ft-in-sector":
+            sector_id = binding.get("sector_id")
+            if (not sector_id or (sid, sector_id) in sector_reviews
+                    or any(not re.search(r"_(?:50cm|[1-4]m)_MLLW", url)
+                           or r.get("sector_cell_center_screen", {}).get("sector_id") != sector_id
+                           or r["sector_cell_center_screen"]["counts"]["nominal_200_300ft_cells_passing_300ft_uncertainty_margin"] != 0
+                           for url, (_, r) in reviews.items())):
+                raise ValueError(f"Original deeper-band sector refutation failed for {sid}")
+            sector_reviews[(sid, sector_id)] = {url: path for url, (path, _) in reviews.items()}
+        else:
+            raise ValueError(f"Unknown original native-depth review claim for {sid}")
+    return depth_reviews, sector_reviews
+
+
+def noaa_bag_evidence(original_bag, surveyed, sector_id, depth_reviews, sector_reviews,
+                      deep_refuted, vr_by_url, regular_by_url, native_links, extra_bag_url):
+    """Summarize exact-file evidence for fine-grid source triage, not habitat."""
+    fine_leads, coarse_audited, fine_elsewhere, unresolved = [], [], [], []
+    depth_refutations, deep_refutations, sector_refutations = [], [], []
+    evidence_by_survey = {}
+    deep_path = "dist/data/central-deep-original-300-refutation.json"
+    for sid in original_bag:
+        # A filename is a triage hint, not proof of native spacing or coverage.
+        candidates = {url for url in surveyed[sid]["products"]["bag"] if fine_bag_hint(url)}
+        depth_paths = depth_reviews.get(sid, {})
+        sector_paths = sector_reviews.get((sid, sector_id), {})
+        deep = deep_refuted.get(sid)
+        deep_paths = {deep["source_url"]: deep_path} if deep else {}
+        negative_depth_paths = {**deep_paths, **depth_paths}
+        files = {}
+        outside = []
+        for url in sorted(candidates | negative_depth_paths.keys() | sector_paths.keys()):
+            file = {"status": "unknown"}
+            if url in negative_depth_paths:
+                file.update(status="inspected-negative", depth_refutation_path=negative_depth_paths[url])
+            elif "_VR_" in url:
+                sectors = vr_by_url.get(url, {}).get("sectors")
+                if sectors is not None:
+                    fine = sectors.get(sector_id, {}).get("fine_native_grids", 0) > 0
+                    file["status"] = "inspected-positive" if fine else "inspected-negative"
+                    if not fine and native_links.get(url, {}).get("fine_refinement_grids", 0) > 0:
+                        outside.append(url)
+                elif url == extra_bag_url:
+                    file["status"] = "inspected-negative"  # Exact review found no fine refinements.
+            elif (review := regular_by_url.get(url)) and review.get("sectors") is not None:
+                fine = (max(review["native_resolution_m"]) <= 4
+                        and review["sectors"].get(sector_id, {}).get("measured_native_cells", 0) > 0)
+                file["status"] = "inspected-positive" if fine else "inspected-negative"
+            if url in sector_paths:
+                file["sector_200_300ft_refutation_path"] = sector_paths[url]
+            files[url] = file
+        if files:
+            evidence_by_survey[sid] = files
+
+        # Aggregate only evidence for the same claim. A sector screen is not a
+        # survey-wide depth review, and an older binding is not a catalog snapshot.
+        depth_complete = bool(depth_paths) and candidates.issubset(depth_paths)
+        deep_complete = bool(deep_paths) and candidates.issubset(deep_paths)
+        if depth_complete:
+            depth_refutations.append({"survey_id": sid, "review_paths": list(depth_paths.values())})
+        if deep_complete:
+            deep_refutations.append({
+                "survey_id": sid, "review_path": deep_path,
+                "shallowest_native_depth_m_mllw": deep["native_refinements"]["shallowest_depth_m_mllw"],
+            })
+        if sector_paths and candidates.issubset(sector_paths):
+            sector_refutations.append({"survey_id": sid, "review_paths": list(sector_paths.values())})
+
+        statuses = {file["status"] for file in files.values()}
+        if "inspected-positive" in statuses:
+            fine_leads.append(sid)
+        elif not (depth_complete or deep_complete):
+            unresolved.append(sid)
+            if candidates and statuses == {"inspected-negative"}:
+                coarse_audited.append(sid)
+            if outside:
+                fine_elsewhere.append({
+                    "survey_id": sid, "fine_grids_outside_sector_urls": outside,
+                    "uninspected_candidate_urls": [url for url, file in files.items() if file["status"] == "unknown"],
+                    "claim": "reviewed fine native grids have no centers in this browse sector; other files remain separate leads",
+                })
+    return {
+        "noaa_bag_evidence_by_survey_and_url": evidence_by_survey,
+        "noaa_filename_fine_grid_leads": fine_leads,
+        "noaa_native_audit_refuted_fine_hint": coarse_audited,
+        "noaa_reviewed_vr_fine_grids_outside_sector": fine_elsewhere,
+        "noaa_original_300ft_depth_refutations": depth_refutations,
+        "noaa_original_deepwater_300ft_refutations": deep_refutations,
+        "noaa_original_200_300ft_sector_refutations": sector_refutations,
+        "noaa_coarse_or_unresolved_leads": unresolved,
+    }
+
+
 def build(root):
     root = Path(root)
     discovery = read(root / "dist/data/noaa-survey-discovery.json")
@@ -336,38 +458,7 @@ def build(root):
                 or report.get("fishing_target") is not False):
             raise ValueError(f"Original Monterey BAG overlap refutation failed for {sid}")
         monterey_no_overlap[sid] = path
-    depth_refuted = {}
-    deeper_sector_refuted = {}
-    for binding in bindings["bindings"]:
-        sid = binding["survey_id"]
-        catalog_urls = surveyed.get(sid, {}).get("products", {}).get("bag", [])
-        paths = binding.get("review_paths", [])
-        if not paths or len(paths) != len(set(paths)):
-            raise ValueError(f"Missing or duplicate native depth receipts for {sid}")
-        receipts = [read(locate(path, root)) for path in paths]
-        for receipt in receipts:
-            if (receipt.get("survey_id") != sid or receipt.get("source_url") not in catalog_urls
-                    or receipt.get("scope") != "original-regular-bag-300-depth-source-review"
-                    or receipt.get("vertical_datum") != "MLLW"
-                    or receipt.get("fishing_target") is not False
-                    or receipt.get("counts", {}).get("measured_native_cells", 0) <= 0):
-                raise ValueError(f"Unreviewed native depth receipt for {sid}")
-        if binding.get("claim") == "no-eligible-25-300ft-anywhere":
-            if sid in depth_refuted or any(r["counts"]["eligible_25_300ft_cells_with_margin"] != 0 for r in receipts):
-                raise ValueError(f"Original depth refutation failed for {sid}")
-            depth_refuted[sid] = paths
-        elif binding.get("claim") == "no-eligible-200-300ft-in-sector":
-            sector_id = binding.get("sector_id")
-            fine_urls = {url for url in catalog_urls if re.search(r"_(?:50cm|[1-4]m)_MLLW", url)}
-            if (not sector_id or (sid, sector_id) in deeper_sector_refuted
-                    or {r["source_url"] for r in receipts} != fine_urls
-                    or any(r.get("sector_cell_center_screen", {}).get("sector_id") != sector_id
-                           or r["sector_cell_center_screen"]["counts"]["nominal_200_300ft_cells_passing_300ft_uncertainty_margin"] != 0
-                           for r in receipts)):
-                raise ValueError(f"Original deeper-band sector refutation failed for {sid}")
-            deeper_sector_refuted[(sid, sector_id)] = paths
-        else:
-            raise ValueError(f"Unknown original native-depth review claim for {sid}")
+    depth_reviews, sector_reviews = depth_review_paths(root, bindings["bindings"], surveyed)
     native_links = {lead["bag_url"]: lead for region in native["regions"]
                     for lead in region.get("leads", [])}
     source_rows = []
@@ -392,40 +483,12 @@ def build(root):
         # The discovery service is broad-track geometry; counts are leads only.
         survey_ids = sorted({s["id"] for s in area.get("surveys", [])})
         original_bag = [sid for sid in survey_ids if surveyed.get(sid, {}).get("products", {}).get("bag")]
-        fine_leads = []
-        coarse_audited = []
-        fine_elsewhere = []
-        for sid in original_bag:
-            urls = surveyed[sid]["products"]["bag"]
-            # A filename is only a triage hint. The native raster still has to
-            # prove spacing, actual measured-cell location, datum and quality.
-            candidate_urls = [url for url in urls if "_VR_MLLW" in url or
-                              re.search(r"_(?:50cm|[1-4]m)_MLLW", url)]
-            if sid in depth_refuted:
-                continue
-            if sid in deep_refuted:
-                continue
-            confirmed_fine_here = any(
-                ("_VR_" in url and url in vr_by_url
-                 and vr_by_url[url].get("sectors", {}).get(sector_id, {}).get("fine_native_grids", 0) > 0)
-                or ("_VR_" not in url and url in regular_by_url
-                    and max(regular_by_url[url]["native_resolution_m"]) <= 4
-                    and regular_by_url[url].get("sectors", {}).get(sector_id, {}).get("measured_native_cells", 0) > 0)
-                for url in candidate_urls)
-            reviewed_fine_elsewhere = [url for url in candidate_urls
-                                       if url in native_links and native_links[url]["fine_refinement_grids"] > 0
-                                       and url in vr_by_url
-                                       and vr_by_url[url].get("sectors", {}).get(sector_id, {}).get("fine_native_grids", 0) == 0]
-            if reviewed_fine_elsewhere and not confirmed_fine_here:
-                fine_elsewhere.append({"survey_id": sid,
-                                       "fine_grids_outside_sector_urls": reviewed_fine_elsewhere,
-                                       "uninspected_candidate_urls": [url for url in candidate_urls
-                                                                       if url not in native_links and url != extra_bag["source_url"]],
-                                       "claim": "reviewed fine native grids have no centers in this browse sector; other files remain separate leads"})
-            if confirmed_fine_here:
-                fine_leads.append(sid)
-            elif candidate_urls:
-                coarse_audited.append(sid)
+        bag_evidence = noaa_bag_evidence(original_bag, surveyed, sector_id, depth_reviews, sector_reviews,
+                                         deep_refuted, vr_by_url, regular_by_url, native_links, extra_bag["source_url"])
+        fine_leads = bag_evidence["noaa_filename_fine_grid_leads"]
+        has_unknown_bags = any(file["status"] == "unknown"
+                               for files in bag_evidence["noaa_bag_evidence_by_survey_and_url"].values()
+                               for file in files.values())
         usgs_areas = [m for m in usgs["map_areas"] if sector_id in m.get("planning_sector_ids", [])]
         paired = [m for m in usgs_areas if
                   {"bathymetry", "seafloor-character"}.issubset({p["kind"] for p in m.get("products", [])})]
@@ -441,20 +504,11 @@ def build(root):
             "noaa_catalog_lead_count": len(survey_ids),
             "noaa_catalog_leads_with_bag_links": len(original_bag),
             "noaa_survey_ids": original_bag,
-            "noaa_filename_fine_grid_leads": fine_leads,
-            "noaa_native_audit_refuted_fine_hint": coarse_audited,
-            "noaa_reviewed_vr_fine_grids_outside_sector": fine_elsewhere,
-            "noaa_original_300ft_depth_refutations": [
-                {"survey_id": sid, "review_paths": depth_refuted[sid]}
-                for sid in original_bag if sid in depth_refuted],
-            "noaa_original_deepwater_300ft_refutations": [
-                {"survey_id": sid, "review_path": "dist/data/central-deep-original-300-refutation.json",
-                 "shallowest_native_depth_m_mllw": deep_refuted[sid]["native_refinements"]["shallowest_depth_m_mllw"]}
-                for sid in original_bag if sid in deep_refuted],
+            **bag_evidence,
             "point_buchon_noaa_catalog_gap": ({
                 "receipt": "dist/data/point-buchon-noaa-catalog-envelope-gap.json",
                 "catalog_bag_survey_ids": buchon_catalog_gap["bag_survey_ids_returned"],
-                "claim": "One current NOS survey-catalog envelope query returned only W00479; its original measured MLLW cells are all deeper than 300 ft. Other archives and unpublished surveys remain possible.",
+                "claim": "The catalog envelope query returned only W00479. The exact reviewed original BAG had no measured MLLW cells at or shallower than 300 ft; other files and archives remain possible.",
                 "fishing_target": False,
                 "exportable": False,
             } if sector_id == "morro-conception" else None),
@@ -492,9 +546,6 @@ def build(root):
                 "fishing_target": False,
                 "exportable": False,
             } if sector_id == "morro-conception" else None),
-            "noaa_original_200_300ft_sector_refutations": [
-                {"survey_id": sid, "review_paths": deeper_sector_refuted[(sid, sector_id)]}
-                for sid in original_bag if (sid, sector_id) in deeper_sector_refuted],
             "point_conception_original_bag_deep_gap": ({
                 "receipt": "dist/data/point-conception-original-bag-200-300ft-gap.json",
                 "exact_files_checked": [row["file_name"] for row in conception_two_bag_gap["sources"]],
@@ -555,7 +606,6 @@ def build(root):
                 "fishing_target": False,
                 "exportable": False,
             } if sector_id == "monterey-sur" else None),
-            "noaa_coarse_or_unresolved_leads": sorted(set(original_bag) - set(fine_leads) - set(depth_refuted) - set(deep_refuted)),
             "noaa_original_300ft_depth_leads": ([{
                 "survey_id": "W00614", "review_path": "dist/data/w00614-original-300-pigeon-monterey-review.json",
                 "qualified_200_300ft_native_cells": w00614_300["counts"]["depth_uncertainty_qualified_200_300ft_cells"],
@@ -661,7 +711,7 @@ def build(root):
                            else "Acquire NOAA 2013 merge source-ID 12241 crosswalk, original survey datum and vertical-accuracy/source-extent deliverables for the paired Monterey research cells; then test independent substrate and full-area clearance" if sector_id == "monterey-sur"
                            else "Resolve Lopez Point original CUBE-source uncertainty and full-grid NAVD88-to-MLLW conversion, obtain independent rock observations and source-specific use permission; then review full access/chart geometry" if sector_id == "big-sur"
                            else "Acquire 2012 Estero CARIS TPU and source coordinate epoch; convert every WGS84 source cell to MLLW, bound its uncertainty, and validate 2008 class registration plus independent bottom/fish observations before full-route review" if sector_id == "cambria-morro"
-                           else "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired
+                           else "Open original native BAG and paired substrate pixels; document measured-cell footprint, MLLW datum, uncertainty, source age and rights before any target screen" if fine_leads or paired or has_unknown_bags
                            else "Find a local finer original survey; currently cataloged BAG filenames suggest only coarse grids and broad track envelopes",
             "blocking_checks": ["valid measured cells within 300 ft plus uncertainty margin",
                                 "paired high-resolution substrate and independent groundtruth",
