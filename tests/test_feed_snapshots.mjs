@@ -232,23 +232,69 @@ test('an oversized table in flight does not make a resolving miss evict an extra
   } finally { useBucket(null); }
 });
 
-// Contract: fetches in flight are bounded. Believable bug: one pending entry per distinct generation with no cap.
-test('in-flight release fetches are bounded by the entry bound; extra misses read uncached', async () => {
-  const f = fixture(), gens = []; useBucket({FEEDS: f.bucket});
+// Contract: actual release-table GETs are bounded and overflow waits FIFO. Bug: capping only tracked promises
+// lets uncached misses start GETs immediately even when all slots are occupied.
+test('release GETs are capped; overflow waits FIFO and reads uncached', async () => {
+  const f = fixture(), cap = RELEASE_CACHE_ENTRIES;
+  const gens = Array.from({length: cap + 2}, (_, i) => f.release('p' + i).generation);
+  const keys = gens.map(g => `forecasts/.r2-releases/${g}.json`);
+  const started = [], gates = new Map(), fetches = [];
+  const turn = () => new Promise(resolve => setImmediate(resolve));
+  const get = f.bucket.get;
+  let holding = true, active = 0, peak = 0;
+  f.bucket.get = async key => {
+    if (!holding || !key.includes('/.r2-releases/')) return get(key);
+    started.push(key); peak = Math.max(peak, ++active);
+    try {
+      if (!gates.has(key)) {
+        let release;
+        const wait = new Promise(resolve => release = resolve);
+        gates.set(key, {wait, release});
+      }
+      await gates.get(key).wait;
+      return await get(key);
+    } finally { active--; }
+  };
+  const request = g => { point(f, g); const fetch = readBucketJSON(MANIFEST); fetches.push(fetch); return fetch; };
+  useBucket({FEEDS: f.bucket});
   try {
-    for (let i = 0; i < RELEASE_CACHE_ENTRIES + 2; i++) gens.push(f.release('p' + i).generation);
-    let release, waiting = 0; const gate = new Promise(r => release = r), get = f.bucket.get;
-    f.bucket.get = async key => { if (key.includes('/.r2-releases/')) { waiting++; await gate; } return get(key); };
-    const fetches = gens.map(g => { point(f, g); return readBucketJSON(MANIFEST); });
-    await new Promise(r => setTimeout(r, 0));
-    assert.equal(waiting, RELEASE_CACHE_ENTRIES + 2, 'every miss starts its own table GET');
-    release(); await Promise.all(fetches);
+    for (const g of gens.slice(0, cap)) request(g);
+    await turn();
+    assert.deepEqual(started, keys.slice(0, cap), 'the first batch occupies every slot');
+
+    const duplicate = request(gens[0]);
+    request(gens[cap]);
+    useBucket({FEEDS: Object.freeze({get: f.bucket.get})});
+    request(gens[cap + 1]);  // an untaggable bucket must use the same cap and queue
+    useBucket({FEEDS: f.bucket});
+    await turn();
+    assert.equal(started.length, cap, 'neither overflow GET starts while full, and the duplicate coalesces');
+
+    gates.get(keys[0]).release();
+    assert.equal((await fetches[0]).cycle, 'p0');
+    assert.equal((await duplicate).cycle, 'p0');
+    await turn();
+    assert.deepEqual(started, keys.slice(0, cap + 1), 'only the first waiter starts when one slot opens');
+    gates.get(keys[1]).release();
+    await fetches[1];
+    await turn();
+    assert.deepEqual(started, keys, 'the second waiter starts next, even though it cannot be cached');
+    for (const {release} of gates.values()) release();
+    await Promise.all(fetches);
+    assert.equal(peak, cap, 'actual concurrent GETs never exceeded the cap');
+
+    holding = false;
     const reads = tableReads(f);
-    for (const g of gens.slice(0, RELEASE_CACHE_ENTRIES)) { point(f, g); await readBucketJSON(MANIFEST); }
+    for (const g of gens.slice(0, cap)) { point(f, g); await readBucketJSON(MANIFEST); }
     assert.equal(tableReads(f), reads, 'the first entry-bound fetches were held');
-    point(f, gens[RELEASE_CACHE_ENTRIES]); await readBucketJSON(MANIFEST);
+    point(f, gens[cap]); await readBucketJSON(MANIFEST);
     assert.equal(tableReads(f), reads + 1, 'a fetch past the in-flight bound was not held');
-  } finally { useBucket(null); }
+  } finally {
+    holding = false;
+    for (const {release} of gates.values()) release();
+    await Promise.allSettled(fetches);
+    useBucket(null);
+  }
 });
 
 test('a legacy prefix is never remembered: its first release applies at once', async () => {
