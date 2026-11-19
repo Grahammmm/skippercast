@@ -87,13 +87,18 @@ test('nearshore rings: nearshoreThemePaint equals a fresh ring build in both the
 });
 
 test('swell overlay mounts the rings\' themePaint: the overlay the engine installs restyles its rings in place', () => {
-  // Contract: the overlay swell.ts hands to engine.setOverlay (not just the nearshore helper) carries the ring paints, which the engine applies on a theme switch.
-  // Bug: the helper exists but swellOverlay never sets themePaint, so visible rings keep the previous theme's blue stroke.
+  // Contract: the overlay swell.ts hands to engine.setOverlay (not just the nearshore helper) carries the ring paints, which the engine applies on a theme switch;
+  // the oracle judges the FULL installed layer set (field layers and rings), because the provider emits edits for every one of them.
+  // Bug: the helper exists but swellOverlay never sets themePaint, so visible rings keep the previous theme's blue stroke; or an oracle that builds only the
+  // rings reports the provider's field-layer edits as missing layers (a false red), hiding a real stale field paint behind a filtered view.
   const ringIds = [ringHitLayer(palettes.dark), ringLayer(palettes.dark)].map(l => l.id);
   for (const field of [false, true]) {
-    const build = p => { const o = swellOverlay(p, {field, rings: true}); return {layers: o.layers.filter(l => ringIds.includes(l.id))}; };
-    assert.equal(typeof swellOverlay(palettes.dark, {field, rings: true}).themePaint, 'function', `field=${field}`);
-    const report = assertThemePaintOracle({build, provider: swellOverlay(palettes.dark, {field, rings: true}), palettes});
+    const build = p => swellOverlay(p, {field, rings: true});
+    const installed = build(palettes.dark);
+    assert.equal(typeof installed.themePaint, 'function', `field=${field}`);
+    assert.ok(ringIds.every(id => installed.layers.some(l => l.id === id)), `field=${field}: the rings are in the installed layers`);
+    assert.equal(installed.layers.length > ringIds.length, field, `field=${field}: field layers are in the oracle's build exactly when drawn`);
+    const report = assertThemePaintOracle({build, provider: installed, palettes});
     assert.ok(report.steps.every(s => s.mismatches.length === 0), `field=${field}`);
   }
 });
