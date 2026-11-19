@@ -82,7 +82,7 @@ class SqlAnswerShapeTests(unittest.TestCase):
     def test_a_later_query_with_a_bad_shape_names_that_query(self):
         code, out, seen = run({'routes': rows_body(NORMAL['routes']), 'queue': json.dumps({'data': 'x'}).encode()})
         self.assertEqual(code, 1)
-        self.assertEqual(seen, ['routes', 'llm', 'queue'])
+        self.assertEqual(seen, ['routes', 'route_totals', 'llm', 'queue'])
         self.assertEqual(out, '::error title=Ops report::Analytics Engine SQL API unavailable for queue: '
                               'unexpected answer shape\n')
 
