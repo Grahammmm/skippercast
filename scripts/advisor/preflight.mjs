@@ -69,6 +69,25 @@ async function get(fetcher, base, path, cookie = null, {redirect = 'follow'} = {
 
 const row = (id, title, status, detail, how = '') => ({id, title, status, detail, how});
 
+const ISO_STAMP = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2}))?$/;
+
+/**
+ * An ISO 8601 timestamp (date, or date and time with Z / an offset) as epoch ms, or NaN.
+ * Date.parse alone rolls an impossible date (2026-09-31) over to the next month, so the
+ * calendar components are checked here and the timestamp is rejected when they do not exist.
+ */
+export function parseStamp(value) {
+  const m = typeof value === 'string' ? ISO_STAMP.exec(value) : null;
+  if (!m) return NaN;
+  const [year, month, day, hour = 0, minute = 0, second = 0] = m.slice(1, 7).map(Number);
+  const calendar = new Date(Date.UTC(year, month - 1, day));
+  if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day) return NaN;
+  if (hour > 23 || minute > 59 || second > 59) return NaN;
+  const offset = m[7]?.match(/^([+-])(\d{2}):(\d{2})$/);
+  if (offset && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return NaN;
+  return Date.parse(value);
+}
+
 /** The rules check: every pilot species has non-retired rows, all active, not due, reviewed within 30 days, with an https source. */
 export function judgeRules(rules, now = Date.now(), species = PILOT_SPECIES) {
   const problems = [];
@@ -77,7 +96,7 @@ export function judgeRules(rules, now = Date.now(), species = PILOT_SPECIES) {
     const rows = rules.filter(r => r.species_key === key && r.status !== 'retired');
     if (!rows.length) { problems.push(`${key}: no row`); continue; }
     const bad = rows.filter(r => {
-      const reviewed = typeof r.reviewed_at === 'string' ? Date.parse(r.reviewed_at) : NaN;
+      const reviewed = parseStamp(r.reviewed_at);
       return r.status !== 'active' || r.due || !(reviewed >= cutoff && reviewed <= now) || !/^https:\/\//.test(r.source_url ?? '');
     });
     if (bad.length) problems.push(`${key}: ${bad.length} of ${rows.length} not active, due, without a valid review in the last ${RULES_FRESH_DAYS} days or without a source`);
