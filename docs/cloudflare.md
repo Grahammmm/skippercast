@@ -42,7 +42,7 @@ Verified locally with `wrangler dev` (Cloudflare's runtime, local D1 and R2):
    - `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`: required.
    - `ANTHROPIC_API_KEY`: optional, for the AI boat lookup.
    - `WATCHDOG_GITHUB_TOKEN`: optional, for the watchdog. Create a fine-grained GitHub token for this repository only, with **Actions: Read and write**.
-   - `R2_PUBLISH_TOKEN`: recommended. An R2-only token for the data jobs; see [scoped tokens](#scoped-tokens-for-the-data-jobs). Until it exists, they fall back to `CLOUDFLARE_API_TOKEN`.
+   - `R2_PUBLISH_TOKEN`: recommended for the data jobs and required for relief STAGE when the selected commit contains a relief pointer. See [scoped tokens](#scoped-tokens-for-the-data-jobs).
 4. **Add repository variables** on the same page, under the Variables tab:
    - `CLOUDFLARE_SITE_URL`, e.g. `https://skippercast.<subdomain>.workers.dev`: required. The post-deploy smoke test checks it, and a deploy fails before writing anything while it is unset;
    - `EXTRA_ORIGINS` set to the same URL, so the staging copy accepts its own form posts.
@@ -80,15 +80,24 @@ These are the free-tier allowances as published by Cloudflare; check current pri
 
 ## Scoped tokens for the data jobs
 
-The data workflows only upload feed files to R2: the live loop, the daily job, Forecast tiles and Seafloor. They read `secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN`. Once `R2_PUBLISH_TOKEN` exists, the broad deploy token, which can edit Workers, D1 and every R2 bucket, is used only by **Deploy to Cloudflare**. To create the R2-only token:
+Data workflows that mirror feeds to R2 can fall back from `R2_PUBLISH_TOKEN` to `CLOUDFLARE_API_TOKEN`. Within **Deploy to Cloudflare**, the `deploy` and `rollback` jobs use the broad token (Workers, D1 and R2). Only the final controller step of `stage_relief` reads `R2_PUBLISH_TOKEN`; STAGE has no broad-token fallback. To create the R2-only token:
 
 1. In the Cloudflare dashboard, open **R2 object storage → Overview**. Under **Account Details**, select **Manage** next to **API Tokens**.
 2. Select **Create Account API token**. A user token also works, but it stops working if your user leaves the account.
 3. Under **Permissions**, choose **Object Read & Write**. Scope it to the **`skippercast-feeds`** bucket only. Do not choose Admin, and do not include `skippercast-backups`, which holds D1 exports.
 4. Create it, then copy the **token value**. The Access Key ID and Secret Access Key shown on the same page are not needed: `scripts/publish_r2.py` derives them from the token value as Cloudflare documents (key ID = token id, secret = SHA-256 of the value).
-5. Save it as the repository secret `R2_PUBLISH_TOKEN`. To check it, run **Actions → Forecast tiles → Run workflow**. The log line `R2 skippercast-feeds/forecasts: … uploaded` means it works. If the job fails with `could not verify CLOUDFLARE_API_TOKEN`, delete the secret; the jobs then fall back to the deploy token.
+5. Save it as the repository secret `R2_PUBLISH_TOKEN`. To check it, run **Actions → Forecast tiles → Run workflow**. The log line `R2 skippercast-feeds/forecasts: … uploaded` means it works. If verification fails, correct the scoped token before attempting relief STAGE; without it, relief STAGE holds deployment.
 
 R2 lifecycle rules are bucket configuration, which an Object Read & Write token cannot change. They are therefore applied by the deploy, with the deploy token.
+
+### Relief activation
+
+Stage checked assets in GitHub, then merge the reviewed regional pointer PR.
+The hosted `stage_relief` job copies the selected commit's approved objects to
+R2 and reads them all back in full. Only after it succeeds may deployment serve
+that same commit. If deploy was skipped, check the `stage_relief` job for its
+own result. The first real release stays **HELD** for attended authorization;
+see the [relief runbook](../catalog/relief/README.md).
 
 **The live workflow is split into three jobs, so each holds only what it needs:**
 
