@@ -8,12 +8,14 @@ from skippercast.platform.contracts import REPO, bbox
 
 def ingest(row, bounds, *, root=REPO, fetch=False, local=None):
     bbox(list(bounds))
-    cache = Path(root) / 'var/seafloor/cache'
-    cache.mkdir(parents=True, exist_ok=True)
+    # Locks live beside, not inside, the content-addressed cache so a refused
+    # import leaves the cache tree untouched. Keep the lock inode after closing:
+    # deleting it can split waiters across two inodes. Hold it through receipt
+    # installation in every adapter.
+    locks = Path(root) / 'var/seafloor/import-locks'
+    locks.mkdir(parents=True, exist_ok=True)
     source_key = hashlib.sha256(row['url'].encode()).hexdigest()
-    # Keep the lock inode after closing: deleting it can split waiters across
-    # two inodes. Hold it through receipt installation in every adapter.
-    with (cache / (source_key + '.lock')).open('a') as lock:
+    with (locks / (source_key + '.lock')).open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         return _ingest(row, bounds, root=root, fetch=fetch, local=local)
 
