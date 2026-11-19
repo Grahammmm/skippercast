@@ -1,8 +1,6 @@
-"""F28-07 / SCA-601: offline controls for the private-block/receipt join.
+"""F28-07 / SCA-452: offline controls for the private-block/receipt join.
 
-Default pytest checks the desired admission contract and the real join's valid
-and held controls. Opt-in ``python -m tests.unit.test_f28_07_audit`` probes the
-unchanged join without the reference gate and exits nonzero on a contract gap.
+Pytest and ``python -m tests.unit.test_f28_07_audit`` exercise the real join.
 Only invented bytes and aggregate counts are used; nothing is published.
 """
 from contextlib import nullcontext
@@ -69,25 +67,11 @@ def pair(case):
         "scope": "point-buchon-2009-csumb-original-100m-access-triage",
         "totals": {"blocks": 181}, "qualified_waypoints": 0,
         "fishing_target": False, "exportable": False,
-        # Fixture-only proposed companion field; neither current script is changed.
         "private_research_blocks_sha256": sha256(screened_bytes).hexdigest(),
     }
     if case == "unbound_receipt":
         del receipt["private_research_blocks_sha256"]
     return encoded(blocks), receipt
-
-
-def admitted(raw, receipt):
-    """Reference gate: validate consumed bytes and every block before counting."""
-    if sha256(raw).hexdigest() != receipt.get("private_research_blocks_sha256"):
-        return False
-    for feature in json.loads(raw)["features"]:
-        flags = feature["properties"].get("review_holds")
-        if not isinstance(flags, dict) or flags.keys() != HOLD_FIELDS:
-            return False
-        if any(type(value) is not bool for value in flags.values()):
-            return False
-    return True
 
 
 def load_join(monkeypatch, tmp_path):
@@ -135,7 +119,8 @@ def load_join(monkeypatch, tmp_path):
     return join
 
 
-def run_join(case, raw, receipt, tmp_path, monkeypatch):
+def observe(case, tmp_path, monkeypatch):
+    raw, receipt = pair(case)
     join = load_join(monkeypatch, tmp_path)
     private, access, rov = (tmp_path / name for name in ("private.json", "access.json", "rov.csv"))
     private.write_bytes(raw)
@@ -156,10 +141,10 @@ def run_join(case, raw, receipt, tmp_path, monkeypatch):
         report = join.build(rov, tmp_path / "archive", tmp_path / "class", private, access, tmp_path / "meta")
     except ValueError:
         return "rejected"
-    except KeyError as error:
-        if case == "absent" and error.args == ("review_holds",):
-            return "unhandled KeyError(review_holds)"
-        raise
+    assert report["private_research_blocks_sha256"] == sha256(raw).hexdigest()
+    # The historical aggregate fingerprint did not include the private binding.
+    aggregate = {key: value for key, value in receipt.items() if key != "private_research_blocks_sha256"}
+    assert report["partial_access_screen_sha256"] == sha256(json.dumps(aggregate, sort_keys=True).encode()).hexdigest()
     for flag in ("fishing_target", "exportable", "full_route_and_fishing_date_cleared"):
         assert report[flag] is False
     counts = report["inward_block_sensitivity_m"]
@@ -167,18 +152,11 @@ def run_join(case, raw, receipt, tmp_path, monkeypatch):
                  for m in ("0", "10", "25"))
 
 
-def observe(case, tmp_path, monkeypatch, *, reference):
-    raw, receipt = pair(case)
-    if reference and not admitted(raw, receipt):
-        return "rejected"
-    return run_join(case, raw, receipt, tmp_path, monkeypatch)
-
-
 @pytest.mark.parametrize(("case", "expected"), CASES, ids=[case for case, _ in CASES])
 def test_partial_clear_requires_bound_blocks_and_complete_boolean_holds(case, expected, tmp_path, monkeypatch):
     # A count-only join trusts the wrong run; truthiness alone silently clears
     # empty, incomplete, extra or falsey non-boolean hold fields.
-    assert observe(case, tmp_path, monkeypatch, reference=True) == expected
+    assert observe(case, tmp_path, monkeypatch) == expected
 
 
 def main():
@@ -187,12 +165,11 @@ def main():
     gaps = 0
     for case, expected in CASES:
         with TemporaryDirectory(prefix="f28-07-") as temp, pytest.MonkeyPatch.context() as monkeypatch:
-            actual = observe(case, Path(temp), monkeypatch, reference=False)
-        # The contract also permits an explicitly held negative instead of rejecting it.
-        checked = actual == expected or expected == "rejected" and actual == HELD
+            actual = observe(case, Path(temp), monkeypatch)
+        checked = actual == expected
         gaps += not checked
         print(f"{'PASS' if checked else 'GAP'} {case}: expected {expected}; observed {actual}")
-    print(f"Baseline contract gaps: {gaps}/{len(CASES)}")
+    print(f"Join contract gaps: {gaps}/{len(CASES)}")
     return int(gaps > 0)
 
 

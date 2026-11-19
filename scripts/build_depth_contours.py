@@ -237,14 +237,15 @@ def merged_blocks(grids, lattice, offsets, keys, ecs=None):
             # A complete individual grid outranks any group completed only by merging partial grids.
             priority = np.where(complete < len(grids), complete, len(grids) + first)
             take = covered & (priority < rank)
-            good = take & valid & (klass != CLASS_INDEX['unresolved'])
-            depth[by:by + rows][good] = (-blocks.sum(axis=(1, 3)) / (n * n) * dc.FEET_PER_M)[good]
+            unresolved = klass == CLASS_INDEX['unresolved']
+            # A better-ranked group replaces the entire result, including absent depth or reason.
+            depth[by:by + rows][take] = np.where(valid & ~unresolved,
+                                                -blocks.sum(axis=(1, 3)) / (n * n) * dc.FEET_PER_M, np.nan)[take]
             credited = np.array(members)[counts.argmax(axis=0)]
             owner[by:by + rows][take] = credited[take]
             cls[by:by + rows][take] = klass[take]
             why = np.stack([per_block(np.isin(code, c) & (source >= 0), np.sum) for c in REASON_CODES]).argmax(axis=0)
-            bad = take & (klass == CLASS_INDEX['unresolved'])
-            reason[by:by + rows][bad] = why[bad]
+            reason[by:by + rows][take] = np.where(unresolved, why, -1)[take]
             hint[by:by + rows][take] = np.fmax.reduce(shoal.reshape(rows, n, width, n).swapaxes(1, 2).reshape(rows, width, -1),
                                                       axis=2)[take]
             rank[take] = priority[take]

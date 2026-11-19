@@ -1,6 +1,6 @@
 // SCA-583 / F15-07: a refresh that changes only geometry/pixels must not let
 // picks advance past paint, or leave a reading card open from the old analysis.
-// `node tests/test_f15_07_audit.mjs --baseline` also diagnoses same-stamp refreshes.
+
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import test from 'node:test';
@@ -118,15 +118,10 @@ async function sst(t, stamp) {
 }
 
 for (const replay of [fronts, sst]) {
-  test(`F15-07 ${replay.name} valid control: new timestamp, one repaint, clear and new pick`, async t => {
-    const {observed, wanted} = await replay(t, NEW_STAMP);
-    assert.deepEqual(observed, wanted);
-  });
-  if (process.argv.includes('--baseline')) {
-    test(`F15-07 ${replay.name} read-only baseline: same timestamps and IDs`, async t => {
-      const {observed, wanted} = await replay(t, STAMP);
-      const fields = Object.keys(wanted).filter(key => JSON.stringify(observed[key]) !== JSON.stringify(wanted[key]));
-      t.diagnostic(fields.length ? `GAP ${fields.join(', ')}; observed ${JSON.stringify(observed)}; wanted ${JSON.stringify(wanted)}` : 'NO GAP');
+  for (const [label, stamp] of [['new timestamp (control)', NEW_STAMP], ['same timestamps and IDs (regression)', STAMP]]) {
+    test(`F15-07 ${replay.name}: ${label}, one repaint, clear and new pick`, async t => {
+      const {observed, wanted} = await replay(t, stamp);
+      assert.deepEqual(observed, wanted);
     });
   }
 }

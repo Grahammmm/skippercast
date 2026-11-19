@@ -83,6 +83,12 @@ def hard_class_review(record):
     return _class3_encoding(record) is not None
 
 
+def legend_matches_audit(row, record):
+    digest = record.get('xml_sha256')
+    return (isinstance(digest, str) and re.fullmatch(r'[a-f0-9]{64}', digest) is not None
+            and digest == row.get('metadata_sha256'))
+
+
 def mpa_union(snapshot):
     source=snapshot.get('sources',{}).get('mpas',{})
     data=source.get('data',{})
@@ -158,8 +164,12 @@ def build(blocks,metadata,audit,mpas,cache):
         if row['status']!='ok' or key not in indexed or key not in meta:
             failures.append(row['block_id'])
             continue
+        record=meta[key]
+        if not legend_matches_audit(row, record):
+            failures.append(row['block_id']+': original XML digest differs from native audit')
+            continue
         try:
-            areas=compile_block(row,{**meta[key],**indexed[key]},cache,excluded)
+            areas=compile_block(row,{**record,'description':indexed[key].get('description','')},cache,excluded)
         except (OSError,ValueError,zipfile.BadZipFile,rasterio.errors.RasterioError) as error:
             failures.append(row['block_id']+': '+str(error)[:100])
             continue
@@ -167,8 +177,8 @@ def build(blocks,metadata,audit,mpas,cache):
             features.append({'type':'Feature','geometry':mapping(geometry),'properties':{
                 'id':f"usgs-{row['block_id']}-{row['archive_sha256'][:8]}-{rank:03d}",'block_id':row['block_id'],
                 'source_url':row['archive_url'],'metadata_url':row['metadata_url'],
-                'source_file_sha256':row['archive_sha256'],'source_metadata_sha256':row['metadata_sha256'],
-                'source_year':meta[key]['published_date'],'source_class':'Class 3 · hard, rugose rock/boulder',
+                'source_file_sha256':row['archive_sha256'],'source_metadata_sha256':record['xml_sha256'],
+                'source_year':record['published_date'],'source_class':'Class 3 · hard, rugose rock/boulder',
                 'approx_original_area_m2':round(native_area),'display_resolution_m':DISPLAY_M,
                 'fishing_target':False,'exportable':False,'depth_qualified':False,
                 'fish_confirmed':False,'mpa_screened_at':mpas['sources']['mpas']['data_retrieved_at']}})

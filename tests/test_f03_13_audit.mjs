@@ -1,7 +1,6 @@
 // SCA-578 / F03-13: a review may close only if its requested link is saved in
 // that transaction. The review UPDATE can succeed even when the link UPDATE is a no-op.
-// Default: valid idempotency controls. To compare the unchanged handler against the
-// conflict contract, run `node tests/test_f03_13_audit.mjs --baseline` (red until fixed).
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {advisorDatabase} from './_advisor_d1.mjs';
@@ -46,16 +45,22 @@ async function scenario({beforeRead, beforeBatch, verify}) {
   } finally { sql.close(); }
 }
 
-for (const [name, timing] of [['before preflight', {beforeRead: BOAT}], ['at write time', {beforeBatch: BOAT}]]) {
-  test(`F03-13: already-correct link ${name} closes idempotently`, () => scenario({
+// A fresh link must write the pair in the batch; an existing pair must not be rewritten.
+for (const [name, timing, linkedAt] of [
+  ['created by the decision', {}, DECIDED],
+  ['present before preflight', {beforeRead: BOAT}, LINKED],
+  ['created by a concurrent write', {beforeBatch: BOAT}, LINKED],
+]) {
+  test(`F03-13: link ${name} closes idempotently`, () => scenario({
     ...timing,
     async verify({result, snapshot, brokenCommits, decide}) {
       const saved = snapshot();
       assert.equal(result.status, 'ok');
+      assert.equal(result.value.repeated, undefined);
       assert.deepEqual({...saved.review, decision_json: JSON.parse(saved.review.decision_json)}, {
         status: 'decided', decision_json: {...input, boat_id: BOAT}, decided_by: ACTOR, decided_at: DECIDED,
       });
-      assert.deepEqual(saved.subject, {fleet_vessel_id: VESSEL, updated_at: LINKED});
+      assert.deepEqual(saved.subject, {fleet_vessel_id: VESSEL, updated_at: linkedAt});
       assert.deepEqual(saved.other, {fleet_vessel_id: null, updated_at: OPENED});
       const repeat = await decide(REPLAYED);
       assert.equal(repeat.status, 'ok');
@@ -66,17 +71,15 @@ for (const [name, timing] of [['before preflight', {beforeRead: BOAT}], ['at wri
   }));
 }
 
-if (process.argv.includes('--baseline')) {
-  test('F03-13: a competing link returns conflict and leaves the review open', () => scenario({
-    beforeBatch: OTHER,
-    verify({result, snapshot, brokenCommits}) {
-      assert.deepEqual({outcome: result.status, ...snapshot(), brokenCommits}, {
-        outcome: 'conflict',
-        review: {status: 'open', decision_json: null, decided_by: null, decided_at: null},
-        subject: {fleet_vessel_id: null, updated_at: OPENED},
-        other: {fleet_vessel_id: VESSEL, updated_at: LINKED},
-        brokenCommits: [],
-      });
-    },
-  }));
-}
+test('F03-13: a competing link returns conflict and leaves the review open', () => scenario({
+  beforeBatch: OTHER,
+  verify({result, snapshot, brokenCommits}) {
+    assert.deepEqual({outcome: result.status, ...snapshot(), brokenCommits}, {
+      outcome: 'conflict',
+      review: {status: 'open', decision_json: null, decided_by: null, decided_at: null},
+      subject: {fleet_vessel_id: null, updated_at: OPENED},
+      other: {fleet_vessel_id: VESSEL, updated_at: LINKED},
+      brokenCommits: [],
+    });
+  },
+}));
