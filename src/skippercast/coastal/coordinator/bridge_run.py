@@ -35,6 +35,12 @@ STATES = {"queued", "done", "held", "failed_terminal", "failed_retryable",
 PARTITION = ("map_done", "held", "failed_terminal", "failed_uncertain",
              "stale", "cancelled", "unfinished")
 CONTINUABLE = {"deadline", "max_ticks", "not_claimable"}
+# v3 replaces v1's global queue dump with run-scoped counts; v1 predecessors still continue.
+RUN_SUMMARY, LEGACY_RUN_SUMMARY = "coast-run-summary-v3", "coast-run-summary-v1"
+SCOPE = "coastal-coordinator-scope-v1"
+SCOPE_KEYS = {"schema", "store", "lineage_jobs", "lineage_charges", "foreign", "events", "last_tick_epoch"}
+MAX_PROBLEMS = 64
+MAX_SUMMARY_BYTES = catalog_bridge.MAX_DOCUMENT_BYTES  # a continuation reads its predecessor under this bound
 HEX = re.compile(r"[0-9a-f]{64}")
 LABEL = re.compile(r"[A-Za-z0-9_-]+")
 
@@ -116,9 +122,13 @@ def _verify(root, ref, root_id, *, metadata=True) -> Any:
     return json.loads(raw) if metadata else raw
 
 
+def _encode(value):
+    return (json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
+
+
 def _freeze(root, path, value):
     relative = _absolute(path).relative_to(root).as_posix()
-    raw = (json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
+    raw = _encode(value)
     with _parent(root, relative) as (parent, leaf):
         fd = os.open(leaf, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o444, dir_fd=parent)
         with os.fdopen(fd, "wb") as stream:
@@ -640,6 +650,58 @@ def _foreign(db, lineage):
             for table in ("jobs", "events", "leases", "charges")}
 
 
+def _scope(db, lineage):
+    """Run-scoped Store counts: this run's own lineage by state; every other job only as a total."""
+    jobs, own, foreign = Counter(), Counter(), Counter()
+    events, last_tick = 0, None
+    if db is not None:
+        for job_id, state in db.execute("SELECT job_id, state FROM jobs"):
+            if job_id in lineage:
+                jobs[state] += 1
+            else:
+                foreign.update(jobs=1, queued_jobs=int(state == "queued"))
+        for job_id, size, requests in db.execute("SELECT job_id, bytes, requests FROM charges"):
+            if job_id in lineage:
+                own.update(rows=1, requests=requests, bytes=size)
+            else:
+                foreign.update(charges=1)
+        events = db.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+        last_tick = db.execute("SELECT MAX(utc) FROM events WHERE kind='tick'").fetchone()[0]
+    return dict(schema=SCOPE, store="uninitialized" if db is None else "present",
+                lineage_jobs=dict(sorted(jobs.items())), events=events, last_tick_epoch=last_tick,
+                lineage_charges={k: own[k] for k in ("rows", "requests", "bytes")},
+                foreign={k: foreign[k] for k in ("jobs", "queued_jobs", "charges")})
+
+
+def _bounded(problems):
+    """Keep the receipt bounded without hiding that problems were omitted."""
+    if len(problems) <= MAX_PROBLEMS:
+        return problems
+    return problems[:MAX_PROBLEMS] + [f"{len(problems) - MAX_PROBLEMS} further problems omitted from the bounded run summary"]
+
+
+def _check_details(root, previous, receipt, namespace):
+    """A v3 predecessor's scoped counts and per-window details must still verify before any tick."""
+    try:
+        scope, windows = previous["store_status"], previous["windows"]
+        if not isinstance(scope, dict) or scope.get("schema") != SCOPE or set(scope) != SCOPE_KEYS:
+            raise ValueError("run-scoped store counts required")
+        if previous.get("windows_sha256") != digest(windows):
+            raise ValueError("per-window details digest mismatch")
+        if [(w["window_key"], w["source_id"], w["root_job_id"]) for w in windows] != [
+                (j["window_key"], j["source_id"], j["root_job_id"]) for j in receipt["jobs"]]:
+            raise ValueError("per-window details population mismatch")
+        for window in windows:
+            for info in window["stages"].values():
+                if info["state"] == "missing":
+                    continue
+                refs = [info["input_manifest"], *([info["result_ref"]] if info["result_ref"] else []), *info["products"].values()]
+                for ref in refs:
+                    _verify(root, ref, namespace, metadata=ref["path"].endswith(".json"))
+    except (KeyError, TypeError, AttributeError) as error:
+        raise ValueError("per-window details malformed") from error
+
+
 def run(root, enqueue_receipt, out, *, max_ticks, until, stop_after="map", continuation_of=None, clock=time.time):
     root, enqueue_receipt = _absolute(root), _absolute(enqueue_receipt)
     out = _new_output(root, out)
@@ -670,18 +732,20 @@ def run(root, enqueue_receipt, out, *, max_ticks, until, stop_after="map", conti
         if (entry["window_key"] != window["window_key"] or entry["source_id"] != job["source_id"]
                 or entry["input_manifest"] != dict(job["input_manifest"], root_id=namespace)):
             raise ValueError("enqueue root manifest mismatch")
-    header = _header("coast-run-summary-v1", admission)
+    header = _header(RUN_SUMMARY, admission)
     enq_ref = _ref(root, enqueue_receipt, namespace)
     previous_ref, sequence = None, 0
     if continuation_of is not None:
         continuation_of = _absolute(continuation_of)
         previous_ref = _ref(root, continuation_of, namespace)
         previous = _verify(root, previous_ref, namespace)
-        if (previous.get("schema") != "coast-run-summary-v1" or previous.get("enqueue") != enq_ref
+        if (previous.get("schema") not in {RUN_SUMMARY, LEGACY_RUN_SUMMARY} or previous.get("enqueue") != enq_ref
                 or previous.get("stop_reason") not in CONTINUABLE
                 or previous.get("code_sha") != receipt["code_sha"] or previous.get("deps_sha") != receipt["deps_sha"]
                 or previous.get("enqueued_job_ids") != [j["root_job_id"] for j in receipt["jobs"]]):
             raise ValueError("ordinary continuation not authorized")
+        if previous["schema"] == RUN_SUMMARY:
+            _check_details(root, previous, receipt, namespace)
         sequence = previous["sequence"] + 1
     if out != root / "plans" / admission["plan_id"] / "runs" / f"run-{sequence:02}.json":
         raise ValueError("run output sequence/path mismatch")
@@ -769,19 +833,32 @@ def run(root, enqueue_receipt, out, *, max_ticks, until, stop_after="map", conti
             foreign_count = sum(r["state"] == "queued" for k, r in rows.items() if k not in lineage)
             renders = sum(r["stage"] == "render" and r["state"] == "queued" for k, r in rows.items() if k in lineage)
             charges = [] if db is None else [dict(r) for r in db.execute("SELECT * FROM charges") if r["job_id"] in lineage]
-        counts = {key: sum(w["state"] == key for w in windows) for key in PARTITION}
-        holds = Counter(h for w in windows for info in w["stages"].values() for h in info.get("holds", []))
-        counts.update(windows=len(windows), by_hold_reason=dict(holds))
+            scope = _scope(db, lineage)
         sources = {s["source"]["sha256"]: s["source"]["bytes"] for s in bridge["decisions"] if s["state"] == "selected"}
-        result = dict(header, sequence=sequence, continuation_of=previous_ref, admission=admission_ref,
-                      bridge=bridge_ref, enqueue=enq_ref, code_sha=binding[0], deps_sha=binding[1],
-                      enqueued_job_ids=[j["root_job_id"] for j in receipt["jobs"]], stop_reason=stop, problems=problems,
-                      started_utc=utc(started), finished_utc=utc(clock()), wall_s=time.monotonic()-monotonic,
-                      ticks_used=ticks, max_ticks=max_ticks, until_epoch=until, stop_after="map",
-                      windows=windows, counts=counts, bridge_caps=bridge["caps"], bytes=dict(unique_sources=sum(sources.values())),
-                      usage=dict(requests=sum(c["requests"] for c in charges), bytes_in=sum(c["bytes"] for c in charges)),
-                      untouched=dict(foreign_queued_jobs_seen=foreign_count, render_jobs_left_queued=renders),
-                      store_status=queue_status(root / DATABASE))
+
+        def summary(windows, stop, problems):
+            counts = {key: sum(w["state"] == key for w in windows) for key in PARTITION}
+            holds = Counter(h for w in windows for info in w["stages"].values() for h in info.get("holds", []))
+            counts.update(windows=len(windows), by_hold_reason=dict(holds))
+            return dict(header, sequence=sequence, continuation_of=previous_ref, admission=admission_ref,
+                        bridge=bridge_ref, enqueue=enq_ref, code_sha=binding[0], deps_sha=binding[1],
+                        enqueued_job_ids=[j["root_job_id"] for j in receipt["jobs"]], stop_reason=stop,
+                        problems=_bounded(problems), started_utc=utc(started), finished_utc=utc(clock()),
+                        wall_s=time.monotonic()-monotonic, ticks_used=ticks, max_ticks=max_ticks, until_epoch=until,
+                        stop_after="map", windows=windows, windows_sha256=digest(windows), counts=counts,
+                        bridge_caps=bridge["caps"], bytes=dict(unique_sources=sum(sources.values())),
+                        usage=dict(requests=sum(c["requests"] for c in charges), bytes_in=sum(c["bytes"] for c in charges)),
+                        untouched=dict(foreign_queued_jobs_seen=foreign_count, render_jobs_left_queued=renders),
+                        store_status=scope)
+        result = summary(windows, stop, problems)
+        size = len(_encode(result))
+        if size > MAX_SUMMARY_BYTES:
+            # Never truncate details silently: withhold them, say so, and stop non-continuably.
+            result = summary([dict(window_key=j["window_key"], root_job_id=j["root_job_id"], source_id=j["source_id"],
+                                   state="unfinished", unfinished_reason="integrity_error", stages={}) for j in receipt["jobs"]],
+                             "integrity_error", [f"run summary of {size} bytes exceeds the "
+                                                 f"{MAX_SUMMARY_BYTES}-byte reader bound; "
+                                                 "per-window details withheld"] + problems)
         _freeze(root, out, result)
         return result
 
