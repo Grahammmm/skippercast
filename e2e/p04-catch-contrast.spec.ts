@@ -271,12 +271,15 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // never MapStage or PresentationToggle; no CSS, token, class, catch markup, paint, contrast(), assertion or threshold
   // change. Rebind only MapStage.tsx.
   // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "07c9cf39e007a91e0784c31cdcdc6248946b7f4c55fa21c301f020265cfd877a",
+  // MB-14: MapStage.tsx passes the 3D sky tokens to the stage and adds a 3D-fallback status line and a zoom hint on the existing app-stage-note class; BODY09 mounts Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
+  // MB-14 phone query: MapStage.tsx only reads the phone width query from stage.ts (PHONE_QUERY, below 900 px) for the 3D zoom offer; BODY09 never mounts MapStage. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "103faaee048a12a3f9192e117287b8810b1979cb67ae1d68fc60e0de04570b06",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
   // MB-22 adds Chart-only survey ink, halo and tints; Reports catch paint is unchanged.
-  "web/tokens.css": "3d2a47d465afd1b920d91ea1519c03420a5925ca0790aafffffffef768194e32",
+  // MB-14 adds the 3D view's --map-sky/--map-horizon/--map-fog in both themes (MAP-DESIGN-LOCK 10.2); Reports catch text and backing do not use them.
+  "web/tokens.css": "cf17f90e35d9ff29956a8b5605c3e6afeaa479a086f275642625c04d8c049b6b",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -418,7 +421,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCA-317: checker only rebinds the History target-size stylesheet hash; contrast math is unchanged.
   // MB-22 rebinds only the tokensCss surface hash. BODY09 paint, contrast logic and assertions are unchanged.
   // MAP-SOURCES-PAGE-1: only the legendTsx surface hash and its comment change; contrast math and gates unchanged.
-  "scripts/check_contrast.mjs": "8ca18920e32a19f262954b1ff2317f3a61336cfb752f1e8c6f520cfe37f58fc1",
+  "scripts/check_contrast.mjs": "97be9563e47af61415678a18ddbea3519c533ae5de144d7c9d33c74648665c06",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.

@@ -52,6 +52,13 @@ export type CoastHabitat={status:string;state:'ok'|'withheld'|'unavailable'|'sho
 export type CoastView={latitude:number;longitude:number;span:number;bearing?:number;pitch?:number};
 /** A host camera request; without `span` the renderer keeps its scale. `bearing` and `pitch` (a pair, units as in `CoastView`) restore a 3D orbit; a missing or invalid pair keeps the default angle. */
 export type CoastLocation={latitude:number;longitude:number;span?:number;bearing?:number;pitch?:number};
+/**
+ * The 3D scene's sky gradient (`sky` at the top, fading to `horizon`), the distance fog and, optionally, the clear
+ * colour (`ground`, what shows behind the 2D view). Any CSS colour three reads; a host takes them from its tokens.
+ */
+export type CoastSky={sky:string;horizon:string;fog:string;ground?:string};
+/** What `setTheme` repaints: the scene's sky and fog, and the colours of already-draped overlays (resolved from their roles). */
+export type CoastTheme={sky?:CoastSky;overlayPalette?:CoastOverlayPalette};
 
 /** State applied once at mount, before `load()`, in the order v1 applies it. */
 export type CoastInitialState={
@@ -111,6 +118,12 @@ export type CoastMountOptions={
  overlayPalette?:CoastOverlayPalette;
  /** A click on a host overlay; the renderer then shows no terrain reading for that click. */
  onOverlayPick?:(pick:CoastOverlayPick)=>void;
+ /** The 3D camera's maximum pitch in degrees (5 to 90, from straight down); a host-chosen cap. Without it, or when out of range, the renderer keeps its own (about 82.8°). */
+ maxPitch?:number;
+ /** Sky, horizon and fog colours for the 3D scene; without them the renderer keeps its palette's. */
+ sky?:CoastSky;
+ /** Called once after each completed frame with a `performance.now()` timestamp, so a host can measure the frame rate. */
+ onFrame?:(at:number)=>void;
 };
 
 /**
@@ -138,6 +151,8 @@ export interface CoastHandle{
  setOverlay(id:string,overlay:CoastOverlay):CoastOverlayDrape|null;
  /** Removes an overlay and frees its geometry; false when the id is unknown. */
  removeOverlay(id:string):boolean;
+ /** Paint only: repaints the sky gradient, fog and clear colour, and re-resolves the colours of draped overlays from their roles. No geometry, source, request or camera changes; an invalid overlay palette throws and changes nothing. */
+ setTheme(theme:CoastTheme):void;
  /** Seabed relief exaggeration, 1 (true scale) to 12 in whole steps; land stays true scale. */
  setRelief(factor:number):void;
  /** Opacity of the illustrative +0.8 m water surface, 0 (clear) to 0.8, in 0.05 steps; the native slider calls it transparency. */
