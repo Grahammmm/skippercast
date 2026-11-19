@@ -24,6 +24,7 @@ import {layerEntry} from './layers.ts';
 import {markData, markScreen} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'commercial-ais';
 /** SC1352-07: a catalogue id for this module's card and status words (mark.layer.ais.<key>). */
@@ -67,15 +68,23 @@ export const cellCollection = (cells: readonly AisFeature[]): Collection => ({ty
 /** The installed opacity scale follows the displayed cells, with v1's one-hour floor. */
 const heatMaximum = (data: Collection): number => Math.max(1, ...data.features.map(f => Number(f.properties.hours) || 0));
 
-/** The heat fill and its outline in the --fleet colour; opacity rises with the cell's apparent fishing hours. */
-export function aisOverlay(p: Palette, data: Collection): Overlay {
+const lightTheme = () => typeof document !== 'undefined' && document.documentElement?.dataset?.theme === 'light';
+
+function aisLayers(p: Palette, most: number, light: boolean): MapLibre.LayerSpecification[] {
+  return [
+    {id: AIS_HEAT, type: 'fill', source: AIS_SOURCE, paint: {'fill-color': p.amber,
+      'fill-opacity': light ? 0.14 : ['interpolate', ['linear'], ['get', 'hours'], 0, HEAT_OPACITY[0], most, HEAT_OPACITY[1]]}},
+    {id: AIS_LINE, type: 'line', source: AIS_SOURCE, paint: {'line-color': p.amber, 'line-width': light ? 1.2 : 1.5}},
+  ];
+}
+
+/** The historical aggregate cells in the --amber colour. Keep the dark effort scale; light uses a fixed wash. */
+export function aisOverlay(p: Palette, data: Collection, light = false): Overlay {
   const most = heatMaximum(data);
   return {
     sources: {[AIS_SOURCE]: {type: 'geojson', data, attribution: layerEntry(REGISTRY_ID).attribution} as MapLibre.SourceSpecification},
-    layers: [
-      {id: AIS_HEAT, type: 'fill', source: AIS_SOURCE, paint: {'fill-color': p.amber, 'fill-opacity': ['interpolate', ['linear'], ['get', 'hours'], 0, HEAT_OPACITY[0], most, HEAT_OPACITY[1]]}},
-      {id: AIS_LINE, type: 'line', source: AIS_SOURCE, paint: {'line-color': p.amber, 'line-width': 1.5}},
-    ] as MapLibre.LayerSpecification[],
+    layers: aisLayers(p, most, light),
+    themePaint: palette => paintEdits(aisLayers(palette, most, lightTheme())),
   };
 }
 
@@ -88,14 +97,14 @@ export function aisMark(p: AisProps): ChartMark {
   return {
     id: `ais:${p.id}`, name: p.label, kind: 'Commercial AIS · historical 2024',
     reading: `${p.days_with_apparent_fishing} days with activity · ${hours(p.apparent_fishing_hours)} hr apparent fishing time. Apparent fishing activity, not a verified catch spot.`,
-    source: `${p.attribution} Activity dates (UTC): ${p.active_dates_utc.join(', ')}`,
+    source: `Activity dates (UTC): ${p.active_dates_utc.join(', ')}`,
     basis: `${layerEntry(REGISTRY_ID).basis} Depth and target species unknown. This offshore context is not qualified for the 200-foot fishing limit. ${p.resolution_note} `
       + `Gear classification: ${p.gear_label}. ${p.fishing_location_confidence}. Local sportfishing-charter identity remains unverified. ${p.vessel_count_note}`,
     // SC1352-07: Spanish wording, resolved by the card; the label, attribution, dates, gear, confidence and notes stay as published.
     copy: {
       kind: [cp(aid('kind'))],
       reading: [cp(aid('reading'), {days, hours: esHours(p.apparent_fishing_hours)})],
-      source: [cp(aid('source'), {attribution: p.attribution, dates: p.active_dates_utc.join(', ')})],
+      source: [cp(aid('source'), {dates: p.active_dates_utc.join(', ')})],
       basis: [cp(aid('basis'), {basis: cp('layer.commercial-ais.basis'), resolution: p.resolution_note, gear: p.gear_label, confidence: p.fishing_location_confidence, count: p.vessel_count_note})],
     },
   };
@@ -138,7 +147,7 @@ export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), pa
       // when its scale changes; a data-only update is enough for an unchanged maximum.
       if (drawn && e === drawnOn && most !== drawnMaximum) { e.setOverlay(REGISTRY_ID, null); drawn = false; }
       // § 9 draw order: above the charter grounds, under the fleet activity layers, the cloud frames and the marks.
-      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, aisOverlay(palette(), data), aisBefore());
+      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, aisOverlay(palette(), data, lightTheme()), aisBefore());
       e.setData(AIS_SOURCE, data);
       drawn = true; drawnOn = e; drawnMaximum = most;
     }),

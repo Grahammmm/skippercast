@@ -73,10 +73,10 @@ test('zoom styling adds non-pickable outline and optional label with palette col
   const opacity = fill.paint['fill-opacity'];
   assert.deepEqual(opacity, ['interpolate', ['linear'], ['zoom'], 9, 0.12, 12, 0.22, 15, 0.3]);
   for (let i = 3; i < opacity.length; i += 2) { assert.ok(opacity[i + 1] > 0 && opacity[i + 1] <= 0.35); if (i > 3) assert.ok(opacity[i] > opacity[i - 2]); }
-  assert.equal(label.type, 'symbol'); assert.equal(label.source, MARKS_SOURCE); assert.equal(label.minzoom, 12);
+  assert.equal(label.type, 'symbol'); assert.equal(label.source, MARKS_SOURCE); assert.equal(label.minzoom, 11);
   assert.deepEqual(label.filter, ['has', 'depth']); assert.deepEqual(label.layout['text-field'], ['get', 'depth']);
   assert.deepEqual(label.layout['text-font'], [LABEL_FONT]);
-  assert.deepEqual(label.layout['text-size'], ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 12]);
+  assert.deepEqual(label.layout['text-size'], ['interpolate', ['linear'], ['zoom'], 11, 10, 15, 12]);
   assert.deepEqual(label.layout['text-offset'], [0, 1.6]); assert.equal(label.layout['text-anchor'], 'top');
   assert.equal(label.layout['text-optional'], true);
   assert.deepEqual(label.paint, {'text-color': p.mapInk, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.2});

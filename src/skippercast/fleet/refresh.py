@@ -11,22 +11,17 @@ ingest.
 | ``sold`` | ``operator_id`` changed from a stored operator |
 | ``moved`` | a stored ``port_id`` or ``landing_id`` changed |
 | ``mmsi``, ``class`` | ``mmsi`` changed (also from none: the watch list needs it); a stored ``vessel_class`` changed |
-| ``returned`` | listed again after missing a complete discovery run while ``inactive`` or vanished |
-| ``vanished`` | ``active``, listed by no source for ``vanished_after_runs`` complete discovery runs and ``vanished_after_days``; opens a ``vanished`` review, the status changes only on the admin's decision |
+| ``returned`` | listed again after an eligible missed run while ``inactive`` or vanished |
+| ``vanished`` | ``active``, listed by no source for ``vanished_after_runs`` eligible runs and ``vanished_after_days``; opens a ``vanished`` review, the status changes only on the admin's decision |
 | ``price`` | an active offering's ``price_cents`` changed |
 | ``schedule`` | an offering added or retired, or its ``departs_local`` or ``days`` changed |
 
 Offerings of a vessel whose sources listed offerings in this run, but not that
-one, are retired (``offering.upsert`` with ``status: retired``), but only when
-every discovery binding of the run listed its boats (``discover.json``
-``complete``: none failed, and none returned nothing because its pages were
-unsupported or its fetches refused; see ``ingest.GAP_STATUSES``):
-in a ``partial`` run the failed source's offerings are kept, so an outage records
-no ``schedule`` change. A vessel is "listed" when a candidate was assigned to it
-or proposed for it in a merge review. Runs count towards ``vanished`` only when
-the run's discovery was ``complete`` as well, so a source outage never marks
-its boats vanished. Change ids hash the after-value, so a rerun records nothing
-new.
+one, are retired (``offering.upsert`` with ``status: retired``) only after an
+eligible run. A vessel is "listed" when a candidate was assigned to it or
+proposed for it in a merge review. A run is eligible for missed-listing history
+only when it successfully ingested complete, nonempty discovery into this sink.
+Change ids hash the after-value, so a rerun records nothing new.
 """
 from __future__ import annotations
 
@@ -39,19 +34,23 @@ from . import ops
 from .adapters import RunContext
 from .ingest import _jsonl, snapshot_from_dict
 from .resolve import Snapshot
+from .runs import completed_step_counts
 
 WATCHED = (("operator_id", "sold"), ("mmsi", "mmsi"), ("vessel_class", "class"))
 
 
-def discovery_history(region_dir: Path, exclude: str | None = None) -> list[str]:
-    """When each earlier complete discovery run of the region listed its boats (``discover.json`` ``at``)."""
+def listing_history(region_dir: Path, *, sink: str, exclude: str | None = None) -> list[str]:
+    """One timestamp per successful listing ingest into this region's selected sink."""
     times = []
-    for path in sorted(Path(region_dir).glob("runs/*/discover.json")):
+    for path in region_dir.glob("runs/*/state.json"):
         if path.parent.name == exclude:
             continue
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        if doc.get("complete"):
-            times.append(ops.iso(doc["at"], "at"))
+        receipt = completed_step_counts(path.parent, "ingest", sink=sink) or {}
+        if receipt.get("listing_complete") == 1:
+            try:
+                times.append(ops.iso(receipt.get("registry_at"), "registry_at"))
+            except ops.OpError:
+                continue  # unreadable or legacy receipts do not establish a miss
     return sorted(times)
 
 
@@ -65,7 +64,7 @@ def detect(before: Snapshot, sent: Iterable[Mapping[str, Any]], now: str, *, com
            vanished_runs: int, vanished_days: float) -> list[dict]:
     """The change, review and offering operations for one run (pure; see the module table).
 
-    ``history``: the complete discovery runs; ``complete``: this run's discovery was. Decisions are as of ``now``:
+    ``history``: eligible listing ingests; ``complete``: this run is eligible. Decisions are as of ``now``:
     only runs strictly earlier than ``now`` count, so replaying an older saved ingest ignores later runs.
     The cutoff compares canonical UTC-millisecond times, not their spelling; emitted timestamps keep ``now``."""
     sent = list(sent)
@@ -146,15 +145,19 @@ def detect(before: Snapshot, sent: Iterable[Mapping[str, Any]], now: str, *, com
 
 def refresh(ctx: RunContext, sink) -> dict:
     path = ctx.run_dir / "ingest-snapshot.json"
-    if not path.exists():
+    ops_path = ctx.run_dir / "ingest-ops.jsonl"
+    receipt = completed_step_counts(ctx.run_dir, "ingest", sink=sink.name) or {}
+    if not receipt.get("registry_at") or not path.is_file() or not ops_path.is_file():
         return {"changes": 0, "no_ingest": 1}
     saved = json.loads(path.read_text(encoding="utf-8"))
-    sent = _jsonl(ctx.run_dir / "ingest-ops.jsonl")
-    discovered = ctx.run_dir / "discover.json"
-    complete = discovered.exists() and json.loads(discovered.read_text(encoding="utf-8")).get("complete") is True
+    if saved["now"] != receipt["registry_at"]:
+        return {"changes": 0, "no_ingest": 1}
+    sent = _jsonl(ops_path)
+    complete = receipt.get("listing_complete") == 1
     rules = ctx.region.thresholds["refresh"]
     out = detect(snapshot_from_dict(saved["snapshot"]), sent, saved["now"], complete=complete,
-                 history=discovery_history(ctx.run_dir.parent.parent, ctx.run_dir.name), vanished_runs=int(rules["vanished_after_runs"]),
+                 history=listing_history(ctx.run_dir.parent.parent, sink=sink.name, exclude=ctx.run_dir.name),
+                 vanished_runs=int(rules["vanished_after_runs"]),
                  vanished_days=float(rules["vanished_after_days"]))
     result = sink.apply(out) if out else {"changed": 0}
     kinds: dict[str, int] = {}

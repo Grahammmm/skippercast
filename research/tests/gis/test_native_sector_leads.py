@@ -27,9 +27,11 @@ class NativeSectorLeadsTest(unittest.TestCase):
         }
         discovery = {'scope': 'noaa-bag-survey-discovery', 'collected_at': '2026-09-23',
                      'sectors': [{'sector_id': 'test', 'status': 'ok',
-                                  'request_url': 'https://example.org/query?geometry=-124%2C39%2C-121%2C42',
+                                  'request_url': ('https://example.org/query?geometry=-124%2C39%2C-121%2C42'
+                                                  '&geometryType=esriGeometryEnvelope&inSR=4326'),
                                   'surveys': [{'id': 'H1'}]}]}
-        sectors = {'sectors': [{'id': 'test', 'name': 'Test', 'coast': 'northern'}]}
+        sectors = {'sectors': [{'id': 'test', 'name': 'Test', 'coast': 'northern',
+                                'bounds': [-124, 39, -121, 42]}]}
         overlap = {'scope': 'statewide-native-depth-substrate-overlap-leads',
                    'leads': [{'url': 'https://example.org/a.bag'}]}
         row = build(audit, discovery, sectors, overlap)['sectors'][0]
@@ -49,9 +51,11 @@ class NativeSectorLeadsTest(unittest.TestCase):
                       'overview_resolution_m': [1, 1], 'variable_refinement_records': 0}]}
         discovery = {'scope': 'noaa-bag-survey-discovery', 'collected_at': '2026-09-23',
                      'sectors': [{'sector_id': 'del-norte', 'status': 'ok',
-                                  'request_url': 'https://example.org/query?geometry=-124.5%2C41.5%2C-124%2C42',
+                                  'request_url': ('https://example.org/query?geometry=-124.5%2C41.5%2C-124%2C42'
+                                                  '&geometryType=esriGeometryEnvelope&inSR=4326'),
                                   'surveys': [{'id': 'F00562'}]}]}
-        sectors = {'sectors': [{'id': 'del-norte', 'name': 'Del Norte', 'coast': 'northern'}]}
+        sectors = {'sectors': [{'id': 'del-norte', 'name': 'Del Norte', 'coast': 'northern',
+                                'bounds': [-124.5, 41.5, -124, 42]}]}
         overlap = {'scope': 'statewide-native-depth-substrate-overlap-leads',
                    'leads': [{'survey_id': 'F00562', 'url': 'https://example.org/harbor.bag',
                               'source_report_url': 'https://data.ngdc.noaa.gov/report.pdf'}]}

@@ -891,7 +891,7 @@ export function createPlanner(deps: PlannerDeps) {
     setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     routing, routeStatus, exportRouteFile, deliverRoute, showRouteOnChart, checkRoutePreview,
-    /** For tests and a region change: stop drawing the ranked set. */
-    dispose: () => { disposed = true; dropRoute(false); stopRouteKey(); stopRouteWater(); pageEvents()?.removeEventListener('skippercast:boundaries', onBoundaries); floatGen++; floatPlan.value = emptyFloatPlan(); floatOpen.value = false; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
+    /** Stop subscriptions and invalidate in-flight ranking and restore. */
+    dispose: () => { disposed = true; revision++; dropRoute(false); stopRouteKey(); stopRouteWater(); pageEvents()?.removeEventListener('skippercast:boundaries', onBoundaries); floatGen++; floatPlan.value = emptyFloatPlan(); floatOpen.value = false; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
   };
 }

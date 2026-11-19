@@ -6,7 +6,7 @@ UPSTREAM = ('select', 'mosaic:public')
 # Give each layer its own atomic target so a rebuild never replaces sibling layers.
 TARGET = 'layers/public/tiles'
 SCRIPT = 'scripts/build_bathy_tiles.py'
-CODE_FILES = (SCRIPT, 'skippercast.relief.mosaic')
+CODE_FILES = (SCRIPT, 'skippercast.relief.mosaic', 'skippercast.relief.pmtiles_v3')  # the script writes the archive with pmtiles_v3
 VARIANT = 'medium'  # MB-01's fixed Deep ramp with medium relief
 
 

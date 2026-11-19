@@ -782,8 +782,8 @@ implementation and the SqliteSink must behave the same).
 | `schedule` | offering added or retired, or departure time/days changed |
 | `mmsi`, `class` | resolved value changed (MMSI also re-checks the watch list) |
 
-`fleet-registry.yml` runs weekly (Mon 09:47 UTC) and on dispatch (`region`,
-`sink`, `steps`). `python -m skippercast.fleet run --region CA --sink worker`
+`fleet-registry.yml` in private `skippercast-ops` runs weekly (Mon 09:47 UTC)
+and on dispatch (`region`, `sink`, `steps`). `python -m skippercast.fleet run --region CA --sink worker`
 runs `discover → resolve → enrich-code → ingest → refresh` and writes
 `report.json`. From empty: `run`, then `fleet-osint`, then `run` again fills
 the registry; the only human step is the review queue.
@@ -875,8 +875,9 @@ MemoryMax=512M
 WantedBy=default.target
 ```
 
-`fleet-ais-listener.yml` (dispatch only, from `main` only, `DATA_RUNNER`) runs
-`scripts/fleet/install_listener.sh`, which copies the revision to
+`fleet-ais-listener.yml` in private `skippercast-ops` (dispatch only, from `main` only)
+checks out public SkipperCast `main` and runs `scripts/fleet/install_listener.sh`,
+which copies the revision to
 `~/.local/share/skippercast/app/<sha>`, builds that revision's own `.venv` with the
 `fleet` extra on the box's `python3` (the listener's WebSocket client is standard
 library; the code runs from the revision's `src/`, so a rollback is a symlink change
@@ -888,7 +889,8 @@ restarts the unit, then fails unless the heartbeat shows messages within 90 s.
 
 ## 11. AIS processor
 
-`fleet-ais.yml`: cron `17 * * * *` and `47 * * * *`, `DATA_RUNNER`, `concurrency: fleet-ais`.
+`fleet-ais.yml` in private `skippercast-ops`: cron `17 * * * *` and `47 * * * *`,
+`concurrency: fleet-ais`.
 Each run: push heartbeat and hourly counters (`job_state`
 `fleet.ais.<region>.heartbeat`, `fleet_ais_hours`); refresh `watch.json`; run
 MMSI matching; process each watched MMSI from its last closed trip end minus
@@ -972,7 +974,7 @@ and runs the same processor with `source=marinecadastre`,
 about mid-December 2026. NOAA's June 2026 FAQ limits use to "coastal and ocean
 planning purposes" and forbids charging a fee for the data, so map and profile
 queries for any paid surface filter this rights tag out in code. `fleet-ais.yml`
-takes a dispatch input to backfill a month.
+in private `skippercast-ops` takes a dispatch input to backfill a month.
 
 **MMSI matching** (`ais/match.py`): (1) registry MMSI (FCC/PSIX) with an
 agreeing AIS call sign or name → `watched` at 0.9 (an admin-pinned MMSI → 1.0);
@@ -1029,10 +1031,11 @@ checks them and posts them to `POST /api/fleet/jobs/labels`
 
 **Job routes** (GitHub OIDC via `server/job-auth.ts`), scope
 `{audiencePath: '/api/fleet/jobs', workflows: ['fleet-registry.yml',
-'fleet-osint.yml', 'fleet-ais.yml', 'fleet-health.yml']}`; the workflows are
-also added to `deployments/production.json` `scheduler.workflows`
-(CODEOWNERS: **Owner** approval). Bodies ≤ 1 MB; D1 batches chunked under
-D1's statement and bound-parameter limits.
+'fleet-osint.yml', 'fleet-ais.yml', 'fleet-health.yml']}`. The three data jobs
+run from private `skippercast-ops`; `fleet-health.yml` runs from public SkipperCast.
+`deployments/production.json` still lists the public data-workflow names during
+the transition, until the separate authorization change. Bodies ≤ 1 MB; D1 batches
+are chunked under D1's statement and bound-parameter limits.
 
 | Route | Purpose |
 | --- | --- |

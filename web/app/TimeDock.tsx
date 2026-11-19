@@ -46,9 +46,22 @@ export function dayOptions(now: Date, tz: string, selected: string | null, lang:
 /** The dock's time for the signals: today and the current hour when the URL names neither. */
 export const dockState = (now: Date, tz: string): DockTime => dockTime(day.value, hour.value, now, tz);
 
+/**
+ * hourText for instant `at` in `tz`. A wall-clock hour the zone repeats that day (fall back) also names its zone,
+ * so the two 1 am instants read "1 am PDT" and "1 am PST" (SCA-413); every other hour stays plain.
+ */
+export function hourLabel(at: number, tz: string, lang: Language = 'en'): string {
+  const parts = localParts(new Date(at), tz), text = hourText(parts.hour, lang);
+  const repeated = [at - 3_600_000, at + 3_600_000].some(x => {
+    const p = localParts(new Date(x), tz);
+    return p.day === parts.day && p.hour === parts.hour;
+  });
+  return repeated ? `${text} ${zoneName(new Date(at), tz)}` : text;
+}
+
 /** "2 pm" for the selected hour; outside the horizon the slider is off and this says why. */
 export function readout(state: DockTime, tz: string, lang: Language = 'en'): string {
-  const text = hourText(localParts(new Date(state.at), tz).hour, lang);
+  const text = hourLabel(state.at, tz, lang);
   return state.index < 0 ? `${text}${t('dock.outside', lang)}` : text;
 }
 
@@ -58,7 +71,7 @@ export function dockValueText(now: Date, tz: string, state: DockTime, lang: Lang
   const label = parts.day === state.today ? t('dock.today', lang)
     : parts.day === horizonDays(now, tz)[1]?.day ? t('dock.tomorrow', lang)
     : dayOptions(now, tz, parts.day, lang).find(d => d.value === parts.day)!.label;
-  const text = `${label} · ${hourText(parts.hour, lang)}`;
+  const text = `${label} · ${hourLabel(at, tz, lang)}`;
   return state.index < 0 ? `${text}${t('dock.outside', lang)}` : text;
 }
 

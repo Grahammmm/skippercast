@@ -44,6 +44,9 @@ ALLOWED_SKIPS = frozenset({
     'Private coordinate fixture absent in CI',
     'Private reference grid absent; committed ledger tested separately',
     'Private review blocks (var/review, gitignored) are only on the maintainer machine',
+    # Four128 original metadata is private; synthetic replay, accounting,
+    # selection and output-overlap checks run independently of the archive.
+    'Host archive test; set SC_ARCHIVE_TESTS=1 to run',
     # SC-4's retained source checkout is not distributed in CI; committed inventory
     # identities, counts and handoff paths are checked without it in the same file.
     'Retained coastal source snapshot unavailable; committed inventory checked separately',
@@ -117,6 +120,8 @@ def _receipt_ok(run):
     """A run ci_budget can read: every key it uses and timezone-aware ISO dates; otherwise it is a HOLD row."""
     try:
         hash(run['databaseId']), run['status'], run['conclusion'], [job['name'] for job in run['jobs']]
+        if not all(isinstance(job['name'], str) and job['name'].strip() for job in run['jobs']):
+            return False
         [job['status'] for job in run['jobs'] if job.get('conclusion') != 'skipped']
         dates = [run['createdAt'], run['updatedAt'], *(j[k] for j in run['jobs'] for k in ('startedAt', 'completedAt') if j.get(k))]
         if not all(datetime.fromisoformat(d.replace('Z', '+00:00')).tzinfo is not None for d in dates):
@@ -130,19 +135,24 @@ def _receipt_ok(run):
         return False
 
 
-def ci_budget(runs):
+def ci_budget(runs, required_jobs=None):
     """Report measured Actions wall/runner time, including independent DCO runs.
 
     Input is a JSON list of `gh run view --json databaseId,createdAt,updatedAt,
     status,conclusion,jobs` objects for the same head. Runner minutes are elapsed
     job time, not billing-rounded minutes; wall time includes queue waits.
     Incomplete/cancelled evidence never authorizes further feature admission.
+    The caller must supply the nonempty applicable job names for this head; every
+    occurrence of a required name must have completed successfully. Other jobs may
+    be skipped, but missing or skipped required work cannot authorize admission.
     """
     lines = ['### Measured CI budget (R12)', '',
              '| Run/job | Wall min | Runner min | Result |',
              '| --- | ---: | ---: | --- |']
     starts, ends, total = [], [], 0.0
-    complete = bool(runs)
+    required = set(required_jobs or ())
+    complete = bool(runs) and bool(required) and all(isinstance(name, str) and name.strip() for name in required)
+    completed_required = set()
     seen = set()
     for run in runs:
         if not _receipt_ok(run):
@@ -161,9 +171,13 @@ def ci_budget(runs):
         for job in run['jobs']:
             result = job.get('conclusion')
             if result == 'skipped':
+                if job['name'] in required:
+                    complete = False
                 lines.append(f"| {run['databaseId']}/{job['name']} | — | 0.00 | skipped |")
                 continue
             complete &= job['status'] == 'completed' and result == 'success'
+            if job['status'] == 'completed' and result == 'success' and job['name'] in required:
+                completed_required.add(job['name'])
             first, last = job.get('startedAt'), job.get('completedAt')
             if not first or not last:
                 complete = False
@@ -176,10 +190,12 @@ def ci_budget(runs):
             total += minutes
             lines.append(f"| {run['databaseId']}/{job['name']} | — | {minutes:.2f} | {result} |")
     wall = (max(ends) - min(starts)).total_seconds() / 60 if starts else 0
+    complete &= required <= completed_required
     ok = complete and wall < 10 and total <= 30
     lines.append(f'| **Total** | **{wall:.2f}** | **{total:.2f}** | {"PASS" if ok else "HOLD"} |')
     lines += ['', 'Elapsed job time (not billing-rounded); wall time includes queue waits.',
               'R12: <10 wall minutes and <=30 runner-minutes per commit.',
+              'Admission also requires a nonempty explicit applicable job set, all completed successfully.',
               'Feature admission may continue.' if ok else
               'BLOCK further feature admission: incomplete evidence or CI trimming required.']
     return '\n'.join(lines) + '\n', ok
@@ -190,11 +206,15 @@ def main(argv=None):
     parser.add_argument('junit', nargs='*', type=Path)
     parser.add_argument('--ci-runs', type=Path,
                         help='JSON Actions run receipts; report R12 budget instead of JUnit')
+    parser.add_argument('--required-job', action='append', default=[], metavar='NAME',
+                        help='applicable required job name (repeat for every required job)')
     parser.add_argument('--title', default='Python tests')
     parser.add_argument('--strict-skips', action='store_true',
                         help='exit 1 if a test was skipped for a reason not in ALLOWED_SKIPS '
                              '(expected failures, counted as xfailed, are not skips)')
     args = parser.parse_args(argv)
+    if args.required_job and not args.ci_runs:
+        parser.error('--required-job requires --ci-runs')
     if args.ci_runs:
         if args.junit:
             parser.error('--ci-runs cannot be combined with JUnit paths')
@@ -207,7 +227,7 @@ def main(argv=None):
             print(f'pytest_report: {args.ci_runs}: expected a JSON list of run objects', file=sys.stderr)
             return 2
         try:
-            text, ok = ci_budget(runs)
+            text, ok = ci_budget(runs, args.required_job)
         except ValueError as error:
             print(f'pytest_report: {args.ci_runs}: {error}', file=sys.stderr)
             return 2

@@ -51,6 +51,7 @@ import {shownPresentation, terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
 import {surfaceField, temperatureRange, type SurfaceField} from './surface-field.js';
 import {SWELL_LAYER} from './swell.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'water-temp' as const;
 export const SST_SOURCE = 'water-temp';
@@ -190,22 +191,28 @@ export function contourLines(field: SurfaceField, range: readonly [number, numbe
   return isolines(field, levels, level => { const major = Number.isInteger(level); return {label: `${major ? level : level.toFixed(1)} °F`, major}; });
 }
 
-/** The texture, its contours and their labels, under the protected areas (§ 9 order); filled by setImage and setData. */
-export function waterTempOverlay(p: Palette): Overlay {
+/** The texture, its contours and their labels, under the protected areas (§ 9 order); filled by setImage and setData. A live theme switch re-runs the same layer builder with the new palette (`themePaint`); ids and sources stay. */
+function waterTempLayers(p: Palette): Overlay['layers'] {
   const width: MapLibre.ExpressionSpecification = ['interpolate', ['linear'], ['zoom'], 7, 0.5, 12, 1.2];
+  return [
+    {id: SST_LAYER, type: 'raster', source: SST_SOURCE, paint: {'raster-opacity': SST_OPACITY, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
+    {id: CONTOUR_LAYER, type: 'line', source: CONTOUR_SOURCE, layout: {'line-join': 'round'},
+      paint: {'line-color': p.text, 'line-width': width, 'line-opacity': ['case', ['get', 'major'], 0.5, 0.25]}},
+    {id: CONTOUR_LABELS, type: 'symbol', source: CONTOUR_SOURCE, filter: ['get', 'major'],
+      layout: {'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 11},
+      paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
+  ];
+}
+
+/** One shared function, so equal overlays stay equal. A live theme switch re-runs the same layer builder with the new palette; ids and sources stay. */
+const themePaint = (pal: Palette) => paintEdits(waterTempLayers(pal));
+export function waterTempOverlay(p: Palette): Overlay {
   return {
     sources: {
       [SST_SOURCE]: {type: 'image', coordinates: [[0, 1], [1, 1], [1, 0], [0, 0]]},
       [CONTOUR_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}},
     },
-    layers: [
-      {id: SST_LAYER, type: 'raster', source: SST_SOURCE, paint: {'raster-opacity': SST_OPACITY, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
-      {id: CONTOUR_LAYER, type: 'line', source: CONTOUR_SOURCE, layout: {'line-join': 'round'},
-        paint: {'line-color': p.text, 'line-width': width, 'line-opacity': ['case', ['get', 'major'], 0.5, 0.25]}},
-      {id: CONTOUR_LABELS, type: 'symbol', source: CONTOUR_SOURCE, filter: ['get', 'major'],
-        layout: {'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 11},
-        paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
-    ],
+    layers: waterTempLayers(p), themePaint,
   };
 }
 
@@ -295,8 +302,14 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
       // § 9 order: under Temp contrast, else swell, wind, depth contours, or protected areas.
-      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
-      e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramps(p).sst, v => v[0]!));
+      const overlay = waterTempOverlay(p);
+      // The texture is pixels in an image source, not a paint: if a theme ever changes the ramp, a live switch repaints it from the same field
+      // (setImage sends no request and setData is not used). Today's --sst-* tokens are identical in both themes, so none is repainted.
+      let painted = ramps(p).sst.join();
+      const texture = (ramp: string[]): void => { painted = ramp.join(); e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramp, v => v[0]!)); };
+      e.setOverlay(REGISTRY_ID, {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).sst; if (ramp.join() !== painted) texture(ramp); return overlay.themePaint!(pal); }},
+        [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
+      texture(ramps(p).sst);
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
     }),
     // Re-judge at the analysis's 72-hour limit and at the next whole hour (the dock's default hour moves on).

@@ -19,11 +19,12 @@ Rules kept from the port:
   fetch time; older than 48 hours is `stale`, absent is `unknown`.
 
 A site that fails keeps its previous published record unchanged (with its
-original fetch and issue clocks) while that fetch is under three hours old, the
-fetch-age gate of `packages/coast` `freshNearshore`; otherwise it is published
-as `availability: error` with no hours. Modelled significant height is not a
-breaking-wave observation. Credit: data from CDIP, Scripps Institution of
-Oceanography (https://cdip.ucsd.edu/).
+original fetch and issue clocks) only if it still matches the site binding,
+has a usable height in the report window, and was fetched under three hours
+ago, the fetch-age gate of `packages/coast` `freshNearshore`; otherwise it is
+published as `availability: error` with no hours. Modelled significant height
+is not a breaking-wave observation. Credit: data from CDIP, Scripps
+Institution of Oceanography (https://cdip.ucsd.edu/).
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -87,6 +88,11 @@ def parse_time(value):
 
 def _finite(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _matches_coordinates(lat, lon, binding):
+    return (_finite(lat) and _finite(lon) and abs(lat - binding["lat"]) <= COORDINATE_TOLERANCE
+            and abs(lon - binding["lon"]) <= COORDINATE_TOLERANCE)
 
 
 def bindings(region, sources):
@@ -225,8 +231,7 @@ def parse_site(das, ascii_text, binding, fetched_at, now):
     if (data.get("metaSiteLabel") or [None])[0] != binding["id"]:
         raise ValueError("CDIP site identity mismatch")
     lat, lon = (data.get("metaLatitude") or [None])[0], (data.get("metaLongitude") or [None])[0]
-    if not (_finite(lat) and _finite(lon) and abs(lat - binding["lat"]) <= COORDINATE_TOLERANCE
-            and abs(lon - binding["lon"]) <= COORDINATE_TOLERANCE):
+    if not _matches_coordinates(lat, lon, binding):
         raise ValueError("CDIP site coordinates mismatch")
     if _string(_block(das, "waveTime"), "units") != TIME_UNITS:
         raise ValueError("CDIP time origin changed")
@@ -298,16 +303,31 @@ def fetch(session, url):
     return (response.body or b"").decode("utf-8")
 
 
+def _has_usable_hours(hours, now):
+    if not isinstance(hours, list):
+        return False
+    start, end = now - WINDOW_BEFORE, now + WINDOW_AFTER
+    for hour in hours:
+        if isinstance(hour, dict):
+            at, height = parse_time(hour.get("at")), hour.get("waveFt")
+            if (at is not None and start <= at <= end
+                    and height is not None and _finite(height) and height >= 0):
+                return True
+    return False
+
+
 def _retained(previous, binding, now):
-    """The previous published record for this site, unchanged, while its fetch is under RETAIN_FOR old."""
+    """Lend a compatible recent record unchanged, including its original clocks."""
     sites = previous.get("nearshore") if isinstance(previous, dict) else None
     for site in sites if isinstance(sites, list) else []:  # only a list can lend; anything else is no record
         if not isinstance(site, dict) or site.get("id") != binding["id"]:
             continue
         fetched = parse_time(site.get("fetchedAt"))
         if (site.get("availability") == "available" and site.get("name") == binding["name"]
-                and site.get("areaId") == binding["areaId"] and isinstance(site.get("hours"), list)
-                and fetched and timedelta(0) <= now - fetched < RETAIN_FOR):
+                and site.get("areaId") == binding["areaId"]
+                and fetched and timedelta(0) <= now - fetched < RETAIN_FOR
+                and _matches_coordinates(site.get("lat"), site.get("lon"), binding)
+                and _has_usable_hours(site.get("hours"), now)):
             return site
     return None
 

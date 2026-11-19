@@ -31,8 +31,10 @@ import type {MarkScreen} from './habitat.ts';
 import {layerEntry, overlayFeatures, setRailNote, setTerrainLayer} from './layers.ts';
 import {MARK_PICK, chartPick, markData, markScreen} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {camera} from './stage.ts';
 import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {LABEL_FONT} from './style.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'charter-grounds';
 export const GROUNDS_SOURCE = 'charter-grounds';
@@ -44,8 +46,8 @@ export const GROUNDS_LINE = 'charter-grounds-line';
 export const GROUNDS_LABEL = 'charter-grounds-label';
 /** Hatch spacing in degrees of longitude plus latitude: about 200 m. */
 export const HATCH_STEP = 0.002;
-/** Names show from this `?view=` zoom, as the protected areas' do. */
-export const LABEL_MIN_ZOOM = 11;
+/** At app z10 the outline gains hatching and a name. */
+export const LABEL_MIN_ZOOM = 10;
 export const BROAD = 'Broad regional name';
 /** Commercial AIS's layers (web/map/commercial-ais.ts): the grounds draw under them. */
 export const AIS_HEAT = 'commercial-ais-heat';
@@ -130,26 +132,36 @@ function groundOutlines(grounds: readonly Ground[]): Collection {
 }
 
 /** The outlines and their hatching, as the two Chart GeoJSON sources. */
-export function groundCollections(grounds: readonly Ground[]): {outlines: Collection; hatch: Collection} {
+export function groundCollections(grounds: readonly Ground[], zoom?: number): {outlines: Collection; hatch: Collection} {
   return {
     outlines: groundOutlines(grounds),
-    hatch: {type: 'FeatureCollection', features: grounds.map(g => ({type: 'Feature', geometry: {type: 'MultiLineString', coordinates: hatchLines(g.geometry)}, properties: {id: g.id}}))},
+    hatch: {type: 'FeatureCollection', features: grounds.map(g => {
+      // Convert the 16 px perpendicular gap into lon+lat degrees at the ground's
+      // latitude in Web Mercator. Only the integer zoom bucket changes the mesh.
+      const step = zoom === undefined ? HATCH_STEP : 16 * 360 / (256 * 2 ** zoom) * Math.hypot(1, Math.cos(g.latitude * Math.PI / 180));
+      return {type: 'Feature', geometry: {type: 'MultiLineString', coordinates: hatchLines(g.geometry, step)}, properties: {id: g.id}};
+    })},
   };
+}
+
+function groundsLayers(p: Palette): MapLibre.LayerSpecification[] {
+  return [
+    {id: GROUNDS_FILL, type: 'fill', source: GROUNDS_SOURCE, paint: {'fill-color': p.amber, 'fill-opacity': 0}},
+    {id: GROUNDS_HATCH, type: 'line', source: HATCH_SOURCE, minzoom: LABEL_MIN_ZOOM - 1,
+      paint: {'line-color': p.amber, 'line-width': 1.2, 'line-opacity': 0.4}},
+    {id: GROUNDS_LINE, type: 'line', source: GROUNDS_SOURCE, layout: {'line-join': 'round'}, paint: {'line-color': p.amber, 'line-width': 2, 'line-dasharray': [4, 2]}},
+    {id: GROUNDS_LABEL, type: 'symbol', source: GROUNDS_SOURCE, minzoom: LABEL_MIN_ZOOM - 1,
+      layout: {'text-field': ['concat', ['get', 'label'], ' charter area'], 'text-font': [LABEL_FONT], 'text-size': 12, 'text-max-width': 8},
+      paint: {'text-color': p.amber, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
+  ];
 }
 
 /** The sources and layers: a transparent pick fill, the hatch, a dashed outline and the name, in the --fleet colour. */
 export function groundsOverlay(p: Palette, data: {outlines: Collection; hatch: Collection}): Overlay {
-  const fleet = p.amber;
   return {
     sources: {[GROUNDS_SOURCE]: {type: 'geojson', data: data.outlines} as MapLibre.SourceSpecification, [HATCH_SOURCE]: {type: 'geojson', data: data.hatch} as MapLibre.SourceSpecification},
-    layers: [
-      {id: GROUNDS_FILL, type: 'fill', source: GROUNDS_SOURCE, paint: {'fill-color': fleet, 'fill-opacity': 0}},
-      {id: GROUNDS_HATCH, type: 'line', source: HATCH_SOURCE, paint: {'line-color': fleet, 'line-width': 1, 'line-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.25, 12, 0.6]}},
-      {id: GROUNDS_LINE, type: 'line', source: GROUNDS_SOURCE, layout: {'line-join': 'round'}, paint: {'line-color': fleet, 'line-width': 2, 'line-dasharray': [4, 2]}},
-      {id: GROUNDS_LABEL, type: 'symbol', source: GROUNDS_SOURCE, minzoom: LABEL_MIN_ZOOM - 1,
-        layout: {'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 12, 'text-max-width': 8},
-        paint: {'text-color': fleet, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
-    ] as MapLibre.LayerSpecification[],
+    layers: groundsLayers(p),
+    themePaint: palette => paintEdits(groundsLayers(palette)),
   };
 }
 
@@ -213,6 +225,11 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
     const e = evidence.value;
     return e && e.path === path.value && e.data ? shownGrounds(e.data, target.value, profile.value, markScreen.value) : [];
   });
+  const hatchZoom = computed(() => {
+    const view = camera.value;
+    return view ? Math.max(LABEL_MIN_ZOOM, Math.min(17, Math.round(view.zoom))) : undefined;
+  });
+  let sentGrounds: Ground[] | null = null;
   let drawn = false, drawnOn: Engine | null = null;
   const disposers = [
     effect(() => {
@@ -236,11 +253,13 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
       const e = engine.value, list = on.value ? shown.value : [];
       if (!e) return;
       if (!list.length) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
-      const data = groundCollections(list);
+      const data = groundCollections(list, hatchZoom.value);
       // § 9 draw order: above the seafloor, under commercial AIS, the cloud frames and the marks.
-      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, groundsOverlay(palette(), data), [...AIS_LAYERS, ...aisBefore()]);
-      e.setData(GROUNDS_SOURCE, data.outlines); e.setData(HATCH_SOURCE, data.hatch);
-      drawn = true; drawnOn = e;
+      const install = !drawn || e !== drawnOn;
+      if (install) e.setOverlay(REGISTRY_ID, groundsOverlay(palette(), data), [...AIS_LAYERS, ...aisBefore()]);
+      if (install || list !== sentGrounds) e.setData(GROUNDS_SOURCE, data.outlines);
+      e.setData(HATCH_SOURCE, data.hatch);
+      drawn = true; drawnOn = e; sentGrounds = list;
     }),
     // FE-82: the same grounds drape on the terrain (outline and a faint fill; the drape has no hatch); a pick opens the ground's card.
     effect(() => {

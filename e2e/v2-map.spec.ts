@@ -337,15 +337,23 @@ for (const reduced of [false, true]) {
   });
 }
 
-test('the Chart draws the basemap and the Morro Bay coastline with their attribution', async ({page, pageErrors, v2}) => {
+// MAP-SOURCES-PAGE-1 (G 2026-11-18): the map draws no source text; its one source control is a "Sources" link to /sources#data-sources.
+const SOURCES_LINK = '.app-chart .map-sources-link a[data-sources-link]';
+const NO_ATTRIBUTION = '.app-chart .maplibregl-ctrl-attrib';
+async function sourcesLinkOnly(page: Page) {
+  await expect(page.locator(SOURCES_LINK)).toHaveText('Sources');
+  await expect(page.locator(SOURCES_LINK)).toHaveAttribute('href', '/sources#data-sources');
+  await expect(page.locator(NO_ATTRIBUTION), 'no credit text on the map').toHaveCount(0);
+}
+
+test('the Chart draws the basemap and the Morro Bay coastline with a Sources link and no credit text', async ({page, pageErrors, v2}) => {
   const fetched: string[] = [];
   page.on('response', response => { if (/ca-coast-fixture\.pmtiles|shoreline(?:-overview)?\.geojson/.test(response.url())) fetched.push(`${response.status()} ${new URL(response.url()).pathname}`); });
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,11'});
   const chart = page.locator('.app-chart');
   await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
-  await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('© OpenStreetMap contributors, © Protomaps');
-  await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('NOAA NGS · CUSP shoreline');
+  await sourcesLinkOnly(page);
   await expect(chart.locator('.maplibregl-ctrl-scale')).toHaveText(/nm|ft/);
   await expect.poll(() => fetched.some(f => f.startsWith('206 /feeds/tiles/basemap/')), {message: 'the basemap is read by range'}).toBe(true);
   // #617: below the detail zoom the Chart draws the overview shoreline only.
@@ -373,7 +381,7 @@ test('a failing coastline marks only its layer unavailable; the basemap keeps dr
   if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
   await expect(page.locator('[data-unavailable="coastline"]')).toHaveText('Coastline unavailable.');
   await expect(page.locator('[data-unavailable]')).toHaveCount(1);
-  await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('© OpenStreetMap contributors, © Protomaps');
+  await sourcesLinkOnly(page);
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
   expect(asked).toEqual(['/regions/morro-bay/shoreline-overview.geojson', '/regions/morro-bay/shoreline.geojson']);
 });
@@ -425,33 +433,25 @@ test('RF2205-9: an overview-only region never asks for the full shoreline, even 
   expect(asked).toContain('/regions/morro-bay/shoreline-overview.geojson');
 });
 
-// BL-SC-1: at phone width the credits are MapLibre's compact toggle, folded on load whatever their length, and one tap opens them.
-test('the Chart attribution starts compact and folded on a phone and expanded on the desktop', async ({page, pageErrors, v2}) => {
+// MAP-SOURCES-PAGE-1 replaces BL-SC-1's folded credits: at phone and desktop width the Chart's one source control is the
+// "Sources" link, a full touch target, whatever base the region opens on (Morro Bay opens on Aerial), and no credit text shows.
+test('the Chart shows only a touch-sized Sources link on a phone and on the desktop', async ({page, pageErrors, v2}) => {
   await page.route('https://imagery.nationalmap.gov/**', route => route.fulfill({body: PIXEL, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}}));
   await holdCoastData(page);
-  const attrib = page.locator('.app-chart .maplibregl-ctrl-attrib'), inner = attrib.locator('.maplibregl-ctrl-attrib-inner');
-  const folded = async () => {
-    await expect(attrib).toContainClass('maplibregl-compact');
-    await expect(attrib).not.toContainClass('maplibregl-compact-show');
-    await expect(inner).toBeHidden();
-    expect((await attrib.boundingBox())!.height).toBeLessThanOrEqual(48);
-    await expect(attrib).toContainText('© OpenStreetMap contributors, © Protomaps');
+  const link = page.locator(SOURCES_LINK);
+  const touchSized = async () => {
+    await sourcesLinkOnly(page);
+    const box = (await link.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(44);
   };
-  // Morro Bay opens on Aerial, so its five credits include NAIP's; Cambria has two lines.
-  for (const [region, width, credit] of [['morro-bay', 390, 'NAIP'], ['cambria-san-simeon', 360, 'Protomaps']] as const) {
+  for (const [region, width] of [['morro-bay', 390], ['cambria-san-simeon', 360]] as const) {
     await page.setViewportSize({width, height: 844});
     await v2.open('app', {region, presentation: 'chart'});
-    await expect(attrib).toContainText(credit);
-    await folded();
+    await touchSized();
   }
   await page.setViewportSize({width: 1280, height: 900});
-  await expect(attrib).not.toContainClass('maplibregl-compact');
-  await expect(inner).toBeVisible();
-  await page.setViewportSize({width: 390, height: 844});
-  await folded();
-  await attrib.locator('summary').click();
-  await expect(attrib).toContainClass('maplibregl-compact-show');
-  await expect(inner).toBeVisible();
+  await touchSized();
   expect(pageErrors).toEqual([]);
 });
 
@@ -558,10 +558,12 @@ test('Seafloor draws screened candidates and cells in Chart, names its surveys, 
   }).toPass();
   await expect(page.locator('.app-mark-kind')).toHaveText('Terrain grade A · fits lingcod habitat 3 of 3');
   await expect(page.locator('.app-mark .ui-reading')).toHaveText('41–90 ft nominal');
-  await expect(page.locator('.app-mark-source')).toHaveText('Survey fixture-survey-2m · 2010 · 2 m grid');
+  await expect(page.locator('.app-mark-source')).toHaveText('Surveyed 2010 · 2 m grid');
   const basis = page.locator('.app-mark .ui-popover-body');
   await expect(basis).toContainText('Habitat candidate, unverified. Nominal depth (NAVD88); verify on your sounder.');
-  await expect(basis).toContainText('Fixture Survey Lab Synthetic test credit; never survey data.');
+  // MAP-SOURCES-PAGE-1: no survey id or publisher credit on the card; the Sources page lists them.
+  await expect(basis).not.toContainText('Fixture Survey Lab');
+  await expect(page.locator('.app-mark')).not.toContainText('fixture-survey-2m');
 
   await showLayers(page);
   const row = page.locator('.app-legend-seafloor');
@@ -625,14 +627,14 @@ test('A seafloor publication that expires while drawn hides its candidates with 
 const BUCHON = '35.24178,-120.91053';
 const mapAttr = async (page: Page, name: string) => Number(await page.locator('.app-chart').getAttribute(name));
 
-test('protected areas draw with the ds582 credit, are named from zoom 11 and open their card with the official rules page', async ({page, pageErrors, v2}) => {
+test('protected areas draw with no credit on the map, are named from zoom 11 and open their card with the official rules page', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', diagnostics: '1', view: `${BUCHON},10`});
   const chart = page.locator('.app-chart');
   await expect(chart).toHaveAttribute('data-mpa', 'complete');
   await expect.poll(() => mapAttr(page, 'data-mpa-drawn'), {message: 'outlines drawn in view'}).toBeGreaterThan(0);
   await expect(chart).toHaveAttribute('data-mpa-labels', '0');
-  await expect(chart.locator('.maplibregl-ctrl-attrib')).toContainText('CDFW ds582 · CC BY 4.0');
+  await sourcesLinkOnly(page);
 
   await page.goto(v2.url('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', diagnostics: '1', view: `${BUCHON},11`}));
   await expect.poll(() => mapAttr(page, 'data-mpa-labels'), {message: 'names placed at zoom 11'}).toBeGreaterThan(0);
@@ -690,7 +692,7 @@ test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; clos
   await expect(heading).toBeFocused();
   await expect(card.locator('.app-mark-kind')).toHaveText('Reef mark · grade A · ~135–184 ft');
   await expect(card.locator('.ui-reading')).toHaveText('Fits lingcod habitat 3 of 3');
-  await expect(card.locator('.app-mark-source')).toHaveText('Avila / Point Buchon · surveyed 2008 · atlas 2026-09-27');
+  await expect(card.locator('.app-mark-source')).toHaveText('surveyed 2008 · atlas 2026-09-27');
   await expect(card.locator('.app-mark-rules')).toHaveText('Screened against protected areas with 2992 m clearance in the atlas of 2026-09-27; check current rules before you fish. CDFW ocean fishing regulations');
   await expect(card.locator('.app-mark-rules').getByRole('link', {name: /^CDFW ocean fishing regulations/})).toHaveAttribute('href', 'https://wildlife.ca.gov/Fishing/Ocean/Regulations');
   const close = card.getByRole('button', {name: 'Clear selection'});
@@ -934,12 +936,12 @@ test('Aerial draws NAIP tiles from the fixed USGS service only while chosen, lab
   expect(blocked, 'the CSP allows the USGS host for MapLibre').toEqual([]);
   expect(requested.every(url => url.startsWith('https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage?')),
     'the one NAIP service packages/coast names').toBe(true);
-  await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('USGS / USDA · NAIP aerial imagery (dated mosaic) · flown 13–29 May 2022');
+  await sourcesLinkOnly(page);
   await v2.a11y('v2-map-aerial');
 
   await select.selectOption('night');
   await expect.poll(() => params(page).base).toBe('night');
-  await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).not.toContainText('NAIP');
+  await sourcesLinkOnly(page);
   const count = requested.length;
   await page.waitForTimeout(1500);
   expect(requested.length, 'no tile is requested once Aerial is off').toBe(count);
@@ -951,7 +953,7 @@ const PECHO_VIEW = '35.17586,-120.82186,14';
 test('Charter fleet draws the charter grounds from the committed file, opens a ground\'s card, offers commercial AIS 2024 and leaves when off', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', profile: 'boat', target: 'lingcod', view: PECHO_VIEW, layers: 'fleet'});
-  const chart = page.locator('.app-chart'), row = page.locator('.app-legend-fleet'), attribution = page.locator('.app-chart .maplibregl-ctrl-attrib');
+  const chart = page.locator('.app-chart'), row = page.locator('.app-legend-fleet');
   await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
   const card = page.getByRole('region', {name: 'Selected mark'});
   await expect(async () => {
@@ -969,16 +971,14 @@ test('Charter fleet draws the charter grounds from the committed file, opens a g
   const option = page.getByRole('checkbox', {name: 'Commercial AIS 2024'});
   await expect(option).not.toBeChecked();
   await expect(page.getByRole('checkbox', {name: /· admin$/}), 'FE-24: no activity layers for a visitor').toHaveCount(0);
-  await expect(attribution).not.toContainText('Global Fishing Watch');
   await option.check();
   await expect(row.locator('[data-reason="commercial-ais"]')).toHaveText('3 historical grid cells · Jul & Sep 2024 · depth unknown');
-  await expect(attribution).toContainText('Global Fishing Watch · CC BY-NC 4.0');
+  await sourcesLinkOnly(page);
   await v2.a11y('v2-map-fleet');
 
   await page.getByRole('button', {name: /^Charter fleet/}).click();
   await expect.poll(() => params(page).layers ?? '').not.toContain('fleet');
   await expect(row).toHaveCount(0);
-  await expect(attribution).not.toContainText('Global Fishing Watch');
   expect(pageErrors).toEqual([]);
 });
 
@@ -1161,7 +1161,7 @@ test('a link\'s ?base=chart shows Chart detail in the base select, which can be 
   await expect.poll(() => params(page).base).toBe('aerial');
   await select.selectOption('chart');
   await expect.poll(() => params(page).base).toBe('chart');
-  await expect(page.locator('.app-chart .maplibregl-ctrl-attrib')).toContainText('NOAA ENC display');
+  await sourcesLinkOnly(page);
   await v2.a11y('v2-map-base');
   expect(pageErrors).toEqual([]);
 });
@@ -1264,7 +1264,7 @@ test('the always-on depth contours read on click: a contour names its depth, the
   await expect(page.locator('.app-mark h2')).toHaveText('270 ft depth contour');
   await expect(page.locator('.app-mark .app-mark-kind')).toHaveText('Depth contour · every 30 ft');
   await expect(page.locator('.app-mark .ui-reading')).toContainText("270 ft below the survey's unverified source datum");
-  await expect(page.locator('.app-mark-source')).toContainText('surveyed 2008 · unverified source datum');
+  await expect(page.locator('.app-mark-source')).toHaveText('Surveyed 2008 · unverified source datum');
 
   // A click on the dashed survey edge says where the reviewed grid stops.
   const edge = await chartPoint(page, CURRENT_VIEW, EDGE_POINT.lon, EDGE_POINT.lat);
@@ -1649,20 +1649,20 @@ test('desktop: a short rail scrolls vertically to its last controls, with a long
 // One test per presentation: each walks two viewports and three rail phases with many round trips, and the shared CI runners take 1.5-5 s over each,
 // so the two together outlasted the 60 s default (twice, on the exact head) while passing in 9 s on a quiet machine.
 for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group'], ['3d', '.app-terrain-controls']] as const) {
-  test(`desktop: the rail stays clear of the map controls on the ${presentation === 'chart' ? 'Chart' : 'terrain'}, scrolled or not${presentation === 'chart' ? ', and the attribution stays clickable' : ''}`, async ({page, pageErrors, v2, isMobile}) => {
+  test(`desktop: the rail stays clear of the map controls on the ${presentation === 'chart' ? 'Chart' : 'terrain'}, scrolled or not${presentation === 'chart' ? ', and the Sources link stays clickable' : ''}`, async ({page, pageErrors, v2, isMobile}) => {
     test.skip(isMobile, 'the desktop rail is not rendered on a phone');
     test.setTimeout(150_000);
     const terrain = await syntheticTerrain(page);
     terrain.release();
-    const ATTRIBUTION = '.app-chart .maplibregl-ctrl-attrib';
+    const SOURCES = '.app-chart .map-sources-link';
     for (const [width, height] of [[1280, 800], [1024, 768]] as const) {
       await page.setViewportSize({width, height});
       await v2.open('app', {region: 'morro-bay', presentation, layers: 'seafloor,currents'});
       const rail = page.locator(RAIL);
       await expect(rail).toBeVisible();
       await expect(page.locator(controls).first(), `${presentation} controls`).toBeVisible();
-      if (presentation === 'chart') await expect(page.locator(`${ATTRIBUTION} .maplibregl-ctrl-attrib-inner`)).toBeVisible();
-      const hittable = `${controls}, .app-presentation .ui-segmented${presentation === 'chart' ? `, ${ATTRIBUTION}` : ''}`;
+      if (presentation === 'chart') await expect(page.locator(SOURCES)).toBeVisible();
+      const hittable = `${controls}, .app-presentation .ui-segmented${presentation === 'chart' ? `, ${SOURCES}` : ''}`;
       for (const phase of ['top', 'scrolled', 'basis']) {
         // SC1722-19: on a window shorter than the header, command bar, first answer and the 480 px stage together, the app scrolls inside itself
         // (the document never does) and the time dock rides over the stage's bottom edge. The map controls sit at that edge, so a visitor scrolls the
@@ -1682,11 +1682,11 @@ for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-b
           return {label: el.getAttribute('aria-label') ?? el.className, ok: !!hit && (el === hit || el.contains(hit))};
         }));
         for (const hit of hits) expect(hit.ok, `${presentation} ${width}x${height} ${phase}: ${hit.label} receives a click at its centre`).toBe(true);
-        // Separate, pre-existing finding (not fixed here, see the PR): the rail's bottom reservation is sized for the four terrain buttons, so the
-        // Chart's expanded credits (74 px tall for this region) reach about 8 px into a rail that has been cut to its reserved height. Recorded, not hidden.
+        // MAP-SOURCES-PAGE-1: the one-line Sources link replaced the expanded credits that used to reach about 8 px into the rail's
+        // reservation (a pre-existing finding, recorded rather than asserted, as before).
         if (presentation === 'chart') {
-          const [credits] = await rects(page, ATTRIBUTION);
-          if (!railApart(mine, credits!)) test.info().annotations.push({type: 'finding', description: `${width}x${height} ${phase}: expanded credits overlap the rail by ${Math.round((mine.bottom - credits!.top) * 10) / 10} px`});
+          const [link] = await rects(page, SOURCES);
+          if (!railApart(mine, link!)) test.info().annotations.push({type: 'finding', description: `${width}x${height} ${phase}: the Sources link overlaps the rail by ${Math.round((mine.bottom - link!.top) * 10) / 10} px`});
         }
       }
     }
