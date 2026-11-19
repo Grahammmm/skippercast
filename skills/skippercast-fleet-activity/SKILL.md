@@ -50,8 +50,10 @@ parts of #469 are **not built**, and the skill names them as gaps:
 
 Commands marked *on the runner* need a shell as the runner user, set up as in
 [fleet-labelling.md § 1](../../docs/operations/runbooks/fleet-labelling.md).
-Without one, mark those lines `not run (no runner shell)`. `gh` commands take
-`--repo Grahammmm/skippercast`.
+Without one, mark those lines `not run (no runner shell)`. The fleet jobs
+(`fleet-ais.yml`) live in the private repository: their `gh` commands take
+`--repo Grahammmm/skippercast-ops`. `fleet-health.yml` and the issues stay in
+the public repository: those `gh` commands take `--repo Grahammmm/skippercast`.
 
 `fleet-ais.yml` keeps one pending run in its concurrency group: a newer
 dispatch or the next scheduled run cancels the pending one. Dispatch one at a
