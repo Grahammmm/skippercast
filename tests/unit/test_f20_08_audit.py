@@ -1,6 +1,7 @@
 """F20-08: only completed configured providers count toward search coverage."""
 from datetime import datetime, timezone
 from functools import partial
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -17,8 +18,13 @@ collector = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(collector)
 NOW = datetime(2026, 9, 22, 20, tzinfo=timezone.utc)
 PREVIOUS = {
-    "id": "old", "url": "https://example.org/old", "published_at": "2026-09-15T00:00:00+00:00",
-    "review_status": "candidate",
+    "id": hashlib.sha256(b"https://example.org/old").hexdigest()[:20],
+    "url": "https://example.org/old", "published_at": "2026-09-15T00:00:00+00:00",
+    "region_id": "morro-bay", "query_id": "reef", "source": "reddit",
+    "title": "Morro Bay lingcod discussion", "summary": "An earlier synthetic search lead",
+    "location_basis": "text mentions region", "review_status": "candidate", "reported_catch": None,
+    "species": [], "fishing_date": None, "geometry": None,
+    "note": "Search lead only; no catch, species, trip date, or fishing position verified.",
 }
 LEAD = {
     "url": "https://example.org/new", "published_at": "2026-09-21T00:00:00+00:00",
