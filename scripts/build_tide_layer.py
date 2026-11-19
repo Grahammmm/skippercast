@@ -160,23 +160,43 @@ def build(sectors_file, ids, name, now, days, fetch=http_json, lon_range=None, p
         raise SystemExit('no CO-OPS station inside the sector bands and longitude window; nothing fetched')
     begin = (now - dt.timedelta(days=1)).date()
     end = (now + dt.timedelta(days=days)).date()
+    begin_day, end_day = begin.isoformat(), end.isoformat()
+    requested_days = (end - begin).days + 1
     stations, failed = [], []
     for st in chosen:
+        coverage = None
         try:
             extremes = parse_extremes(fetch(predictions_url(st['id'], begin, end)))
+            if extremes:
+                first, last = extremes[0]['t'], extremes[-1]['t']
+                dates = {row['t'][:10] for row in extremes}
+                # Query dates are inclusive UTC calendar days. Extremes need not fall at
+                # midnight, but a whole missing day must not be interpolated across.
+                status, reason = 'complete', None
+                if any(not begin_day <= day <= end_day for day in dates):
+                    status, reason = 'out_of_window', 'tide prediction outside requested UTC window'
+                elif len(dates) != requested_days:
+                    status, reason = 'partial', 'partial UTC date coverage'
+                coverage = {'status': status, 'first': first, 'last': last}
+                if reason:
+                    raise ValueError(f'{reason} (returned {first} to {last})')
             if len(extremes) < 4:
                 raise ValueError('fewer than 4 extremes returned')
         except (ValueError, RuntimeError, KeyError) as exc:
-            failed.append({'id': st['id'], 'name': st['name'], 'reason': str(exc)})
+            failure = {'id': st['id'], 'name': st['name'], 'reason': str(exc)}
+            if coverage is not None:
+                failure['coverage'] = coverage
+            failed.append(failure)
             continue
-        stations.append(dict(st, extremes=extremes))
+        stations.append(dict(st, extremes=extremes, coverage=coverage))
         time.sleep(pause)
     if not stations:
-        raise SystemExit('no station returned predictions; nothing written')
+        details = ''.join(f"\n  failed {f['id']}: {f['reason']}" for f in failed if 'coverage' in f)
+        raise SystemExit('no station returned predictions; nothing written' + details)
     return {
         'schema': SCHEMA, 'name': name, 'sectors': list(ids), 'labels': LABELS,
         'fetched_at': now.strftime('%Y-%m-%dT%H:%MZ'),
-        'window': {'begin': begin.isoformat(), 'end': end.isoformat(), 'time_zone': 'UTC'},
+        'window': {'begin': begin_day, 'end': end_day, 'time_zone': 'UTC'},
         'datum': 'MLLW', 'units': 'ft',
         'source': {'name': 'NOAA CO-OPS tide predictions (hilo)', 'station_list': STATIONS_URL,
                    'data': DATA_URL + '?product=predictions&interval=hilo&datum=MLLW'},
