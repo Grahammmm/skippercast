@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import test from 'node:test';
-import {createFeedReader, feedKey, readBucketJSON, serveFeed, useBucket} from '../server/feeds.ts';
+import {createFeedReader, feedKey, readBucketJSON, RELEASE_CACHE_BYTES, RELEASE_CACHE_ENTRIES, serveFeed, useBucket} from '../server/feeds.ts';
+import {meter, readsToday, resetMeter} from '../server/cost-ceiling.ts';
 
 const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -76,6 +77,232 @@ test('ordinary feed URLs retain JSON/type/ETag and indicate their coherent gener
     assert.equal((await r.json()).cycle, 'new');
     assert.equal(feedKey('/feeds/forecasts/.r2-current.json'), null);
     assert.equal(feedKey('/feeds/forecasts/.r2-objects/' + 'a'.repeat(64)), null);
+  } finally { useBucket(null); }
+});
+
+// SCA-032: validated release tables are shared across operations; pointers are not.
+const MANIFEST = RAW + 'forecasts/m/manifest.json', TILE = RAW + 'forecasts/m/tiles/x.json';
+const serveTile = () => serveFeed(new Request('https://x/feeds/forecasts/m/tiles/x.json'), '/feeds/forecasts/m/tiles/x.json');
+const tableReads = f => f.reads.filter(k => k.includes('/.r2-releases/')).length;
+const pointerReads = f => f.reads.filter(k => k.endsWith('/.r2-current.json')).length;
+const point = (f, generation, prefix = 'forecasts') => f.objects.set(`${prefix}/.r2-current.json`, JSON.stringify({schema_version: 1, generation}));
+
+test('two same-generation misses do one table GET/hash, through a fresh cost meter per request', async () => {
+  const f = fixture(), release = f.release('one');
+  resetMeter();
+  try {
+    useBucket({FEEDS: meter(f.bucket)});  // request 1: its own metered wrapper
+    assert.equal((await createFeedReader()(MANIFEST)).cycle, 'one');
+    useBucket({FEEDS: meter(f.bucket)});  // request 2: a new wrapper around the same bucket
+    const r = await serveTile();
+    assert.equal(r.status, 200); assert.equal(r.headers.get('X-Feed-Generation'), release.generation);
+    useBucket({FEEDS: meter(f.bucket)});  // two concurrent misses share one in-flight check
+    const [a, b] = await Promise.all([readBucketJSON(MANIFEST), readBucketJSON(TILE)]);
+    assert.equal(a.cycle, 'one'); assert.equal(b.cycle, 'one');
+    assert.equal(tableReads(f), 1, 'one release-table GET for four operations');
+    assert.equal(pointerReads(f), 4, 'every operation still resolves the pointer');
+    assert.equal(readsToday(), f.reads.length, 'every R2 read that does happen is still metered');
+  } finally { useBucket(null); resetMeter(); }
+});
+
+test('rotation and rollback take effect on the next operation; one operation stays pinned', async () => {
+  const f = fixture(), one = f.release('one'); useBucket({FEEDS: f.bucket});
+  try {
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'one');
+    const pinned = createFeedReader();
+    assert.equal((await pinned(MANIFEST)).cycle, 'one');
+    f.release('two');
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'two', 'rotation is immediate');
+    assert.equal((await pinned(TILE)).cycle, 'one', 'an operation keeps its generation');
+    point(f, one.generation);
+    assert.equal((await readBucketJSON(TILE)).cycle, 'one', 'rollback is immediate');
+    assert.equal(tableReads(f), 2, 'each verified generation was fetched once');
+  } finally { useBucket(null); }
+});
+
+test('a bad table hash, bad pointer or missing table still fails closed and is never kept', async () => {
+  const f = fixture(), one = f.release('one'); useBucket({FEEDS: f.bucket});
+  const tableKey = `forecasts/.r2-releases/${one.generation}.json`, good = f.objects.get(tableKey);
+  try {
+    f.objects.set(tableKey, good.replace('"schema_version":1', '"schema_version":1 '));
+    await assert.rejects(readBucketJSON(MANIFEST), /hash mismatch/);
+    await assert.rejects(createFeedReader()(MANIFEST), /hash mismatch/);
+    assert.equal(tableReads(f), 2, 'a failed check is retried, not remembered');
+    f.objects.set(tableKey, good);
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'one');
+    const two = f.release('two');  // a verified generation is cached; the next one is corrupt
+    f.objects.set(`forecasts/.r2-releases/${two.generation}.json`, '{}');
+    await assert.rejects(readBucketJSON(MANIFEST), /hash mismatch/, 'no fallback to the cached generation');
+    f.objects.delete(`forecasts/.r2-releases/${two.generation}.json`);
+    await assert.rejects(readBucketJSON(MANIFEST), /snapshot unavailable/);
+    await assert.rejects(readBucketJSON(MANIFEST), /snapshot unavailable/);
+    f.objects.set('forecasts/.r2-current.json', '{"schema_version":1,"generation":"../other"}');
+    await assert.rejects(readBucketJSON(MANIFEST), /pointer/);
+  } finally { useBucket(null); }
+});
+
+test('a cached table never hides a missing entry or a removed object', async () => {
+  const f = fixture(), one = f.release('one', false); useBucket({FEEDS: f.bucket});
+  f.objects.set('forecasts/m/tiles/x.json', '{"cycle":"legacy"}');
+  try {
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'one');
+    await assert.rejects(readBucketJSON(TILE), /absent from current/);
+    assert.equal((await serveTile()).status, 404);
+    assert.equal(tableReads(f), 1);
+    f.objects.delete(`forecasts/.r2-objects/${one.files['m/manifest.json']}`);
+    await assert.rejects(createFeedReader()(MANIFEST), /object unavailable/);
+    assert.equal((await serveFeed(new Request('https://x/feeds/forecasts/m/manifest.json'), '/feeds/forecasts/m/manifest.json')).status, 503);
+  } finally { useBucket(null); }
+});
+
+test('the cache is isolated by bucket and prefix, and an unbound bucket reads nothing', async () => {
+  const a = fixture(), b = fixture(), one = a.release('one'); b.release('one');
+  try {
+    useBucket({FEEDS: a.bucket});
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'one');
+    b.objects.delete(`forecasts/.r2-releases/${one.generation}.json`);  // same generation, but this bucket lacks it
+    useBucket({FEEDS: b.bucket});
+    await assert.rejects(readBucketJSON(MANIFEST), /snapshot unavailable/);
+    useBucket({FEEDS: a.bucket});
+    point(a, one.generation, 'data');  // same generation under another prefix, whose table is absent
+    await assert.rejects(readBucketJSON(RAW + 'data/m/manifest.json'), /snapshot unavailable/);
+    useBucket(null);  // past the cost ceiling or unbound: no read, no cached answer
+    const before = a.reads.length;
+    assert.equal(await readBucketJSON(MANIFEST), undefined);
+    await assert.rejects(createFeedReader()(MANIFEST), /storage unavailable/);
+    assert.equal((await serveTile()).status, 503);
+    assert.equal(a.reads.length, before);
+  } finally { useBucket(null); }
+});
+
+test('the cache is bounded by entries and bytes; a store that cannot be tagged reads uncached', async () => {
+  const f = fixture(), first = f.release('g0'); useBucket({FEEDS: f.bucket});
+  try {
+    await readBucketJSON(MANIFEST);
+    const gens = [first.generation];
+    for (let i = 1; i <= RELEASE_CACHE_ENTRIES; i++) { gens.push(f.release('g' + i).generation); await readBucketJSON(MANIFEST); }
+    assert.equal(tableReads(f), RELEASE_CACHE_ENTRIES + 1);
+    await readBucketJSON(MANIFEST);
+    assert.equal(tableReads(f), RELEASE_CACHE_ENTRIES + 1, 'the newest generation is held');
+    point(f, first.generation);
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'g0');
+    assert.equal(tableReads(f), RELEASE_CACHE_ENTRIES + 2, 'the oldest generation was evicted');
+    // A table larger than the byte budget is checked and served but not kept, and does not evict the others.
+    const files = {...first.files}, padding = Math.ceil((RELEASE_CACHE_BYTES + 1024 * 1024) / 80);
+    for (let i = 0; i < padding; i++) files[`pad/${i}.json`] = hash(String(i));
+    const bytes = JSON.stringify({schema_version: 1, files}), big = hash(bytes);
+    assert.ok(Buffer.byteLength(bytes) > RELEASE_CACHE_BYTES);
+    f.objects.set(`forecasts/.r2-releases/${big}.json`, bytes); point(f, big);
+    const reads = tableReads(f);
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'g0');
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'g0');
+    assert.equal(tableReads(f), reads + 2, 'the oversized table is fetched each time');
+    point(f, first.generation); await readBucketJSON(MANIFEST);
+    assert.equal(tableReads(f), reads + 2, 'held tables survive an oversized one');
+    // The cache is full here (g2..g8 and g0): fetching the oversized table must not have evicted its least recently used entry.
+    point(f, gens[2]); assert.equal((await readBucketJSON(MANIFEST)).cycle, 'g2');
+    assert.equal(tableReads(f), reads + 2, 'a full cache keeps its least recently used table while an oversized one is fetched');
+    const frozen = fixture(); frozen.release('cold'); useBucket({FEEDS: Object.freeze(frozen.bucket)});
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'cold');
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'cold');
+    assert.equal(tableReads(frozen), 2);
+  } finally { useBucket(null); }
+});
+
+// Contract: a table still being fetched is not a held table. Believable bug: counting the pending oversized fetch toward
+// the entry bound, so a normal miss that resolves meanwhile evicts a second held table.
+test('an oversized table in flight does not make a resolving miss evict an extra held table', async () => {
+  const f = fixture(), gens = []; useBucket({FEEDS: f.bucket});
+  try {
+    for (let i = 0; i < RELEASE_CACHE_ENTRIES; i++) { gens.push(f.release('c' + i).generation); await readBucketJSON(MANIFEST); }
+    const files = {}, padding = Math.ceil((RELEASE_CACHE_BYTES + 1024 * 1024) / 80);
+    for (let i = 0; i < padding; i++) files[`pad/${i}.json`] = hash(String(i));
+    const bytes = JSON.stringify({schema_version: 1, files}), big = hash(bytes);
+    f.objects.set(`forecasts/.r2-releases/${big}.json`, bytes);
+    let release, started; const gate = new Promise(r => release = r), begun = new Promise(r => started = r), get = f.bucket.get;
+    f.bucket.get = async key => { if (key.endsWith(`${big}.json`)) { started(); await gate; } return get(key); };
+    point(f, big); const pending = readBucketJSON(MANIFEST); await begun;  // the oversized fetch is now in flight
+    gens.push(f.release('c-new').generation); await readBucketJSON(MANIFEST);  // a normal ninth table resolves meanwhile
+    release(); await pending.catch(() => {});
+    const reads = tableReads(f);
+    point(f, gens[1]); assert.equal((await readBucketJSON(MANIFEST)).cycle, 'c1');
+    assert.equal(tableReads(f), reads, 'only the oldest table was evicted for the ninth; the second oldest is still held');
+    point(f, gens[0]); await readBucketJSON(MANIFEST);
+    assert.equal(tableReads(f), reads + 1, 'the oldest table was evicted by the ninth');
+  } finally { useBucket(null); }
+});
+
+// Contract: actual release-table GETs are bounded and overflow waits FIFO. Bug: capping only tracked promises
+// lets uncached misses start GETs immediately even when all slots are occupied.
+test('release GETs are capped; overflow waits FIFO and reads uncached', async () => {
+  const f = fixture(), cap = RELEASE_CACHE_ENTRIES;
+  const gens = Array.from({length: cap + 2}, (_, i) => f.release('p' + i).generation);
+  const keys = gens.map(g => `forecasts/.r2-releases/${g}.json`);
+  const started = [], gates = new Map(), fetches = [];
+  const turn = () => new Promise(resolve => setImmediate(resolve));
+  const get = f.bucket.get;
+  let holding = true, active = 0, peak = 0;
+  f.bucket.get = async key => {
+    if (!holding || !key.includes('/.r2-releases/')) return get(key);
+    started.push(key); peak = Math.max(peak, ++active);
+    try {
+      if (!gates.has(key)) {
+        let release;
+        const wait = new Promise(resolve => release = resolve);
+        gates.set(key, {wait, release});
+      }
+      await gates.get(key).wait;
+      return await get(key);
+    } finally { active--; }
+  };
+  const request = g => { point(f, g); const fetch = readBucketJSON(MANIFEST); fetches.push(fetch); return fetch; };
+  useBucket({FEEDS: f.bucket});
+  try {
+    for (const g of gens.slice(0, cap)) request(g);
+    await turn();
+    assert.deepEqual(started, keys.slice(0, cap), 'the first batch occupies every slot');
+
+    const duplicate = request(gens[0]);
+    request(gens[cap]);
+    useBucket({FEEDS: Object.freeze({get: f.bucket.get})});
+    request(gens[cap + 1]);  // an untaggable bucket must use the same cap and queue
+    useBucket({FEEDS: f.bucket});
+    await turn();
+    assert.equal(started.length, cap, 'neither overflow GET starts while full, and the duplicate coalesces');
+
+    gates.get(keys[0]).release();
+    assert.equal((await fetches[0]).cycle, 'p0');
+    assert.equal((await duplicate).cycle, 'p0');
+    await turn();
+    assert.deepEqual(started, keys.slice(0, cap + 1), 'only the first waiter starts when one slot opens');
+    gates.get(keys[1]).release();
+    await fetches[1];
+    await turn();
+    assert.deepEqual(started, keys, 'the second waiter starts next, even though it cannot be cached');
+    for (const {release} of gates.values()) release();
+    await Promise.all(fetches);
+    assert.equal(peak, cap, 'actual concurrent GETs never exceeded the cap');
+
+    holding = false;
+    const reads = tableReads(f);
+    for (const g of gens.slice(0, cap)) { point(f, g); await readBucketJSON(MANIFEST); }
+    assert.equal(tableReads(f), reads, 'the first entry-bound fetches were held');
+    point(f, gens[cap]); await readBucketJSON(MANIFEST);
+    assert.equal(tableReads(f), reads + 1, 'a fetch past the in-flight bound was not held');
+  } finally {
+    holding = false;
+    for (const {release} of gates.values()) release();
+    await Promise.allSettled(fetches);
+    useBucket(null);
+  }
+});
+
+test('a legacy prefix is never remembered: its first release applies at once', async () => {
+  const f = fixture(); f.objects.set('forecasts/m/manifest.json', '{"cycle":"legacy"}'); useBucket({FEEDS: f.bucket});
+  try {
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'legacy');
+    f.release('one');
+    assert.equal((await readBucketJSON(MANIFEST)).cycle, 'one');
   } finally { useBucket(null); }
 });
 
