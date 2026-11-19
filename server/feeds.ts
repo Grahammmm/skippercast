@@ -51,7 +51,8 @@ async function loadRelease(selected: Pick<R2Bucket, 'get'>, prefix: string, gene
  */
 export const RELEASE_CACHE_ENTRIES = 8;
 export const RELEASE_CACHE_BYTES = 8 * 1024 * 1024;
-const releases = new Map<string, {table: Promise<Snapshot>; bytes: number}>();
+const releases = new Map<string, {table: Promise<Snapshot>; bytes: number}>();  // held: verified, sized, counted against both bounds
+const loading = new Map<string, Promise<Snapshot>>();  // in flight: not held, so never counted against (or evicting from) the cache
 // The per-request cost meter (cost-ceiling.ts) wraps the bound bucket in a fresh Proxy with only a `get` trap, so
 // own-property definition and lookup reach the bucket itself: the tag names the bucket, not the wrapper.
 const NAMESPACE = Symbol('skippercast.feedReleaseNamespace');
@@ -76,19 +77,18 @@ function releaseTable(selected: Pick<R2Bucket, 'get'>, prefix: string, generatio
   if (id === null) return loadRelease(selected, prefix, generation);
   const name = `${id}/${prefix}/${generation}`, held = releases.get(name);
   if (held) { releases.delete(name); releases.set(name, held); return held.table; }
-  const entry = {bytes: 0, table: null as unknown as Promise<Snapshot>};
-  entry.table = loadRelease(selected, prefix, generation).then(({bytes, ...table}) => {
-    if (releases.get(name) === entry) {
-      if (bytes > RELEASE_CACHE_BYTES) releases.delete(name);
-      else { entry.bytes = bytes; trimReleases(); }
-    }
-    return table;
-  }, (error: unknown) => {
-    if (releases.get(name) === entry) releases.delete(name);
-    throw error;
-  });
-  releases.set(name, entry);  // not trimmed yet: its size is unknown, and an oversized table must not evict held ones
-  return entry.table;
+  const pending = loading.get(name);
+  if (pending) return pending;
+  // Past the in-flight bound a miss is read uncached, so pending fetches cannot pile up.
+  if (loading.size >= RELEASE_CACHE_ENTRIES) return loadRelease(selected, prefix, generation);
+  const table: Promise<Snapshot> = loadRelease(selected, prefix, generation).then(({bytes, ...snapshot}) => {
+    loading.delete(name);
+    // Held only once its size is known; an oversized table is served but never held and evicts nothing.
+    if (bytes <= RELEASE_CACHE_BYTES) { releases.set(name, {table: Promise.resolve(snapshot), bytes}); trimReleases(); }
+    return snapshot;
+  }, (error: unknown) => { loading.delete(name); throw error; });
+  loading.set(name, table);
+  return table;
 }
 
 /** Capture the bucket and pin each prefix once for a multi-file operation. */

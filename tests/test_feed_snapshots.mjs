@@ -209,6 +209,48 @@ test('the cache is bounded by entries and bytes; a store that cannot be tagged r
   } finally { useBucket(null); }
 });
 
+// Contract: a table still being fetched is not a held table. Believable bug: counting the pending oversized fetch toward
+// the entry bound, so a normal miss that resolves meanwhile evicts a second held table.
+test('an oversized table in flight does not make a resolving miss evict an extra held table', async () => {
+  const f = fixture(), gens = []; useBucket({FEEDS: f.bucket});
+  try {
+    for (let i = 0; i < RELEASE_CACHE_ENTRIES; i++) { gens.push(f.release('c' + i).generation); await readBucketJSON(MANIFEST); }
+    const files = {}, padding = Math.ceil((RELEASE_CACHE_BYTES + 1024 * 1024) / 80);
+    for (let i = 0; i < padding; i++) files[`pad/${i}.json`] = hash(String(i));
+    const bytes = JSON.stringify({schema_version: 1, files}), big = hash(bytes);
+    f.objects.set(`forecasts/.r2-releases/${big}.json`, bytes);
+    let release, started; const gate = new Promise(r => release = r), begun = new Promise(r => started = r), get = f.bucket.get;
+    f.bucket.get = async key => { if (key.endsWith(`${big}.json`)) { started(); await gate; } return get(key); };
+    point(f, big); const pending = readBucketJSON(MANIFEST); await begun;  // the oversized fetch is now in flight
+    gens.push(f.release('c-new').generation); await readBucketJSON(MANIFEST);  // a normal ninth table resolves meanwhile
+    release(); await pending.catch(() => {});
+    const reads = tableReads(f);
+    point(f, gens[1]); assert.equal((await readBucketJSON(MANIFEST)).cycle, 'c1');
+    assert.equal(tableReads(f), reads, 'only the oldest table was evicted for the ninth; the second oldest is still held');
+    point(f, gens[0]); await readBucketJSON(MANIFEST);
+    assert.equal(tableReads(f), reads + 1, 'the oldest table was evicted by the ninth');
+  } finally { useBucket(null); }
+});
+
+// Contract: fetches in flight are bounded. Believable bug: one pending entry per distinct generation with no cap.
+test('in-flight release fetches are bounded by the entry bound; extra misses read uncached', async () => {
+  const f = fixture(), gens = []; useBucket({FEEDS: f.bucket});
+  try {
+    for (let i = 0; i < RELEASE_CACHE_ENTRIES + 2; i++) gens.push(f.release('p' + i).generation);
+    let release, waiting = 0; const gate = new Promise(r => release = r), get = f.bucket.get;
+    f.bucket.get = async key => { if (key.includes('/.r2-releases/')) { waiting++; await gate; } return get(key); };
+    const fetches = gens.map(g => { point(f, g); return readBucketJSON(MANIFEST); });
+    await new Promise(r => setTimeout(r, 0));
+    assert.equal(waiting, RELEASE_CACHE_ENTRIES + 2, 'every miss starts its own table GET');
+    release(); await Promise.all(fetches);
+    const reads = tableReads(f);
+    for (const g of gens.slice(0, RELEASE_CACHE_ENTRIES)) { point(f, g); await readBucketJSON(MANIFEST); }
+    assert.equal(tableReads(f), reads, 'the first entry-bound fetches were held');
+    point(f, gens[RELEASE_CACHE_ENTRIES]); await readBucketJSON(MANIFEST);
+    assert.equal(tableReads(f), reads + 1, 'a fetch past the in-flight bound was not held');
+  } finally { useBucket(null); }
+});
+
 test('a legacy prefix is never remembered: its first release applies at once', async () => {
   const f = fixture(); f.objects.set('forecasts/m/manifest.json', '{"cycle":"legacy"}'); useBucket({FEEDS: f.bucket});
   try {
