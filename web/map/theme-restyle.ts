@@ -54,14 +54,28 @@ export function restyle(target: Restylable, palette: Palette, providers: readonl
   return {applied, skipped: [...skipped]};
 }
 
+/**
+ * Project the `paint` entries of built layer specs into edits, so a layer
+ * module's `themePaint` can reuse its own pure builder rather than restate IDs
+ * and values. `keep` picks properties by name; the default keeps every one
+ * (MapLibre skips a `setPaintProperty` whose value is unchanged). Layout,
+ * sources and layers without `paint` contribute nothing.
+ */
+export function paintEdits(
+  layers: readonly {readonly id: string; readonly paint?: object}[],
+  keep: (property: string) => boolean = () => true,
+): readonly PaintEdit[] {
+  return layers.flatMap(({id: layer, paint}) => Object.entries(paint ?? {})
+    .filter(([property]) => keep(property))
+    .map(([property, value]) => ({layer, property, value})));
+}
+
 /** Project just the Chart basemap's theme-dependent paints, not its sources or layout. */
 export function basemapThemePaint(palette: Palette): readonly PaintEdit[] {
   // The style builder is pure. Use its layers so the initial draw and restyle
   // share the very same layer IDs, token roles and numeric controls.
   const {layers} = basemapStyle(palette, {archive: '', assets: ''});
-  return layers.flatMap(({id: layer, paint}) => Object.entries(paint ?? {})
-    .filter(([property]) => property.endsWith('-color') || property === 'line-opacity' || property === 'text-opacity')
-    .map(([property, value]) => ({layer, property, value})));
+  return paintEdits(layers, property => property.endsWith('-color') || property === 'line-opacity' || property === 'text-opacity');
 }
 
 /**
