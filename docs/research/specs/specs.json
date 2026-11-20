@@ -390,7 +390,7 @@
     },
     {
      "id": "R2",
-     "text": "Derived per cell and frame:"
+     "text": "Derived per cell and frame:\n- Thermocline depth is the mid-depth of the level pair with the maximum \u2212dT/dz across levels 0\u2013100 m (1, 2, 4 \u2026 100 m available), but only where max \u2212dT/dz \u2265 0.05 \u00b0C/m. Otherwise it is `none` (\"well mixed\").\n- Mixed-layer depth is the shallowest depth where T < T(10 m) \u2212 0.2 \u00b0C (de Boyer Mont\u00e9gut criterion), interpolating linearly between levels. It is labelled \"estimated from model levels\"."
     },
     {
      "id": "R3",
