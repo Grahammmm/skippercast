@@ -6,7 +6,7 @@ import json
 
 from skippercast.paths import repo_root
 from skippercast.platform import depth_contours as dc
-from skippercast.platform.contracts import atomic_json, load_catalogs, load_region
+from skippercast.platform.contracts import atomic_json, load_catalogs, load_region, owner_display_cleared
 from skippercast.relief import package, receipts
 
 UPSTREAM = ('select', 'mosaic:public')
@@ -39,8 +39,13 @@ def read(path):
 def _metadata_refusal(source):
     if package._MBARI.search(package._lineage(source)):
         return 'MBARI lineage'
-    license_id = (source.get('rights') or {}).get('license')
+    rights = source.get('rights') or {}
+    license_id = rights.get('license')
     if not isinstance(license_id, str) or not license_id.strip():
+        return 'licence mismatch'
+    # Same rule as the release policy (package._UNKNOWN_LICENSE): an unreviewed licence term is accepted only
+    # where the owner's recorded G display decision clears the source.
+    if license_id.strip().lower() in package._UNKNOWN_LICENSE and not owner_display_cleared(rights):
         return 'licence mismatch'
     return None
 
