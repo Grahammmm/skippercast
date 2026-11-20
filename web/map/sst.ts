@@ -22,10 +22,8 @@
 //   The texture and contours cover complete quads only: masked land and missing
 //   cells stay blank. A grid it refuses draws nothing, and a refused or stale
 //   replacement removes the texture and contours of the analysis before it.
-// - Legend: the range is packages/coast `temperatureRange` of every sample (the
-//   whole degrees around its extremes) and the ramp the `--sst-*` tokens
-//   (web/map/palette.ts), which equal its `temperatureColors`. The analysis
-//   error stays in the legend's basis and the click reading.
+// - Legend: the displayed band range and step follow supported water in the
+//   settled Chart viewport. The analysis error stays in the basis and reading.
 //
 // Erasable syntax only: tests/test_field_texture.mjs imports it by type stripping.
 import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
@@ -40,17 +38,18 @@ import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
 import {CONTRAST_LAYER} from './contrast.ts';
 import type {Engine, Overlay} from './engine.ts';
-import {fieldTexture, isolines} from './field.ts';
+import {isolines, mercatorDisplay, sampleDisplay, textureSize, type Corners} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
 import {LAYERS_STYLE} from './layers-style.gen.ts';
 import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {COAST_NOT_SAVED, COAST_OFFLINE_COPY, NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY, watchOffline} from './offline.ts';
 import {pair, sp, type StatusCopy} from './status-copy.ts';
 import {MPA_FILL} from './mpa.ts';
-import {fieldOpacity, kitMinZoom} from './nearshore-paint.ts';
+import {kitMinZoom} from './nearshore-paint.ts';
 import {NEARSHORE_STYLE} from './nearshore-style.gen.ts';
-import {ramps, readPalette, type Palette} from './palette.ts';
-import {shownPresentation, terrainHour} from './stage.ts';
+import {readPalette, type Palette} from './palette.ts';
+import {camera, shownPresentation, terrainHour} from './stage.ts';
+import {sstBandLayers, sstBandModel, sstBandPixels, sstRamp, SST_BAND_SOURCE, SST_STYLE} from './sst-bands.ts';
 import {LABEL_FONT, PLACE_LABELS} from './style.ts';
 import {surfaceField, temperatureRange, type SurfaceField} from './surface-field.js';
 import {SWELL_LAYER} from './swell.ts';
@@ -206,8 +205,9 @@ export function contourLines(field: SurfaceField, range: readonly [number, numbe
 function waterTempLayers(p: Palette): Overlay['layers'] {
   const width: MapLibre.ExpressionSpecification = ['interpolate', ['linear'], ['zoom'], 7, 0.5, 12, 1.2];
   const isolines = kitMinZoom(NEARSHORE_STYLE.overlays.isolines_from_zoom);
+  const [fill, edge] = sstBandLayers(p);
   return [
-    {id: SST_LAYER, type: 'raster', source: SST_SOURCE, paint: {'raster-opacity': fieldOpacity() as MapLibre.ExpressionSpecification, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
+    {...fill, id: SST_LAYER, source: SST_SOURCE}, edge,
     {id: CONTOUR_LAYER, type: 'line', source: CONTOUR_SOURCE, minzoom: isolines, layout: {'line-join': 'round'},
       paint: {'line-color': p.text, 'line-width': width, 'line-opacity': ['case', ['get', 'major'], 0.5, 0.25]}},
     {id: CONTOUR_LABELS, type: 'symbol', source: CONTOUR_SOURCE, minzoom: isolines, filter: ['get', 'major'],
@@ -222,6 +222,7 @@ export function waterTempOverlay(p: Palette): Overlay {
   return {
     sources: {
       [SST_SOURCE]: {type: 'image', coordinates: [[0, 1], [1, 1], [1, 0], [0, 0]]},
+      [SST_BAND_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}},
       [CONTOUR_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}},
     },
     layers: waterTempLayers(p), themePaint,
@@ -242,6 +243,25 @@ export function sstMark(a: Analysis, at: {lon: number; lat: number}, now: Date, 
 
 /** What the rail and legend show for Water temp. */
 export const waterTempState = signal<WaterTempStatus>(OFF);
+
+function imageGrid(field: SurfaceField) {
+  const {width, height} = textureSize(field), [west, south, east, north] = field.bounds;
+  const view = mercatorDisplay(field.bounds, width, height);
+  const samples = sampleDisplay(view, (lon, lat) => field.sample(lon, lat)?.[0] ?? NaN);
+  const coordinates: Corners = [[west, north], [east, north], [east, south], [west, south]];
+  return {width, height, coordinates, view, samples};
+}
+
+function visibleWater(e: Engine, raster: ReturnType<typeof imageGrid>) {
+  if (!e.view) return raster.samples;
+  const {width, height} = e.view.size();
+  if (!width || !height) return raster.samples;
+  const nw = e.view.unproject(0, 0), se = e.view.unproject(width, height);
+  const {view} = raster;
+  const columns = view.lon.map((lon, x) => lon >= nw.lon && lon <= se.lon ? x : -1).filter(x => x >= 0);
+  const rows = view.lat.map((lat, y) => lat <= nw.lat && lat >= se.lat ? y : -1).filter(y => y >= 0);
+  return Float64Array.from(rows.flatMap(y => columns.map(x => raster.samples[y * raster.width + x]!)));
+}
 
 export interface WaterTempOptions {
   engine: ReadonlySignal<Engine | null>;
@@ -278,6 +298,10 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
   });
   let feedRegion = '', feedAt = 0, feedAbort: AbortController | undefined;
   let painted: SurfaceTemperature | null = null, drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  let raster: ReturnType<typeof imageGrid> | undefined;
+  let restyleBands: ((p: Palette) => void) | undefined;
+  const bandState = signal<ReturnType<typeof sstBandModel>>(null);
+  const resized = signal(0);
   const withdraw = (): void => { if (chartMark.peek()?.id.startsWith('sst:')) chartMark.value = null; };
 
   const disposers = [
@@ -301,8 +325,8 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
         .then(result => { if (!abort.signal.aborted) feed.value = {region: id, result}; }, () => { /* aborted by a newer read */ });
     }),
     effect(() => {
-      const s = status.value;
-      waterTempState.value = s;
+      const s = status.value, band = bandState.value;
+      waterTempState.value = s.drawn && band ? {...s, drawn: {...s.drawn, range: [band.low, band.high]}, basis: `${band.legend}. ${s.basis}`} : s;
       setRailNote(REGISTRY_ID, on.value ? s.note : '', on.value ? s.copy?.note : undefined);
     }),
     // A new analysis repaints; no analysis (off, refused, stale) removes the texture and the contours at once.
@@ -310,21 +334,40 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       const e = engine.value, a = status.value.drawn, generation = e ? a?.sst ?? null : null;
       if (generation === painted && e === drawnOn) return;
       if (generation !== painted) withdraw();
-      painted = null; drawnOn = e;
+      painted = null; drawnOn = e; raster = undefined; restyleBands = undefined;
       if (!e) return;
-      if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
+      if (!a) { bandState.value = null; e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
       // § 9 order: under Temp contrast, else swell, wind, depth contours, or protected areas.
       const overlay = waterTempOverlay(p);
-      // The texture is pixels in an image source, not a paint: if a theme ever changes the ramp, a live switch repaints it from the same field
-      // (setImage sends no request and setData is not used). Today's --sst-* tokens are identical in both themes, so none is repainted.
-      let paintedRamp = ramps(p).sst.join();
-      const texture = (ramp: string[]): void => { paintedRamp = ramp.join(); e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramp, v => v[0]!)); };
-      e.setOverlay(REGISTRY_ID, {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).sst; if (ramp.join() !== paintedRamp) texture(ramp); return overlay.themePaint!(pal); }},
+      let paintedKey = '';
+      raster = imageGrid(a.field);
+      restyleBands = (pal: Palette): void => {
+        const grid = raster, band = bandState.peek();
+        if (!grid || !band) return;
+        const ramp = sstRamp(pal), key = [band.low, band.high, band.step, ...ramp].join();
+        if (key === paintedKey) return;
+        paintedKey = key;
+        const {width, height, coordinates, samples} = grid;
+        e.setImage(SST_SOURCE, {width, height, coordinates, data: sstBandPixels(samples, band, ramp)});
+        const levels = Array.from({length: band.count - 1}, (_, i) => band.low + (i + 1) * band.step);
+        e.setData(SST_BAND_SOURCE, isolines(a.field, levels, () => ({label: '', major: false})));
+      };
+      e.setOverlay(REGISTRY_ID, {...overlay, themePaint: (pal: Palette) => { restyleBands?.(pal); return overlay.themePaint!(pal); }},
         [CONTRAST_LAYER, 'chlorophyll', SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
-      texture(ramps(p).sst);
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
       painted = a.sst;
+      const stop = e.view?.on?.('resize', () => { resized.value++; });
+      return stop;
+    }),
+    effect(() => {
+      const e = engine.value, a = status.value.drawn, zoom = camera.value?.zoom ?? SST_STYLE.zoom;
+      void resized.value;
+      if (!e || !a || e !== drawnOn || a.sst !== painted || !raster) return;
+      const band = sstBandModel(visibleWater(e, raster), zoom);
+      // An empty viewport must not let off-screen temperatures set its range.
+      bandState.value = band;
+      restyleBands?.(palette());
     }),
     // Re-judge at the analysis's 72-hour limit and at the next whole hour (the dock's default hour moves on).
     effect(() => {

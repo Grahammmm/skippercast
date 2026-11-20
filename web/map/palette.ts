@@ -54,6 +54,13 @@ export function sknColor(p: Palette, cssVar: string): string {
   return p[key];
 }
 
+/** Resolve a generated all-layers colour through the CSS palette bridge. */
+export function sklColor(p: Palette, cssVar: string): string {
+  const key = cssVar.startsWith('--skl-') ? BY_TOKEN.get(cssVar.slice(2)) : undefined;
+  if (!key) throw new Error(`Map palette: ${cssVar} is not bridged in PALETTE_TOKENS.`);
+  return p[key];
+}
+
 export type PaletteKey = keyof typeof PALETTE_TOKENS;
 export type Palette = Readonly<Record<PaletteKey, string>>;
 /** Returns a custom property's value by name (without `--`), or '' when it is not set. */
