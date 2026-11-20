@@ -1,0 +1,1 @@
+ALTER TABLE `advisor_rules` ADD `import_origin` text;
