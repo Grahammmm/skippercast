@@ -634,7 +634,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // MB-14 only adds the 3D sky, horizon and fog tokens in both themes; no existing token, chrome text, panel or legend-glass paint changes.
   // MB-11 adds Ramp B and native legend paint roles only.
   // MSK-1: only unused --skn-* declarations were added; existing surface paint is unchanged.
-  "tokensCss": "cfb8d4f43efb5f85157946d82146d6d43e37a0fc67773e6b160fdc674c21b5be",
+  // MSKL-1: only the additive --skl-* block was inserted; removing it recovers every previous CSS byte. Surface paint is unchanged.
+  "tokensCss": "ea900e4864cf82b5dcac7876ec9c0d8a31dd3ede3f24eae8ab5718b75045cbd0",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.

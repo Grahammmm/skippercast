@@ -15,6 +15,9 @@ from tests._support import ROOT
 
 GEN = "scripts/style/gen_style.py"
 RELEASE = "style/nearshore-v1.0.0.json"
+LAYERS = "style/layers-v1.0.0.json"
+STACKING = "style/stacking-v1.0.0.json"
+FRAGMENT = "style/generated/maplibre-layers-v1.0.0.json"
 
 
 def test_load_verifies_release_and_freezes_nested_values(tmp_path, monkeypatch):
@@ -147,7 +150,8 @@ def test_generator_check_matches_checkout():
 def copy_generator(tmp_path):
     paths = [GEN, "src/skippercast/__init__.py", "src/skippercast/style/__init__.py", RELEASE,
              "style/index.json", "style/groups.json", "web/tokens.css",
-             "web/map/nearshore-style.gen.ts", "packages/coast/src/palette.ts"]
+             "web/map/nearshore-style.gen.ts", "packages/coast/src/palette.ts",
+             "scripts/style/layers_fragment.py", LAYERS, STACKING, FRAGMENT, "web/map/layers-style.gen.ts"]
     for name in paths:
         dest = tmp_path / name
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -239,6 +243,12 @@ def test_check_refuses_a_pointer_whose_look_left_the_index(tmp_path, where):
     ("unassigned", "unassigned style key: rock_piles.future_knob"),
     ("digest", "index digests disagree"),
     ("projection", "generated file drift: web/map/nearshore-style.gen.ts"),
+    ("layer-colour", "layers-v1.0.0: sha256 mismatch"),
+    ("missing-layer-var", "generated file drift: web/tokens.css"),
+    ("extra-layer-var", "generated file drift: web/tokens.css"),
+    ("fragment-byte", f"generated file drift: {FRAGMENT}"),
+    ("fragment-pin", "fragment canonical sha256 mismatch"),
+    ("layer-module", "generated file drift: web/map/layers-style.gen.ts"),
 ])
 def test_generator_check_refuses_drift_without_writing(tmp_path, drift, diagnostic):
     # Independently trip the raw-byte pin, group coverage, digest and projection checks.
@@ -249,6 +259,31 @@ def test_generator_check_refuses_drift_without_writing(tmp_path, drift, diagnost
     ts = tmp_path / "web/map/nearshore-style.gen.ts"
     if drift == "projection":
         ts.write_bytes(ts.read_bytes() + b"// stale\n")
+    elif drift == "layer-colour":
+        path = tmp_path / LAYERS
+        raw = path.read_bytes()
+        first = re.search(rb'"#[0-9a-fA-F]{6}"', raw)
+        assert first is not None
+        replacement = b'"#123456"' if first[0] != b'"#123456"' else b'"#654321"'
+        path.write_bytes(raw[:first.start()] + replacement + raw[first.end():])
+    elif drift in {"missing-layer-var", "extra-layer-var"}:
+        css = tmp_path / "web/tokens.css"
+        raw = css.read_bytes()
+        if drift == "missing-layer-var":
+            css.write_bytes(re.sub(rb"(?m)^  --skl-[^\n]+\n", b"", raw, count=1))
+        else:
+            css.write_bytes(raw.replace(b"  /* skl:end */", b"  --skl-orphan: #123456;\n  /* skl:end */"))
+    elif drift == "fragment-byte":
+        path = tmp_path / FRAGMENT
+        # Same parsed fragment: check must require exact output bytes, not just its digest.
+        path.write_bytes(path.read_bytes().removesuffix(b"\n") + b" ")
+    elif drift == "fragment-pin":
+        index = json.loads(manifest.read_bytes())
+        index["layers"][index["layers_default"]]["fragment_canonical_sha256"] = "0" * 64
+        manifest.write_text(json.dumps(index), encoding="utf-8")
+    elif drift == "layer-module":
+        path = tmp_path / "web/map/layers-style.gen.ts"
+        path.write_bytes(path.read_bytes() + b"// stale\n")
     else:
         tokens = json.loads(release.read_bytes())
         if drift == "unassigned":
@@ -270,3 +305,61 @@ def test_generator_check_refuses_drift_without_writing(tmp_path, drift, diagnost
     assert result.returncode == 1, result.stderr
     assert diagnostic in result.stderr
     assert snapshot() == before
+
+
+def test_layer_loader_resolves_the_released_stack_and_leaves_prose():
+    # The released SST opacity must follow stacking; treating prose as a path would reject this release.
+    layers = style.load_layers()
+    base = style.load()
+    assert layers["layers"]["sst-fill"]["opacity"] == base["overlays"]["field_opacity_by_zoom"]
+    raw = json.loads((ROOT / LAYERS).read_bytes())
+    assert layers["regional_base"]["land_rule"] == raw["regional_base"]["land_rule"]
+    with pytest.raises(TypeError):
+        layers["layers"]["sst-fill"]["opacity"][0][1] = 1
+    with pytest.raises(TypeError):
+        layers["stacking"]["z_order"][0]["z"] = 1
+
+
+@pytest.mark.parametrize(("path", "diagnostic"), [(LAYERS, "layers-v1.0.0"), (STACKING, "stacking-v1.0.0.json")])
+def test_layer_loader_refuses_both_changed_raw_files(tmp_path, path, diagnostic):
+    copy_generator(tmp_path)
+    release = tmp_path / path
+    release.write_bytes(release.read_bytes() + b"\n")
+    with pytest.raises(ValueError, match=rf"{re.escape(diagnostic)}: sha256 mismatch"):
+        style.load_layers(root=tmp_path / "style")
+
+
+@pytest.mark.parametrize(("value", "diagnostic"), [
+    ("base:depth_ramp.stops_ft.0.1", None),
+    ("base:depth_ramp.stops_ft.999.1", "unresolvable layer reference"),
+    ("stacking:missing", "unresolvable layer reference"),
+    ("stacking:cycle", "layer reference depth exceeds 8"),
+    (None, "base_tokens.version does not match"),
+])
+def test_layer_loader_validates_reference_paths_and_pinned_base(tmp_path, value, diagnostic):
+    # Validly rehash altered inputs so a pin error cannot mask bad paths, cycles or a wrong base release.
+    copy_generator(tmp_path)
+    path = tmp_path / LAYERS
+    tokens = json.loads(path.read_bytes())
+    tokens["probe"] = value
+    if value is None:
+        tokens["base_tokens"]["version"] = "0.0.0"
+    raw = json.dumps(tokens).encode()
+    path.write_bytes(raw)
+    manifest = tmp_path / "style/index.json"
+    index = json.loads(manifest.read_bytes())
+    entry = index["layers"][index["layers_default"]]
+    entry["sha256"] = sha256(raw).hexdigest()
+    if value == "stacking:cycle":
+        path = tmp_path / STACKING
+        stack = json.loads(path.read_bytes())
+        stack["cycle"] = "stacking:cycle"
+        raw = json.dumps(stack).encode()
+        path.write_bytes(raw)
+        entry["stacking_sha256"] = sha256(raw).hexdigest()
+    manifest.write_text(json.dumps(index), encoding="utf-8")
+    if diagnostic:
+        with pytest.raises(ValueError, match=diagnostic):
+            style.load_layers(root=tmp_path / "style")
+    else:
+        assert style.load_layers(root=tmp_path / "style")["probe"] == style.load()["depth_ramp"]["stops_ft"][0][1]
