@@ -251,21 +251,43 @@ def adopt_saved_area(store, descriptor, new_grant, *, now, horizon):
             store.event(None,'saved_area_adopted',dict(adoption=descriptor,source_volume_bytes=0))
     return proof
 
-def registered_acceptance(store,grant,*,now,horizon):
-    descriptor=grant["saved_area_adoption"]
-    proof=validate_adoption(store.root,descriptor,grant,now=now,horizon=horizon)
+def _registered_record(store, grant_sha, descriptor):
     exists=store.db.execute("SELECT 1 FROM sqlite_master WHERE name='saved_area_adoptions'").fetchone()
-    row=store.db.execute("SELECT adoption_sha,record_json FROM saved_area_adoptions WHERE grant_sha=?",(digest(grant),)).fetchone() if exists else None
-    if not row or row["adoption_sha"]!=descriptor["sha256"] or json.loads(row["record_json"])!=proof:
-        raise ValueError("exact registered adopted producer required")
+    row=store.db.execute('SELECT adoption_sha,record_json FROM saved_area_adoptions WHERE grant_sha=?',(grant_sha,)).fetchone() if exists else None
+    if not row or row['adoption_sha']!=descriptor['sha256']:
+        raise ValueError('exact registered adopted producer required')
+    return json.loads(row['record_json'])
+
+def registered_acceptance(store,grant,*,now,horizon):
+    descriptor=grant['saved_area_adoption']
+    proof=validate_adoption(store.root,descriptor,grant,now=now,horizon=horizon)
+    if _registered_record(store,digest(grant),descriptor)!=proof:
+        raise ValueError('exact registered adopted producer required')
     return proof
 
 def acceptance(store, preparation):
     grant=metadata_document(store.root,preparation['grant'],'coastal-authenticated-policy-v1')
     descriptor=preparation['saved_area_adoption']
-    proof=validate_adoption(store.root,descriptor,grant,now=store.clock(),horizon=preparation['deadline_epoch'])
-    exists=store.db.execute("SELECT 1 FROM sqlite_master WHERE name='saved_area_adoptions'").fetchone()
-    row=store.db.execute('SELECT adoption_sha,record_json FROM saved_area_adoptions WHERE grant_sha=?',(digest(grant),)).fetchone() if exists else None
-    if not row or row['adoption_sha']!=descriptor['sha256'] or json.loads(row['record_json'])!=proof:
+    now=store.clock();deadline=preparation['deadline_epoch']
+    if now>=deadline:
+        raise ValueError('immutable parent UTC deadline')
+    proof=validate_adoption(store.root,descriptor,grant,now=now,horizon=deadline)
+    if _registered_record(store,digest(grant),descriptor)!=proof:
         raise ValueError('exact registered adopted producer required')
     return proof
+
+def historical_registration(store, preparation):
+    """Check the recorded window-A adoption for status, never as science authority."""
+    grant=metadata_document(store.root,preparation['grant'],'coastal-authenticated-policy-v1')
+    descriptor=preparation['saved_area_adoption']
+    if (preparation['saved_area_continuation_contract']!=CONTRACT
+            or grant_identity(grant)!=preparation['grant_identity']
+            or grant.get('saved_area_adoption')!=descriptor
+            or grant.get('window_set')!=preparation['window_set']):
+        raise ValueError('exact continuation parent required for historical status')
+    grant_sha=digest(grant)
+    record=_registered_record(store,grant_sha,descriptor)
+    if (not isinstance(record,dict) or record.get('schema')!=ADOPTION
+            or record.get('execution_grant_sha')!=grant_sha or record.get('adoption')!=descriptor
+            or record.get('window')!=preparation['window_set'][0] or record.get('source')!=grant['source']):
+        raise ValueError('exact registered adopted producer required')
