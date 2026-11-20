@@ -14,6 +14,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 import json
+import re
 
 _STYLE_DIR = Path(__file__).resolve().parents[3] / "style"
 GROUPS = ("baked", "contours", "habitat", "paint")
@@ -258,6 +259,50 @@ def load(version=None, root=None):
         raise ValueError(f"{version}: groups.json disagrees with the index digests "
                          "(regenerate with scripts/style/gen_style.py)")
     return Style(version, _freeze(tokens), _freeze(entry["digests"]), _below_map(leaves))
+
+
+_LAYER_REF = re.compile(r"(base|stacking):([A-Za-z0-9_.-]+)")
+
+
+def _resolve_layer_refs(value, roots, hops=0):
+    if isinstance(value, dict):
+        return {key: _resolve_layer_refs(item, roots, hops) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_resolve_layer_refs(item, roots, hops) for item in value]
+    if not isinstance(value, str) or not (match := _LAYER_REF.fullmatch(value)):
+        return value
+    if hops == 8:
+        raise ValueError(f"layer reference depth exceeds 8: {value}")
+    target = roots[match[1]]
+    try:
+        for key in match[2].split("."):
+            if isinstance(target, list):
+                if not key.isascii() or not key.isdecimal():
+                    raise ValueError(key)
+                target = target[int(key)]
+            else:
+                target = target[key]
+    except (KeyError, IndexError, TypeError, ValueError):
+        raise ValueError(f"unresolvable layer reference: {value}") from None
+    return _resolve_layer_refs(target, roots, hops + 1)
+
+
+def load_layers(version=None, root=None):
+    """Load immutable all-layers tokens (including `stacking`) from a style directory."""
+    directory = _STYLE_DIR if root is None else Path(root)
+    index = _read_index(directory)
+    version = index["layers_default"] if version is None else version
+    entry = index["layers"][version]
+    tokens = _verified_tokens(directory, version, entry)
+    stacking = _verified_tokens(directory, entry["stacking_file"], {
+        "file": entry["stacking_file"], "sha256": entry["stacking_sha256"],
+    })
+    base_version = entry["base"]
+    base = _verified_tokens(directory, base_version, index["versions"][base_version])
+    # Kit files carry the release number, while index IDs include the product prefix.
+    if tokens["base_tokens"]["version"] != base["version"] or base_version != f"nearshore-v{base['version']}":
+        raise ValueError(f"{version}: base_tokens.version does not match pinned base {base_version}")
+    return _freeze(_resolve_layer_refs({**tokens, "stacking": stacking}, {"base": base, "stacking": stacking}))
 
 
 def digest(group):
