@@ -65,6 +65,8 @@ function routeFor(request, origin) {
     if (url.origin === ENC_ORIGIN && url.pathname === ENC_PATH) return encTileKey(url) ? 'tile' : null;
     return url.protocol === 'https:' && DATA_HOSTS.has(url.hostname) ? 'data' : null;
   }
+  // SCA-091: the server handles legacy GPX links; never replay an older saved file.
+  if (url.pathname.startsWith('/downloads/') && url.pathname.endsWith('.gpx')) return null;
   if (request.mode === 'navigate') return 'shell';
   if (url.pathname === '/sw.js' || url.pathname === '/precache.json') return null;
   if(Object.hasOwn(COASTAL_LIMITS,url.pathname)){return !request.headers.has('X-SC-Offline-Save')&&!url.search&&!url.hash&&!request.headers.has('authorization')&&!request.headers.has('cookie')?'coastal':null;}

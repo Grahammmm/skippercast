@@ -10,7 +10,7 @@
 // the throttled mobile profile (FE-09, design § 13).
 import {build} from 'esbuild';
 import type {Page} from '@playwright/test';
-import {test, expect, VIEWPORTS, LCP_BUDGET_MS, LCP_ASSERT_REARM_DATE, AERIAL_LCP_BUDGET_MS} from './fixtures.ts';
+import {test, expect, VIEWPORTS, LCP_BUDGET_MS, LCP_ASSERT_REARM_DATE, AERIAL_LCP_BUDGET_MS, type LcpMeasurement} from './fixtures.ts';
 
 const AREA = {region: 'morro-bay'};
 const TABS = 56;
@@ -224,6 +224,19 @@ test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) 
   expect(pageErrors).toEqual([]);
 });
 
+function reportLcp(label: string, paint: LcpMeasurement, budget: number, reportOnlyUntil?: string): string {
+  const w = paint.winner;
+  const element = w ? `${w.tag.toLowerCase()}${w.cls.trim() ? `.${w.cls.trim().split(/\s+/).join('.')}` : ''} (${w.size} px)` : 'none recorded';
+  const trail = paint.candidates.map(c => `${c.tag.toLowerCase()}@${Math.round(c.ms)}ms/${c.size}px`).join(' -> ') || 'none';
+  const over = paint.ms - budget;
+  return `${label} LCP ${Math.round(paint.ms)} ms (budget ${budget}, design § 13): `
+    + (!paint.settled ? 'INCONCLUSIVE (paint did not settle)' : over > 0 ? `OVER BUDGET by ${Math.ceil(over)} ms` : `within budget by ${Math.floor(-over)} ms`)
+    + `; ${paint.settled ? 'winner' : 'last observed candidate'} ${element}; candidates ${trail}`
+    + (paint.settled && over > 0 && reportOnlyUntil ? ` [recorded, not failed: report-only until ${reportOnlyUntil}]` : '');
+}
+
+const VERDICT_RULES = '.app-verdict-rules';
+
 test('the shell paints within the LCP budget on the throttled mobile profile', async ({page, pageErrors, v2}, info) => {
   test.skip(info.project.name !== 'phone', 'measured once, at phone size');
   // The shell on the Night base is the design § 13 budget; Morro Bay opens on Aerial, whose tiles land later (owner's call).
@@ -232,16 +245,9 @@ test('the shell paints within the LCP budget on the throttled mobile profile', a
   // and reading at `networkidle` reported whichever of them had painted by then. LCP_ASSERT_REARM_DATE
   // in e2e/fixtures.ts says why the comparison below is recorded rather than asserted, and when it
   // re-arms; the budget itself is unchanged.
-  const paint = await v2.lcpSettled('app', {...AREA, base: 'night'});
-  const over = paint.ms - LCP_BUDGET_MS;
-  const w = paint.winner;
-  const element = w ? `${w.tag.toLowerCase()}${w.cls.trim() ? `.${w.cls.trim().split(/\s+/).join('.')}` : ''} (${w.size} px)` : 'none recorded';
-  const trail = paint.candidates.map(c => `${c.tag.toLowerCase()}@${c.ms}ms/${c.size}px`).join(' -> ') || 'none';
-  const verdict = `v2 app shell LCP ${paint.ms} ms (budget ${LCP_BUDGET_MS}, design § 13): `
-    + `${over > 0 ? `OVER BUDGET by ${over} ms` : `within budget by ${-over} ms`}`
-    + `; largest element ${element}; candidates ${trail}`
-    + `${paint.settled ? '' : ' (WARNING: the candidate list had not settled)'}`
-    + `${over > 0 ? ` [recorded, not failed: report-only until ${LCP_ASSERT_REARM_DATE}]` : ''}`;
+  const paint = await v2.lcpSettled('app', {...AREA, base: 'night'}, {ready: [VERDICT_RULES]});
+  const armed = Date.now() >= Date.parse(`${LCP_ASSERT_REARM_DATE}T00:00:00Z`);
+  const verdict = reportLcp('v2 app shell', paint, LCP_BUDGET_MS, armed ? undefined : LCP_ASSERT_REARM_DATE);
   console.log(verdict);
   info.annotations.push({type: 'lcp', description: verdict});
   // #617: the coast poster (web/map/poster.ts) is an inline path, never the LCP element; reported, and gone once the map has drawn.
@@ -252,17 +258,52 @@ test('the shell paints within the LCP budget on the throttled mobile profile', a
   await expect(page.locator('.app-poster')).toHaveCount(0);
   expect(paint.ms, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
   // Report-only until LCP_ASSERT_REARM_DATE, then this line fails a genuine breach again.
-  if (Date.now() >= Date.parse(`${LCP_ASSERT_REARM_DATE}T00:00:00Z`)) expect(paint.ms, verdict).toBeLessThanOrEqual(LCP_BUDGET_MS);
+  if (armed) {
+    expect(paint.settled, verdict).toBe(true);
+    expect(paint.ms, verdict).toBeLessThanOrEqual(LCP_BUDGET_MS);
+  }
   expect(pageErrors).toEqual([]);
 });
 
 test('opening on the Aerial base paints within the budget the owner accepted for it', async ({pageErrors, v2}, info) => {
   test.skip(info.project.name !== 'phone', 'measured once, at phone size');
-  const lcp = await v2.lcp('app', AREA);
-  console.log(`v2 app Aerial default LCP ${Math.round(lcp)} ms (budget ${AERIAL_LCP_BUDGET_MS}, design § 13)`);
-  expect(lcp, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
-  expect(lcp).toBeLessThanOrEqual(AERIAL_LCP_BUDGET_MS);
+  // The Chart stays busy through the Aerial preview. Both it and the late rules line must be ready before settling.
+  const paint = await v2.lcpSettled('app', AREA, {ready: [VERDICT_RULES, '.app-chart[aria-busy="false"] canvas']});
+  const verdict = reportLcp('v2 app Aerial default', paint, AERIAL_LCP_BUDGET_MS);
+  console.log(verdict);
+  info.annotations.push({type: 'lcp', description: verdict});
+  expect(paint.settled, verdict).toBe(true);
+  expect(paint.ms, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
+  expect(paint.ms, verdict).toBeLessThanOrEqual(AERIAL_LCP_BUDGET_MS);
   expect(pageErrors).toEqual([]);
+});
+
+// One response and no subresources: the larger render happens after the first idle gap, not after more network activity.
+test('LCP settlement counts a late larger paint and rejects a capped sample', async ({page, v2}, info) => {
+  test.skip(info.project.name !== 'phone', 'uses the throttled phone profile');
+  await page.route('**/map?*', route => route.fulfill({contentType: 'text/html', body: `<!doctype html>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <p class="early">Waiting</p><script>
+      setTimeout(() => document.body.insertAdjacentHTML('beforeend',
+        '<h1 class="late" style="font: 48px sans-serif">A much larger final headline</h1>'), 3000);
+    </script>`}));
+  const budget = 2500;
+  const early = await v2.lcp('app');
+  expect(early, 'first network-idle gap has a candidate').toBeGreaterThan(0);
+  expect(early, 'old sample falsely clears the synthetic budget').toBeLessThanOrEqual(budget);
+  const paint = await v2.lcpSettled('app', {}, {ready: ['.late']});
+  expect(paint.settled).toBe(true);
+  expect(paint.winner).toMatchObject({tag: 'H1', cls: 'late'});
+  expect(paint.candidates[0]?.cls).toBe('early');
+  expect(paint.ms).toBeGreaterThan(budget);
+  const capped = await v2.lcpSettled('app', {}, {ready: ['.late'], capMs: 1500});
+  expect(capped.settled).toBe(false);
+  expect(capped.winner?.cls).toBe('early');
+  expect(capped.ms).toBeLessThanOrEqual(budget);
+  const verdict = reportLcp('synthetic', capped, budget);
+  expect(verdict).toContain('INCONCLUSIVE');
+  expect(verdict).not.toContain('within budget');
+  console.log(`first idle=${Math.round(early)} ms; ${reportLcp('synthetic', paint, budget)}\n${verdict}`);
 });
 
 test.describe('phone', () => {

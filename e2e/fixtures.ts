@@ -38,12 +38,11 @@ export const LCP_BUDGET_MS = 2500;
  * the comparison is report-only while the paint itself is fixed, and re-arms by itself on this date.
  */
 export const LCP_ASSERT_REARM_DATE = '2026-12-01';
-/** No new LCP candidate for this long means the candidate list has settled. */
+/** Once the intended content is ready, require this long without a new candidate. */
 const LCP_QUIET_MS = 2_000;
 /** Stop waiting for the list to settle after this long, and say in the result that it had not. */
 const LCP_SETTLE_CAP_MS = 25_000;
-/** The app opening on the Aerial base (region.json `basemap.default`): the owner accepted on 12 Oct 2026 that on the throttled
- * profile the NAIP tiles queue behind the bundle and basemap, so the imagery credit (the largest paint) lands near 8 s. */
+/** The owner-accepted budget for the app opening on Aerial (region.json `basemap.default`). */
 export const AERIAL_LCP_BUDGET_MS = 10000;
 /** A 1×1 transparent PNG: what the stubbed NAIP service answers with. */
 export const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
@@ -79,9 +78,10 @@ export interface V2 {
   /**
    * The same load, measured until the LCP candidate list settles rather than until the network goes
    * quiet: `networkidle` can fire between the chained requests a late, larger candidate waits on,
-   * which reports an earlier and smaller element as the LCP. Returns every candidate and the winner.
+   * which reports an earlier and smaller element as the LCP. Start the quiet window only once all
+   * supplied readiness selectors are visible. A capped sample retains its candidates for diagnosis.
    */
-  lcpSettled(page: V2Page, params?: Record<string, string>): Promise<LcpMeasurement>;
+  lcpSettled(page: V2Page, params?: Record<string, string>, options?: {ready?: string[]; capMs?: number}): Promise<LcpMeasurement>;
   /** axe on the page as it is now (serious and critical fail; the rest are reported). */
   a11y(name: string): Promise<void>;
 }
@@ -155,7 +155,7 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
           w.__lcp = entry.startTime;
           const paint = entry as PerformanceEntry & {element?: Element | null; size?: number};
           const el = paint.element as HTMLElement | null | undefined;
-          w.__lcpCandidates.push({ms: Math.round(entry.startTime), tag: el?.tagName ?? 'none',
+          w.__lcpCandidates.push({ms: entry.startTime, tag: el?.tagName ?? 'none',
             cls: String(el?.className ?? '').slice(0, 60), size: paint.size ?? 0});
         }
       }).observe({type: 'largest-contentful-paint', buffered: true});
@@ -175,30 +175,36 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
         await cdp.send('Emulation.setCPUThrottlingRate', {rate: THROTTLED_MOBILE.cpu});
         try {
           await page.goto(url(name, params), {waitUntil: 'networkidle'});
-          // The LCP candidate stops changing once the network is quiet; the observer saw every earlier one.
+          // This is only a snapshot at network idle; app budgets use lcpSettled instead.
           return await page.evaluate(() => (window as unknown as {__lcp: number}).__lcp);
         } finally {
           await cdp.send('Emulation.setCPUThrottlingRate', {rate: 1});
           await cdp.detach();
         }
       },
-      async lcpSettled(name, params) {
+      async lcpSettled(name, params, {ready = [], capMs = LCP_SETTLE_CAP_MS} = {}) {
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('Network.enable');
         await cdp.send('Network.emulateNetworkConditions', {offline: false, ...THROTTLED_MOBILE});
         await cdp.send('Emulation.setCPUThrottlingRate', {rate: THROTTLED_MOBILE.cpu});
-        const seen = () => page.evaluate(() => (window as unknown as {__lcpCandidates: LcpCandidate[]}).__lcpCandidates);
         try {
-          await page.goto(url(name, params), {waitUntil: 'networkidle'});
-          // A quiet network is not a settled paint: keep watching until no new candidate arrives.
-          const deadline = Date.now() + LCP_SETTLE_CAP_MS;
-          let candidates = await seen(), settled = false;
-          while (Date.now() < deadline) {
-            await page.waitForTimeout(LCP_QUIET_MS);
-            const next = await seen();
-            if (next.length === candidates.length) { settled = true; break; }
-            candidates = next;
-          }
+          await page.goto(url(name, params), {waitUntil: 'commit'});
+          const deadline = performance.now() + capMs;
+          let candidates: LcpCandidate[] = [], quietSince: number | undefined, settled = false;
+          do {
+            const sample = await page.evaluate(selectors => ({
+              ready: selectors.every(selector => [...document.querySelectorAll(selector)].some(el =>
+                el.checkVisibility({opacityProperty: true, visibilityProperty: true}) && el.getClientRects().length > 0)),
+              candidates: (window as unknown as {__lcpCandidates?: LcpCandidate[]}).__lcpCandidates ?? [],
+            }), ready);
+            const now = performance.now();
+            if (!sample.ready || !sample.candidates.length) quietSince = undefined;
+            else if (quietSince === undefined || sample.candidates.length !== candidates.length) quietSince = now;
+            candidates = sample.candidates;
+            if (now >= deadline) break;
+            if (quietSince !== undefined && now - quietSince >= LCP_QUIET_MS) { settled = true; break; }
+            await page.waitForTimeout(Math.min(100, deadline - now));
+          } while (true);
           const winner = candidates.at(-1) ?? null;
           return {ms: winner?.ms ?? 0, winner, candidates, settled};
         } finally {

@@ -82,7 +82,7 @@ export function FleetCoverageView({region}: {region: string}) {
 }
 
 function CoverageBody({r}: {r: CoverageReport}) {
-  if (!r.totals.boats && !r.runs.length) return <p>{COPY.noBoats}</p>;
+  if (!r.totals.boats && !r.runs.length) return <><p>{COPY.noBoats}</p><p>{COPY.singleEmpty}</p></>;
   const head = (
     <tr>
       <th scope="col">{COPY.port}</th><th scope="col">{COPY.vesselClass}</th><th scope="col">{COPY.boats}</th><th scope="col">{COPY.mmsi}</th>
