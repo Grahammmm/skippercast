@@ -195,7 +195,8 @@ test('the legend shows a colour key only while its layer draws, and says why oth
   assert.equal(reasons(html)['charter-grounds'], undefined, 'FE-21: drawn grounds give no reason');
   assert.equal(reasons(html)['commercial-ais'], '3 historical grid cells · Jul &amp; Sep 2024 · depth unknown', 'v1\'s status line (HTML-escaped)');
   // The Charter fleet entry offers v1's commercial AIS layer as an option where the region has it, off by default.
-  assert.match(m.render(m.h(m.LayerRail)), /<label class="app-rail-option"><input type="checkbox" checked\/?>Commercial AIS 2024<\/label>/);
+  // MB-13: a rail checkbox carries a 24 px minimum target (WCAG 2.5.8; e2e/wcag-views.spec.ts fails the page without it).
+  assert.match(m.render(m.h(m.LayerRail)), /<label class="app-rail-option"><input type="checkbox" style="min-width:24px;min-height:24px;" checked\/?>Commercial AIS 2024<\/label>/);
   m.aisState.value = {offered: false, drawn: 0, note: ''};
   assert.doesNotMatch(m.render(m.h(m.LayerRail)), /app-rail-option/);
   // In 3D the Chart's layers draw nothing: chart-only rows say so, Currents gives the renderer's status, and
@@ -313,7 +314,7 @@ test('FE-80: in 2D and 3D the Seafloor entry holds the terrain\'s options with l
   m.terrainShading.value = null;
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=currents`);
   html = m.render(m.h(m.LayerRail));
-  assert.match(html, /<input type="checkbox" disabled\/?>Reefs &amp; species pins/, 'with Seafloor off the reefs and pins are off and fixed');
+  assert.match(html, /<input type="checkbox" style="min-width:24px;min-height:24px;" disabled\/?>Reefs &amp; species pins/, 'with Seafloor off the reefs and pins are off and fixed');
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=seafloor`);
   assert.doesNotMatch(m.render(m.h(m.LayerRail)), /app-rail-terrain/);
 });

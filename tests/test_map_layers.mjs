@@ -338,11 +338,11 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   await tick(); await tick();
   assert.equal(fake.maps.length, 1, 'one map');
   const [map] = fake.maps;
-  // The boat profile's default layers include Seafloor (FE-14), which checks its own publication; the
-  // protected areas (FE-19) read only the region's own files. The reef marks' run-time screen (#489) asks
-  // v1's live ds582 query, then the daily feed's boundary record (the Worker's part, else the whole feed).
+  // MB-13 (D5): a fresh profile opens with only the charter areas on, so the boat profile no longer reads the seafloor publication here
+  // (its manifest is fetched when Seafloor is switched on; see the layer menu tests). The protected areas (FE-19) read only the region's
+  // own files. The reef marks' run-time screen (#489) asks v1's live ds582 query, then the daily feed's boundary record (the Worker's part, else the whole feed).
   assert.deepEqual(fetches.filter(url => !url.startsWith('https://s.test/regions/') && !url.startsWith('https://s.test/data/')).sort(), [
-    `https://s.test/${BASEMAP_MANIFEST}`, '/feeds/tiles/seafloor/manifest-morro-bay.json', mpaQuery([-121.9, 34.95, -120.55, 35.85]),
+    `https://s.test/${BASEMAP_MANIFEST}`, mpaQuery([-121.9, 34.95, -120.55, 35.85]),
     'https://s.test/api/daily?region=morro-bay&part=mpa-boundaries', 'https://s.test/feeds/data/regions/morro-bay/latest.json',
   ].sort());
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
