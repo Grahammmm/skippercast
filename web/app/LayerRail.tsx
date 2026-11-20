@@ -38,14 +38,16 @@ import {chartFailed, ENC_MIN_ZOOM} from '../map/chart.ts';
 import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
-import {chartOnly, drawsIn, layerCopy, railNoteCopies, railNotes} from '../map/layers.ts';
+import {chartOnly, depthLinesOn, drawsIn, layerCopy, menuList, railNoteCopies, railNotes, spotsOn, withDepthLines, withSpots} from '../map/layers.ts';
 import {statusText} from '../map/status-copy.ts';
 import type {CoastHabitat} from '../../packages/coast/src/embed-types.ts';
 import {
-  currentStatus, exploreRankedReef, selectRankedReef, setTerrainOption, shownPresentation, terrainHabitat, terrainOptions, terrainShading,
+  camera, choosePresentation, currentStatus, exploreRankedReef, PHONE_QUERY, selectRankedReef, setTerrainOption, shownPresentation, terrainBlocked, terrainHabitat, terrainOptions,
+  terrainReason, terrainShading, threeDOffered,
 } from '../map/stage.ts';
 import {base, current, DEFAULT_CURRENT, grade, isBase, layers, layersParam, profile, region, setParams, species, UNSUPPORTED, type Base} from '../state.ts';
-import {railEntries, railOn, toggled} from './rail.ts';
+import {railEntries, railOn} from './rail.ts';
+import {ThemeChoice} from './ThemeChoice.tsx';
 import {Presets} from './Presets.tsx';
 import {PreviewRailItems} from './PreviewLayers.tsx';
 import {EnglishDetail} from './EnglishDetail.tsx';
@@ -55,7 +57,7 @@ export {RAIL_ENTRIES, railEntries, railOn, toggled, type RailEntry} from './rail
 
 /** Choose a surface-current source; the rail's Currents entry is on exactly when one is chosen. */
 export function chooseCurrent(value: string): void {
-  setParams({current: value, layers: layersParam(toggled(layers.value, 'currents', value !== 'off'))});
+  setParams({current: value, layers: layersParam(menuList(layers.value, 'currents', value !== 'off'))});
 }
 
 /** The one `?current=` control, shared by the Currents rail entry and the Conditions view (FE-32). */
@@ -253,6 +255,21 @@ export function LookFor() {
   );
 }
 
+/** The phone's viewport (the 3D choice is offered from a later zoom there, MB-14). */
+const phoneQuery = typeof matchMedia === 'function' ? matchMedia(PHONE_QUERY) : null;
+
+/** The menu's 3D view row: on while the 3D terrain shows; waits for the zoom and the renderer as the presentation toggle does. */
+function View3dItem({basisLabel}: {basisLabel: string}) {
+  const shown = shownPresentation.value, blocked = terrainBlocked.value, lang = language.value;
+  const zoomedOut = blocked === null && shown !== '3d' && !threeDOffered(camera.value?.zoom, phoneQuery?.matches ?? false);
+  const off = shown !== '3d' && (!!blocked || zoomedOut);
+  const note = shown === '3d' ? undefined : blocked ? terrainReason(blocked, lang) : zoomedOut ? t('stage.zoomFor3d', lang) : undefined;
+  return (
+    <RailItem id="view-3d" label={t('rail.view3d', lang)} icon="map" on={shown === '3d'} disabled={off} note={off ? note : undefined} basisLabel={basisLabel}
+      onToggle={(_, next) => choosePresentation(next ? '3d' : 'chart')} />
+  );
+}
+
 export function LayerRail() {
   const on = layers.value, source = current.value, shown = shownPresentation.value, lang = language.value;
   // SC1922-07: the Chart could not start, so none of its layers can draw; the buttons say so and ignore presses, and keep what was chosen.
@@ -268,24 +285,50 @@ export function LayerRail() {
   };
   // SC1352-02: a note whose producer attached catalogue parts reads in the page's language; any other stays labelled English.
   const railNote = (id: string) => { const raw = railNotes.value[id as keyof typeof railNotes.value]; const r = raw ? statusText(raw, railNoteCopies.value[id as keyof typeof railNotes.value], lang) : null; return r?.translated ? r.text : runtime(raw || undefined); };
+  const entries = railEntries(lang);
+  // MB-13: the menu's own names for two rows; the rail ids, and so the links and saved lists, are unchanged.
+  const MENU_LABEL: Partial<Record<string, string>> = {seafloor: t('rail.seafloorType', lang), fleet: t('rail.spots', lang)};
+  const entry = (id: string) => {
+    const e = entries.find(x => x.id === id);
+    if (!e) return null;
+    const here = drawsIn(e.id, shown), active = id === 'fleet' ? spotsOn(on) || railOn(e.id, on, source) : railOn(e.id, on, source), label = MENU_LABEL[id] ?? e.label;
+    // The one place a list changes: markers and the field and flow rules live in layers.ts (menuList, withSpots).
+    // Wind (the swell + wind entry) turning on also ends a chosen current source: one flow at a time.
+    const toggle = (_: string, next: boolean) => setParams({layers: layersParam(id === 'fleet' ? withSpots(layers.value, next) : menuList(layers.value, id, next)), ...id === 'swell' && next ? {current: 'off'} : {}});
+    return id === 'currents' ? (
+      <RailItem key={id} id={id} label={label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(label)} disabled={!here || failed}
+        note={!here ? chartOnly(lang) : failed ? failedReason : active ? currentsNote() : undefined} onToggle={(_, next) => chooseCurrent(next ? DEFAULT_CURRENT : 'off')}>
+        {active && here && !failed ? <CurrentSource /> : null}
+      </RailItem>
+    ) : (
+      <RailItem key={id} id={id} label={label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(label)} disabled={!here || failed}
+        note={!here ? chartOnly(lang) : failed ? failedReason : id === 'seafloor' && shown !== 'chart' ? undefined : railNote(id)} onToggle={toggle}>
+        {id === 'fleet' && railOn(id, on, source) && here && !failed ? <FleetOptions /> : null}
+        {id === 'seafloor' && shown !== 'chart' ? <TerrainOptions on={active} /> : null}
+      </RailItem>
+    );
+  };
+  const lines = depthLinesOn(on), drawsLines = shown === 'chart';  // the lines are a Chart layer (layers.ts: depth-contours)
   return (
-    <Rail class="app-rail" label={t('rail.aria', lang)} header={<><LookFor /><Presets /></>} footer={<BaseChoice />}>
-      {[...railEntries(lang).map(e => {
-        const here = drawsIn(e.id, shown), active = railOn(e.id, on, source);
-        return e.id === 'currents' ? (
-          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here || failed}
-            note={!here ? chartOnly(lang) : failed ? failedReason : active ? currentsNote() : undefined} onToggle={(_, next) => chooseCurrent(next ? DEFAULT_CURRENT : 'off')}>
-            {active && here && !failed ? <CurrentSource /> : null}
-          </RailItem>
-        ) : (
-          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here || failed}
-            note={!here ? chartOnly(lang) : failed ? failedReason : e.id === 'seafloor' && shown !== 'chart' ? undefined : railNote(e.id)}
-            onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})}>
-            {e.id === 'fleet' && active && here && !failed ? <FleetOptions /> : null}
-            {e.id === 'seafloor' && shown !== 'chart' ? <TerrainOptions on={active} /> : null}
-          </RailItem>
-        );
-      }), <PreviewRailItems key="previews" disabledReason={failed ? failedReason : undefined} />]}
+    <Rail class="app-rail" label={t('rail.aria', lang)} header={<><h2 class="ui-eyebrow app-rail-title">{t('rail.title', lang)}</h2><LookFor /><Presets /></>} footer={<><BaseChoice /><ThemeChoice inMenu /></>}>
+      {[
+        <RailItem key="depth" id="depth-shading" label={t('rail.depth', lang)} icon="layers" on basis={t('layer.relief.shading', lang)} basisLabel={basisLabel(t('rail.depth', lang))}
+          disabled={false} note={t('rail.depth.note', lang)} onToggle={() => {}} />,
+        <RailItem key="lines" id="depth-lines" label={t('rail.lines', lang)} icon="chart" on={lines} basis={t('layer.depth-contours.v2.basis', lang)} basisLabel={basisLabel(t('rail.lines', lang))}
+          disabled={!drawsLines || failed} note={!drawsLines ? chartOnly(lang) : failed ? failedReason : undefined}
+          onToggle={(_, next) => setParams({layers: layersParam(withDepthLines(layers.value, next))})} />,
+        entry('seafloor'),
+        <View3dItem key="view3d" basisLabel={basisLabel(t('rail.view3d', lang))} />,
+        entry('fleet'),
+        <li key="conditions" class="ui-rail-group" role="presentation">
+          <h3 class="ui-eyebrow">{t('rail.conditions', lang)}</h3>
+          <p class="app-rail-hint">{t('rail.conditions.note', lang)}</p>
+        </li>,
+        ...['swell', 'currents', 'water-temp', 'chlorophyll', 'stations'].map(entry),
+        <li key="more" class="ui-rail-group" role="presentation"><h3 class="ui-eyebrow">{t('rail.moreConditions', lang)}</h3></li>,
+        ...['sst-contrast', 'sst-fronts', 'clouds'].map(entry),
+        <PreviewRailItems key="previews" disabledReason={failed ? failedReason : undefined} />,
+      ]}
     </Rail>
   );
 }
