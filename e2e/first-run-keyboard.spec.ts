@@ -55,6 +55,10 @@ for (const lang of ['en', 'es'] as const) {
       test.skip(isMobile, 'desktop layout only: the phone sheet deliberately takes no focus on load');
       await v2.open('app', lang === 'es' ? {region: 'morro-bay', lang} : {region: 'morro-bay'});
       const card = page.locator('[data-first-run]'), heading = card.locator('#first-run-title');
+      // The document title can be ready before the app mounts, especially while Spanish copy loads.
+      // Start the focus deadline only once the localized first-run card has rendered.
+      await expect(card).toBeVisible();
+      await expect(heading).toHaveText(copy.title);
       await expect(heading).toBeFocused({timeout: 2_000});
       await page.keyboard.press('Tab');
       await expect(card.locator('button[data-profile="boat"]')).toBeFocused();

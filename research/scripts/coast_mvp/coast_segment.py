@@ -32,7 +32,7 @@ from uuid import uuid4
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_ADMITTED = REPO.parent / 'out'
 STAGE_HASHES = {
-    'coast_mosaic': '102b59f8a2a0c04faeedf903ebbb024f01b354d6c335b1d90aef10f86fcfe8d7',
+    'coast_mosaic': '3e45f64af6302ef3eb975e27a0687b2bbe08e43606073b5f3f23cefb414c8157',
     'coast_contours': '47be44283bc2924ef35d292ffc4ed42e82324c05722c52ad274a55918cb8818b',
     'coast_qa': '0c5816fbe3b0f5fe2ca4010bdfcf632d665cec28185a4bfa07b06946cee57235',
     'coast_rights': '76c1e470d2ceeb37b963cb4e738bc12f7c7a50789f10bee20426c7d701954702',
