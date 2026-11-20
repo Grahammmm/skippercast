@@ -1,6 +1,6 @@
-// SCA-607 / F15-12 (MB contours): z18 may magnify z17 or be unreachable;
+// SCA-458 / F15-12 (MB contours): z18 magnifies z17;
 // it must not add native detail or silently erase the survey gap.
-// Default CI: synthetic controls. Read-only production-path replay:
+// Default CI: real projection over synthetic controls. Diagnostic replay:
 //   node tests/test_f15_12_audit.mjs --baseline
 // The replay reports the gap without making it an expected production result.
 import assert from 'node:assert/strict';
@@ -94,18 +94,18 @@ async function replay(t, cap) {
 }
 
 if (process.argv.includes('--baseline')) {
-  test('F15-12: unchanged camera and contour projection, read-only receipt', async t => {
+  test('F15-12: camera and contour projection, read-only receipt', async t => {
     const {before, after} = await replay(t);
     t.diagnostic(`app zoom ${before.zoom} -> ${after.zoom} (requested ${REQUEST}); z17 source IDs: ${before.features.map(f => f.id).join(', ')}; endpoint source IDs: ${after.features.map(f => f.id).join(', ') || 'none'}`);
     const issues = endpointGaps(before, after);
     t.diagnostic(issues.length ? `GAP: ${issues.join('; ')}` : 'NO GAP');
   });
 } else {
-  test('F15-12: clamping to z17 or retaining the z17 projection at z18 preserves coverage', async t => {
-    const {before, after} = await replay(t, START);
-    assert.equal(after.zoom, START);
+  test('F15-12: zooming to z18 retains the z17 coverage and detail', async t => {
+    const {before, after} = await replay(t);
+    assert.equal(after.zoom, REQUEST);
     assert.deepEqual(endpointGaps(before, after), []);
-    assert.deepEqual(endpointGaps(before, {...after, zoom: REQUEST}), []);
+    assert.deepEqual(after.features, before.features, 'z18 magnifies the same overlay');
   });
 
   test('F15-12: an empty projection or invented detail at z18 fails the endpoint contract', async t => {
