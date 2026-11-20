@@ -15,6 +15,8 @@ import {readPalette, type Palette} from './palette.ts';
 import {sp, type StatusCopy} from './status-copy.ts';
 
 const ID = 'chlorophyll', HOUR = 3_600_000;
+/** § 9: Temp contrast inserts under this, so the field order does not depend on which drew first. */
+export const CHLOROPHYLL_LAYER = ID;
 export const CHLOROPHYLL_SCALE = [0.01, 0.1, 1, 10, 100] as const;
 const BASIS = layerEntry(ID).basis;
 export interface ChlorophyllStatus {readonly drawn: ChlorophyllObservation | null; readonly basis: string; readonly note: string; readonly copy?: StatusCopy}
