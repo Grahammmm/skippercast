@@ -26,7 +26,7 @@ import {MPA_FILL} from '../web/map/mpa.ts';
 import {PLACE_LABELS} from '../web/map/style.ts';
 import {ramps, readPalette} from '../web/map/palette.ts';
 import {
-  CONTOUR_LABELS, CONTOUR_LAYER, CONTOUR_SOURCE, MAX_AGE_MS, SST_LAYER, SST_SOURCE, WATER_TEMP_BASIS,
+  CONTOUR_LABELS, CONTOUR_LAYER, CONTOUR_SOURCE, SST_LAYER, SST_SOURCE, WATER_TEMP_BASIS,
   analysisStatus, contourLines, createWaterTemp, sstMark, waterTempOverlay, waterTempState,
 } from '../web/map/sst.ts';
 import {surfaceField} from '../web/map/surface-field.js';
@@ -133,9 +133,26 @@ test('nothing draws without a fresh, loaded, drawable analysis, and the reason i
   assert.equal(status(report({source: {...MUR, outcome: 'error'}})).note, 'no analysis in the report', 'a failed source');
   assert.equal(status(report({source: null})).note, 'no analysis in the report', 'an unnamed source');
   assert.equal(status({...report(), spatial: {}}).note, 'no analysis in the report');
-  const late = new Date(Date.parse('2026-10-07T09:00:00Z') + MAX_AGE_MS);
-  assert.deepEqual(reason(status(report(), late, late)), ['no fresh analysis · last Oct 7', 'Water temp unavailable: the latest NASA JPL MUR analysis, for Oct 7, is past its 72-hour age limit.', null]);
-  assert.equal(status(report({sst: {fetchedAt: '2026-10-06T02:00:00.000Z'}})).note, 'no fresh analysis · last Oct 7', 'retrieved over 72 h ago');
+  // Each timestamp independently expires at the limit; clock skew is inclusive.
+  // Keep the dock later than the skew cases so its separate rule cannot hide an age-gate regression.
+  const selectedHour = new Date(NOW.getTime() + HOUR);
+  for (const key of ['analysedAt', 'fetchedAt']) {
+    for (const [offset, draws, label] of [
+      [-72 * HOUR + 1, true, '1 ms inside the age limit'],
+      [-72 * HOUR, false, 'at the age limit'],
+      [5 * 60_000, true, 'at the clock skew limit'],
+      [5 * 60_000 + 1, false, '1 ms beyond the clock skew limit'],
+    ]) {
+      const when = new Date(NOW.getTime() + offset).toISOString();
+      const result = status(report({sst: {[key]: when}}), selectedHour, NOW);
+      assert.equal(Boolean(result.drawn), draws, `${key}: ${label}`);
+      if (!draws) {
+        const date = key === 'fetchedAt' ? 'Oct 7' : offset < 0 ? 'Oct 5' : 'Oct 8';
+        assert.equal(result.note, `no fresh analysis · last ${date}`, 'withhold copy names the analysis date');
+        assert.equal(result.reason, `Water temp unavailable: the latest NASA JPL MUR analysis, for ${date}, is past its 72-hour age limit.`);
+      }
+    }
+  }
   assert.equal(status(report(), new Date('2026-10-07T08:00:00Z')).note, 'analysis after this hour · Oct 7');
   const irregular = points().map((p, k) => (k === 7 ? {...p, lon: p.lon + 0.007} : p));
   assert.deepEqual(reason(status(report({sst: {points: irregular}}))), ['grid cannot be drawn · Oct 7',

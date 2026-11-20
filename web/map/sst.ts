@@ -42,6 +42,7 @@ import {CONTRAST_LAYER} from './contrast.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {fieldTexture, isolines} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {LAYERS_STYLE} from './layers-style.gen.ts';
 import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {COAST_NOT_SAVED, COAST_OFFLINE_COPY, NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY, watchOffline} from './offline.ts';
 import {pair, sp, type StatusCopy} from './status-copy.ts';
@@ -63,7 +64,7 @@ export const CONTOUR_LAYER = 'water-temp-contours';
 export const CONTOUR_LABELS = 'water-temp-labels';
 const HOUR = 3_600_000;
 /** fish's `live(…, 72)`: an analysis, and its retrieval, under 72 hours old and at most 5 minutes ahead. */
-export const MAX_AGE_MS = 72 * HOUR;
+export const MAX_AGE_MS = LAYERS_STYLE.layers['sst-fill'].data_age.max_age_h * HOUR;
 const AHEAD_MS = 5 * 60_000;
 
 /** An analysis that passed the gate, with its grid. */
@@ -109,6 +110,14 @@ export function dayText(iso: string, tz: string): string {
 /** "under 1 h", "42 h", "3 d". */
 const age = (ms: number): string => { const h = Math.floor(Math.max(0, ms) / HOUR); return h < 1 ? 'under 1 h' : h < 72 ? `${h} h` : `${Math.floor(h / 24)} d`; };
 const fresh = (iso: string, now: Date, limit = MAX_AGE_MS): boolean => { const d = now.getTime() - Date.parse(iso); return Number.isFinite(d) && d >= -AHEAD_MS && d < limit; };
+/** Age check for an already admitted SST source; source status and dock hour are separate. */
+export function sstDataIsFresh(
+  {analysedAt, fetchedAt}: Pick<SurfaceTemperature, 'analysedAt' | 'fetchedAt'>,
+  now: Date,
+  limitMs = MAX_AGE_MS,
+): boolean {
+  return fresh(analysedAt, now, limitMs) && fresh(fetchedAt, now, limitMs);
+}
 const deg = (value: number): string => `${Number(value.toFixed(3))}°`;
 const fahrenheit = (value: number): string => `${value.toFixed(1)} °F`;
 
@@ -169,7 +178,7 @@ export function regionalStatus(on: boolean, feed: RegionalSST | null, at: Date, 
 /** The shared gate: age (the analysis's and its retrieval's), the dock's hour, then the grid. */
 function judge(sst: SurfaceTemperature, product: string, limit: number, at: Date, now: Date, tz: string): WaterTempStatus {
   const date = dayText(sst.analysedAt, tz), when = {day: sst.analysedAt, tz};
-  if (!fresh(sst.analysedAt, now, limit) || !fresh(sst.fetchedAt, now, limit)) return stale(product, sst.analysedAt, limit, tz);
+  if (!sstDataIsFresh(sst, now, limit)) return stale(product, sst.analysedAt, limit, tz);
   if (Date.parse(sst.analysedAt) > at.getTime())
     return none(`analysis after this hour · ${date}`, `Water temp unavailable: the ${product} analysis, for ${date}, is later than the selected hour.`,
       pair(sp('map.status.common.afterHourNote', {date: when}), sp('map.status.sst.afterHour', {product, date: when})));
