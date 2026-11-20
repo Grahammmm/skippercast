@@ -17,20 +17,30 @@ from scripts import check_deploy_source as source  # noqa: E402
 from skippercast.relief import package, stage_transport as stage  # noqa: E402
 
 
+def _event_object(parent, key, *, field=None):
+    value = parent.get(key, {})
+    if not isinstance(value, dict):
+        raise stage.StageError(f'event field {field or key} must be a JSON object')
+    return value
+
+
 def deploy_mode(env, event):
     if (env.get('GITHUB_REPOSITORY') != stage.REPOSITORY or env.get('GITHUB_REF') != 'refs/heads/main'
             or env.get('GITHUB_REF_PROTECTED') != 'true' or env.get('RUNNER_ENVIRONMENT') != 'github-hosted'):
         raise stage.StageError('STAGE requires the protected SkipperCast main path on a hosted runner')
     name = env.get('GITHUB_EVENT_NAME')
-    if name == 'workflow_dispatch' and event.get('inputs', {}).get('action') == 'deploy':
-        return 'read-back'  # manual deploy does not authorize new objects
-    run = event.get('workflow_run', {})
-    if (name == 'workflow_run' and event.get('action') == 'completed'
-            and run.get('path') == '.github/workflows/ci.yml' and run.get('name') == 'Offline checks'
-            and run.get('event') == 'push' and run.get('head_branch') == 'main'
-            and run.get('status') == 'completed' and run.get('conclusion') == 'success'
-            and (run.get('head_repository') or {}).get('full_name') == stage.REPOSITORY):
-        return 'copy'
+    if name == 'workflow_dispatch':
+        if _event_object(event, 'inputs').get('action') == 'deploy':
+            return 'read-back'  # manual deploy does not authorize new objects
+    elif name == 'workflow_run':
+        run = _event_object(event, 'workflow_run')
+        repository = _event_object(run, 'head_repository', field='workflow_run.head_repository')
+        if (event.get('action') == 'completed'
+                and run.get('path') == '.github/workflows/ci.yml' and run.get('name') == 'Offline checks'
+                and run.get('event') == 'push' and run.get('head_branch') == 'main'
+                and run.get('status') == 'completed' and run.get('conclusion') == 'success'
+                and repository.get('full_name') == stage.REPOSITORY):
+            return 'copy'
     raise stage.StageError('event cannot copy or verify staged relief')
 
 
