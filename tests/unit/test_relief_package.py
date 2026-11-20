@@ -14,6 +14,7 @@ from tests._support import ROOT
 REGION = 'morro-bay'
 SOURCE = 'synthetic-grid'
 CHUNK = 'layers/public/relief.digests/8/2_1.json'
+OWNER_DISPLAY = {'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}
 LAYERS = {
     package.ARCHIVE: b'synthetic relief archive',
     package.DIGEST_ROOT: b'{"synthetic": "root"}',
@@ -157,7 +158,25 @@ def test_pointer_schema_round_trip_and_previous(tmp_path, assembly):
         envelope.build_pointer(approval, review, previous=previous | {'region': 'elsewhere'})
 
 
-@pytest.mark.parametrize('change', ['private-source', 'held-catalog-row', 'publication-denied', 'publication-denied-owner-cleared',
+def test_package_releases_owner_cleared_candidate(tmp_path, assembly):
+    # Contract (DATA-LIVE-ROUTING §2): a relief release is derived display, so a candidate row with the owner's G
+    # display decision releases even with an unresolved licence and a raw-redistribution denial, and the catalogue
+    # row is not promoted. Bug caught: the Morro ROLL-A package refusing every owner-cleared relief source.
+    catalog = assembly / 'catalog/sources.json'
+    rows = json.loads(catalog.read_bytes())
+    rows['sources'][0].update(review_status='candidate', publication_allowed=False)
+    rows['sources'][0]['rights'].update(license='unresolved', owner_public_display=OWNER_DISPLAY)
+    write_json(catalog, rows)
+    region, manifest = inputs(tmp_path / 'out')
+    doc = json.loads(manifest.read_bytes())
+    doc['sources'][0]['rights']['license'] = 'unresolved'
+    write_json(manifest, doc)
+    assert run_package(region, manifest) == 0
+    assert list(region.dir.glob('release/*/release.json'))
+
+
+@pytest.mark.parametrize('change', ['private-source', 'held-catalog-row', 'publication-denied', 'owner-marker-wrong-basis',
+                                    'owner-cleared-display-held',
                                     'unknown-source',
                                     'excluded-mbari', 'out-of-region', 'unlisted-digest', 'unreceipted-layer', 'uncertified-z16'])
 def test_package_refuses_ineligible_inputs(tmp_path, assembly, change, capsys):
@@ -175,15 +194,19 @@ def test_package_refuses_ineligible_inputs(tmp_path, assembly, change, capsys):
         # Contract: an approved, display-allowed row with an explicit publication denial and no owner display
         # decision is not releasable. Bug caught: the SCA-126 display decision dropping that veto from the relief gate.
         rows['sources'][0]['publication_allowed'] = False
-    elif change == 'publication-denied-owner-cleared':
-        # Contract: the owner's display decision is not a release authorization; an explicit publication denial
-        # still blocks the release. Bug caught: the relief gate skipping the veto when owner_public_display is set.
-        rows['sources'][0]['publication_allowed'] = False
-        rows['sources'][0]['rights']['owner_public_display'] = {'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}
+    elif change == 'owner-marker-wrong-basis':
+        # Contract: only the recorded G basis clears a candidate row. Bug caught: any owner marker releasing.
+        rows['sources'][0].update(review_status='candidate', publication_allowed=False)
+        rows['sources'][0]['rights']['owner_public_display'] = {'decision': 'allowed', 'basis': 'unrecorded'}
+    elif change == 'owner-cleared-display-held':
+        # Contract: the owner decision never overrides a display hold. Bug caught: owner marker skipping display.
+        rows['sources'][0]['rights'].update(public_display='private', owner_public_display=OWNER_DISPLAY)
     elif change == 'unknown-source':
         rows['sources'].clear()
     elif change == 'excluded-mbari':
+        # The owner decision never clears MBARI lineage.
         rows['sources'][0]['provider'] = 'MBARI'
+        rows['sources'][0]['rights']['owner_public_display'] = OWNER_DISPLAY
     elif change == 'out-of-region':
         doc['bounds'][0] = -125
         reason = 'clipped to the region'
