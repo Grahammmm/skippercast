@@ -49,18 +49,35 @@ async function json(get, path) {
   return r.json();
 }
 
+/** Match check_feed_freshness.py's backup age: use the first usable data clock,
+ * measured at source check time (or feed build time), not publication age. */
+function timelyBackup(source, feed, now, hours) {
+  const built = [source.checked_at, feed.generated_at, feed.published_at || feed.completed_at || feed.generated_at]
+    .map(stamp).find(Number.isFinite);
+  const at = [source.data?.sample_at, source.data?.issued_at, source.data_retrieved_at, source.last_success_at]
+    .map(stamp).find(Number.isFinite);
+  // Preserve preflight's rejection of future data clocks.
+  return at <= now + 600000 && built - at <= hours * HOUR;
+}
+
 /** Catalog degradation semantics, but missing required kinds also fail promotion. */
 function feedCheck(feed, id, now, hours, requiredKinds, degradedHours) {
   requireThat(feed?.schema_version === 1 && feed.region_id === id, 'feed-identity');
   requireThat(fresh(feed.published_at || feed.completed_at || feed.generated_at, now, hours), 'feed-clock-stale-invalid-or-future');
   requireThat(object(feed.sources) && Object.keys(feed.sources).length > 0, 'feed-sources-missing');
   const sources = Object.values(feed.sources).filter(object);
+  const warnings = [];
   for (const kind of new Set([...requiredKinds, ...sources.map(s => s.kind).filter(k => HEALTH.critical_kinds.includes(k))])) {
     const rows = sources.filter(s => s.kind === kind);
     requireThat(rows.length > 0, `missing-${kind}-sources`);
-    // A failed source's retained data may bridge an outage only inside the existing catalog limit.
-    requireThat(rows.some(s => s.status === 'ok' || fresh(s.data?.sample_at || s.data?.issued_at || s.data_retrieved_at || s.last_success_at, now, degradedHours)), `degraded-${kind}-sources`);
+    // An OK backup is still degraded service; only an OK primary bypasses the age check.
+    const usable = rows.filter(s => s.fallback_for ? timelyBackup(s, feed, now, degradedHours)
+      : s.status === 'ok' || fresh(s.data?.sample_at || s.data?.issued_at || s.data_retrieved_at || s.last_success_at, now, degradedHours));
+    requireThat(usable.length > 0, `degraded-${kind}-sources`);
+    if (usable.length < rows.length) warnings.push(`partial outage: ${kind}`);
+    if (usable.some(s => s.fallback_for)) warnings.push(`backup ${kind} within limit (degraded service)`);
   }
+  return warnings;
 }
 
 /** Runs sequentially: the app's rules loader has a shared region-keyed store. */
@@ -90,6 +107,7 @@ export async function checkRegion(id, sourceRegion, index, get, now = Date.now()
   });
   if (!checks[0].pass) return {region: id, pass: false, checks};
   await check('feeds', async () => {
+    const warnings = [];
     for (const [branch, file, hours, kinds, degraded] of [
       ['conditions', 'latest.json', HEALTH.regions.max_age_hours, ['observation'], HEALTH.regions.critical_degraded_hours],
       ['data', 'latest.json', HEALTH.feeds.data.max_age_hours, ['observation', 'prediction', 'advisory', 'forecast'], HEALTH.feeds.data.critical_degraded_hours],
@@ -97,10 +115,10 @@ export async function checkRegion(id, sourceRegion, index, get, now = Date.now()
     ]) {
       const feed = await json(get, `/feeds/${branch}/regions/${id}/${file}`);
       if (branch === 'data') daily = feed;
-      try { feedCheck(feed, id, now, hours, kinds, degraded); }
+      try { warnings.push(...feedCheck(feed, id, now, hours, kinds, degraded).map(w => `${branch}/${file}: ${w}`)); }
       catch (e) { throw new Error(`${branch}/${file}: ${e.message}`); }
     }
-    return 'regional conditions, daily and intelligence fresh; critical sources checked';
+    return ['regional conditions, daily and intelligence fresh; critical sources checked', ...warnings].join('; ');
   });
   await check('tides', async () => {
     // Fetch independently if an earlier feed failed: all useful failure reasons still print.

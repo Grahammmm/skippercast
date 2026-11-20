@@ -1,5 +1,7 @@
 """Offline real-GDAL controls for the whole-segment research mosaic."""
 import json
+import shutil
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -7,7 +9,7 @@ import rasterio
 from rasterio.transform import from_origin
 from rasterio.warp import transform_bounds
 
-from research.scripts.coast_mvp.coast_mosaic import file_hash, load_sources, mosaic
+from research.scripts.coast_mvp.coast_mosaic import estimate_bytes, file_hash, load_sources, mosaic
 
 
 def fixture(tmp_path):
@@ -84,13 +86,40 @@ def test_refuse_changed_or_ambiguous_sources(tmp_path, change, match):
         load_sources(table)
 
 
-def test_caps_fail_before_output(tmp_path):
+def test_caps_fail_before_output(tmp_path, monkeypatch):
     region, table = fixture(tmp_path)
+    out = tmp_path / 'out'
     with pytest.raises(ValueError, match='cell cap'):
-        mosaic(region, table, tmp_path/'out', max_cells=1)
-    with pytest.raises(ValueError, match='reserve'):
-        mosaic(region, table, tmp_path/'out', reserve_gib=1e12)
-    assert not (tmp_path/'out').exists()
+        mosaic(region, table, out, max_cells=1)
+    assert not out.exists()
+
+    # At exactly the reserve, ignoring the estimate would wrongly admit the run.
+    reserve = 250 * 1024**3
+    monkeypatch.setattr(shutil, 'disk_usage', lambda _: SimpleNamespace(free=reserve))
+    with pytest.raises(ValueError, match='^Free-space reserve would be crossed$'):
+        mosaic(region, table, out)
+    assert not out.exists()
+
+    # Each 100 m source crosses one block boundary on each axis of a 5 x 5
+    # block grid. Whole-grid charging or rounding only the span gives the wrong cost.
+    bounds = (-5170, -5180, 5080, 5070)
+    cells = 1025**2
+    small = load_sources(table) * 64
+    tile_metadata = 4096 * 25
+    assert estimate_bytes(small, *bounds, cells) == (
+        40 * cells + len(small) * (4 * 256**2 * 4 + tile_metadata)
+    )
+
+    # A source covering the grid must pay for all blocks, including partial
+    # edge blocks; a disjoint source pays only full-extent tile overhead.
+    whole = tmp_path / 'whole.tif'
+    with rasterio.open(whole, 'w', driver='GTiff', width=1, height=1, count=1,
+                       dtype='float32', crs='EPSG:3310',
+                       transform=from_origin(-6000, 6000, 12000, 12000)):
+        pass
+    source = [{'path': whole}]
+    assert estimate_bytes(source, *bounds, cells) - 40 * cells >= 4 * cells
+    assert estimate_bytes(source, 20000, 20000, 30250, 30250, cells) == 40 * cells + tile_metadata
 
 
 def test_duplicate_ids(tmp_path):

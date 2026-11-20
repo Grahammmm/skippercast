@@ -187,8 +187,15 @@ class Plan:
         raw = read_bytes(self.root, self.summary_path.relative_to(self.root).as_posix())
         self.summary_ref = {"path": self.summary_path.relative_to(self.root).as_posix(), "sha256": sha256(raw), "bytes": len(raw)}
         self.summary = load_json(raw)
-        if self.summary.get("schema") != "coast-run-summary-v1":
-            raise Refused("run summary schema coast-run-summary-v1 required")
+        if self.summary.get("schema") not in ("coast-run-summary-v1", "coast-run-summary-v3"):
+            raise Refused("run summary schema coast-run-summary-v3 or legacy coast-run-summary-v1 required")
+        if self.summary["schema"] == "coast-run-summary-v3":
+            # v3 carries run-scoped store counts and binds its inline per-window details by digest.
+            windows = json.dumps(self.summary.get("windows"), sort_keys=True, separators=(",", ":"), allow_nan=False)
+            if self.summary.get("windows_sha256") != hashlib.sha256(windows.encode()).hexdigest():
+                raise Refused("run summary per-window details digest mismatch")
+            if (self.summary.get("store_status") or {}).get("schema") != "coastal-coordinator-scope-v1":
+                raise Refused("run summary v3 requires run-scoped store counts")
 
     def _latest(self):
         found = []

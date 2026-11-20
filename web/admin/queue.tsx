@@ -5,9 +5,10 @@
 // (post-card.tsx); edit opens the post editor, whose save is the edit decision
 // (which also approves). ReviewCard is exported for the Posts view.
 import {useEffect, useRef, useState} from 'preact/hooks';
+import type {ComponentChildren} from 'preact';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
-import {ApiError, KINDS, STATUSES, contactHref, decide, getQueue, when} from './api.ts';
-import type {Count, DecisionBody, DecisionResult, QueueItem} from './api.ts';
+import {ApiError, KINDS, STATUSES, contactHref, decide, getQueue, getReview, when} from './api.ts';
+import type {Count, DecisionBody, DecisionResult, QueueItem, ReviewSummary} from './api.ts';
 import {decisionsFor, shortcutFor} from './keys.ts';
 import {rulesHref} from './route.ts';
 import {PostDetail, PostEditor} from './post-card.tsx';
@@ -15,10 +16,37 @@ import type {Post} from './api.ts';
 
 const cardId = (id: string): string => `review-${id}`;
 
+/** Focus the review that should take the keyboard next. A review the user already expanded holds its shortcut handler on the nested ReviewCard article, so focus that card; the outer list item (collapsed review) or the heading are the fallbacks. */
+export function focusReview(doc: Pick<Document, 'getElementById'>, id: string | undefined): void {
+  const outer = id ? doc.getElementById(cardId(id)) : null;
+  const target = outer ? outer.querySelector<HTMLElement>('article.admin-card') ?? outer : doc.getElementById('queue-heading');
+  target?.focus();
+}
+
+/** Detail lives only inside the open card, not in page state or a shared cache. */
+export function AdminDisclosure<T>({load, children}: {load: () => Promise<T>; children: (value: T) => ComponentChildren}) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <button type="button" class="admin-button" aria-expanded={open} onClick={() => setOpen(v => !v)}>Details</button>
+    {open ? <LoadedDetail load={load}>{children}</LoadedDetail> : null}
+  </>;
+}
+
+function LoadedDetail<T>({load, children}: {load: () => Promise<T>; children: (value: T) => ComponentChildren}) {
+  const [value, setValue] = useState<T | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let live = true;
+    load().then(detail => { if (live) setValue(detail); }).catch(() => { if (live) setFailed(true); });
+    return () => { live = false; };
+  }, []);
+  return failed ? <p class="admin-error" role="alert">{COPY.loadFailed}</p> : value ? <>{children(value)}</> : <p role="status">{COPY.loading}</p>;
+}
+
 export function Queue() {
   const [status, setStatus] = useState('open');
   const [kind, setKind] = useState('');
-  const [items, setItems] = useState<QueueItem[]>([]);
+  const [items, setItems] = useState<ReviewSummary[]>([]);
   const [next, setNext] = useState<string | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [notice, setNotice] = useState('');
@@ -34,10 +62,10 @@ export function Queue() {
   }
   useEffect(() => { void load(); }, [status, kind]);
 
-  function decided(item: QueueItem, result: DecisionResult): void {
+  function decided(item: ReviewSummary, result: DecisionResult): void {
     const index = items.findIndex(i => i.id === item.id);
     const stays = status === 'all' || result.review.status === status;
-    const rest = stays ? items.map(i => (i.id === item.id ? {...i, ...result.review, detail: i.detail} : i)) : items.filter(i => i.id !== item.id);
+    const rest = stays ? items.map(i => i.id === item.id ? {...i, status: result.review.status, decided_at: result.review.decided_at} : i) : items.filter(i => i.id !== item.id);
     setItems(rest);
     const word = COPY.statuses[result.review.status];
     const parts = [result.repeated ? COPY.alreadyDecided(word.toLowerCase()) : COPY.decided(word.toLowerCase())];
@@ -45,7 +73,7 @@ export function Queue() {
     if (result.held) parts.push(COPY.heldTexts);
     setNotice(parts.join(' '));
     const following = stays ? item : rest[Math.min(index, rest.length - 1)];
-    requestAnimationFrame(() => document.getElementById(following ? cardId(following.id) : 'queue-heading')?.focus());
+    requestAnimationFrame(() => focusReview(document, following?.id));
   }
 
   return (
@@ -70,7 +98,15 @@ export function Queue() {
       <p class="admin-notice" role="status">{notice}</p>
       {state === 'loading' ? <p>{COPY.loading}</p> : state === 'failed' ? <p class="admin-error" role="alert">{COPY.loadFailed}</p> : items.length === 0 ? <p>{COPY.empty}</p> : (
         <ol class="admin-queue">
-          {items.map(item => <li key={item.id}><ReviewCard item={item} onDecided={result => decided(item, result)} /></li>)}
+          {items.map(item => <li key={item.id} id={cardId(item.id)} tabIndex={-1}>
+            <div class="admin-card">
+              <h2>{COPY.kinds[item.kind]} <span class="admin-reason">{item.reason}</span></h2>
+              <p class="admin-meta">{COPY.opened(when(item.opened_at))} · {COPY.statuses[item.status]}</p>
+              <AdminDisclosure key={`${item.id}:${item.status}`} load={() => getReview(item.id)}>
+                {detail => <ReviewCard item={detail} onDecided={result => decided(item, result)} nested />}
+              </AdminDisclosure>
+            </div>
+          </li>)}
         </ol>
       )}
       {next && state === 'ready' ? <button type="button" class="admin-button" onClick={() => void load(next)}>{COPY.more}</button> : null}
@@ -78,7 +114,7 @@ export function Queue() {
   );
 }
 
-export function ReviewCard({item, onDecided}: {item: QueueItem; onDecided: (result: DecisionResult) => void}) {
+export function ReviewCard({item, onDecided, nested}: {item: QueueItem; onDecided: (result: DecisionResult) => void; nested?: boolean}) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -109,7 +145,7 @@ export function ReviewCard({item, onDecided}: {item: QueueItem; onDecided: (resu
   const headingId = `${cardId(item.id)}-title`;
   const approveLabel = item.kind === 'skipper' && item.reason === 'new_skipper' ? COPY.verify : item.kind === 'conversation' || item.kind === 'rule' ? COPY.done : COPY.approve;
   return (
-    <article id={cardId(item.id)} ref={card} class={`admin-card is-${item.kind}`} tabIndex={0} aria-labelledby={headingId} onKeyDown={onKey}>
+    <article id={nested ? undefined : cardId(item.id)} ref={card} class={`admin-card is-${item.kind}`} tabIndex={0} aria-labelledby={headingId} onKeyDown={onKey}>
       <header class="admin-card-head">
         <h2 id={headingId}>{COPY.kinds[item.kind]} <span class="admin-reason">{item.reason}</span></h2>
         <p class="admin-meta">{COPY.opened(when(item.opened_at))}{item.status !== 'open' ? ` · ${COPY.statuses[item.status]}` : ''}</p>

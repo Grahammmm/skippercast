@@ -67,7 +67,7 @@ const AHEAD_MS = 5 * 60_000;
 
 /** An analysis that passed the gate, with its grid. */
 export interface Analysis {
-  /** Changes with the product, its analysis time or its retrieval: a new key is a new texture. */
+  /** Metadata for the reading card ID. Paint follows the analysis object, not these timestamps. */
   readonly key: string;
   readonly sst: SurfaceTemperature;
   /** The product, from the report's status label ("NASA JPL MUR · surface temperature analysis" gives "NASA JPL MUR"). */
@@ -265,7 +265,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
     return analysisStatus(on.value, report.value, data.coastReport.value?.data ?? null, at, t, zone(), connection.offline.value);
   });
   let feedRegion = '', feedAt = 0, feedAbort: AbortController | undefined;
-  let drawnKey = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  let painted: SurfaceTemperature | null = null, drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
   const withdraw = (): void => { if (chartMark.peek()?.id.startsWith('sst:')) chartMark.value = null; };
 
   const disposers = [
@@ -295,22 +295,24 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
     }),
     // A new analysis repaints; no analysis (off, refused, stale) removes the texture and the contours at once.
     effect(() => {
-      const e = engine.value, a = status.value.drawn, key = a?.key ?? '';
-      if (!e || (key === drawnKey && e === drawnOn)) return;
-      if (key !== drawnKey) withdraw();
-      drawnKey = key; drawnOn = e;
+      const e = engine.value, a = status.value.drawn, generation = e ? a?.sst ?? null : null;
+      if (generation === painted && e === drawnOn) return;
+      if (generation !== painted) withdraw();
+      painted = null; drawnOn = e;
+      if (!e) return;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
       // § 9 order: under Temp contrast, else swell, wind, depth contours, or protected areas.
       const overlay = waterTempOverlay(p);
       // The texture is pixels in an image source, not a paint: if a theme ever changes the ramp, a live switch repaints it from the same field
       // (setImage sends no request and setData is not used). Today's --sst-* tokens are identical in both themes, so none is repainted.
-      let painted = ramps(p).sst.join();
-      const texture = (ramp: string[]): void => { painted = ramp.join(); e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramp, v => v[0]!)); };
-      e.setOverlay(REGISTRY_ID, {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).sst; if (ramp.join() !== painted) texture(ramp); return overlay.themePaint!(pal); }},
+      let paintedRamp = ramps(p).sst.join();
+      const texture = (ramp: string[]): void => { paintedRamp = ramp.join(); e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramp, v => v[0]!)); };
+      e.setOverlay(REGISTRY_ID, {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).sst; if (ramp.join() !== paintedRamp) texture(ramp); return overlay.themePaint!(pal); }},
         [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
       texture(ramps(p).sst);
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
+      painted = a.sst;
     }),
     // Re-judge at the analysis's 72-hour limit and at the next whole hour (the dock's default hour moves on).
     effect(() => {
@@ -324,7 +326,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
   return {
     reading(at) {
       const a = status.peek().drawn;
-      return a && drawnKey === a.key && shownPresentation.peek() === 'chart' ? sstMark(a, at, now(), zone()) : null;
+      return a && painted === a.sst && drawnOn === engine.peek() && shownPresentation.peek() === 'chart' ? sstMark(a, at, now(), zone()) : null;
     },
     destroy() {
       connection.destroy();

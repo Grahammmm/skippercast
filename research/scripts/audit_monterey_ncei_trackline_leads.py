@@ -23,6 +23,7 @@ FIELDS = {
     "footprint": "OBJECTID,NCEI_ID,SURVEY_ID,SURVEY_YEAR,INSTRUMENT,DOWNLOAD_URL",
     "trackline": "OBJECTID,NGDC_ID,SURVEY_ID,SURVEY_YEAR,INSTRUMENT,DOWNLOAD_URL",
 }
+FILTER = "1=1"
 
 
 def esri_polygon(geometry):
@@ -36,26 +37,59 @@ def esri_polygon(geometry):
     return {"rings": rings, "spatialReference": {"wkid": 4326}}
 
 
+def arcgis_request(endpoint, geometry, fields, where, user_agent):
+    polygon = esri_polygon(geometry)
+    params = {
+        "where": where,
+        "geometry": json.dumps(polygon, sort_keys=True, separators=(",", ":"), allow_nan=False),
+        "geometryType": "esriGeometryPolygon", "inSR": str(polygon["spatialReference"]["wkid"]),
+        "spatialRel": "esriSpatialRelIntersects", "outFields": fields,
+        "returnGeometry": "false", "f": "json",
+    }
+    # Hash the exact canonical POST parameters and full service/layer URL.
+    body = urlencode(sorted(params.items())).encode()
+    fingerprint = hashlib.sha256(endpoint.encode() + b"\n" + body).hexdigest()
+    request = Request(endpoint, data=body, headers={
+        "User-Agent": user_agent,
+        "Content-Type": "application/x-www-form-urlencoded",
+    })
+    return request, fingerprint
+
+
+def _query_cache_receipt(fingerprint, raw):
+    return {"request_sha256": fingerprint, "response_sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def read_query_cache(path, fingerprint, limit):
+    try:
+        receipt = json.loads(path.with_suffix(".request.json").read_bytes())
+        with path.open("rb") as source:
+            raw = source.read(limit + 1)
+    except (FileNotFoundError, ValueError) as exc:
+        raise ValueError(f"Missing or invalid NCEI query cache binding: {path.name}") from exc
+    if len(raw) > limit or receipt != _query_cache_receipt(fingerprint, raw):
+        raise ValueError(f"NCEI query cache does not match request or response: {path.name}")
+    return raw
+
+
+def write_query_cache(path, fingerprint, raw):
+    # Keep original response bytes; a partial write or mixed pair fails digest validation.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(raw)
+    path.with_suffix(".request.json").write_text(json.dumps(_query_cache_receipt(fingerprint, raw)))
+
+
 def query(root, ident, geometry, kind, fetch):
     path = root / "var/review/ncei-monterey-tracklines" / f"{ident}-{kind}.json"
+    request, fingerprint = arcgis_request(SERVICES[kind], geometry, FIELDS[kind], FILTER,
+                                          "SkipperCast-original-survey-lead-audit/1.0")
     if fetch:
-        body = urlencode({
-            "where": "1=1", "geometry": json.dumps(esri_polygon(geometry), separators=(",", ":")),
-            "geometryType": "esriGeometryPolygon", "inSR": "4326",
-            "spatialRel": "esriSpatialRelIntersects", "outFields": FIELDS[kind],
-            "returnGeometry": "false", "f": "json",
-        }).encode()
-        request = Request(SERVICES[kind], data=body, headers={
-            "User-Agent": "SkipperCast-original-survey-lead-audit/1.0",
-            "Content-Type": "application/x-www-form-urlencoded",
-        })
         with urlopen(request, timeout=45) as response:
             raw = response.read(3_000_001)
         if len(raw) > 3_000_000:
             raise ValueError("NCEI query response exceeds bounded size")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-    raw = path.read_bytes()
+    else:
+        raw = read_query_cache(path, fingerprint, 3_000_000)
     payload = json.loads(raw)
     if payload.get("error") or payload.get("exceededTransferLimit") or not isinstance(payload.get("features"), list):
         raise ValueError(f"NCEI {kind} service returned incomplete results at {ident}")
@@ -77,6 +111,8 @@ def query(root, ident, geometry, kind, fetch):
             "survey_id": ident_value, "survey_year": int(year),
             "instrument": item.get("INSTRUMENT"), "download_url": url,
         })
+    if fetch:
+        write_query_cache(path, fingerprint, raw)
     return sorted(rows, key=lambda row: row["object_id"]), hashlib.sha256(raw).hexdigest()
 
 

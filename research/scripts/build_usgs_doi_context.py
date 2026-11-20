@@ -10,7 +10,9 @@ from shapely.geometry import mapping
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
-from research.scripts.build_usgs_statewide_context import compile_block, hard_class_review, mpa_union
+from research.scripts.build_usgs_statewide_context import (
+    compile_block, hard_class_review, legend_matches_audit, mpa_union,
+)
 
 
 def reviewed_holds(packet):
@@ -73,6 +75,8 @@ def build(releases,metadata,audit,mpas,cache,hold_packet):
         if row['status']!='ok' or row['metadata_url'] not in source or row['metadata_url'] not in product:
             failures.append(ident+': native seafloor grid unavailable');continue
         record=source[row['metadata_url']]
+        if not legend_matches_audit(row, record):
+            failures.append(ident+': original XML digest differs from native audit');continue
         if not hard_class_review(record):
             failures.append(ident+': original XML does not define hard class 3');continue
         hold=holds.get(ident)
@@ -92,7 +96,7 @@ def build(releases,metadata,audit,mpas,cache,hold_packet):
             features.append({'type':'Feature','geometry':mapping(geometry),'properties':{
                 'id':f'usgs-doi-{ident}-{rank:03d}','release_id':ident,'study_area':row.get('study_areas',[''])[0],
                 'source_url':row['archive_url'],'metadata_url':row['metadata_url'],
-                'source_file_sha256':row['archive_sha256'],'source_metadata_sha256':row['metadata_sha256'],
+                'source_file_sha256':row['archive_sha256'],'source_metadata_sha256':record['xml_sha256'],
                 'source_year':record['published_date'],'source_class':'Class 3 · hard, rugose rock/boulder',
                 'approx_original_area_m2':round(native_area),'display_resolution_m':20,
                 'fishing_target':False,'exportable':False,'depth_qualified':False,
