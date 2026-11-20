@@ -4,13 +4,13 @@ import {build} from 'esbuild';
 
 // Mount the real Queue and its API client. Only the DOM and transport are fakes.
 const {outputFiles: [bundle]} = await build({stdin: {resolveDir: process.cwd(), contents: `
-  export {Queue} from './web/admin/queue.tsx';
+  export {Queue, focusReview} from './web/admin/queue.tsx';
   export {ApiError, getQueue, getFleetEnabled} from './web/admin/api.ts';
   export {ADMIN_COPY as COPY} from './web/advisor/copy.ts';
   export {h, render} from 'preact';
   export {act} from 'preact/test-utils';
 `}, bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact'});
-const {Queue, ApiError, getQueue, getFleetEnabled, COPY, h, render, act} =
+const {Queue, focusReview, ApiError, getQueue, getFleetEnabled, COPY, h, render, act} =
   await import(`data:text/javascript;base64,${Buffer.from(bundle.contents).toString('base64')}`);
 
 class Element {
@@ -94,6 +94,7 @@ test('Queue renders empty only for a valid empty page', async t => {
     fetchMock.mockImplementation(async (path, init) => {
       if (path === queuePath && !init.method) return Response.json({items: [review], next: 'synthetic-next'});
       assert.equal(path, `/api/admin/reviews/${review.id}`);
+      if (!init.method) return Response.json({review});
       assert.equal(init.method, 'POST');
       assert.deepEqual(JSON.parse(init.body), {decision: 'approve'});
       return nonJson();
@@ -102,12 +103,16 @@ test('Queue renders empty only for a valid empty page', async t => {
       await act(() => render(h(Queue), root));
       await flush();
       assert.ok(find(root, node => node.localName === 'button' && node.textContent === COPY.more));
+      const expand = find(root, node => node.localName === 'button' && node.textContent === 'Details');
+      assert.equal(fetchMock.callCount(), 1, 'closed summaries do not fetch any detail');
+      await act(() => expand.handlers.click.call(expand, {type: 'click'}));
+      await flush();
       const button = find(root, node => node.localName === 'button' && node.textContent === COPY.done);
       await act(() => button.handlers.click.call(button, {type: 'click'}));
       await flush();
       assert.ok(find(root, node => node.attrs.role === 'alert')?.textContent.includes('did not confirm'));
       assert.ok(find(root, node => node.localName === 'article'));
-      assert.equal(fetchMock.callCount(), 2); // one read, one user-initiated write
+      assert.equal(fetchMock.callCount(), 3); // list, explicit expansion, user-initiated write
     } finally { render(null, root); }
   });
   await t.test('Fleet capability still requires 204, not a 200 JSON response', async () => {
@@ -116,4 +121,18 @@ test('Queue renders empty only for a valid empty page', async t => {
     fetchMock.mockImplementation(async () => Response.json({enabled: true}));
     assert.equal(await getFleetEnabled(), false);
   });
+});
+
+// Contract: after a decision, focus lands where the A/E/R handler lives. Bug caught: focusing only the outer
+// list item leaves an already-expanded next review without keyboard shortcuts (they are on the nested card).
+test('focusReview focuses the expanded ReviewCard, else the list item, else the heading', () => {
+  const focused = [];
+  const el = name => ({focus: () => focused.push(name)});
+  const expanded = {...el('item-1'), querySelector: selector => { assert.equal(selector, 'article.admin-card'); return el('card-1'); }};
+  const collapsed = {...el('item-2'), querySelector: () => null};
+  const doc = {getElementById: id => ({'review-1': expanded, 'review-2': collapsed, 'queue-heading': el('heading')})[id] ?? null};
+  focusReview(doc, '1');
+  focusReview(doc, '2');
+  focusReview(doc, undefined);
+  assert.deepEqual(focused, ['card-1', 'item-2', 'heading']);
 });

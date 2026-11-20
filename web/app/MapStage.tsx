@@ -25,7 +25,7 @@ import {createDepthContours} from '../map/depth-contours.ts';
 import {createClouds} from '../map/clouds.ts';
 import {createFleetActivity} from '../map/fleet.ts';
 import {regionPlace} from '../map/currents.ts';
-import {coastPalette, readPalette} from '../map/palette.ts';
+import {coastPalette, coastSky, readPalette} from '../map/palette.ts';
 import {createReach} from '../map/reach.ts';
 import {createPlanningRouteLayer} from '../map/planning-route.ts';
 import {createContrast} from '../map/contrast.ts';
@@ -43,7 +43,7 @@ import {dailyFeed, verdictEpoch} from '../brief/Brief.tsx';
 import {mapFirstIdle} from '../map-ready.ts';
 import {createWind} from '../map/wind.ts';
 import type {HourClock} from '../clock.ts';
-import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked, terrainReason} from '../map/stage.ts';
+import {camera, choosePresentation, createStage, fpsFallback, PHONE_QUERY, shownPresentation, terrainActions, terrainBlocked, terrainReason, threeDOffered} from '../map/stage.ts';
 import {language, t, type StringId} from '../i18n.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
 import {appView, base, layers, profile, region, species} from '../state.ts';
@@ -57,6 +57,11 @@ export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> 
 /** SC1352-06: each presentation's catalogue label, shown in the page's language at render; PRESENTATIONS stays the English compatibility list. */
 const PRESENTATION_IDS: Readonly<Record<Presentation, StringId>> = {chart: 'stage.chart', '2d': 'stage.2d', '3d': 'stage.3d'};
 const NOTE_ID = 'app-stage-note';
+const ZOOM_NOTE_ID = 'app-stage-zoom-note';
+// MB-14: 3D is offered from z11, and from z12 on a phone: a viewport below 900 px (MAP-DESIGN-LOCK § 2.3).
+const phoneQuery = typeof matchMedia === 'function' ? matchMedia(PHONE_QUERY) : null;
+const phone = signal(phoneQuery?.matches ?? false);
+phoneQuery?.addEventListener('change', event => { phone.value = event.matches; });
 
 // DATA-LIVE-9: the regional bottom relief is public. It draws only for a region whose reviewed pointer resolves
 // `ready` (web/map/bottom-relief.ts), is on by default and has no admin gate or toggle. The older Morro study
@@ -130,19 +135,23 @@ export function MapUnavailable() {
 export function PresentationToggle() {
   const shown = shownPresentation.value, blocked = terrainBlocked.value, lang = language.value;
   const loading = chartLoading.value;
+  // The 3D choice waits for the map to be zoomed in enough; a 3D view already shown is never taken away by zooming out.
+  const zoomedOut = blocked === null && shown !== '3d' && !threeDOffered(camera.value?.zoom, phone.value);
   const armed = waypointPlacement.value === region.value && shown === 'chart', refused = armed && placementRefused.value ? verdictLine(placementRefused.value, lang) : null;
   return (
     <div class={armed ? 'app-presentation app-presentation--placing' : 'app-presentation'}>
       <p class="app-stage-note" data-chart-loading-status role="status" aria-live="polite" aria-atomic="true">{loading ? t('stage.loadingChart', lang) : ''}</p>
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
+      <p class="app-stage-note" data-fps-fallback role="status" aria-live="polite" aria-atomic="true">{fpsFallback.value ? t('stage.fpsFallback', lang) : ''}</p>
+      {zoomedOut ? <p id={ZOOM_NOTE_ID} class="app-stage-note" role="status">{t('stage.zoomFor3d', lang)}</p> : null}
       {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<Button size="sm" variant="quiet" onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</Button></p> : null}
       {shown === 'chart' && seafloorRough.value ? <p class="app-stage-note" data-seafloor-rough role="status">{t('stage.seafloorRough', lang)}</p> : null}
       <DepthShadingNote />
       <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">
         {PRESENTATIONS.map(p => {
-          const off = p.value !== 'chart' && !!blocked;
+          const needsZoom = p.value === '3d' && zoomedOut, off = (p.value !== 'chart' && !!blocked) || needsZoom;
           return (
-            <Chip key={p.value} on={p.value === shown} disabled={off} aria-describedby={off ? NOTE_ID : undefined}
+            <Chip key={p.value} on={p.value === shown} disabled={off} aria-describedby={needsZoom ? ZOOM_NOTE_ID : off ? NOTE_ID : undefined}
               onClick={() => { if (p.value !== shown) choosePresentation(p.value); }}>{t(PRESENTATION_IDS[p.value], lang)}</Chip>
           );
         })}
@@ -188,6 +197,8 @@ export function ChartPoster() {
 const palette = () => { try { return coastPalette(readPalette()); } catch { return undefined; } };
 /** The token palette the registry's terrain overlays take their roles from (FE-82). */
 const overlayPalette = () => { try { return readPalette(); } catch { return undefined; } };
+/** The 3D sky, horizon and fog from the tokens (MB-14), read at mount and on every theme switch. */
+const sky = () => { try { return coastSky(readPalette()); } catch { return undefined; } };
 
 /** The map stage with whatever chrome the layout puts over it. */
 export function MapStage({children, clock}: {children?: ComponentChildren; clock?: HourClock} = {}) {
@@ -201,7 +212,7 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
     // R4-SC-09: the first view's aerial base is a quarter-pixel preview; the full image follows once the map has first
     // settled and the seafloor's first view has landed (or SHARP_WAIT_MAX_MS after that settle), so the two do not share the link.
     const sharp = createSharpStart(() => mapFirstIdle.value, () => seafloorState.value.status === 'checking');
-    const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone, clock,
+    const stage = createStage({host: terrainHost.current!, palette, overlayPalette, sky, center: () => currentRegionInfo()?.center ?? null, zone, clock,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         idleReady: () => !aerialWaiting.value,
         layers: [engine => createChlorophyll({engine}), engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createFronts({engine, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),

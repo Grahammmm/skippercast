@@ -110,6 +110,22 @@ test('routing: shell, fingerprinted assets, public data and tiles; private and O
   assert.equal(route(get('https://example.com/x.json')), null);
 });
 
+// The old static and navigation strategies could return a saved GPX instead
+// of leaving the request to the server's planner redirect.
+test('legacy GPX requests bypass the worker even with saved responses', async () => {
+  const worker = loadWorker();
+  const shell = await worker.storage.open('sc-shell-dev');
+  const data = await worker.storage.open('sc-data');
+  const pack = await worker.storage.open('sc-pack-test');
+  await pack.put('/__skippercast-pack.json', Response.json({schema_version: 1}));
+  for (const path of ['/downloads/complete.gpx', '/downloads/targets/SC26-001.gpx?old=1']) {
+    for (const cache of [shell, data, pack]) await cache.put(path, new Response('stale GPX'));
+    assert.equal(await dispatch(worker, get(path)), null, path);
+    assert.equal(await dispatch(worker, nav(path)), null, path);
+  }
+  assert.deepEqual(worker.calls, [], 'the worker never intercepted');
+});
+
 test('a chart tile and the trip pack\'s own tile URL share one cache key', () => {
   const {context} = loadWorker();
   for (const [z, x, y] of [[8, 20, 50], [12, 330, 800]]) {

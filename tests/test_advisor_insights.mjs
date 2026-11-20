@@ -24,7 +24,7 @@ const {advisorCron} = await import('../server/advisor/cron.ts');
 const {storeInbound} = await import('../server/advisor/inbound.ts');
 const {parseSourceMarker} = await import('../server/advisor/intents.ts');
 const {textBody} = await import('../server/routes/advisor.ts');
-const {listPosts} = await import('../server/advisor/admin/posts.ts');
+const {listPosts, postDetail} = await import('../server/advisor/admin/posts.ts');
 const {adminFunnel} = await import('../server/advisor/admin/funnel.ts');
 
 const dbTest = (name, fn) => test(name, {skip: sqliteUnavailable || false}, fn);
@@ -206,12 +206,15 @@ dbTest('chats started: the first message\'s post id is kept on the contact and c
   const contacts = s.sql.prepare('SELECT source, source_post_id FROM advisor_contacts ORDER BY source_post_id').all().map(r => ({...r}));
   assert.deepEqual(contacts, [{source: 'ig', source_post_id: null}, {source: 'ig', source_post_id: MEDIA.reel}, {source: 'ig', source_post_id: POST_ID}]);
   const {posts} = await listPosts(s.db, {status: 'posted'});
-  const card = posts.find(p => p.id === POST_ID);
+  assert.ok(posts.some(p => p.id === POST_ID));
+  const {post: card} = await postDetail(s.db, POST_ID);
   assert.equal(card.stats.chats, 1);
   assert.deepEqual([card.stats.instagram.views, card.stats.instagram.day, card.stats.facebook.reach, card.stats.facebook.likes], [1840, '2026-10-05', 812, 57]);
-  assert.equal(posts.find(p => p.id === 'p-reel').stats.chats, 1);
+  assert.ok(posts.some(p => p.id === 'p-reel'));
+  assert.equal((await postDetail(s.db, 'p-reel')).post.stats.chats, 1);
   const {posts: drafts} = await listPosts(s.db, {status: 'all'});
-  assert.ok(drafts.every(p => p.status === 'posted' ? p.stats : p.stats === null));
+  const expanded = await Promise.all(drafts.map(p => postDetail(s.db, p.id)));
+  assert.ok(expanded.every(({post: p}) => p.status === 'posted' ? p.stats : p.stats === null));
   const f = await adminFunnel(s.env, 7, {now: T0, sql: null});
   assert.equal(f.social.posts, 2);
   assert.deepEqual(f.social.instagram, {views: 1840 + 5210, reach: 1203 + 3988, likes: 96 + 240, comments: 7 + 18, saved: 12 + 44, shares: 5 + 31, follows: 3 + 11, profile_visits: 21 + 63});

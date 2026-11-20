@@ -1,7 +1,6 @@
-"""SCA-592: a shoal component is not its bounding box.
+"""SCA-592/SCA-445: a shoal component is not its bounding box.
 
-Run this module with the survey stack for a read-only diagnostic. Pytest
-runs only the valid filled-box control until exact membership is supported.
+Run this module with the survey stack to replay the original audit controls.
 """
 import hashlib
 from pathlib import Path
@@ -15,7 +14,7 @@ BBOX = [14, 14, 16, 16]  # col0, row0, col1, row1 (exclusive)
 CODE = 'measured-suspect-shoal'
 
 
-def _apply(root, points, *, wrong_count=False):
+def _apply(root, points, *, wrong_count=None):
     import numpy as np
     from scripts import ec_apply, ec_detect
     from skippercast.platform import seafloor_ec as ec
@@ -30,11 +29,12 @@ def _apply(root, points, *, wrong_count=False):
     assert not pits and not clusters
     spike, = spikes
     assert (spike['bbox'], spike['cells']) == (BBOX, len(points))
-    if wrong_count:
+    if wrong_count == 'component':
         spike['cells'] -= 1  # same input bytes and bounding box, inconsistent count
     grid = _tif(root / 'grid.tif', elevations)
     detect = _detect(grid, root, holes=[], pits=[], spikes=spikes, disposition='VERIFY',
-                     counts={CODE: spike['cells'], 'measured': elevations.size - spike['cells']},
+                     counts={CODE: spike['cells'] - (wrong_count == 'total'),
+                             'measured': elevations.size - spike['cells']},
                      duplicate_signature=[32, 32, 'EPSG:32610', 2.0, -20, -4, float(elevations.mean())])
     inputs = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in (grid, detect)}
     out = root / 'applied'
@@ -53,9 +53,19 @@ def _apply(root, points, *, wrong_count=False):
 
 
 @pytest.mark.gis
-def test_filled_box_marks_only_detected_shoals_without_changing_depths(tmp_path):
-    # Both implementations agree when every bounding-box cell is a member.
-    assert _apply(tmp_path, POINTS | {CORNER}) == (POINTS | {CORNER}, 4)
+@pytest.mark.parametrize('points', [POINTS | {CORNER}, POINTS], ids=['filled-box', 'l-shape'])
+def test_marks_only_detected_shoals_without_changing_depths(tmp_path, points):
+    # Bounding-box painting would mark CORNER suspect in the L-shaped case.
+    assert _apply(tmp_path, points) == (points, len(points))
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize('wrong_count, reason', [('component', 'component bboxes or cell counts'),
+                                                ('total', 'suspect-shoal total')])
+def test_refuses_inconsistent_shoal_counts(tmp_path, wrong_count, reason):
+    # Neither matching input bytes nor matching aggregate counts prove component membership.
+    actual = _apply(tmp_path, POINTS, wrong_count=wrong_count)
+    assert isinstance(actual, str) and reason in actual
 
 
 def _baseline(root):
@@ -65,7 +75,7 @@ def _baseline(root):
         case_dir = root / case
         case_dir.mkdir()
         actual = _apply(case_dir, POINTS | {CORNER} if case == 'filled-box' else POINTS,
-                        wrong_count=case == 'bad-count')
+                        wrong_count='component' if case == 'bad-count' else None)
         if wanted is None:
             ok = isinstance(actual, str) and ('spike' in actual.lower() or 'shoal' in actual.lower())
             print(f'{case}: {"PASS" if ok else "GAP"}; expected component-count refusal, observed {actual}')

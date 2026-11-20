@@ -1,11 +1,11 @@
-// Prebuilt files allow a normal download link on mobile and embedded browsers.
+// Historical single-target exports for local research only, not web assets.
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { targetGPX } from "../../dist/gpx.js";
 
 const atlas = JSON.parse(
   await readFile(new URL("../../dist/data/atlas.json", import.meta.url)),
 );
-const directory = new URL("../../dist/downloads/targets/", import.meta.url);
+const directory = new URL("../../var/research/legacy-target-gpx/", import.meta.url);
 await mkdir(directory, { recursive: true });
 let bytes = 0;
 for (const target of atlas.targets) {
@@ -16,5 +16,5 @@ for (const target of atlas.targets) {
   bytes += Buffer.byteLength(gpx);
 }
 console.log(
-  `Prepared ${atlas.targets.length} direct GPX downloads (${bytes} bytes).`,
+  `Prepared ${atlas.targets.length} local research GPX files (${bytes} bytes).`,
 );

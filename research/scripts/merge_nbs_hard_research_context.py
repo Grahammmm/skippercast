@@ -67,7 +67,10 @@ def merge(primary_path, addition_path, native_path):
         'source_path': str(native_path), 'sha256': digest(native_path),
         'overlap_threshold_fraction': .5, 'held_additions': duplicate,
     }
-    result['method'] += ' Southern additions used a stricter 1 m uncertainty screen; outlines covering at least 50% of an existing original-survey display polygon were withheld as duplicate context.'
+    result['method'] += (
+        ' Southern additions used a stricter 1 m uncertainty screen; proposed outlines with at least 50% of their own area '
+        'overlapping any single existing polygon were withheld as duplicate context.'
+    )
     return result
 
 

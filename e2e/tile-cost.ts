@@ -8,14 +8,14 @@ export const KINDS = ['script', 'style', 'font', 'image', 'tile', 'feed', 'api',
 export interface Classified {kind: Kind; remote: boolean}
 /** What the page reported about one resource (or one failed request). */
 export interface ResourceEntry {url: string; transfer_bytes: number | null; body_bytes: number | null}
-export interface Row {
+interface TransferTotal {transfer_bytes: number | null; transfer_measured: number}
+interface ByteTotals extends TransferTotal {body_bytes: number | null; body_measured: number}
+export interface Row extends ByteTotals {
   view: string;
   project: string;
   pass: 'cold' | 'warm';
   requests: number;
-  transfer_bytes: number | null;
-  body_bytes: number | null;
-  by_kind: Record<string, {requests: number; transfer_bytes: number | null}>;
+  by_kind: Record<string, TransferTotal & {requests: number}>;
   remote: Record<string, number>;
   /** Same-origin entries whose body came from a cache (HTTP cache hit, 304, or a preload/duplicate reused within the load). */
   cache_reused: number;
@@ -47,14 +47,41 @@ export function classify(url: string, origin: string): Classified | null {
 export function hostOf(url: string): string {
   try { return new URL(url).host; } catch { return url; }
 }
-/** Sum transfer/body bytes over a list; null bytes never count as 0. */
-export function sumBytes(rows: Array<{transfer_bytes: number | null; body_bytes: number | null}>): {transfer_bytes: number | null; body_bytes: number | null} {
-  let transfer: number | null = 0, body = 0, saw = false;
+/** Self-contained callback for page.evaluate: an all-zero timing without a status may be a failed request. */
+export function readResourceEntries(origin: string): ResourceEntry[] {
+  return ([...performance.getEntriesByType('resource'), ...performance.getEntriesByType('navigation')] as PerformanceResourceTiming[])
+    .map(e => {
+      const observed = new URL(e.name).origin === origin && (e.responseStatus > 0 || e.transferSize > 0 || e.encodedBodySize > 0);
+      return {
+        url: e.name,
+        transfer_bytes: observed && Number.isInteger(e.transferSize) && e.transferSize >= 0 ? e.transferSize : null,
+        body_bytes: observed && Number.isInteger(e.encodedBodySize) && e.encodedBodySize >= 0 ? e.encodedBodySize : null,
+      };
+    });
+}
+
+function addTransfer(total: TransferTotal, bytes: number | null): void {
+  if (bytes === null) return;
+  total.transfer_bytes = (total.transfer_bytes ?? 0) + bytes;
+  total.transfer_measured += 1;
+}
+
+/** A numeric total sums only measured sizes, including measured zero. */
+export function sumBytes(rows: Array<Pick<ResourceEntry, 'transfer_bytes' | 'body_bytes'>>): ByteTotals {
+  const totals: ByteTotals = {transfer_bytes: null, transfer_measured: 0, body_bytes: null, body_measured: 0};
   for (const r of rows) {
-    if (r.transfer_bytes !== null) { transfer! += r.transfer_bytes; saw = true; }
-    if (r.body_bytes !== null) body += r.body_bytes;
+    addTransfer(totals, r.transfer_bytes);
+    if (r.body_bytes !== null) {
+      totals.body_bytes = (totals.body_bytes ?? 0) + r.body_bytes;
+      totals.body_measured += 1;
+    }
   }
-  return {transfer_bytes: saw ? transfer! : null, body_bytes: body};
+  return totals;
+}
+
+export function formatByteTotal(bytes: number | null, measured: number, requests: number): string {
+  if (bytes === null) return `unknown (${measured}/${requests} measured)`;
+  return measured < requests ? `${bytes} (partial: ${measured}/${requests} measured)` : String(bytes);
 }
 /**
  * A same-origin entry whose body was reused from a cache: it has a body, and
@@ -62,7 +89,7 @@ export function sumBytes(rows: Array<{transfer_bytes: number | null; body_bytes:
  * for a 304). A network fetch transfers headers plus the body, so never less.
  */
 export function cacheReused(e: ResourceEntry, c: Classified): boolean {
-  return !c.remote && e.body_bytes !== null && e.body_bytes > 0 && (e.transfer_bytes === null || e.transfer_bytes < e.body_bytes);
+  return !c.remote && e.body_bytes !== null && e.body_bytes > 0 && e.transfer_bytes !== null && e.transfer_bytes < e.body_bytes;
 }
 /** A same-origin entry that crossed the network in full (headers plus body). */
 function fetched(e: ResourceEntry, c: Classified): boolean {
@@ -100,24 +127,20 @@ export function withFailed(entries: ResourceEntry[], failed: string[]): Resource
  * Pass the cold pass's entries with a warm pass to fill reused_from_cold.
  */
 export function aggregate(origin: string, view: string, project: string, pass: 'cold' | 'warm', entries: ResourceEntry[], settled: boolean, cold?: ResourceEntry[]): Row {
-  const by_kind: Record<string, {requests: number; transfer_bytes: number | null}> = {};
+  const by_kind: Row['by_kind'] = {};
   const remote: Record<string, number> = {};
-  let requests = 0, transfer: number | null = 0, body = 0, saw = false, cache_reused = 0;
+  const counted: ResourceEntry[] = [];
+  let cache_reused = 0;
   for (const e of entries) {
     const c = classify(e.url, origin);
     if (c === null) continue;
-    requests += 1;
-    const bucket = (by_kind[c.kind] ??= {requests: 0, transfer_bytes: null});
+    counted.push(e);
+    const bucket = (by_kind[c.kind] ??= {requests: 0, transfer_bytes: null, transfer_measured: 0});
     bucket.requests += 1;
-    if (e.transfer_bytes !== null) {
-      bucket.transfer_bytes = (bucket.transfer_bytes ?? 0) + e.transfer_bytes;
-      transfer! += e.transfer_bytes;
-      saw = true;
-    }
-    if (e.body_bytes !== null) body += e.body_bytes;
+    addTransfer(bucket, e.transfer_bytes);
     if (c.remote) remote[hostOf(e.url)] = (remote[hostOf(e.url)] ?? 0) + 1;
     if (cacheReused(e, c)) cache_reused += 1;
   }
   const reused_from_cold = cold ? reusedAcrossPasses(origin, cold, entries).length : null;
-  return {view, project, pass, requests, transfer_bytes: saw ? transfer! : null, body_bytes: body, by_kind, remote, cache_reused, reused_from_cold, settled};
+  return {view, project, pass, requests: counted.length, ...sumBytes(counted), by_kind, remote, cache_reused, reused_from_cold, settled};
 }

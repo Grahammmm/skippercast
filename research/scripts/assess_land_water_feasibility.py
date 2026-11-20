@@ -450,16 +450,21 @@ def main():
     loops = [p for p in paths if p not in mainland]
     if len(mainland) != 1:
         unavailable.append(f'bounds-to-bounds paths {len(mainland)}')
+    elif mainland[0][0][1] != N or mainland[0][-1][1] != S:
+        unavailable.append('probe handles a north-to-south mainland only')
     print(f'4. bounds-to-bounds paths {len(mainland)} ({[len(p) for p in mainland]} positions); closed loops from seam joins {len(loops)}')
+    if unavailable:
+        print(f'PRODUCT UNAVAILABLE: {"; ".join(unavailable)}')
+        return
+
+    mainland_path = mainland[0]
     corners = {'NE': (E, N), 'SE': (E, S), 'SW': (W, S), 'NW': (W, N)}
 
-    def close(path, names):
-        a, b = path[0], path[-1]
-        assert a[1] == N and b[1] == S, 'probe handles a north-to-south mainland only'
-        return path + [corners[n] for n in names] + [a]
+    def close(names):
+        return mainland_path + [corners[n] for n in names] + [mainland_path[0]]
 
     # 5. curves for parity; degenerate ones are edge-only
-    curves = [('mainland', close(mainland[0], args.land_corners.split(',')))] if len(mainland) == 1 else []
+    curves = [('mainland', close(args.land_corners.split(',')))]
     curves += [('ring', l['c']) for l in closed] + [('chain', c['c']) for c in closed_chains] + [('seam loop', p + [p[0]]) for p in loops]
     kinds = Counter((name, degenerate(k, c)) for name, c in curves)
     parity_curves = [(name, c) for name, c in curves if not degenerate(k, c)]
@@ -489,7 +494,7 @@ def main():
     def classifier(names, source, as_resolved=False):
         # as_resolved: the curves exactly as given, the resolved mainland included (the step-0 review's
         # nonblocking finding: the after-removal comparison must not reinstate the original mainland).
-        polys = [c for _, c in source] if as_resolved else [close(mainland[0], names)] + [c for name, c in source if name != 'mainland']
+        polys = [c for _, c in source] if as_resolved else [close(names)] + [c for name, c in source if name != 'mainland']
         polys = [[(x / UNIT, y / UNIT) for x, y in r] for r in polys]
         polys = [(r, box(r)) for r in polys]
         return polys, lambda pt, skip=None: sum(1 for i, (r, bb) in enumerate(polys) if i != skip and inside(pt, r, bb)) % 2

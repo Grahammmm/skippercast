@@ -271,17 +271,20 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // never MapStage or PresentationToggle; no CSS, token, class, catch markup, paint, contrast(), assertion or threshold
   // change. Rebind only MapStage.tsx.
   // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
+  // MB-14: MapStage.tsx passes the 3D sky tokens to the stage and adds a 3D-fallback status line and a zoom hint on the existing app-stage-note class; BODY09 mounts Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
+  // MB-14 phone query: MapStage.tsx only reads the phone width query from stage.ts (PHONE_QUERY, below 900 px) for the 3D zoom offer; BODY09 never mounts MapStage. Rebind only MapStage.tsx.
   // MB-11: the Chart legend gains depth-ramp/survey-detail chips; BODY09 mounts Reports/CatchCards, never MapStage. No catch
   // markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
   // MSK-2: MapStage only passes the relief look and nearshore flags to the legend; Reports never mounts it. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "35b3f3877ea77ecbdd22a28e327bc967e8d1515fca31af8cc37b2bcb12202d5a",
+  "web/app/MapStage.tsx": "f86a708fad5104448bbccb1b78991ad1dbf85e2d1e322be690d75728acd27910",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
   // MB-22 adds Chart-only survey ink, halo and tints; Reports catch paint is unchanged.
+  // MB-14 adds the 3D view's --map-sky/--map-horizon/--map-fog in both themes (MAP-DESIGN-LOCK 10.2); Reports catch text and backing do not use them.
   // MB-11: Chart legend colours/layout only (ramp-B chips, survey-detail chips, dim note); Reports catch text and backing do not use them. Rebind only tokens.css.
   // MSK-1 adds only unused --skn-* variables. Reports catch markup, paint and thresholds are unchanged; rebind tokens.css only.
-  "web/tokens.css": "b33922749186e5307b93bcd39238e7cb170f0e3e020870a59f98c99cbf691a23",
+  "web/tokens.css": "cfb8d4f43efb5f85157946d82146d6d43e37a0fc67773e6b160fdc674c21b5be",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -427,7 +430,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-11: contrast check gains the legend chip/panel pairs only; no existing pair, assertion or threshold changes. Rebind only check_contrast.mjs.
   // MSK-1: only tokensCss source digest/comment changed in the checker; no contrast logic changed.
   // MSK-2: only the legendTsx surface hash and its comment changed; contrast() untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "984345a6008777666c8b4d15c3cf7579378401c02b209afb8d6c830273f5f238",
+  "scripts/check_contrast.mjs": "df8ffd8101a8bf3cde294ad4eccf88eeac5d47e5af056b2cf88128aef76a8a6b",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.

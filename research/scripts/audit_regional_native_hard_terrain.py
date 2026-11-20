@@ -10,13 +10,15 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+from math import ceil, floor
 from pathlib import Path
 
 import numpy as np
 from pyproj import CRS, Transformer
 import rasterio
 from rasterio.features import geometry_mask
-from rasterio.windows import from_bounds
+from rasterio.windows import Window
+from shapely.affinity import affine_transform
 from shapely.geometry import box, shape
 from shapely.ops import transform, unary_union
 from shapely.strtree import STRtree
@@ -121,30 +123,33 @@ def audit(region_id, enc_path, federal_path, *, root=REPO, now=None):
                     or "utm zone 10" not in parts[0].name.lower()):
                 raise ValueError("Original BAG resolution, MLLW datum or bands changed")
             local = transform(Transformer.from_crs("EPSG:4326", parts[0], always_xy=True).transform, geographic)
-            window = from_bounds(*local.bounds, transform=ds.transform).round_offsets().round_lengths()
+            # Bound the complete outline in pixel space before clipping the read.
+            inverse = ~ds.transform
+            left, top, right, bottom = affine_transform(
+                local, (inverse.a, inverse.b, inverse.d, inverse.e, inverse.c, inverse.f)).bounds
+            footprint = Window.from_slices((floor(top), ceil(bottom)), (floor(left), ceil(right)),
+                                           boundless=True)
+            window = footprint.crop(ds.height, ds.width)
             area_m2 = local.area
-            if window.width < 1 or window.height < 1:
-                inside = np.zeros((0, 0), dtype=bool)
-                qualified = inside
-                hold = hold or "held-subcell-display"
-            else:
-                depth = ds.read(1, window=window)
-                uncertainty = ds.read(2, window=window)
-                affine = ds.window_transform(window)
+            depth = ds.read(1, window=window)
+            affine = ds.window_transform(window)
+            if depth.size:
                 inside = geometry_mask([local], out_shape=depth.shape, transform=affine, invert=True)
-                qualified = cells_qualified(depth, uncertainty, 2) & inside
-                if not inside.any():
-                    hold = hold or "held-subcell-display"
+                qualified = cells_qualified(depth, ds.read(2, window=window), 2) & inside
+            else:
+                inside = qualified = np.zeros(depth.shape, dtype=bool)
+            if window == footprint and not inside.any():
+                hold = hold or "held-subcell-display"
             if hold is None and area_m2 < 2500:
                 hold = hold or "held-small-display"
-            elif hold is None and (qualified.sum() < 20 or not qualified.all(where=inside)):
+            elif hold is None and (window != footprint or qualified.sum() < 20
+                                   or not qualified.all(where=inside)):
                 hold = hold or "held-native-cell-gap"
             terrain = None
             depth_stats = None
             if hold is None:
                 yy, xx = np.where(qualified)
-                east = affine.c + (xx + .5) * affine.a
-                north = affine.f + (yy + .5) * affine.e
+                east, north = affine @ (xx + .5, yy + .5)
                 terrain = terrain_metrics(east, north, depth[qualified], np.full(len(east), 2.0),
                                           hard_area_m2=area_m2)
                 sampled = -depth[qualified].astype("float64") / .3048

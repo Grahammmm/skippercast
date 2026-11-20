@@ -201,7 +201,7 @@ export async function vesselDetail(db: D1Database, id: string): Promise<Record<s
       .all<{before_json: string | null; after_json: string | null}>(),
     db.prepare('SELECT region,mmsi,match_method,confidence,status,ais_name,ais_call_sign,ais_class,first_seen_at,last_seen_at,positions_30d,updated_at FROM fleet_ais_watch WHERE vessel_id=? ORDER BY mmsi').bind(id).all(),
     db.prepare(`SELECT id,mmsi,depart_port_id,return_port_id,departed_at,returned_at,local_date,status,trip_type_inferred,distance_nm,fishing_min,source,rights
-      FROM fleet_trips WHERE vessel_id=? ORDER BY departed_at DESC LIMIT ?`).bind(id, DETAIL_LIMITS.trips).all(),
+      FROM fleet_trips WHERE vessel_id=? ORDER BY departed_at DESC LIMIT ?`).bind(id, DETAIL_LIMITS.trips).all<{id: string; mmsi: string}>(),
     db.prepare('SELECT id,slug,name,port,status FROM advisor_boats WHERE fleet_vessel_id=? ORDER BY slug').bind(id).all(),
     db.prepare("SELECT id,kind,score,opened_at FROM fleet_reviews WHERE subject_id=? AND status='open' ORDER BY opened_at DESC,id").bind(id).all(),
     row.operator_id ? db.prepare('SELECT id,slug,name,consent_status,outreach_status FROM fleet_operators WHERE id=?').bind(row.operator_id).first() : Promise.resolve(null),
@@ -220,6 +220,8 @@ export async function vesselDetail(db: D1Database, id: string): Promise<Record<s
     fields[col] = {value, pinned: pinOf(col), fact_id: winner?.id ?? null};
   }
   const {pinned_json, waters_json, ...vessel} = row;
+  const claims = await tripActivityClaims(db, trips.results.map(trip => ({id: trip.id,
+    identityConfirmed: !!row.mmsi && trip.mmsi === row.mmsi && !!(row.uscg_doc || row.state_reg)})));
   return {
     vessel: {...vessel, waters: parse(waters_json as string | null), pinned: pinnedNames(pinned_json)},
     fields,
@@ -230,8 +232,7 @@ export async function vesselDetail(db: D1Database, id: string): Promise<Record<s
       ({...o, days: parse(days_json as string | null), target_species: parse(target_species_json as string | null), source_fact_ids: parse(source_fact_ids_json as string | null)})),
     changes: changes.results.map(({before_json, after_json, ...c}) => ({...c, before: parse(before_json), after: parse(after_json)})),
     watch: watch.results,
-    trips: await Promise.all(trips.results.map(async trip => ({...trip,
-      claims: await tripActivityClaims(db, String(trip.id), !!row.mmsi && trip.mmsi === row.mmsi && !!(row.uscg_doc || row.state_reg))}))),
+    trips: trips.results.map(trip => ({...trip, claims: claims.get(trip.id) ?? []})),
     advisor_boats: boats.results, open_reviews: reviews.results, operator,
   };
 }

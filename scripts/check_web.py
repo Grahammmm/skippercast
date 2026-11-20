@@ -394,9 +394,13 @@ def main():
     assert all(row['raw_cells_in_25_to_200_ft_mllw_band'] == 0 and
                row['nearshore_depth_lead'] is False for row in central_deep['sources'])
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
-    for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx", "spot-notes.html"]:
-        assert (WEB / "downloads" / name).read_bytes() == (ATLAS / "exports" / name).read_bytes(), name
+    assert (WEB / "downloads/spot-notes.html").read_bytes() == (ATLAS / "exports/spot-notes.html").read_bytes()
     assert (WEB / "downloads/LICENSE.txt").read_bytes() == (ROOT / "LICENSE").read_bytes()
+    for directory in [WEB / "downloads", WEB / "client"]:
+        assert not any(p.is_file() and p.suffix.lower() == ".gpx" for p in directory.rglob("*")), directory
+    if (WEB / "client").is_dir():
+        for name in ["LICENSE.txt", "spot-notes.html"]:
+            assert (WEB / "client/downloads" / name).read_bytes() == (WEB / "downloads" / name).read_bytes(), name
     pinned = json.loads((ROOT / "scripts/web-vendor-sha256.json").read_text())
     for name, digest in pinned.items():
         assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest, name
@@ -411,10 +415,10 @@ def main():
             if not url.scheme and url.path:
                 assert (path.parent / unquote(url.path)).is_file(), (path, ref)
     ns = {"g": "http://www.topografix.com/GPX/1/1"}
-    full = ET.parse(WEB / "downloads/complete.gpx").getroot()
+    full = ET.parse(ATLAS / "exports/complete.gpx").getroot()
     assert len(full.findall("g:wpt", ns)) == 132
-    for path in (WEB / "downloads").glob("*.gpx"):
-        assert ET.parse(path).getroot().tag == "{http://www.topografix.com/GPX/1/1}gpx"
+    for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx"]:
+        assert ET.parse(ATLAS / "exports" / name).getroot().tag == "{http://www.topografix.com/GPX/1/1}gpx", name
     check_native_depth_review('noaa-vr-native-depth-review.json',
                               'california-original-vr-native-depth-review')
     check_native_depth_review('noaa-regular-native-depth-review.json',

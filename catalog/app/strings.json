@@ -2733,6 +2733,8 @@
     "a11y.basis.run": {"en": "How this is worked out: run time", "es": "Cómo se calcula: tiempo de recorrido"},
     "stage.unavailable": {"en": "Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.", "es": "Los gráficos costeros no están disponibles. La carta, los pronósticos y las herramientas de viaje siguen funcionando."},
     "stage.noTerrain": {"en": "No reviewed coastal terrain covers this region yet.", "es": "Aún no hay terreno costero revisado que cubra esta región."},
+    "stage.fpsFallback": {"en": "3D was running slowly on this device, so the map is back in 2D.", "es": "El 3D iba lento en este dispositivo, así que el mapa volvió a 2D."},
+    "stage.zoomFor3d": {"en": "Zoom in to use 3D.", "es": "Acerca el mapa para usar el 3D."},
     "savedSpots.status.signedOut": {"en": "Sign in to show your saved spots.", "es": "Inicia sesión para mostrar tus lugares guardados."},
     "savedSpots.status.loadingAccount": {"en": "Checking your account…", "es": "Comprobando tu cuenta…"},
     "savedSpots.status.offline": {"en": "Accounts need a connection.", "es": "Las cuentas necesitan conexión."},

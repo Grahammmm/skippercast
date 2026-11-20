@@ -219,6 +219,15 @@ def valid_final_url(value):
     return parts.scheme in ('http', 'https') and bool(host) and not parts.fragment
 
 
+def receipt_fields(pairs):
+    row = {}
+    for key, value in pairs:
+        if key in row and (key == 'url' or key in IDENTITY_KEYS):
+            raise Hold(f'Repeated receipt identity field {key}; preserve both manifests')
+        row[key] = value
+    return row
+
+
 def raw_receipts(path, *, strict):
     """Every receipt line in file order, never collapsed by URL.
 
@@ -228,8 +237,8 @@ def raw_receipts(path, *, strict):
     rows = []
     for line in path.read_text().splitlines():
         try:
-            row = json.loads(line)
-        except ValueError:
+            row = json.loads(line, object_pairs_hook=receipt_fields)
+        except json.JSONDecodeError:
             if strict:
                 raise
             continue
@@ -420,6 +429,9 @@ class Prefetch:
         # files, in any order) mean neither copy is authoritative. Write nothing.
         seen = {}
         for row in primary_rows + mirror_rows:
+            size, sha = row.get('bytes'), row.get('sha256')
+            if type(size) is not int or size <= 0 or not isinstance(sha, str) or not SHA.fullmatch(sha):
+                raise Hold(f'A receipt lacks a valid byte count or SHA-256; preserve both: {path} {mirror}')
             identity = tuple(row.get(key) for key in IDENTITY_KEYS)
             if seen.setdefault(row['url'], identity) != identity:
                 raise Hold(f'Receipts for one URL contradict each other; preserve both: {path} {mirror}')
