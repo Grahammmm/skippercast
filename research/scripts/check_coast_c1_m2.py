@@ -16,6 +16,8 @@ def sha(path):
 
 
 def verify(receipts=None):
+    if not __debug__:
+        raise RuntimeError('Evidence checks require Python assertions; run without optimization')
     summary = json.loads((ROOT / 'research/receipts/coast-c1-m2-held.json').read_text())
     assert summary['task_id'] == 't_6fe43227'
     assert summary['acquire_state'] == 'held'

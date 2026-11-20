@@ -214,6 +214,34 @@ async function passkeyFixture(page: Page): Promise<string> {
   return b64url(id);
 }
 
+test('the account menu reuses its settled session after a layout remount', async ({page, v2}) => {
+  await page.setViewportSize({width: 1280, height: 800});
+  await page.clock.install();
+  await page.addInitScript(() => {
+    // Count at fetch invocation, not at route delivery: after the effects run,
+    // a redundant request cannot still be in flight to the Playwright process.
+    const probe = Object.assign(window, {sessionReads: 0});
+    const fetchOriginal = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = new URL(input instanceof Request ? input.url : input, location.href);
+      if (url.origin !== location.origin || url.pathname !== '/api/session') return fetchOriginal(input, init);
+      probe.sessionReads += 1;
+      return Response.json({signIn: '/#account', signedIn: true, user: {display_name: 'Skipper'}});
+    };
+  });
+  const reads = () => page.evaluate(() => (window as unknown as {sessionReads: number}).sessionReads);
+  await v2.open('app', AREA);
+  const desktop = page.locator('.app-masthead .app-account-trigger');
+  await expect(desktop).toHaveText('Skipper');
+  expect(await reads(), 'initial mount reads the session').toBe(1);
+
+  await page.setViewportSize({width: 390, height: 844});
+  await expect(desktop).toHaveCount(0);
+  await expect(page.locator('.app-account-top-trigger')).toHaveAccessibleName('Skipper');
+  await page.clock.runFor(200); // drain mount effects, including the after-paint fallback
+  expect(await reads(), 'settled remount does not read the session again').toBe(1);
+});
+
 test('signing in from the account menu completes the passkey flow and keeps the place', async ({page, pageErrors, v2, isMobile}) => {
   const state = await stubAuth(page, await passkeyFixture(page));
   await v2.open('app', AREA);
