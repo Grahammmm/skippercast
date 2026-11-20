@@ -465,6 +465,11 @@
       "source_path": "schemas/render-handoff-v2.1.schema.json"
     },
     {
+      "id": "https://skippercast.com/schemas/sc-render-v1.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/sc-render-v1.schema.json"
+    },
+    {
       "id": "https://skippercast.com/schemas/shore-habitat.schema.json",
       "pointer": "/$id",
       "source_path": "schemas/shore-habitat.schema.json"
@@ -615,7 +620,7 @@
       "source_path": "skills/coast-campaign-shared/schemas/coast-tier2-check-v1.schema.json"
     }
   ],
-  "manifest_sha256": "cec9550bed3f6b1e1c2e4113e0ab328ef57139b53a1f6e13ed5c3ecd6b6948ee",
+  "manifest_sha256": "4b9690e70925864c95ecfd7ff37d7862e41cce7a236366d3ab68aa437d6d577b",
   "oracle": "referencing.jsonschema.DRAFT202012 id_of + subresources_of; exact-string duplicate ids",
   "schema": "sc-schema-closure-oracle-ids-v1"
 }
