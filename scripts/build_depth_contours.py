@@ -569,8 +569,11 @@ def v3_cli(region, sources, order, opened, identity, hashes, supports, provs, he
             common = {'source_id': ident, 'survey_date': known['survey_date'], 'vertical_datum': known['vertical_datum']}
             measured = stack.enter_context(open_geotiff(supports[ident], normalized=True)) if ident in supports else None
             ec_grid = stack.enter_context(rasterio.open(provs[ident])) if ident in provs else None
+            # Standalone inputs have no attested selector row or native zoom eligibility.
+            # A pinned support raster alone cannot certify pier contours; the receipt-backed
+            # relief contour stage supplies certification from its attested selection.
             lines = list(v3_grid(grid, region, view, common, known['native_cell_m'], support=measured,
-                                 certified=measured is not None, provenance=ec_grid))
+                                 certified=False, provenance=ec_grid))
             if lines:
                 listed.append({**common, 'name': known['name'], 'url': source['documentation_url'],
                                'attribution': source['rights']['attribution'], 'sha256': hashes[ident],

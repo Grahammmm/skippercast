@@ -203,6 +203,63 @@ def test_v3_native_tiers_and_pier(tmp_path, cell, native, certified):
             assert min(ys) > 3915000 - 20 * cell or max(ys) < 3915000 - 30 * cell
 
 
+def test_standalone_v3_support_alone_does_not_certify_pier(builder, tmp_path, monkeypatch):
+    import numpy as np
+    from rasterio.transform import from_origin
+    from skippercast.relief import contours
+
+    tool = contours.producer()
+    _, source = builder
+    source['native_resolution_m'] = 1
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36],
+              'source_bindings': {'bathymetry': [SOURCE]}}
+    values = np.tile(np.linspace(-0.2, -100, 100, dtype='float32'), (50, 1))
+    grid = write_grid(tmp_path / 'grid.tif', values, 'EPSG:32610', from_origin(690000, 3915000, 1, 1))
+    support = write_support(tmp_path / 'support.tif', grid)
+    monkeypatch.setattr(tool.dc, 'check_contours', lambda *args: None)
+    with tool.open_geotiff(grid, normalized=True) as ds:
+        doc = tool.v3_cli(region, {SOURCE: source}, [SOURCE], [ds],
+                          {SOURCE: {'name': source['name'], 'survey_date': '2008',
+                                    'vertical_datum': 'MLLW', 'native_cell_m': 1}},
+                          {SOURCE: digest(grid)}, {SOURCE: support}, {}, False)
+    tiers = {feature['properties']['tier'] for feature in doc['features']}
+    assert 'z15' in tiers
+    assert 'pier' not in tiers
+
+
+@pytest.mark.parametrize('cap,zoom,native,expect_pier', [(2, 17, True, False), (3, 15, True, False),
+                                                        (3, 17, False, False), (3, 17, True, True)])
+def test_selected_v3_pier_requires_attested_native_eligibility(builder, tmp_path, cap, zoom, native, expect_pier):
+    import numpy as np
+    from rasterio.transform import from_origin
+    from skippercast import style
+    from skippercast.relief import contours
+
+    tool = contours.producer()
+    _, source = builder
+    source['native_resolution_m'] = 1
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36]}
+    transform = from_origin(690000, 3915000, 1, 1)
+    values = np.tile(np.linspace(-0.2, -100, 100, dtype='float32'), (50, 1))
+    grid = write_grid(tmp_path / 'grid.tif', values, 'EPSG:32610', transform)
+    support = write_support(tmp_path / 'support.tif', grid)
+    sidecar = tmp_path / 'sidecar.json'
+    sidecar.write_text(json.dumps({'schema': 'sc-relief-normalized/1', 'original_sha256': digest(grid),
+                                   'outputs': {'grid.tif': digest(grid), 'support.tif': digest(support)},
+                                   'units': 'm', 'value_convention': 'elevation_positive_up',
+                                   'vertical_datum': 'MLLW', 'crs': 'EPSG:32610', 'shape': list(values.shape),
+                                   'transform': list(transform)[:6], 'resolution_m': 1}))
+    row = {'id': 'tile', 'source_id': SOURCE, 'sha256': digest(grid), 'support_sha256': digest(support),
+           'value_convention': 'elevation_positive_up', 'vertical_datum': 'MLLW',
+           'support_class_cap': cap, 'max_zoom': zoom}
+    job = (tool, region, {SOURCE: source}, [(row, grid, sidecar, digest(sidecar), support)],
+           {'tile'} if native else set(), None, None)
+    doc = contours.trace_v3(job, style.load().view('contours'))
+    tiers = {feature['properties']['tier'] for feature in doc['features']}
+    assert 'z15' in tiers
+    assert ('pier' in tiers) is expect_pier
+
+
 def test_normalized_twin_retains_original_identity_and_shelf_lines(builder, geographic_twin, tmp_path):
     # A derivative may not replace the original digest, leak its path or move lines in this planar control.
     from pyproj import Transformer
