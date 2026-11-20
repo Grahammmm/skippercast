@@ -2,7 +2,7 @@
 // A private web-mercator image with its own data time and age limit. Clear pixels are no reading, never zero.
 import type {Overlay} from '../engine.ts';
 import {PREVIEW_DATA, type PreviewAttach} from '../preview-layers.ts';
-import {ageText, BEFORE_APP_LAYERS, expireWhenStale, freshWithin, getJson, handle, hoursOld, utc} from './common.ts';
+import {ageText, BEFORE_APP_LAYERS, expireWhenStale, freshWithin, getJson, handle, hoursOld, isPositiveFiniteHours, utc} from './common.ts';
 
 export const CHLOROPHYLL_ID = 'preview-chlorophyll';
 interface ChlDoc {bounds: [number, number, number, number]; sample_at: string; max_age_hours: number; style: {legend: Array<[number, string]>}}
@@ -10,7 +10,7 @@ interface ChlDoc {bounds: [number, number, number, number]; sample_at: string; m
 export function readChlorophyll(raw: unknown): ChlDoc {
   const d = raw as Partial<ChlDoc> | null;
   if (!d || !Array.isArray(d.bounds) || d.bounds.length !== 4 || !d.bounds.every(Number.isFinite) || typeof d.sample_at !== 'string'
-    || !(Number(d.max_age_hours) > 0) || !Array.isArray(d.style?.legend) || d.style.legend.length < 2
+    || !isPositiveFiniteHours(d.max_age_hours) || !Array.isArray(d.style?.legend) || d.style.legend.length < 2
     || !d.style.legend.every(stop => Array.isArray(stop) && Number.isFinite(stop[0]) && stop[0] > 0 && typeof stop[1] === 'string')) throw new Error('chlorophyll file is not valid');
   const [w, s, e, n] = d.bounds;
   // One non-wrapping rectangle: west < east, south < north, inside the world. Never swapped, clamped or wrapped.

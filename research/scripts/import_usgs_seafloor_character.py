@@ -2,6 +2,10 @@
 
 This optional GIS adapter needs rasterio, numpy, shapely, and pyproj. It never
 publishes fishing targets, legal depth, or invented boulder descriptions.
+
+Schema v2 replaces v1's misleading source_area_m2 with display_area_m2:
+the simplified polygon's area measured in the source projection. No native
+class area is counted. Retained v1 receipts are not migrated.
 """
 import argparse
 import hashlib
@@ -75,11 +79,11 @@ def compile_context(source, archive, output):
                 'id':f"{source['id']}-{index:03d}", 'name':source['class_name'],
                 'source_id':source['id'], 'source_url':source['data_release_url'],
                 'source_year':source['source_year'], 'class_code':source['class'],
-                'source_area_m2':round(area), 'native_resolution_m':native,
+                'display_area_m2':round(area), 'native_resolution_m':native,
                 'display_resolution_m':cell, 'fishing_target':False,
                 'exportable':False, 'depth_qualified':False,
                 'fish_confirmed':False}})
-    payload={'type':'FeatureCollection','schema_version':1,'scope':'generalized-seafloor-character-context',
+    payload={'type':'FeatureCollection','schema_version':2,'scope':'generalized-seafloor-character-context',
              'source_id':source['id'],'sector_id':source['sector_id'],
              'source_url':source['data_release_url'],'source_file_sha256':actual,
              'class_code_rule':source.get('class_code_rule','direct'),
