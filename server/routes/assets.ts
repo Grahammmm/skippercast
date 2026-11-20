@@ -49,6 +49,10 @@ declare const NOT_FOUND_HTML: string | undefined;
 // Paths that name a resource, not a page: a miss there stays the plain original 404.
 const RESOURCE_ROOTS: readonly string[] = ['/api', '/feeds', '/coast-data', '/data', '/regions', '/tiles', '/basemap', '/assets', '/vendor', '/downloads', '/icons', '/.well-known'];
 
+// SCA-091: receipt-pinned legacy links, not the entire downloads namespace.
+// Target files were SC26-001 through SC26-136, excluding 013 through 016.
+const LEGACY_GPX = /^\/downloads\/(?:complete|drift-lines|reef-outlines|waypoints|targets\/SC26-(?:00[1-9]|01[012789]|0[2-9][0-9]|1[0-2][0-9]|13[0-6]))\.gpx$/;
+
 /** True when the Accept header names text/html explicitly with a positive q (an exclusion or a malformed q refuses). */
 export function acceptsHtml(accept: string | null): boolean {
   let found = false;
@@ -93,7 +97,10 @@ export const serveAsset: Handler<AppEnv> = async c => {
     const response = await assets.fetch(request), fresh = new Response(response.body, response);
     fresh.headers.set('Cache-Control', 'no-cache'); return fresh;
   }
-  const search = new URL(request.url).searchParams;
+  const url = new URL(request.url), search = url.searchParams;
+  if ((request.method === 'GET' || request.method === 'HEAD') && LEGACY_GPX.test(url.pathname)) {
+    return new Response(null, {status: 302, headers: {Location: '/map#export', 'Cache-Control': 'no-store'}});
+  }
   if (c.var.path === '/coast' || c.var.path === '/coast.html') return new Response(null, {status: 302, headers: {Location: coastRedirect(search), 'Cache-Control': 'no-store'}});
   // #475: the page's links are relative, so /sources/ moves to /sources rather than serving the shell there.
   if (c.var.path === '/sources/') return new Response(null, {status: 301, headers: {Location: `/sources${new URL(request.url).search}`, 'Cache-Control': 'no-store'}});

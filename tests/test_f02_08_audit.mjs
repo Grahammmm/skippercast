@@ -10,8 +10,7 @@
 //   valid control     a synthetic store that keeps per-metric availability meets the contract (no gaps).
 //   affected control  a synthetic store that writes zeros for a failed count is reported with each gap
 //                     (and a store wrong only for comments/shares is still detected).
-//   baseline receipt  the real code's observation is printed as a diagnostic (gaps listed, not asserted), so this file
-//                     stays green before and after the product fix. The real measured-zero case is asserted.
+//   regression        the real reader/writer must satisfy all of the same cases, including the original same-day overwrite.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -32,7 +31,7 @@ const iso = ms => new Date(ms).toISOString();
 const T0 = Date.parse('2026-10-05T18:00:00Z'), HOUR = 3600000, DAY = 86400000;
 const FB_POST = '100000000000001_200000000000001';
 const METRICS = ['likes', 'comments', 'shares'];
-const NOTE_NAME = {likes: 'reactions', comments: 'comments', shares: 'shares'};
+
 const POS = {likes: 57, comments: 6, shares: 4};
 const ZERO = {likes: 0, comments: 0, shares: 0};
 /** A counts argument is 'fail' (the whole count call fails) or {likes, comments, shares}, each a number or 'fail' (that metric not returned). */
@@ -45,7 +44,9 @@ function graph(counts) {
     if (edge === 'insights') return jsonResponse(fixture('fb-post-insights'));
     if (counts === 'fail') return jsonResponse({error: {code: 190, message: 'synthetic count failure'}}, 400);
     const body = {id: FB_POST};
-    if (counts.shares !== 'fail') body.shares = {count: counts.shares};
+    // An omitted shares field is a real zero in the Graph adapter, so simulate
+    // an unreadable shares count with a present field and a missing count.
+    body.shares = counts.shares === 'fail' ? {} : {count: counts.shares};
     if (counts.likes !== 'fail') body.reactions = {summary: {total_count: counts.likes}};
     if (counts.comments !== 'fail') body.comments = {summary: {total_count: counts.comments}};
     return jsonResponse(body);
@@ -65,8 +66,11 @@ function realStore() {
     },
     async latest() {
       const fb = (await I.postStats(db, {id: 'p1', ig_media_id: null})).facebook;
-      // The real reader exposes only numbers and notes: a note is the only hint it offers for a failed count.
-      return Object.fromEntries(METRICS.map(m => [m, {value: fb[m], stale: fb.notes.some(n => n.startsWith('counts:') || n.startsWith(`${NOTE_NAME[m]}:`)), measuredAt: fb.fetched_at}]));
+      for (const m of METRICS) {
+        if (fb[m] === null) assert.ok(fb.notes.includes(`${m}: unavailable`));
+        else if (fb.engagement?.[m].stale) assert.ok(fb.notes.includes(`${m}: stale (last measured ${fb.engagement[m].measuredAt})`));
+      }
+      return Object.fromEntries(METRICS.map(m => [m, {value: fb[m], ...fb.engagement?.[m]}]));
     },
   };
 }
@@ -110,7 +114,7 @@ const GAP = {
   zero: m => `a genuine measured zero did not replace the earlier positive ${m}`,
   mixed: m => `in a mixed-availability reading, ${m} was not kept, flagged or replaced independently of the other metrics`,
 };
-const ALL_GAPS = new Set(METRICS.flatMap(m => Object.values(GAP).map(g => g(m))));
+
 /** The contract over a store, per metric: four scenarios, each on its own store from `make`. */
 async function contractGaps(make) {
   const gaps = [];
@@ -159,11 +163,15 @@ dbTest('real code: a measured zero on a later day replaces the earlier positive 
   for (const m of METRICS) assert.equal(after[m].value, 0);
 });
 
-dbTest('baseline receipt: the real reading/stat read-back observed against the contract (diagnostic; not asserted)', async t => {
-  const gaps = await contractGaps(realStore);
-  const s = realStore(); await s.record(T0, POS); await s.record(T0 + HOUR, 'fail');
-  const f = realStore(); await f.record(T0, 'fail');
-  const x = realStore(); await x.record(T0, POS); await x.record(T0 + DAY, {likes: 0, comments: 'fail', shares: 9});
-  t.diagnostic(`after good then failed count (same day): ${JSON.stringify(await s.latest())}; first failure: ${JSON.stringify(await f.latest())}; mixed availability: ${JSON.stringify(await x.latest())}; gaps=${JSON.stringify(gaps)}`);
-  for (const gap of gaps) assert.ok(ALL_GAPS.has(gap));
+dbTest('real code: failed counts retain per-metric measurements or report unavailable; zero still replaces a positive count', async () => {
+  assert.deepEqual(await contractGaps(realStore), []);
+  const s = realStore();
+  await s.record(T0, POS);
+  await s.record(T0 + HOUR, 'fail');
+  await s.record(T0 + DAY, 'fail');
+  const afterFailures = await s.latest();
+  for (const m of METRICS) assert.deepEqual(afterFailures[m], {value: POS[m], stale: true, measuredAt: iso(T0)});
+  await s.record(T0 + DAY + HOUR, ZERO);
+  const recovered = await s.latest();
+  for (const m of METRICS) assert.deepEqual(recovered[m], {value: 0, stale: false, measuredAt: iso(T0 + DAY + HOUR)});
 });

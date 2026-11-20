@@ -4,10 +4,8 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-// F06-12: the same contract must pass on the synthetic reuse control and
-// detect redundant work on the unmodified inspector. The latter is opt-in:
-// node tests/test_f06_12_audit.mjs --baseline
-const baseline = process.argv.includes('--baseline');
+// F06-12: exercise the actual inspector controller on a synthetic mesh. A
+// light-only rebuild or a fresh raster allocation on camera input must fail.
 const source = name => readFileSync(new URL(`../src/skippercast/coastal/render/terrain_demo_${name}.js`, import.meta.url));
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const width = 1600, height = 1000, area = width * height;
@@ -23,26 +21,18 @@ const payload = {
 };
 const noop = () => {};
 const viewWork = ['project', 'raster', 'visibleScan', 'updateRange', 'clippedCounts'];
-const freshCounts = () => ({ project: 0, raster: 0, visibleScan: 0, updateRange: 0, clippedCounts: 0, depthOrZ: 0, triangles: 0, normals: 0 });
+const freshCounts = () => ({ project: 0, raster: 0, visibleScan: 0, updateRange: 0, clippedCounts: 0, depthOrZ: 0, triangles: 0, normals: 0, imageData: 0 });
 
-function replay(useBaseline) {
-  let counts = freshCounts(), surface, viewport, pixels, pending, hit, slot = 0;
-  const planes = [];
+function replay() {
+  let counts = freshCounts(), surface, viewport, pixels, pending, hit;
   const typed = (Type, length, key) => new Proxy(Type, {
     construct(target, args) {
-      if (args[0] !== length) return Reflect.construct(target, args);
-      // Fixture-only arena. The real rasterizer still writes every supported pixel.
-      // Float64/Int32 sentinels are filled by raster; zero the normal plane as on allocation.
-      const index = slot++;
-      if (!useBaseline && planes[index]) return planes[index].fill(0);
-      counts[key]++;
-      const array = Reflect.construct(target, args);
-      if (!useBaseline) planes[index] = array;
-      return array;
+      if (args[0] === length) counts[key]++;
+      return Reflect.construct(target, args);
     },
   });
   const ctx = {
-    createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+    createImageData: (w, h) => { counts.imageData++; return { data: new Uint8ClampedArray(w * h * 4) }; },
     putImageData: image => { pixels = sha256(image.data); },
     // Only terrain RGBA from putImageData is read; no browser contour compositing.
     beginPath: noop, moveTo: noop, lineTo: noop, stroke: noop,
@@ -83,7 +73,7 @@ function replay(useBaseline) {
     C[key] = (...args) => observe(fn, args);
   };
   wrap('project', (fn, args) => { counts.project++; return fn(...args); });
-  wrap('raster', (fn, args) => { counts.raster++; slot = 0; return (surface = fn(...args)); });
+  wrap('raster', (fn, args) => { counts.raster++; return (surface = fn(...args)); });
   wrap('updateRange', (fn, args) => {
     counts.updateRange++;
     const range = fn(...args);
@@ -98,49 +88,15 @@ function replay(useBaseline) {
   });
   wrap('probe', (fn, args) => (hit = fn(...args)));
 
-  let changeLight, pan, reset, probe;
-  if (useBaseline) {
-    const ui = source('ui');
-    vm.runInContext(ui.toString(), context, { filename: 'terrain_demo_ui.js' });
-    changeLight = () => { element('lightIntensity').value = '1'; element('lightIntensity').fire('input'); };
-    pan = () => canvas.fire('keydown', { key: 'ArrowRight' });
-    reset = () => element('reset').fire('click');
-    probe = (clientX, clientY) => {
-      const event = { pointerId: 1, clientX, clientY };
-      canvas.fire('pointerdown', event);
-      canvas.fire('pointerup', event);
-    };
-  } else {
-    // Valid control, not production code: retain the view on light-only input,
-    // rebuild its contents on camera input. Real core and real pixel math;
-    // the fixed hashes below are recorded from the independent inspector path.
-    const camera = { azimuth: 0, elevation: 90, ve: 1, width, height, scale: 84, panX: 0, panY: 0 };
-    const light = { azimuth: 315, elevation: 45, intensity: 0.5 };
-    const state = C.rangeState(), normals = C.smoothNormals(payload.vertices, payload.faces);
-    let projected, range;
-    function draw(rebuild) {
-      if (rebuild) {
-        projected = C.project(payload, camera);
-        C.raster(payload, projected, width, height, normals);
-        const visible = ViewArray.from(surface.depth).filter(Number.isFinite);
-        range = C.updateRange(state, visible);
-        C.clippedCounts(visible, range);
-      }
-      const image = ctx.createImageData(width, height);
-      const { triangles, depth, shadeNormals: n } = surface;
-      for (let k = 0; k < area; k++) {
-        const rgb = triangles[k] < 0 ? [230, 235, 239]
-          : C.color(depth[k], range, C.relief([n[k * 3], n[k * 3 + 1], n[k * 3 + 2]], light));
-        image.data.set([...rgb, 255], k * 4);
-      }
-      ctx.putImageData(image, 0, 0);
-    }
-    draw(true);
-    changeLight = () => { light.intensity = 1; draw(false); };
-    pan = () => { camera.panX = 48; draw(true); };
-    reset = () => { camera.panX = 0; draw(true); };
-    probe = (x, y) => C.probe(payload, projected, [x, y]);
-  }
+  vm.runInContext(source('ui').toString(), context, { filename: 'terrain_demo_ui.js' });
+  const changeLight = () => { element('lightIntensity').value = '1'; element('lightIntensity').fire('input'); };
+  const pan = () => canvas.fire('keydown', { key: 'ArrowRight' });
+  const reset = () => element('reset').fire('click');
+  const probe = (clientX, clientY) => {
+    const event = { pointerId: 1, clientX, clientY };
+    canvas.fire('pointerdown', event);
+    canvas.fire('pointerup', event);
+  };
 
   let previousBuffers;
   return [noop, changeLight, pan, reset].map(action => {
@@ -182,9 +138,9 @@ const expected = [
   relit,
 ];
 
-test(`F06-12 ${baseline ? 'unchanged inspector' : 'synthetic reuse control'}`, t => {
-  const frames = replay(baseline);
-  if (baseline) {
+test('F06-12 inspector reuses view work and raster storage without changing output', t => {
+  const frames = replay();
+  if (process.argv.includes('--diagnostics')) {
     t.diagnostic(`sources core=${sha256(source('core'))} ui=${sha256(source('ui'))}`);
     for (const [i, frame] of frames.entries()) t.diagnostic(`${steps[i]} ${JSON.stringify(frame)}`);
   }
@@ -197,10 +153,11 @@ test(`F06-12 ${baseline ? 'unchanged inspector' : 'synthetic reuse control'}`, t
     if (light.counts[key]) gaps.push(`light rebuilt ${key}: ${light.counts[key]}`);
   }
   for (const [i, { counts, sameStorage }] of frames.entries()) {
-    const { depthOrZ, triangles, normals } = counts;
+    const { depthOrZ, triangles, normals, imageData } = counts;
     const allocations = depthOrZ + triangles + normals;
     if (i === 0) assert.deepEqual([depthOrZ, triangles, normals], [2, 1, 1], 'cold frame exercises all four planes');
     else if (allocations || !sameStorage) gaps.push(`${steps[i]} allocated ${allocations} raster planes; same storage=${sameStorage}`);
+    if (imageData !== Number(i === 0)) gaps.push(`${steps[i]} allocated ${imageData} ImageData buffers`);
   }
   assert.deepEqual(gaps, [], 'warm light/camera frames must reuse view work or storage as applicable');
 });
