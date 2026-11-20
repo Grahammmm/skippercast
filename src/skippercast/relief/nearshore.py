@@ -26,11 +26,11 @@ from scipy import ndimage
 from scipy.signal import fftconvolve
 
 from skippercast.style import StyleView
+from skippercast.util.units import FT_PER_M
 
 # Bump in the same PR as any change of rendered pixels (engine goldens are pinned per epoch).
 ENGINE_EPOCH = 1
 
-FT_PER_M = 3.28084  # unit conversion (international foot), as the kit
 _TOLERANCE = 1e-9  # float slack on cell-size gates, as the kit
 _CONTOUR_LAND_FT = -3.0  # land depth before contour smoothing (kit reference plumbing, not a token)
 ZOOM_CLASSES = ("overview", "closeup")

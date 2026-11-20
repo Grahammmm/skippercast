@@ -12,7 +12,7 @@
    "cell_m": 1.0,
    "depth_ft_range": [
     0.004729,
-    70.613383
+    70.613381
    ],
    "pile_area_frac": 0.072483,
    "pile_heights_m": [
@@ -47,7 +47,7 @@
    "cell_m": 2.0,
    "depth_ft_range": [
     0.012851,
-    70.341532
+    70.34153
    ],
    "pile_area_frac": 0.086263,
    "pile_heights_m": [
@@ -83,7 +83,7 @@
    "cell_m": 4.0,
    "depth_ft_range": [
     0.00787,
-    69.752376
+    69.752373
    ],
    "pile_area_frac": 0.0,
    "pile_heights_m": [],

@@ -32,6 +32,7 @@ from skippercast.relief import nearshore  # noqa: E402
 import png8  # noqa: E402
 
 OUT = ROOT / "tests/fixtures/style/nearshore-v1.0.0"
+PINS = ROOT / "scripts/web-vendor-sha256.json"
 SEED = 20261119
 SIZE_M = 192
 ORIGIN = (700000.0, 3900000.0)  # west, north of a UTM-like metric grid
@@ -122,6 +123,13 @@ def build(out=OUT):
                          "src/skippercast/relief/nearshore.py for a deliberate look change, then rerun")
     epochs[key] = hashes
     epochs_path.write_text(json.dumps(epochs, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    # check_repository.py admits a binary file only with its pin in the shared manifest.
+    pins = json.loads(PINS.read_text(encoding="utf-8"))
+    prefix = out.resolve().relative_to(ROOT).as_posix() + "/" if out.resolve().is_relative_to(ROOT) else None
+    if prefix:
+        pins = {k: v for k, v in pins.items() if not k.startswith(prefix)}
+        pins.update({prefix + name: digest for name, digest in hashes.items()})
+        PINS.write_text(json.dumps(dict(sorted(pins.items())), indent=2) + "\n", encoding="utf-8")
     (out / "metrics.json").write_text(json.dumps({"engine_epoch": nearshore.ENGINE_EPOCH, "seed": SEED,
                                                   "style": baked.version, "baked": baked.digest("baked"),
                                                   "grids": metrics}, indent=1, sort_keys=True) + "\n",

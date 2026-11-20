@@ -131,9 +131,9 @@ def test_parity_keys_are_canonical_hashes_of_their_members():
     for name, bad in (("runtime", {**runtime, "pillow": "13"}), ("baked", "B"), ("engine_epoch", True)):
         with pytest.raises(ValueError):
             parity.parity_key(**{**members, name: bad})
-    refs = dict(zip(parity.REFERENCE_FILES, h))
-    oracle = parity.oracle_key(h[2], h[3], refs, {"python": "3.12.3"}, {"case": ["$FX/dem.tif"]})
-    assert oracle != parity.oracle_key(h[2], h[3], refs, {"python": "3.12.3"}, {"case": ["$FX/dem.tif", "--class"]})
+    refs, venv = dict(zip(parity.REFERENCE_FILES, h)), {"venv": "kit pins"}
+    oracle = parity.oracle_key(h[2], h[3], refs, venv, {"case": ["$FX/dem.tif"]})
+    assert oracle != parity.oracle_key(h[2], h[3], refs, venv, {"case": ["$FX/dem.tif", "--class"]})
     assert len(parity.engine_digest()) == 64
 
 
