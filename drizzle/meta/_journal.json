@@ -141,6 +141,13 @@
       "when": 1795033446278,
       "tag": "0019_advisor_review_events",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1795146980473,
+      "tag": "0020_advisor_rule_origin",
+      "breakpoints": true
     }
   ]
 }
