@@ -488,7 +488,6 @@ def read_static_candidates(state_path: Path, boat_name: str, start: datetime, en
         entry = by_mmsi.setdefault(row["mmsi"], {
             "mmsi": row["mmsi"], "ais_names": set(), "call_signs": set(), "ship_types": set(),
             "sources": set(), "first_static_utc": None, "last_static_utc": None, "static_rows": 0,
-            "identity_observations": set(),
         })
         entry["ais_names"].add(row["name"] or "")
         if row["call_sign"]:
@@ -496,13 +495,7 @@ def read_static_candidates(state_path: Path, boat_name: str, start: datetime, en
         if row["ship_type"] is not None:
             entry["ship_types"].add(row["ship_type"])
         entry["sources"].add(row["source"])
-        instant = datetime.fromtimestamp(row["ts"] / 1000, timezone.utc)
-        observed = instant.isoformat(timespec="seconds").replace("+00:00", "Z")
-        observed_exact = instant.isoformat(timespec="milliseconds" if instant.microsecond else "seconds").replace("+00:00", "Z")
-        for field, value in (("mmsi", row["mmsi"]), ("vessel_name", row["name"]),
-                             ("call_sign", row["call_sign"]), ("ship_type", row["ship_type"])):
-            if value is not None and value != "":
-                entry["identity_observations"].add((row["source"], field, str(value), observed_exact))
+        observed = datetime.fromtimestamp(row["ts"] / 1000, timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
         entry["first_static_utc"] = min(entry["first_static_utc"] or observed, observed)
         entry["last_static_utc"] = max(entry["last_static_utc"] or observed, observed)
         entry["static_rows"] += 1
@@ -614,6 +607,46 @@ def raw_window_summary(fleet_var: Path, region: str, mmsi: int, start: datetime,
             "gaps": gaps}
 
 
+def read_identity_observations(fleet_var: Path, region: str, mmsi: int, start: datetime,
+                               end: datetime) -> list[tuple[str, str, str, str]]:
+    """Return (source, field, value, observed_utc) for each field a raw static message carried.
+
+    ``match_statics`` is one merged row per MMSI: it keeps older non-empty fields while
+    replacing its source and time with the newest message, so it cannot say which message
+    carried which field. The raw store keeps one row per (mmsi, ts, source) message, so
+    each field is paired with the source and time of the row that holds it. An unreadable
+    or missing day contributes nothing: no pairing is better than a wrong one.
+    """
+    raw_dir = fleet_var / region / "ais" / "raw"
+    start_ms, end_ms = int(start.timestamp() * 1000), int(end.timestamp() * 1000)
+    first_day = start.astimezone(timezone.utc).date()
+    last_day = end.astimezone(timezone.utc).date()
+    observations: set[tuple[str, str, str, str]] = set()
+    for offset in range((last_day - first_day).days + 1):
+        path = raw_dir / f"{(first_day + timedelta(days=offset)).isoformat()}.sqlite"
+        if not path.is_file():
+            continue
+        try:
+            conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=2)
+            try:
+                rows = conn.execute("""SELECT ts,source,name,call_sign,ship_type FROM statics
+                    WHERE mmsi=? AND ts>=? AND ts<? ORDER BY ts,source""", (mmsi, start_ms, end_ms)).fetchall()
+            finally:
+                conn.close()
+        except sqlite3.Error:
+            continue
+        for ts_ms, source, name, call_sign, ship_type in rows:
+            instant = datetime.fromtimestamp(ts_ms / 1000, timezone.utc)
+            observed = instant.isoformat(timespec="milliseconds" if instant.microsecond else "seconds").replace("+00:00", "Z")
+            name = " ".join(str(name or "").replace("@", " ").split())
+            call_sign = "".join(ch for ch in str(call_sign or "").upper() if ch.isalnum())
+            for field, value in (("mmsi", mmsi), ("vessel_name", name), ("call_sign", call_sign),
+                                 ("ship_type", ship_type)):
+                if value is not None and value != "":
+                    observations.add((source, field, str(value), observed))
+    return sorted(observations)
+
+
 IDENTITY_FIELD_ALLOWLIST = frozenset({"mmsi", "vessel_name", "call_sign", "ship_type", "official_number",
                                       "length_ft", "vessel_class", "imo", "dimensions_ft"})
 
@@ -667,6 +700,8 @@ def assess_ais(conn: sqlite3.Connection, state_path: Path, fleet_var: Path, regi
                                                          day_start, day_end)
             candidate["port_presence"] = read_port_presence(state_path, candidate["mmsi"],
                                                               trip["port_id"], trip["scheduled_date_local"])
+            candidate["identity_observations"] = read_identity_observations(
+                fleet_var, region.id, candidate["mmsi"], start - look, end + look)
             store_ais_identity_evidence(conn, trip["trip_id"], trip["revision"], candidate, stamp(now))
             del candidate["identity_observations"]  # Keep the existing assessment summary shape.
             candidate["evidence_origin"] = "AIS self-reported static fields; no official FCC/PSIX corroboration"
