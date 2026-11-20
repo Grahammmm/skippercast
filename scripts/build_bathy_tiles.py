@@ -404,6 +404,17 @@ def feather_tier(coarse, native, ground, feather_m=FEATHER_M):
     coarse support is absent, retain native measured support rather than blending to nodata.
     Vertical references are not transformed: this is explicitly a mixed-datum preview.
     """
+    result, valid, _, _ = _feather_tier(coarse, native, ground, feather_m)
+    return result, valid
+
+
+def feather_tier_with_weight(coarse, native, ground, feather_m=FEATHER_M):
+    """Also return the display blend weight (1 outside the two-tier overlap)."""
+    result, _, overlap, weight = _feather_tier(coarse, native, ground, feather_m)
+    return result, np.where(overlap, weight, 1.0)
+
+
+def _feather_tier(coarse, native, ground, feather_m):
     from scipy import ndimage
     valid = np.isfinite(native) & (native != NODATA) & (native <= 0) & (native >= -SHALLOW_M)
     base_valid = np.isfinite(coarse) & (coarse != NODATA)
@@ -416,7 +427,7 @@ def feather_tier(coarse, native, ground, feather_m=FEATHER_M):
     overlap = valid & base_valid
     result[overlap] = (coarse[overlap] * (1 - weight[overlap]) + native[overlap] * weight[overlap])
     result[valid & ~base_valid] = native[valid & ~base_valid]
-    return result, valid
+    return result, valid, overlap, weight
 
 
 def _manifest_entries(path):

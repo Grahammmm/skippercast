@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import re
 
 from jsonschema import Draft202012Validator, ValidationError
 import pytest
@@ -9,7 +10,7 @@ import pytest
 from scripts.relief import region as cli
 from skippercast.platform.contracts import OWNER_DISPLAY_BASIS
 from skippercast.relief import envelope, package, receipts
-from tests._support import ROOT
+from tests._support import FIXTURES, ROOT
 
 REGION = 'morro-bay'
 SOURCE = 'synthetic-grid'
@@ -46,7 +47,7 @@ def assembly(tmp_path, monkeypatch):
     return config
 
 
-def inputs(root, *, include_digests=True):
+def inputs(root, *, include_digests=True, style=None):
     region = receipts.Region(root, REGION)
     layers = {p: b for p, b in LAYERS.items() if include_digests or 'relief.digests' not in p}
 
@@ -55,8 +56,12 @@ def inputs(root, *, include_digests=True):
             path = output / name.removeprefix('layers/public/')
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(blob)
+        if style is not None:
+            return {'style': {'built_with': style['built_with']}}
 
     assert receipts.run_stage(receipts.StageRun(region, 'tiles', tiles, 'a' * 64,
+                                                plan=lambda _: receipts.Plan(params={} if style is None else
+                                                    dict(engine='nearshore', baked=style['baked'])),
                                                 scope='public', target='layers/public')).state == 'ok'
     manifest = root / 'layers.json'
     metadata = {
@@ -81,7 +86,8 @@ def run(region, stage, *args):
 
 
 def run_package(region, manifest):
-    return run(region, 'package', '--manifest', manifest, '--upstream', 'tiles:public')
+    contours = ('--upstream', 'contours') if region.receipt_path('contours').exists() else ()
+    return run(region, 'package', '--manifest', manifest, '--upstream', 'tiles:public', *contours)
 
 
 def release_and_qa(region, manifest, *, status='PASS', digest=None):
@@ -97,8 +103,15 @@ def release_and_qa(region, manifest, *, status='PASS', digest=None):
     return gen, release, region.dir / 'qa' / gen / 'qa.json'
 
 
-def approved(root, *, include_digests=True):
-    region, manifest = inputs(root, include_digests=include_digests)
+def approved(root, *, include_digests=True, style=None):
+    region, manifest = inputs(root, include_digests=include_digests, style=style)
+    if style is not None and style['contours'] is not None:
+        def contours(out):
+            (out / 'native.geojson').write_bytes(b'{"type":"FeatureCollection","features":[]}')
+
+        assert receipts.run_stage(receipts.StageRun(region, 'contours', contours, 'c' * 64,
+            plan=lambda _: receipts.Plan(params={'set': 'ft-v3', 'contours': style['contours']}),
+            target='layers/contours')).state == 'ok'
     gen, release, qa = release_and_qa(region, manifest)
     assert run(region, 'envelope', '--generation', gen) == 0
     review = region.dir / 'review' / gen / 'envelope.json'
@@ -106,6 +119,100 @@ def approved(root, *, include_digests=True):
     write_json(approval, {'envelope_sha256': sha(review), 'verdict': f'APPROVED release {REGION} envelope={sha(review)}',
                           'card_id': 'fixture', 'reviewer': 'fixture', 'time': '2000-01-01T00:00:00Z'})
     return region, release, qa, review, approval
+
+
+def kit_style():
+    versions = json.loads((ROOT / 'style/index.json').read_bytes())['versions']
+    version = versions['nearshore-v1.0.0']
+    return dict(baked=version['digests']['baked'], contours=version['digests']['contours'],
+                built_with='nearshore-v1.0.0', habitat=None)
+
+
+def test_e_frozen_style_schema_at_both_levels(tmp_path, assembly):
+    # An additive pointer member must be optional but cannot accept rev-2 provenance or malformed keys.
+    _, _, _, review, approval = approved(tmp_path)
+    pointer = envelope.build_pointer(approval, review)
+    prior = {key: pointer[key] for key in ('generation', 'release_sha256', 'envelope_sha256', 'sha256')}
+    kit = kit_style() | {'contours': None}
+    assert package.validate_schema(pointer, package.pointer_schema()) is None
+    for wrap in (lambda s: pointer | {'style': s}, lambda s: pointer | {'previous': prior | {'style': s}}):
+        package.validate_schema(wrap(kit), package.pointer_schema())
+        for bad in (kit | {'baked': 'z' * 64}, kit | {'contours': '0' * 63}, kit | {'habitat': {}},
+                    kit | {'extra': 1}, kit | {'built_with': {'tiles': kit['built_with']}},
+                    kit | {'built_with': 'ok\n'}, {k: v for k, v in kit.items() if k != 'habitat'}):
+            with pytest.raises(package.ReleaseError):
+                package.validate_schema(wrap(bad), package.pointer_schema())
+
+
+def style_fixture_data():
+    from scripts.style.gen_style import group_digests, look_table
+
+    kit = kit_style()
+    tokens = json.loads((ROOT / 'style/nearshore-v1.0.0.json').read_bytes())
+    rules = json.loads((ROOT / 'style/groups.json').read_bytes())
+    next_tokens = copy.deepcopy(tokens)
+    next_tokens['depth_ramp']['stops_ft'][0][1] = '#E0F8F4'
+    next_tokens['version'] = '1.1.0'
+    digests = group_digests(next_tokens, rules)
+    bumped = kit | {'built_with': 'nearshore-v1.1.0',
+                    'baked': digests['baked']}
+    index = json.loads((ROOT / 'style/index.json').read_bytes())
+    index['versions'][bumped['built_with']] = {'status': 'rolling', 'digests': digests}
+    web, _, coast = look_table(index, {kit['built_with']: tokens, bumped['built_with']: next_tokens})
+    return kit, bumped, {'web': web, 'coast': coast}
+
+
+def composed_pointers(tmp_path):
+    kit, bumped, _ = style_fixture_data()
+    pointers = {}
+    for name, style, previous in (('legacy', None, None), ('v1', kit, None),
+                                  ('v1-no-contours', kit | {'contours': None}, None),
+                                  ('v1_1-prev-v1', bumped, 'v1')):
+        _, _, _, review, approval = approved(tmp_path / name, style=style)
+        assert envelope.verify_chain(approval, review).release.get('style') == style
+        pointer = envelope.build_pointer(approval, review, previous=pointers.get(previous))
+        assert pointer.get('style') == style
+        if previous is not None:
+            assert pointer['previous']['style'] == kit
+        pointers[name] = pointer
+    return pointers
+
+
+def test_f_composed_pointer_fixtures(tmp_path, assembly):
+    # Cross-language consumers read committed producer bytes; only identity hashes may drift.
+    def masked(pointer):
+        pointer = copy.deepcopy(pointer)
+        for block in (pointer, pointer['previous']):
+            if block is not None:
+                for key in ('generation', 'release_sha256', 'envelope_sha256'):
+                    assert re.fullmatch('[0-9a-f]{64}', block[key])
+                    block[key] = '0' * 64
+        return receipts.canonical(pointer)
+
+    for name, pointer in composed_pointers(tmp_path).items():
+        raw = (FIXTURES / 'relief/pointer-style' / f'{name}.json').read_bytes()
+        committed = json.loads(raw)
+        assert receipts.canonical(committed) == raw
+        assert masked(pointer) == masked(committed)
+    assert (FIXTURES / 'relief/pointer-style/looks.json').read_bytes() == receipts.canonical(style_fixture_data()[2])
+
+
+def test_h_verify_chain_refuses_malformed_style_even_when_resealed(tmp_path, assembly):
+    # Make all transport identities agree so only the malformed style can cause rejection.
+    _, release, qa, review, approval = approved(tmp_path, style=kit_style())
+    doc = json.loads(release.read_bytes())
+    doc['style']['built_with'] = {'tiles': 'nearshore-v1.0.0'}
+    write_json(release, doc)
+    write_json(qa, json.loads(qa.read_bytes()) | {'release_sha256': sha(release)})
+    env = json.loads(review.read_bytes())
+    for name, path in (('release', release), ('qa', qa)):
+        env[name]['sha256'] = sha(path)
+    write_json(review, env)
+    digest = sha(review)
+    write_json(approval, json.loads(approval.read_bytes()) | {'envelope_sha256': digest,
+                                  'verdict': f'APPROVED release {REGION} envelope={digest}'})
+    with pytest.raises(package.ReleaseError, match='invalid relief style block'):
+        envelope.verify_chain(approval, review)
 
 
 def test_deterministic_acyclic_chain_and_receipts(tmp_path, assembly, capsys):
