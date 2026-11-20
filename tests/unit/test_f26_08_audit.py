@@ -156,6 +156,34 @@ def test_failed_run_does_not_seal_edition(run):
     assert good.calls
 
 
+@pytest.mark.parametrize('invalid', ['decode', 'class'])
+def test_failed_tile_in_sealed_edition_is_refetched(run, monkeypatch, invalid):
+    # A stamp written before validation traps retries on the same bad bytes
+    # when a later run expands the selection under an already sealed edition.
+    selected = {(100, 100)}
+    monkeypatch.setattr(m, 'sector_tiles', lambda sectors: {'northern': selected})
+    edition = ('--edition', 'reviewed-A')
+    run(Upstream(code=1), *edition)
+    selected.add((100, 101))
+    bad = Upstream(code=3)
+    if invalid == 'decode':
+        bad.blob = bad.blob[:10]  # Keep the Lerc2 prefix but truncate the header.
+    with pytest.raises(SystemExit) as exc:
+        run(bad, *edition)
+    assert exc.value.code == 1
+    failure = json.loads(run.output.read_text())['failures']
+    assert [entry['tile'] for entry in failure] == [[100, 101]]
+    assert manifest(run.cache)['edition'] == 'reviewed-A'
+    bad_stamps = list(run.cache.rglob('101.lerc.edition'))
+
+    retry = Upstream(code=2)
+    audit = run(retry, *edition)
+    assert not bad_stamps
+    assert [u.rsplit('/', 2)[-2:] for u in retry.calls] == [['100', '101']]
+    assert {t['col']: t['reused'] for t in audit['tiles']} == {100: True, 101: False}
+    assert [t['soft_cells'] for t in audit['tiles']] == [0, 256 * 256]
+
+
 def test_new_edition_over_fewer_tiles_does_not_vouch_for_the_rest(run, monkeypatch):
     # Contract: a tile is reused only if it was itself fetched under the requested edition.
     # Bug caught: sealing edition B after a run over a subset marked the whole cache as B,

@@ -134,27 +134,31 @@ def inspect_tile(row, col, cache, edition=None, reuse=False):
     """
     path = cache / str(LEVEL) / str(row) / f'{col}.lerc'
     url = f'{BASE}/tile/{LEVEL}/{row}/{col}'
-    reused = reuse and edition is not None and path.exists() and stamped_edition(path, path.read_bytes()) == edition
+    blob = path.read_bytes() if reuse and edition is not None and path.exists() else b''
+    reused = bool(blob) and stamped_edition(path, blob) == edition
     if not reused:
         request = urllib.request.Request(url, headers={'User-Agent': 'SkipperCast/0.3 public substrate source audit'})
         with urllib.request.urlopen(request, timeout=35) as response:
             blob = response.read()
         if not blob.startswith(b'Lerc2') or len(blob) > 500000:
             raise ValueError(f'Unexpected LERC tile {row}/{col}')
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # Drop the old stamp first so a crash mid-write cannot leave new bytes under an old edition.
-        tile_stamp(path).unlink(missing_ok=True)
-        path.write_bytes(blob)
-        if edition is not None:
-            tile_stamp(path).write_text(json.dumps({'edition': edition, 'sha256': hashlib.sha256(blob).hexdigest()}) + '\n')
-    blob = path.read_bytes()
     result = lerc.decode(blob)
-    if result[0] != 0 or result[1].shape != (256, 256) or (result[2] is not None and result[2].shape != (256, 256)):
+    # pylerc can return a bare error code instead of a tuple for malformed bytes.
+    if (not isinstance(result, tuple) or result[0] != 0 or result[1].shape != (256, 256)
+            or (result[2] is not None and result[2].shape != (256, 256))):
         raise ValueError(f'Invalid CDFW tile {row}/{col}')
     values = result[1][result[2]] if result[2] is not None else result[1].ravel()
     if not np.isin(values, [1, 2]).all():
         raise ValueError(f'Unexpected CDFW substrate code {row}/{col}')
-    return {'row': row, 'col': col, 'sha256': hashlib.sha256(blob).hexdigest(),
+    digest = hashlib.sha256(blob).hexdigest()
+    if not reused:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Drop the old stamp before replacing bytes; only validated tiles get a new stamp.
+        tile_stamp(path).unlink(missing_ok=True)
+        path.write_bytes(blob)
+        if edition is not None:
+            tile_stamp(path).write_text(json.dumps({'edition': edition, 'sha256': digest}) + '\n')
+    return {'row': row, 'col': col, 'sha256': digest,
             'hard_cells': int(np.count_nonzero(values == 1)),
             'soft_cells': int(np.count_nonzero(values == 2)), 'bytes': len(blob), 'reused': reused}
 
