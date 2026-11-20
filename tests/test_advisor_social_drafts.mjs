@@ -26,7 +26,7 @@ const {onError} = await import('../server/middleware/error.ts');
 const {adminRoutes} = await import('../server/routes/admin.ts');
 const D = await import('../server/advisor/social/drafts.ts');
 const {decideReview} = await import('../server/advisor/admin/decisions.ts');
-const {listReviews} = await import('../server/advisor/admin/queue.ts');
+const {listReviews, reviewView} = await import('../server/advisor/admin/queue.ts');
 const {listBoats} = await import('../server/advisor/admin/skippers.ts');
 const {reviewId, forgetContact} = await import('../server/advisor/contacts.ts');
 const {engineHandler} = await import('../server/advisor/engine.ts');
@@ -430,7 +430,7 @@ dbTest('the queue card and GET /api/admin/posts: the post with its photos, capti
   const p = await postOf(sql, 'm1');
   const queue = await listReviews(env.DB, {status: 'open', kind: 'post'});
   assert.equal(queue.items.length, 1);
-  const card = queue.items[0].detail.post;
+  const card = (await reviewView(env.DB, queue.items[0].id)).detail.post;
   assert.deepEqual([card.id, card.kind, card.status, card.targets, card.allowed_targets, card.collaborators, card.review_id, card.hold],
     [p.id, 'photo', 'draft', ['instagram', 'facebook'], ['instagram', 'facebook'], ['seaexample'], await postReview(p.id), 'a photo of this post is waiting for its photo review']);
   assert.deepEqual(card.media.map(m => [m.id, m.has_person, m.review_open, m.thumb]), [['m1', true, true, '/api/admin/media/m1']]);
@@ -453,7 +453,9 @@ dbTest('the queue card and GET /api/admin/posts: the post with its photos, capti
   const ok = await quiet(() => post(`/api/admin/reviews/${card.review_id}`, {decision: 'approve'}));
   assert.equal(ok.value.status, 200);
   const approved = (await (await get('/api/admin/posts?status=approved')).json()).posts;
-  assert.deepEqual(approved.map(x => [x.id, x.status, x.approved_by, x.review_id, x.hold]), [[p.id, 'approved', ADMIN, null, null]]);
+  assert.deepEqual(approved.map(x => [x.id, x.status]), [[p.id, 'approved']]);
+  const {post: expanded} = await (await get(`/api/admin/posts/${p.id}`)).json();
+  assert.deepEqual([expanded.approved_by, expanded.review_id, expanded.hold], [ADMIN, null, null]);
   assert.deepEqual(decisionsFor('post', 'social_draft'), ['approve', 'edit', 'reject']);
   // Skippers: the boat's posts that were not rejected.
   assert.equal((await listBoats(env.DB, T0)).boats.find(b => b.id === 'b1').posts, 1);

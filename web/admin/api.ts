@@ -14,7 +14,8 @@ export interface QueueItem {
   id: string; kind: ReviewKind; ref_id: string; reason: string; status: ReviewStatus; note: string | null; opened_at: string; decided_at: string | null;
   detail: Record<string, any> | null;   // the kind's detail (server/advisor/admin/queue.ts reviewDetail)
 }
-export interface QueuePage {items: QueueItem[]; next: string | null}
+export type ReviewSummary = Omit<QueueItem, 'note' | 'detail'>;
+export interface QueuePage {items: ReviewSummary[]; next: string | null}
 export interface DecisionBody {decision: Decision; patch?: Record<string, unknown>; note?: string; reply?: string}
 export interface DecisionResult {review: QueueItem; sends?: number; held?: string; repeated?: boolean}
 export interface Health {
@@ -39,6 +40,7 @@ export interface Boat {
   consent: 'given' | 'revoked' | 'not given'; consent_photos_at: string | null; consent_revoked_at: string | null;
   consent_note: {note: string; at: string} | null; crew: Crew[]; review_open: boolean;
 }
+export type BoatSummary = Omit<Boat, 'owner' | 'crew' | 'consent_note'> & {crew_count: number; has_note: boolean};
 export type BoatFields = Partial<Record<'name' | 'port' | 'landing' | 'instagram' | 'booking_url' | 'phone_public', string | null>>;
 export interface BoatEdit {fields?: BoatFields; status?: 'verified' | 'rejected'; consent_note?: string | null}
 export interface BoatResult {boat: Boat; sends?: number; held?: string}
@@ -107,7 +109,8 @@ export interface WeekDay {date: string; weekday: string; slots: WeekSlot[]; othe
 export interface CalendarWeek {tz: string; start: string; end: string; days: WeekDay[]}
 /** POST /api/admin/posts/:id/{publish,schedule,retry} (TA-S2). */
 export interface PostActionResult {post: Post; outcome?: string; error?: string}
-export interface PostsPage {posts: Post[]; next: string | null}
+export type PostSummary = Pick<Post, 'id' | 'kind' | 'region' | 'status' | 'ig_media_id' | 'fb_post_id' | 'fb_story_id' | 'collab_status' | 'updated_at'> & {media_count: number};
+export interface PostsPage {posts: PostSummary[]; next: string | null}
 export const POST_STATUSES: readonly string[] = ['all', 'draft', 'approved', 'scheduled', 'publishing', 'posted', 'partial', 'failed', 'rejected'];
 export const POST_KINDS: readonly string[] = ['photo', 'carousel', 'reel', 'story', 'daily', 'roundup'];
 /** The query string for a Posts page. */
@@ -149,20 +152,25 @@ export function queuePath(status: string, kind: string, cursor?: string | null):
   return `/api/admin/reviews?${q}`;
 }
 
-function isQueueItem(item: unknown): item is QueueItem {
+function isReviewSummary(item: unknown): item is ReviewSummary {
   return isObject(item) && typeof item.id === 'string' && typeof item.ref_id === 'string' &&
     typeof item.reason === 'string' && typeof item.opened_at === 'string' && KINDS.some(kind => kind === item.kind) &&
     STATUSES.some(status => status !== 'all' && status === item.status) &&
-    (item.note === null || typeof item.note === 'string') && (item.decided_at === null || typeof item.decided_at === 'string') &&
-    (item.detail === null || isObject(item.detail));
+    (item.decided_at === null || typeof item.decided_at === 'string');
 }
 
 export async function getQueue(status: string, kind: string, cursor?: string | null): Promise<QueuePage> {
   const page = await call<Record<string, unknown>>(queuePath(status, kind, cursor));
-  if (!Array.isArray(page.items) || !page.items.every(isQueueItem) || (page.next !== null && typeof page.next !== 'string')) {
+  if (!Array.isArray(page.items) || !page.items.every(isReviewSummary) || (page.next !== null && typeof page.next !== 'string')) {
     throw new Error('Invalid admin queue response');
   }
   return {items: page.items, next: page.next};
+}
+export async function getReview(id: string): Promise<QueueItem> {
+  const {review} = await call<{review: QueueItem}>(`/api/admin/reviews/${encodeURIComponent(id)}`);
+  if (!isReviewSummary(review) || review.id !== id || !(review.note === null || typeof review.note === 'string') ||
+    !(review.detail === null || isObject(review.detail))) throw new Error('Invalid admin review response');
+  return review;
 }
 export async function getHealth(): Promise<Health> {
   const health = await call<Health>('/api/admin/health', {redirect: 'error'});
@@ -175,7 +183,8 @@ export const decide = (id: string, body: DecisionBody): Promise<DecisionResult> 
 const postJson = <T>(path: string, data: unknown): Promise<T> =>
   call(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
 
-export const getBoats = (): Promise<{boats: Boat[]}> => call('/api/admin/boats');
+export const getBoats = (cursor?: string | null): Promise<{boats: BoatSummary[]; next: string | null}> => call(`/api/admin/boats${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`);
+export const getBoat = (id: string): Promise<Boat> => call<{boat: Boat}>(`/api/admin/boats/${encodeURIComponent(id)}`).then(r => r.boat);
 export const editBoat = (id: string, edit: BoatEdit): Promise<BoatResult> => postJson(`/api/admin/boats/${encodeURIComponent(id)}`, edit);
 export const removeCrew = (boat: string, contact: string): Promise<{boat: Boat}> =>
   postJson(`/api/admin/boats/${encodeURIComponent(boat)}/crew/${encodeURIComponent(contact)}/remove`, {});
@@ -186,6 +195,7 @@ export const setBlocked = (id: string, blocked: boolean): Promise<{status: strin
 export const getFunnel = (days: 7 | 30): Promise<Funnel> => call(`/api/admin/funnel?days=${days}`);
 export const subscribeWebhooks = (): Promise<{subscribed: boolean; fields: string}> => postJson('/api/admin/meta/subscribe', {});   // TA-S6
 export const getPosts = (status: string, kind: string, cursor?: string | null): Promise<PostsPage> => call(postsPath(status, kind, cursor));
+export const getPost = (id: string): Promise<Post> => call<{post: Post}>(`/api/admin/posts/${encodeURIComponent(id)}`).then(r => r.post);
 export const publishPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/publish`, {});
 export const schedulePost = (id: string, scheduledFor: string | null): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/schedule`, {scheduled_for: scheduledFor});
 export const retryPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/retry`, {});
