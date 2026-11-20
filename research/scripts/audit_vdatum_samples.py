@@ -41,15 +41,25 @@ def assess_response(payload: dict, longitude: float, latitude: float) -> dict:
         tx, ty = float(payload["t_x"]), float(payload["t_y"])
     except (TypeError, ValueError, KeyError):
         return {"status": "unavailable", "reason": "missing_numeric_result"}
-    if abs(sx - longitude) > 1e-5 or abs(sy - latitude) > 1e-5:
+    if (not all(map(math.isfinite, (sx, sy)))
+            or abs(sx - longitude) > 1e-5 or abs(sy - latitude) > 1e-5):
         return {"status": "invalid_response", "reason": "source_coordinate_mismatch"}
+    source_height = None
+    if payload.get("s_z") is not None:
+        try:
+            source_height = float(payload["s_z"])
+        except (TypeError, ValueError, OverflowError):
+            return {"status": "invalid_response", "reason": "source_height_mismatch"}
+        if isinstance(payload["s_z"], bool) or source_height != 0:
+            return {"status": "invalid_response", "reason": "source_height_mismatch"}
     if not all(map(math.isfinite, (offset, uncertainty, tx, ty))):
         return {"status": "unavailable", "reason": "nonfinite_result"}
     if offset <= -1e5 or abs(offset) > 20 or uncertainty <= 0 or uncertainty > 20:
         return {"status": "unavailable", "reason": "sentinel_or_invalid_uncertainty"}
     if abs(tx - longitude) > 0.01 or abs(ty - latitude) > 0.01:
         return {"status": "invalid_response", "reason": "target_coordinate_mismatch"}
-    return {"status": "sample_available", "offset_m": offset, "vdatum_uncertainty_m": uncertainty}
+    return {"status": "sample_available", "offset_m": offset, "vdatum_uncertainty_m": uncertainty,
+            "source_height_echo_m": source_height}
 
 
 def fetch_sample(longitude: float, latitude: float) -> tuple[str, dict]:
