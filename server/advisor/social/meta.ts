@@ -262,8 +262,7 @@ export async function igCollaborators(cfg: MetaConfig, mediaId: string): Promise
 // ---- Facebook Page ------------------------------------------------------------------------------
 
 function pageCreateId(edge: string, id: unknown): string {
-  const value = String(id ?? '');
-  if (ID.test(value)) return value;
+  if (typeof id === 'string' && ID.test(id)) return id;
   throw new MetaCreateUncertain(edge, 200, null, null, null);
 }
 

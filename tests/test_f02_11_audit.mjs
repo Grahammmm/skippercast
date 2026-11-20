@@ -54,7 +54,8 @@ function setup(t, edge, ambiguous) {
     // The fake accepts *every* create. Only the first acknowledgement is lost.
     const id = `created-${accepted.length + 1}`;
     accepted.push(id);
-    if (ambiguous && accepted.length === 1) return Response.json({error: {}}, {status: 503});
+    if (ambiguous === true && accepted.length === 1) return Response.json({error: {}}, {status: 503});
+    if (ambiguous === 'invalid-id') return Response.json({id: true});
     return Response.json({id});
   };
   const deps = {fetcher, sleep: async () => {}, dispatch: async () => {
@@ -99,6 +100,19 @@ for (const edge of ['photos', 'feed']) {
     assert.deepEqual({creates: f.accepted.length, ...f.post()}, first);
     assert.equal(f.staged.length, edge === 'feed' ? 2 : 0);
     assert.deepEqual(f.unexpected, []);
+  });
+
+  test(`F02-11 ${edge}: a non-string acknowledgement id is held for reconciliation`, async t => {
+    const {f, first, next} = await observe(t, edge, 'invalid-id');
+    assert.equal(first.creates, 1);
+    assert.equal(first.fb_post_id, null);
+    assert.equal(first.posted_at, null);
+    assert.notEqual(first.status, 'posted');
+    assert.match(first.error, /uncertain; reconcile before retrying.*HTTP 200/);
+    assert.deepEqual(next, first);
+    const retry = await publish(f.env, 'post', {...f.deps, now: () => NEXT}, {retry: true});
+    assert.match(retry.error, /uncertain; reconcile before retrying/);
+    assert.deepEqual({creates: f.accepted.length, ...f.post()}, first);
   });
 
   test(`F02-11 ${edge}: a normal acknowledgement persists the id and isn't replayed`, async t => {
