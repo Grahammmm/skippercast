@@ -335,6 +335,11 @@ def validate_receipt(doc: Mapping, region: str, stage: str, scope: str | None) -
             and isinstance(u.get('generation'), str) and HEX64.fullmatch(u['generation'])
             for u in upstream):
         return 'upstream malformed'
+    for u in upstream:
+        try:
+            check_names(u['stage'], u.get('scope'))
+        except ReceiptError as exc:
+            return f'upstream {exc}'
     if not isinstance(doc.get('attempt'), int) or doc['attempt'] < 1:
         return 'attempt malformed'
     return None
