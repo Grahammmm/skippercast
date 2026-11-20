@@ -92,6 +92,9 @@ const frameBoundary = (page: import('@playwright/test').Page) => page.evaluate((
 
 for (const starting of ['dark', 'light'] as const) {
   test(`mounted map stays in place and matches fresh ${other(starting)} paint (starts ${starting})`, async ({browser}, info) => {
+    // Eight paired full-page journeys plus the held-region transition share
+    // this deadline; individual readiness and request assertions stay bounded.
+    test.setTimeout(180_000);
     const phone = info.project.name === 'phone';
     const viewport = phone ? {width: 390, height: 844} : {width: 1200, height: 800};
     const server = await serveThemeApp();

@@ -100,6 +100,9 @@ export async function bindThemeFixture(context: BrowserContext, origin: string, 
   let release!: () => void;
   const regionHold = new Promise<void>(resolve => { release = resolve; });
   await context.addInitScript(() => {
+    // Do not let a delayed, unrelated page telemetry flush pollute the
+    // all-request oracle; map-data requests remain fully observed.
+    Object.defineProperty(navigator, 'doNotTrack', {value: '1'});
     localStorage.setItem('skippercast-first-run-v1', 'done');
     localStorage.setItem('skippercast-profile-v1', 'boat');
     sessionStorage.setItem('skippercast-flyover-v1', '1');
