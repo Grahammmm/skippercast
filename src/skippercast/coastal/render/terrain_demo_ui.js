@@ -13,6 +13,8 @@
   let displayUnits = 'm', interval = 0.5, projected, displayProjected, displayPayload=P, surface, pending = false, lastProbe = null, keyboardFocus = false, viewMode = 'plan';
   const flowField=C.displayField(P,{subdivisions:STYLE.subdivisions,strength:STYLE.strength,haloCells:STYLE.haloCells});
   const MAX_CONTOUR_DRAW_STEPS = 16384, normals = C.smoothNormals(P.vertices, P.faces), flowNormals=C.smoothNormals(flowField.vertices,flowField.faces);
+  const image = ctx.createImageData(width, height);
+  let viewKey, viewport;
   const label = value => `${C.units(value, displayUnits).toFixed(2)} ${displayUnits}`;
   function probeLabel() {
     el('probe').textContent = lastProbe ? `Supported triangle ${lastProbe.triangle}: original depth ${label(lastProbe.depth_m)} (${lastProbe.depth_m.toPrecision(15)} m); ${P.uncertainty_kind}: ${lastProbe.uncertainty_m === null ? 'unavailable' : label(lastProbe.uncertainty_m)}. Triangle interpolation, not a new measurement.` : 'Click or tap supported terrain to probe original depth and producer uncertainty.';
@@ -59,11 +61,20 @@
   }
   function draw() {
     pending = false;
-    displayPayload=displayMode==='Flow'?flowField:P;
-    projected = C.project(P, camera); displayProjected=C.project(displayPayload,camera);
-    surface = C.raster(displayPayload, displayProjected, width, height, displayMode==='Flow'?flowNormals:normals);
-    const visible = Array.from(surface.depth).filter(Number.isFinite), range = C.updateRange(state, visible);
-    const clipped = C.clippedCounts(visible, range), image = ctx.createImageData(width, height);
+    const key = [displayMode, camera.azimuth, camera.elevation, camera.ve, camera.scale, camera.panX, camera.panY].join(':');
+    if (key !== viewKey) {
+      displayPayload=displayMode==='Flow'?flowField:P;
+      projected = C.project(P, camera);
+      displayProjected = displayPayload === P ? projected : C.project(displayPayload, camera);
+      surface = C.raster(displayPayload, displayProjected, width, height, displayMode==='Flow'?flowNormals:normals, surface);
+      viewKey = key;
+      viewport = null;
+    }
+    if (!viewport) {
+      const visible = Array.from(surface.depth).filter(Number.isFinite), range = C.updateRange(state, visible);
+      viewport = {range, clipped: C.clippedCounts(visible, range), visibleCount: visible.length};
+    }
+    const {range, clipped, visibleCount} = viewport;
     if(el('rangeLow')) el('rangeLow').textContent=label(range[0]);
     if(el('rangeHigh')) el('rangeHigh').textContent=label(range[1]);
     for (let k = 0; k < surface.depth.length; k++) {
@@ -74,7 +85,7 @@
     }
     ctx.putImageData(image, 0, 0); drawContours();
     if(keyboardFocus){ctx.strokeStyle='#315466';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(width/2-16,height/2);ctx.lineTo(width/2+16,height/2);ctx.moveTo(width/2,height/2-16);ctx.lineTo(width/2,height/2+16);ctx.stroke();}
-    el('legend').textContent = `${state.mode}: ${label(range[0])} to ${label(range[1])}. Below range: ${clipped.below}; above range: ${clipped.above} clipped visible pixel centres. Auto uses viewport 2nd–98th percentiles, minimum 1 m span, 8% range hysteresis. ${visible.length} supported visible pixel centres. Grey = no supported surface. Blue bathymetry darkens with depth. ${displayMode==='Flow'?`Flow is an interpolated display estimate at ${flowField.stats.strength.toFixed(2)} blend strength, bounded to each local native-cell range; ${flowField.stats.linear_fallback_vertices} points taper toward or use original linear profiles where context is missing or unavailable. Probes always use original mesh values.`:'Measured view uses the original piecewise-planar mesh.'}`;
+    el('legend').textContent = `${state.mode}: ${label(range[0])} to ${label(range[1])}. Below range: ${clipped.below}; above range: ${clipped.above} clipped visible pixel centres. Auto uses viewport 2nd–98th percentiles, minimum 1 m span, 8% range hysteresis. ${visibleCount} supported visible pixel centres. Grey = no supported surface. Blue bathymetry darkens with depth. ${displayMode==='Flow'?`Flow is an interpolated display estimate at ${flowField.stats.strength.toFixed(2)} blend strength, bounded to each local native-cell range; ${flowField.stats.linear_fallback_vertices} points taper toward or use original linear profiles where context is missing or unavailable. Probes always use original mesh values.`:'Measured view uses the original piecewise-planar mesh.'}`;
     el('camera').textContent = `${viewMode === 'plan' ? 'North-up plan view; east is right.' : 'Oblique 3D view.'} Azimuth ${camera.azimuth.toFixed(0)}° / elevation ${camera.elevation.toFixed(0)}°; display-only vertical exaggeration ${camera.ve.toFixed(2)}×. Relief normals are area-weighted and interpolated for display; original unexaggerated metres remain unchanged. Flow mesh: ${flowField.stats.display_vertices} vertices / ${flowField.stats.display_faces} faces at ${flowField.stats.subdivisions} subdivisions per native triangle edge; estimated contours omit whole levels under bounded work.`;
     probeLabel();
   }
@@ -98,7 +109,7 @@
       const mode = el('mode').value;
       if (mode === 'Manual' && (!el('min').value.trim() || !el('max').value.trim())) throw Error('manual_explicit_min_and_max_required');
       const explicit = [C.metres(Number(el('min').value), displayUnits),C.metres(Number(el('max').value), displayUnits)];
-      C.setMode(state, mode, explicit); el('error').textContent = ''; schedule();
+      C.setMode(state, mode, explicit); viewport = null; el('error').textContent = ''; schedule();
     } catch (error) { el('mode').value = state.mode; el('error').textContent = error.message; }
   }
   el('mode').addEventListener('change', applyMode); el('apply').addEventListener('click', applyMode);
