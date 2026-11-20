@@ -270,6 +270,22 @@ def validate(block):
     return sorted(set(holds))
 
 
+def observed_field_holds(block, facts):
+    """Compare raw header facts to the validated declaration, without rewriting evidence."""
+    holds = []
+    for key in FIELDS:
+        value = facts.get(key)
+        if key == 'datum' and value is None and is_deep(block):
+            # G3: a silent header is 'unstated'; named deep datums need a source statement.
+            if block['datum'] != 'unstated' and block.get('datum_statement') is None:
+                holds.append('vertical_datum_statement_required')
+        elif value is None or value == 'unknown':
+            holds.append('vertical_' + key + '_unobserved')
+        elif block.get(key) != value:
+            holds.append('vertical_' + key + '_conflict')
+    return holds
+
+
 def resolve(declared, observed, evidence=None):
     """A review cannot remove unknown/conflict holds; evidence must match facts."""
     if not isinstance(observed, dict) or not isinstance(observed.get('facts'), dict):
@@ -292,16 +308,7 @@ def resolve(declared, observed, evidence=None):
         holds.append('vertical_observation_header_hash_mismatch')
     if not re.fullmatch('[a-f0-9]{64}', str(observed.get('source_sha256'))):
         holds.append('vertical_source_hash_required')
-    for key in FIELDS:
-        if key == 'datum' and facts.get(key) is None and is_deep(block):
-            # G3: a raster header that states no datum is the 'unstated' class.
-            # EGM2008 / instantaneous sea level then need the source's own statement.
-            if block['datum'] != 'unstated' and block.get('datum_statement') is None:
-                holds.append('vertical_datum_statement_required')
-        elif facts.get(key) is None or facts.get(key) == 'unknown':
-            holds.append('vertical_' + key + '_unobserved')
-        elif block.get(key) != facts[key]:
-            holds.append('vertical_' + key + '_conflict')
+    holds.extend(observed_field_holds(block, facts))
     if block.get('datum_realization') != facts.get('datum_realization', 'unknown'):
         holds.append('vertical_datum_realization_conflict')
     verified = False
