@@ -29,6 +29,10 @@ export function checkGpx(xml: string, expected: {waypoints: number}, screen?: un
   const stack: string[] = [], names = new Set<string>();
   const coordinates: {latitude: number; longitude: number}[] = [];
   let roots = 0, count = 0, cursor = 0, waypoint = false, waypointName = false;
+  const closeWaypoint = (): void => {
+    if (!waypointName) fail('Waypoint name missing');
+    waypoint = false;
+  };
   /** Decodes character data once, left to right; invalid references are reported through `fail` and decode to nothing. */
   const decode = (s: string): string => {
     let out = '';
@@ -54,7 +58,7 @@ export function checkGpx(xml: string, expected: {waypoints: number}, screen?: un
     const [, closing, name, attrs = '', self] = parsed;
     if (closing) {
       if (attrs.trim() || self || stack.pop() !== name) fail(`Unbalanced ${name} tag`);
-      if (name === 'wpt') { if (!waypointName) fail('Waypoint name missing'); waypoint = false; }
+      if (name === 'wpt') closeWaypoint();
       continue;
     }
     if (!stack.length) {
@@ -92,6 +96,7 @@ export function checkGpx(xml: string, expected: {waypoints: number}, screen?: un
       }
     }
     if (!self) stack.push(name!);
+    else if (name === 'wpt') closeWaypoint();
   }
   if (stack.length) fail(`Unbalanced ${stack.at(-1)} tag`);
   if (roots !== 1 || !/<\/gpx>\s*$/.test(xml) || xml.slice(cursor).trim()) fail('Missing or invalid GPX root close');
