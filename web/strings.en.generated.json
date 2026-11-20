@@ -1066,6 +1066,8 @@
 "layer.depth-contours.v2.basis":{"en":"Depth lines in feet to 300 ft, estimated from reviewed survey grids. Lines get closer together as you zoom in. The 60, 150 and 300 ft lines are heavier. Not for navigation."},
 "layer.depth-contours.v2.legend0":{"en":"Depth lines in feet; closer as you zoom in; heavier at 60, 150 and 300 ft"},
 "layer.depth-contours.v2.legend1":{"en":"Survey edge: no reviewed grid beyond"},
+"layer.depth-contours.v3.basis":{"en":"Depth lines in feet to 300 ft, estimated from reviewed survey grids. Lines get closer together as you zoom in. Heavier lines mark 60, 150 and 300 ft at wide zoom, every 50 ft closer in, and every 10 ft at the closest zoom. Not for navigation."},
+"layer.depth-contours.v3.legend0":{"en":"Depth lines in feet; closer as you zoom in; heavier lines every 50 ft, then every 10 ft, as you zoom in"},
 "layer.mpas.label":{"en":"Marine protected areas"},
 "layer.mpas.basis":{"en":"CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page."},
 "layer.mpas.legend0":{"en":"Marine protected area"},
