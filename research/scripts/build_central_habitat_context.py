@@ -119,7 +119,9 @@ def build_region(region_id, usgs, usgs_digest):
         candidates, source_digest, source_url = pmep_features(bounds)
         source_kind = "PMEP compiled rocky-reef HAPC"
     else:
-        candidates = usgs["features"]
+        # New shards separate clipped discovery from canonical inventory;
+        # existing reviewed receipts still carry only the centroid-owned rows.
+        candidates = usgs.get("regional_features", usgs["features"])
         source_digest = usgs_digest
         source_url = usgs.get("source_catalog_url")
         source_kind = "USGS original seafloor-character class 3"
