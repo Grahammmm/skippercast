@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const {classify, aggregate, sumBytes, reusedAcrossPasses, withFailed, KINDS} = await import('../e2e/tile-cost.ts');
+const {classify, aggregate, formatByteTotal, readResourceEntries, sumBytes, reusedAcrossPasses, withFailed, KINDS} = await import('../e2e/tile-cost.ts');
 
 const ORIGIN = 'http://localhost:8787';
 const kind = url => classify(url, ORIGIN)?.kind ?? null;
@@ -42,26 +42,32 @@ test('aggregate: duplicates count twice and remote nulls never become 0 bytes', 
   assert.equal(row.requests, 3);                                                // the data: URL is ignored
   assert.equal(row.transfer_bytes, 200);                                        // remote tile excluded, not added as 0
   assert.equal(row.body_bytes, 400);
-  assert.deepEqual(row.by_kind.script, {requests: 2, transfer_bytes: 200});
-  assert.deepEqual(row.by_kind.tile, {requests: 1, transfer_bytes: null});
+  assert.equal(row.transfer_measured, 2);
+  assert.equal(row.body_measured, 2);
+  assert.deepEqual(row.by_kind.script, {requests: 2, transfer_bytes: 200, transfer_measured: 2});
+  assert.deepEqual(row.by_kind.tile, {requests: 1, transfer_bytes: null, transfer_measured: 0});
   assert.deepEqual(row.remote, {'gis.charttools.noaa.gov': 1});
   assert.equal(row.settled, true);
 });
 
-test('aggregate: an all-remote row has null transfer bytes', () => {
+test('aggregate: an all-remote row has no measured transfer or body bytes', () => {
   const row = aggregate(ORIGIN, 'fleet', 'laptop', 'warm', [{url: 'https://nowcoast.noaa.gov/wms?request=GetMap&width=256', transfer_bytes: null, body_bytes: null}], false);
   assert.equal(row.requests, 1);
   assert.equal(row.transfer_bytes, null);
-  assert.deepEqual(row.by_kind.tile, {requests: 1, transfer_bytes: null});
+  assert.equal(row.body_bytes, null);
+  assert.equal(row.transfer_measured, 0);
+  assert.equal(row.body_measured, 0);
+  assert.deepEqual(row.by_kind.tile, {requests: 1, transfer_bytes: null, transfer_measured: 0});
   assert.equal(row.settled, false);
 });
 
 test('aggregate: cache_reused counts same-origin cache hits and 304s, never network fetches or remotes', () => {
   const entries = [
-    {url: ORIGIN + '/assets/app.js', transfer_bytes: null, body_bytes: 5000},     // fresh cache hit: 0 bytes over the wire
+    {url: ORIGIN + '/assets/app.js', transfer_bytes: 0, body_bytes: 5000},        // fresh cache hit: 0 bytes over the wire
     {url: ORIGIN + '/assets/site.css', transfer_bytes: 300, body_bytes: 4000},    // 304: headers only
     {url: ORIGIN + '/api/tides', transfer_bytes: 1300, body_bytes: 1000},         // network fetch: headers + body
     {url: ORIGIN + '/api/blocked', transfer_bytes: null, body_bytes: null},       // failed: no body at all
+    {url: ORIGIN + '/api/unknown', transfer_bytes: null, body_bytes: 80},         // unknown transfer is not cache evidence
     {url: 'https://x.test/a.js', transfer_bytes: null, body_bytes: 5000},         // remote: never counted as a hit
   ];
   assert.equal(aggregate(ORIGIN, 'coast', 'phone', 'warm', entries, true).cache_reused, 2);
@@ -71,15 +77,15 @@ test('aggregate: cache_reused counts same-origin cache hits and 304s, never netw
 test('reusedAcrossPasses: only what the cold pass fetched and the warm pass got from cache', () => {
   const cold = [
     {url: ORIGIN + '/assets/map.js', transfer_bytes: 30300, body_bytes: 30000},    // fetched
-    {url: ORIGIN + '/assets/map.js', transfer_bytes: null, body_bytes: 30000},     // same load reuses it: no proof of a warm cache
-    {url: ORIGIN + '/assets/pre.js', transfer_bytes: null, body_bytes: 900},       // preloaded: never seen fetched in full
+    {url: ORIGIN + '/assets/map.js', transfer_bytes: 0, body_bytes: 30000},       // same load reuses it: no proof of a warm cache
+    {url: ORIGIN + '/assets/pre.js', transfer_bytes: 0, body_bytes: 900},          // preloaded: never seen fetched in full
     {url: ORIGIN + '/api/report', transfer_bytes: 1300, body_bytes: 1000},         // fetched
     {url: 'https://x.test/r.js', transfer_bytes: 600, body_bytes: 500},            // remote
   ];
   const warm = [
-    {url: ORIGIN + '/assets/map.js', transfer_bytes: null, body_bytes: 30000},     // cache hit
-    {url: ORIGIN + '/assets/map.js', transfer_bytes: null, body_bytes: 30000},     // counted once
-    {url: ORIGIN + '/assets/pre.js', transfer_bytes: null, body_bytes: 900},
+    {url: ORIGIN + '/assets/map.js', transfer_bytes: 0, body_bytes: 30000},       // cache hit
+    {url: ORIGIN + '/assets/map.js', transfer_bytes: 0, body_bytes: 30000},       // counted once
+    {url: ORIGIN + '/assets/pre.js', transfer_bytes: 0, body_bytes: 900},
     {url: ORIGIN + '/api/report', transfer_bytes: 1300, body_bytes: 1000},         // fetched again
     {url: 'https://x.test/r.js', transfer_bytes: null, body_bytes: 500},
   ];
@@ -108,8 +114,31 @@ test('withFailed: a failure the Performance API also timed counts once; real dup
 });
 
 test('sumBytes: null is not 0', () => {
-  assert.deepEqual(sumBytes([{transfer_bytes: null, body_bytes: null}, {transfer_bytes: 5, body_bytes: 7}]), {transfer_bytes: 5, body_bytes: 7});
-  assert.deepEqual(sumBytes([{transfer_bytes: null, body_bytes: null}]), {transfer_bytes: null, body_bytes: 0});
+  const unknown = {transfer_bytes: null, body_bytes: null};
+  const empty = {transfer_bytes: 5, body_bytes: 0};
+  assert.deepEqual(sumBytes([unknown]), {...unknown, transfer_measured: 0, body_measured: 0});
+  assert.deepEqual(sumBytes([unknown, empty]), {...empty, transfer_measured: 1, body_measured: 1});
+});
+
+test('timing report distinguishes withheld or absent sizes from measured zero and partial totals', t => {
+  const timed = [
+    {name: `${ORIGIN}/api/blocked`, transferSize: 0, encodedBodySize: 0, responseStatus: 0},
+    {name: 'https://example.test/withheld', transferSize: 0, encodedBodySize: 0, responseStatus: 0},
+    {name: `${ORIGIN}/api/empty`, transferSize: 300, encodedBodySize: 0, responseStatus: 204},
+    {name: `${ORIGIN}/api/cached`, transferSize: 0, encodedBodySize: 12},
+    {name: `${ORIGIN}/api/missing-body`, transferSize: 400, responseStatus: 200},
+  ];
+  t.mock.method(performance, 'getEntriesByType', type => type === 'resource' ? timed.slice(0, 4) : timed.slice(4));
+  const entries = readResourceEntries(ORIGIN);
+  assert.deepEqual(entries.map(e => [e.transfer_bytes, e.body_bytes]), [[null, null], [null, null], [300, 0], [0, 12], [400, null]]);
+  const report = input => {
+    const {transfer_bytes, transfer_measured, body_bytes, body_measured, requests} = aggregate(ORIGIN, 'view', 'phone', 'cold', input, true);
+    return [formatByteTotal(transfer_bytes, transfer_measured, requests), formatByteTotal(body_bytes, body_measured, requests)];
+  };
+  assert.deepEqual(report(entries.slice(0, 2)), ['unknown (0/2 measured)', 'unknown (0/2 measured)']);
+  assert.deepEqual(report(entries.slice(2, 3)), ['300', '0']);
+  assert.deepEqual(report(entries.slice(3, 4)), ['0', '12']);
+  assert.deepEqual(report(entries), ['700 (partial: 3/5 measured)', '12 (partial: 2/5 measured)']);
 });
 
 test('the tile-cost-v1 document validates its own small schema', () => {
