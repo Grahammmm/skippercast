@@ -25,6 +25,26 @@ function surveyDetailText(p: Record<string, unknown>): string | null {
   return measured(p.tier) && p.grid_m <= maximumGrid[p.tier] ? measuredLabel[p.tier] : null;
 }
 
+function validRing(ring: unknown): boolean {
+  if (!Array.isArray(ring) || ring.length < 4) return false;
+  for (const pt of ring) {
+    if (!Array.isArray(pt) || pt.length !== 2 ||
+        !finite(pt[0]) || Math.abs(pt[0]) > 180 || !finite(pt[1]) || Math.abs(pt[1]) > 90) return false;
+  }
+  const [x0, y0] = ring[0];
+  const [lastX, lastY] = ring[ring.length - 1];
+  if (x0 !== lastX || y0 !== lastY) return false;
+
+  // Sum signed triangle areas relative to the first vertex to retain small rings.
+  let twiceArea = 0;
+  for (let i = 1; i < ring.length - 2; i++) {
+    const [x, y] = ring[i];
+    const [nextX, nextY] = ring[i + 1];
+    twiceArea += (x - x0) * (nextY - y0) - (y - y0) * (nextX - x0);
+  }
+  return twiceArea !== 0;
+}
+
 /** MB-09 writes Polygon or MultiPolygon with holes. Retain the actual geometry,
  * not its envelope, and reject an invalid collection rather than guessing. */
 export function decodeSurveyDetail(region: string, value: unknown, reviewedSources: ReadonlySet<string>): Exclude<SourceData, string> | null {
@@ -43,10 +63,7 @@ export function decodeSurveyDetail(region: string, value: unknown, reviewedSourc
     if (p.grid_tier !== undefined && (p.grid_tier !== '4-16m-compiled' || p.tier !== 'estimated')) return null;
     const coordinates = g.coordinates;
     function polygon(value: unknown): value is number[][][] {
-      return Array.isArray(value) && value.length > 0 && value.every(ring =>
-        Array.isArray(ring) && ring.length >= 4 && ring.every(pt => Array.isArray(pt) && pt.length === 2 &&
-          finite(pt[0]) && Math.abs(pt[0]) <= 180 && finite(pt[1]) && Math.abs(pt[1]) <= 90) &&
-        ring[0][0] === ring.at(-1)[0] && ring[0][1] === ring.at(-1)[1]);
+      return Array.isArray(value) && value.length > 0 && value.every(validRing);
     }
     const geometry = g.type === 'Polygon' && polygon(coordinates) ? {type: 'Polygon' as const, coordinates}
       : g.type === 'MultiPolygon' && Array.isArray(coordinates) && coordinates.length && coordinates.every(polygon)
