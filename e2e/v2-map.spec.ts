@@ -1144,7 +1144,7 @@ test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile 
 
   await v2.open('app', {place: 'morro', layer: 'temperature'});
   await showLayers(page);
-  await expect.poll(() => pressedEntries(page), 'Fish\'s layer=temperature').toEqual(['Water temp']);
+  await expect.poll(() => pressedEntries(page), 'Fish\'s layer=temperature').toEqual(['Depth shading', 'Depth lines', 'Spots & charter activity', 'Water temp']);   // MB-13 (D5): the defaults beside the Fish layer
   await expect(page.locator('.app-location')).toHaveAttribute('data-region', 'morro-bay');
   expect(pageErrors).toEqual([]);
 });
@@ -1673,6 +1673,11 @@ test('desktop: a short rail scrolls vertically to its last controls, with a long
     const scrolls = await rail.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollHeight > element.clientHeight; });
     expect(scrolls, `${width}x${height}: a long rail scrolls`).toBe(true);
     const base = rail.locator('.app-rail-base').getByRole('combobox', {name: 'Base'});
+    // MB-13: the menu's last row is now the Map theme row, below the Base; at the end of the scroll the last theme button is the control in view, and the Base
+    // is one scroll up (the rail is only ~124 px tall here). Both must be reachable inside the rail, never clipped.
+    const lastTheme = rail.locator('.app-rail-theme button').last();
+    await expect(lastTheme).toBeInViewport({ratio: 1});
+    await base.scrollIntoViewIfNeeded();
     await expect(base).toBeInViewport({ratio: 1});
     const box = (await base.boundingBox())!, railBox = (await rail.boundingBox())!;
     expect(box.y).toBeGreaterThanOrEqual(railBox.y);
