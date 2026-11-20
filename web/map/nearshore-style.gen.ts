@@ -459,7 +459,7 @@ export const NEARSHORE_STYLE = {
 } as const;
 /** Legend depth chips by look key (baked digest, or a legacy version id); every active or rolling version. */
 export const NEARSHORE_LOOKS = {
-  "c0846138ea6c66d28ccfd9c22102e37015f7516d9566262beb61ff8f104e4409": {
+  "d568d2aee05dccfb26d626a33a7f26386238a415b2bf4d296db6a89d48beb20b": {
     "legacy": false,
     "versions": [
       "nearshore-v1.0.0"

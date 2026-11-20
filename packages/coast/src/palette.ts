@@ -76,7 +76,7 @@ export const NEARSHORE_COAST_PALETTE = {
   noData: "#D0D0D0",
 } as const;
 export const NEARSHORE_COAST_LOOKS = {
-  "c0846138ea6c66d28ccfd9c22102e37015f7516d9566262beb61ff8f104e4409": {"legacy": false, "versions": ["nearshore-v1.0.0"], "depthStopsFt": [[0, "#EAF8F4"], [10, "#CDEFE8"], [20, "#ADE4DC"], [30, "#8ED6D0"], [45, "#6CC5C8"], [60, "#52B1C0"], [80, "#3E99B5"], [100, "#3282AA"], [130, "#2B6C9D"], [160, "#27598F"], [200, "#234880"], [250, "#20396E"], [300, "#1C2D5C"], [450, "#162147"], [900, "#0E1430"]], "contour": "#0B1726", "noData": "#D0D0D0"},
+  "d568d2aee05dccfb26d626a33a7f26386238a415b2bf4d296db6a89d48beb20b": {"legacy": false, "versions": ["nearshore-v1.0.0"], "depthStopsFt": [[0, "#EAF8F4"], [10, "#CDEFE8"], [20, "#ADE4DC"], [30, "#8ED6D0"], [45, "#6CC5C8"], [60, "#52B1C0"], [80, "#3E99B5"], [100, "#3282AA"], [130, "#2B6C9D"], [160, "#27598F"], [200, "#234880"], [250, "#20396E"], [300, "#1C2D5C"], [450, "#162147"], [900, "#0E1430"]], "contour": "#0B1726", "noData": "#D0D0D0"},
   "deep-fixed-v1": {"legacy": true, "versions": ["deep-fixed-v1"]}
 } as const;
 // skn:end
