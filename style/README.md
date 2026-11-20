@@ -20,6 +20,10 @@ fixtures, goldens, images and reference scripts stay private.
   its immutable snapshot for a render. Each stage takes the digest of what it
   reads: tiles use `baked`, contours use `contours`, habitat uses `baked` and
   `habitat`. These digests identify style inputs, not survey data provenance.
+  Render code reads tokens only through `Style.view(*groups)`, which raises
+  `StyleGroupError` outside those groups; `load()` refuses a `groups.json`
+  that no longer yields the index digests. `load(root=...)` reads another
+  style directory (tests).
 - The web map gets non-colour values and CSS variable names from
   `web/map/nearshore-style.gen.ts`; the palette bridge resolves colours. Both
   themes inherit the same `--skn-*` colours from `:root`. The Coast 3D renderer
