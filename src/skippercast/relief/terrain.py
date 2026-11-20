@@ -206,9 +206,19 @@ def build(ctx, out):
             inventory[key] = code
         return inventory[key]
 
+    # DL-5's coast_mosaic writer assigns 1..65534 and uses 0 for nodata.
+    # Keep a slot for every uint16 raster value so unknown codes still get
+    # the existing ReceiptError when sampled, including 65535.
     lookup = np.zeros(65536, dtype=np.uint8)
     for row in manifest['sources']:
-        lookup[row['code']] = source_code(row)
+        code = row.get('code')
+        if type(code) is int and code == 0:
+            raise receipts.ReceiptError('mosaic contributor code 0 is reserved for nodata')
+        if type(code) is not int or not 1 <= code <= 65534:
+            raise receipts.ReceiptError(f'invalid mosaic contributor code {code!r}: expected an integer in 1..65534')
+        if lookup[code] != 0:
+            raise receipts.ReceiptError(f'duplicate mosaic contributor code {code}')
+        lookup[code] = source_code(row)
     native = []
     for row in rows:  # selector priority, not filename order
         refs = list(native_refs(table, row))
