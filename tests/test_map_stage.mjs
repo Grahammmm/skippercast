@@ -2,6 +2,7 @@
 // store-to-renderer and renderer-to-store flows over a fake terrain module,
 // so neither three nor a GPU is needed. web/map/stage.ts runs by type stripping.
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
 import {
@@ -9,6 +10,7 @@ import {
   currentStatus, locationFor, parseCamera, shownPresentation, spanForZoom, terrainBlocked, terrainFailed, terrainHour, terrainMark,
   terrainState, zoomForSpan, PHONE_QUERY, TERRAIN_DEFAULTS, createFrameMonitor, entryCamera, fpsFallback, setTerrainOption, threeDOffered, terrainActions, terrainCoverage, terrainOptions, terrainShading, terrainPick, terrainReading,
 } from '../web/map/stage.ts';
+import {terrainFixedRamp} from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
 import {dockTime} from '../web/hour.ts';
 import {createHourClock} from '../web/clock.ts';
@@ -85,6 +87,29 @@ function stage(fake, {center = [35.37, -120.86], doc = document(), now = () => N
   const s = createStage({host, load: async () => fake.module, center: () => center, now, clock, doc, viewDelay: 0, ...extra});
   return {stage: s, host, doc};
 }
+
+// A direct 3D link has no Chart overlay to supply its region's look.
+test('a direct 3D mount reads its own relief pointer before offering the kit ramp', async () => {
+  browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  const pointer = JSON.parse(readFileSync(new URL('fixtures/relief/pointer-style/v1.json', import.meta.url)));
+  const fake = terrain();
+  const mount = fake.module.mountCoast;
+  fake.module.mountCoast = (...args) => Object.assign(mount(...args), {
+    setReliefLook(key) { fake.calls.push(['setReliefLook', key]); return 'known'; },
+  });
+  const {stage: mounted} = stage(fake, {reliefFetch: async url => {
+    assert.equal(url.pathname, '/catalog/relief/morro-bay.json');
+    return Response.json(pointer);
+  }});
+  try {
+    await tick();
+    assert.equal(fake.last('setReliefLook'), pointer.style.baked);
+    assert.equal(terrainFixedRamp.value, true);
+    setTerrainOption('fixedRamp', false);
+    assert.equal(fake.last('setFixedRamp'), false);
+    assert.equal(fake.mounts, 1);
+  } finally { mounted.destroy(); }
+});
 
 test('the span-to-zoom rule is v1\'s, and a camera round-trips through ?view=', () => {
   assert.equal(zoomForSpan(7300), 12);
