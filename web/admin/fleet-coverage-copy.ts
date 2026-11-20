@@ -44,7 +44,7 @@ export const FLEET_COVERAGE_COPY = {
   sourcesNote: 'Distinct sources behind each boat’s current facts; admin edits and AIS records are left out.',
   sourcesCount: (k: string): string => k === '1' ? '1 source' : `${k} sources`,
   singleHeading: 'Single-source boats',
-  singleEmpty: 'Every boat has two or more sources.',
+  singleEmpty: 'No single-source boats in this result.',
   name: 'Boat',
   source: 'Source',
   ais: 'AIS (30 d)',

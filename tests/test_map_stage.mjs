@@ -559,6 +559,13 @@ test('MB-14 entry: a 3D choice after Chart or 2D starts at pitch 60°, half a zo
   fake.options.onView({latitude: 35.37, longitude: -120.86, span: spanForZoom(14)});
   choosePresentation('3d');
   assert.equal(camera.value.zoom, 14 - ENTRY_ZOOM_DROP);
+  // A 2D pan at the same zoom is a moved view too. Bug it catches: a straight-return test on zoom alone skips the widening after a pan.
+  fake.options.onView({latitude: 35.37, longitude: -120.86, span: spanForZoom(13.5), bearing: 0, pitch: 60});
+  choosePresentation('2d');
+  fake.options.onView({latitude: 35.37, longitude: -120.86 + 0.05, span: spanForZoom(13.5)});
+  choosePresentation('3d');
+  assert.equal(camera.value.zoom, 13.5 - ENTRY_ZOOM_DROP, 'panned at the same zoom: widened again');
+  assert.equal(camera.value.longitude, -120.86 + 0.05);
   assert.deepEqual(entryCamera({latitude: 1, longitude: 2, zoom: 0.2}, 5), {latitude: 1, longitude: 2, zoom: 0, bearing: 5, pitch: 60}, 'the entry zoom stays on the map\'s zoom range');
 });
 
@@ -652,7 +659,10 @@ test('MB-14 fallback: 2 s under 24 fps on a loaded 3D view goes back to 2D in pl
   doc.set(true); frames(10, 5000); doc.set(false);
   assert.equal(nav.params().get('presentation'), '3d', 'a hidden page is not timed');
   const entries = nav.stack.length;
-  frames(15, FPS_WINDOW_MS + 200);
+  // With no browser-test opt-out, even 23 fps must trigger the stage fallback once the full window elapses.
+  frames(23, FPS_WINDOW_MS - 100);
+  assert.equal(nav.params().get('presentation'), '3d', 'the default stage waits a full window before falling back');
+  frames(23, 300);
   assert.equal(nav.params().get('presentation'), '2d'); assert.equal(fpsFallback.value, true);
   assert.equal(shownPresentation.value, '2d'); assert.equal(fake.last('setPerspective'), '2d');
   assert.equal(nav.stack.length, entries, 'the link is rewritten in place: Back does not return to the slow view');

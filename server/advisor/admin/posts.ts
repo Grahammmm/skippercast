@@ -79,6 +79,12 @@ async function mediaOf(db: D1Database, ids: string[]): Promise<HoldMedia[]> {
 export async function approvalHold(db: D1Database, post: Pick<PostRow, 'id' | 'kind' | 'boat_id' | 'media_json'>,
   opts: {videoPendingOk?: boolean; graphicPendingOk?: boolean} = {}): Promise<string | null> {
   const ids = mediaIdsOf(post), media = await mediaOf(db, ids);
+  return holdWithMedia(db, post, ids, media, opts);
+}
+
+// Display can reuse this request's media read; decisions still enter through approvalHold.
+async function holdWithMedia(db: D1Database, post: Pick<PostRow, 'id' | 'kind' | 'boat_id' | 'media_json'>, ids: string[], media: HoldMedia[],
+  opts: {videoPendingOk?: boolean; graphicPendingOk?: boolean} = {}): Promise<string | null> {
   const graphic = usesGraphic(post);
   if (graphic) {
     const hold = await graphicHold(db, post.id, {pendingOk: opts.graphicPendingOk});
@@ -122,7 +128,7 @@ export async function postView(db: D1Database, post: PostRow): Promise<Record<st
     media: media.map(m => ({id: m.id, kind: m.kind, has_person: m.has_person === null ? null : m.has_person === 1, publish_state: m.publish_state, credit: m.credit,
       review_open: m.open_review > 0, thumb: m.r2_key ? adminMediaUrl(m.id) : null, original: m.r2_key ? adminMediaUrl(m.id, 'original') : null})),
     review_id: open ? review : null,
-    hold: post.status === 'draft' ? await approvalHold(db, post) : null,
+    hold: post.status === 'draft' ? await holdWithMedia(db, post, ids, media) : null,
     // TA-S4: the generated images (the daily card, the roundup cover and slides, a Story card), for the admin's preview.
     graphics: usesGraphic(post) ? graphicKeys(await graphicState(db, post.id)).map(k => adminGraphicUrl(post.id, graphicName(k))) : [],
     // TA-S7: for a posted or partly posted post, the latest insights per surface and the chats its link started; null otherwise.
@@ -137,6 +143,8 @@ export async function postDetail(db: D1Database, id: string): Promise<Record<str
 }
 
 export interface PostsQuery {status?: string | null; kind?: string | null; cursor?: string | null}
+type PostListRow = Pick<PostRow, 'id' | 'kind' | 'region' | 'status' | 'media_json' | 'ig_media_id' | 'fb_post_id' | 'fb_story_id' | 'collab_status' | 'updated_at'>;
+type PostSummary = Omit<PostListRow, 'media_json'> & {media_count: number};
 const encode = (row: {updated_at: string; id: string}): string => btoa(`${row.updated_at}|${row.id}`).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 function decode(cursor: string | null | undefined): {updated_at: string; id: string} | null {
   if (!cursor || !/^[\w-]{1,200}$/.test(cursor)) return null;
@@ -147,7 +155,7 @@ function decode(cursor: string | null | undefined): {updated_at: string; id: str
 }
 
 /** GET /api/admin/posts: newest change first, 50 a page; status (any of POST_STATUSES, or 'all') and kind filters. Unknown values are refused. */
-export async function listPosts(db: D1Database, query: PostsQuery = {}): Promise<{posts: Record<string, unknown>[]; next: string | null} | {error: string}> {
+export async function listPosts(db: D1Database, query: PostsQuery = {}): Promise<{posts: PostSummary[]; next: string | null} | {error: string}> {
   const status = query.status || 'all', kind = query.kind || '';
   if (status !== 'all' && !(POST_STATUSES as readonly string[]).includes(status)) return {error: 'unknown status'};
   if (kind && !(POST_KINDS as readonly string[]).includes(kind)) return {error: 'unknown kind'};
@@ -156,10 +164,16 @@ export async function listPosts(db: D1Database, query: PostsQuery = {}): Promise
   if (kind) { where.push('kind=?'); args.push(kind); }
   const after = decode(query.cursor);
   if (after) { where.push('(updated_at<? OR (updated_at=? AND id<?))'); args.push(after.updated_at, after.updated_at, after.id); }
-  const rows = (await db.prepare(`SELECT * FROM advisor_posts${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY updated_at DESC, id DESC LIMIT ?`)
-    .bind(...args, POSTS_PAGE + 1).all<PostRow>()).results;
+  const rows = (await db.prepare(`SELECT id,kind,region,status,media_json,ig_media_id,fb_post_id,fb_story_id,collab_status,updated_at
+    FROM advisor_posts${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY updated_at DESC, id DESC LIMIT ?`)
+    .bind(...args, POSTS_PAGE + 1).all<PostListRow>()).results;
   const page = rows.slice(0, POSTS_PAGE);
-  return {posts: await Promise.all(page.map(p => postView(db, p))), next: rows.length > POSTS_PAGE ? encode(page.at(-1)!) : null};
+  const ids = new Set(page.flatMap(mediaIdsOf));
+  const media = ids.size ? (await db.prepare('SELECT id FROM advisor_media WHERE id IN (SELECT value FROM json_each(?))')
+    .bind(JSON.stringify([...ids])).all<{id: string}>()).results : [];
+  const found = new Set(media.map(m => m.id));
+  const posts = page.map(({media_json, ...row}) => ({...row, media_count: mediaIdsOf({media_json}).filter(id => found.has(id)).length}));
+  return {posts, next: rows.length > POSTS_PAGE ? encode(page.at(-1)!) : null};
 }
 
 // ---- the decision ------------------------------------------------------------------------------

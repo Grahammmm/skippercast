@@ -1,10 +1,10 @@
 // The admin review queue's read side (docs/plans/text-advisor/08-website.md
 // § Admin, Queue; TA-W2): GET /api/admin/reviews lists review items newest
-// first, 50 a page, each joined with what its kind needs to be decided. Phone
+// first, 50 summaries a page; detail is loaded when the admin opens a card. Phone
 // numbers never leave the server: a contact is shown by id, channel, language
 // and display name only (CONTRIBUTING: no chat identifiers in casual reach).
 import {countsOf} from '../intake/reports.ts';
-import {conversationContact} from './decisions.ts';
+import {conversationContact, reviewRow} from './decisions.ts';
 import {ruleChange} from './rules.ts';
 import {postDetail} from './posts.ts';
 import {videoHold} from '../media.ts';
@@ -22,10 +22,11 @@ export const LAST_MESSAGES = 6;
 export const adminMediaUrl = (id: string, variant: 'thumb' | 'original' = 'thumb'): string => `/api/admin/media/${encodeURIComponent(id)}${variant === 'original' ? '?v=original' : ''}`;
 
 export interface QueueQuery {status?: string | null; kind?: string | null; cursor?: string | null; limit?: number}
-export interface QueuePage {items: QueueItem[]; next: string | null}
+export interface QueuePage {items: ReviewSummary[]; next: string | null}
 export interface ContactView {id: string; channel: string; language: string; display_name: string | null; role: string; status: string}
 export interface MessageView {direction: 'in' | 'out'; body: string | null; created_at: string; team: boolean}
-export type QueueItem = Pick<ReviewRow, 'id' | 'kind' | 'ref_id' | 'reason' | 'status' | 'note' | 'opened_at' | 'decided_at'> & {detail: Record<string, unknown> | null};
+export type ReviewSummary = Pick<ReviewRow, 'id' | 'kind' | 'ref_id' | 'reason' | 'status' | 'opened_at' | 'decided_at'>;
+export type QueueItem = ReviewSummary & {note: string | null; detail: Record<string, unknown> | null};
 
 /** The paging cursor: "<opened_at>|<id>" of the last item, base64url. */
 export const encodeCursor = (row: {opened_at: string; id: string}): string => btoa(`${row.opened_at}|${row.id}`).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
@@ -37,7 +38,7 @@ export function decodeCursor(cursor: string | null | undefined): {opened_at: str
   } catch { return null; }
 }
 
-/** Review items, newest first, with their kind's detail. Unknown status/kind values are refused by the route before this. */
+/** Review summaries, newest first. Unknown status/kind values are refused by the route before this. */
 export async function listReviews(db: D1Database, query: QueueQuery = {}): Promise<QueuePage> {
   const limit = Math.min(Math.max(1, query.limit ?? PAGE_SIZE), PAGE_SIZE);
   const where: string[] = [], args: unknown[] = [];
@@ -45,14 +46,17 @@ export async function listReviews(db: D1Database, query: QueueQuery = {}): Promi
   if (query.kind) { where.push('kind=?'); args.push(query.kind); }
   const after = decodeCursor(query.cursor);
   if (after) { where.push('(opened_at<? OR (opened_at=? AND id<?))'); args.push(after.opened_at, after.opened_at, after.id); }
-  const rows = (await db.prepare(`SELECT * FROM advisor_reviews${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY opened_at DESC, id DESC LIMIT ?`)
-    .bind(...args, limit + 1).all<ReviewRow>()).results;
-  const page = rows.slice(0, limit);
-  const items = await Promise.all(page.map(async row => ({
-    id: row.id, kind: row.kind, ref_id: row.ref_id, reason: row.reason, status: row.status, note: row.note, opened_at: row.opened_at, decided_at: row.decided_at,
-    detail: await reviewDetail(db, row),
-  })));
-  return {items, next: rows.length > limit ? encodeCursor(page.at(-1)!) : null};
+  const rows = (await db.prepare(`SELECT id,kind,ref_id,reason,status,opened_at,decided_at FROM advisor_reviews${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY opened_at DESC, id DESC LIMIT ?`)
+    .bind(...args, limit + 1).all<ReviewSummary>()).results;
+  const items = rows.slice(0, limit);
+  return {items, next: rows.length > limit ? encodeCursor(items.at(-1)!) : null};
+}
+
+export async function reviewView(db: D1Database, id: string): Promise<QueueItem | null> {
+  const row = await reviewRow(db, id);
+  if (!row) return null;
+  const {kind, ref_id, reason, status, opened_at, decided_at, note} = row;
+  return {id, kind, ref_id, reason, status, opened_at, decided_at, note, detail: await reviewDetail(db, row)};
 }
 
 const contactView = (c: Record<string, unknown> | null): ContactView | null => c ? {

@@ -37,5 +37,10 @@
     "vite": "8.3.8",
     "@types/three": "0.187.0",
     "@types/suncalc": "1.9.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "@esbuild-kit/core-utils@3.3.2>esbuild": "0.25.12"
+    }
   }
 }

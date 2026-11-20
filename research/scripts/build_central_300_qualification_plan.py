@@ -7,6 +7,7 @@ measured-cell, chart-datum, legal, biological, or navigation release gate.
 
 import argparse
 import hashlib
+from functools import partial
 import json
 from pathlib import Path
 import sys
@@ -112,8 +113,10 @@ SECTOR_OVERRIDES = {
 }
 
 
-def load(root, relative):
-    return json.loads(locate(relative, root).read_text())
+def load(root, relative, *, source_sha256):
+    raw = locate(relative, root).read_bytes()
+    source_sha256[relative] = hashlib.sha256(raw).hexdigest()
+    return json.loads(raw)
 
 
 def digest(root, relative):
@@ -122,6 +125,8 @@ def digest(root, relative):
 
 def build(root):
     root = Path(root)
+    source_sha256 = {}
+    read = partial(load, root, source_sha256=source_sha256)
     queue_path = "dist/data/central-source-acquisition-queue.json"
     ledger_path = "dist/data/central-coverage-ledger-v1.json"
     buchon_path = "dist/data/point-buchon-original-paired-200-300ft-review.json"
@@ -179,13 +184,13 @@ def build(root):
     buchon_2009_vdatum_path = "dist/data/point-buchon-2009-conditional-vdatum-probes.json"
     cal_dig_rov_path = "dist/data/cal-dig-i-original-rov-300ft-gap.json"
     dataone_rov_path = "dist/data/central-dataone-rov-300ft-spot-precision.json"
-    queue, ledger = load(root, queue_path), load(root, ledger_path)
-    buchon, estero = load(root, buchon_path), load(root, estero_path)
-    bss03_video = load(root, bss03_video_path)
-    bss03_access = load(root, bss03_access_path)
-    bss03_datum = load(root, bss03_datum_path)
-    bss03_caris = load(root, bss03_caris_path)
-    bss03_tpe = load(root, bss03_tpe_path)
+    queue, ledger = read(queue_path), read(ledger_path)
+    buchon, estero = read(buchon_path), read(estero_path)
+    bss03_video = read(bss03_video_path)
+    bss03_access = read(bss03_access_path)
+    bss03_datum = read(bss03_datum_path)
+    bss03_caris = read(bss03_caris_path)
+    bss03_tpe = read(bss03_tpe_path)
     if (bss03_tpe.get("scope") != "bss03-original-caris-complete-single-line-tpe-member"
             or bss03_tpe.get("tpe_member_bytes") != 37668488
             or bss03_tpe.get("tpe_line_date_matches_released_grid_metadata_dates") is not False
@@ -193,11 +198,11 @@ def build(root):
             or bss03_tpe.get("grid_cell_upper_uncertainty_verified") is not False
             or bss03_tpe.get("fishing_target") is not False):
         raise ValueError("BSS03 original CARIS TPE member status changed")
-    bss03_vessel = load(root, bss03_vessel_path)
-    pigeon_video = load(root, pigeon_video_path)
-    pigeon_noaa_rov = load(root, pigeon_noaa_rov_path)
-    cal_dig_rov = load(root, cal_dig_rov_path)
-    dataone_rov = load(root, dataone_rov_path)
+    bss03_vessel = read(bss03_vessel_path)
+    pigeon_video = read(pigeon_video_path)
+    pigeon_noaa_rov = read(pigeon_noaa_rov_path)
+    cal_dig_rov = read(cal_dig_rov_path)
+    dataone_rov = read(dataone_rov_path)
     if (dataone_rov.get("scope") != "central-opc-dataone-rov-fish-count-300ft-spot-precision"
             or dataone_rov.get("central_location_date_depth_habitat_units_200_300ft") != 370
             or dataone_rov.get("native_spot_position_and_swath_verified") is not False
@@ -219,7 +224,7 @@ def build(root):
             or pigeon_noaa_rov.get("biological_fish_gate_satisfied") is not False
             or pigeon_noaa_rov.get("fishing_target") is not False):
         raise ValueError("NOAA SH-18-09 original occurrence support changed")
-    pigeon_lander = load(root, pigeon_lander_path)
+    pigeon_lander = read(pigeon_lander_path)
     if (pigeon_lander.get("id") != "tnc-mlml-pigeon-video-lander"
             or pigeon_lander.get("access_status") != "not-tested"
             or pigeon_lander.get("access_url") is not None
@@ -228,14 +233,14 @@ def build(root):
             or "fishing_target" in pigeon_lander
             or "exportable" in pigeon_lander):
         raise ValueError("Pigeon Point original lander source status changed; review before promotion")
-    mare_2016 = load(root, mare_2016_path)
+    mare_2016 = read(mare_2016_path)
     if (mare_2016.get("id") != "cdfw-mare-ciap-2016-central-original-rov"
             or mare_2016.get("access_status") != "partial"
             or mare_2016.get("spatial", {}).get("candidate_cell_overlap_verified") is not False
             or mare_2016.get("spatial", {}).get("position_uncertainty_verified") is not False
             or mare_2016.get("provenance", {}).get("raw_sha256") is not None):
         raise ValueError("CDFW/MARE original 2016 ROV source status changed; review before promotion")
-    mare_2016_service = load(root, mare_2016_service_path)
+    mare_2016_service = read(mare_2016_service_path)
     if (mare_2016_service.get("scope") != "ciap-2016-central-public-wfs-service-access"
             or mare_2016_service.get("central_video", {}).get("total_features_reported") != 236960
             or mare_2016_service.get("fish_display", {}).get("total_features_reported") != 49076
@@ -243,7 +248,7 @@ def build(root):
             or mare_2016_service.get("biological_fish_gate_satisfied") is not False
             or mare_2016_service.get("qualified_waypoints") != 0):
         raise ValueError("CIAP ROV WFS evidence scope changed; review before promotion")
-    mare_2016_overlap = load(root, mare_2016_overlap_path)
+    mare_2016_overlap = read(mare_2016_overlap_path)
     if (mare_2016_overlap.get("scope") != "ciap-2016-central-video-to-private-300ft-research-blocks"
             or mare_2016_overlap.get("groups", {}).get("point-buchon-rov", {}).get("video_fix_counts", {}).get("inside") != 1644
             or mare_2016_overlap.get("groups", {}).get("point-buchon-terrain", {}).get("video_fix_counts", {}).get("inside") != 1167
@@ -253,7 +258,7 @@ def build(root):
             or mare_2016_overlap.get("biological_fish_gate_satisfied") is not False
             or mare_2016_overlap.get("qualified_waypoints") != 0):
         raise ValueError("CIAP video/block overlap changed; review before promotion")
-    buchon_private_access = load(root, buchon_private_access_path)
+    buchon_private_access = read(buchon_private_access_path)
     if (buchon_private_access.get("scope") != "point-buchon-private-100m-blocks-cdfw-mpa-noaa-enc-research-screen"
             or buchon_private_access.get("groups", {}).get("rov_blocks", {}).get("block_count") != 26
             or buchon_private_access.get("groups", {}).get("terrain_blocks", {}).get("block_count") != 181
@@ -265,7 +270,7 @@ def build(root):
             or buchon_private_access.get("fishing_target") is not False
             or buchon_private_access.get("exportable") is not False):
         raise ValueError("Point Buchon private block MPA/ENC screen changed; review before promotion")
-    buchon_grid_bridge = load(root, buchon_grid_bridge_path)
+    buchon_grid_bridge = read(buchon_grid_bridge_path)
     residual = buchon_grid_bridge.get("api_minus_raw_grid_shortcut_range_m", [])
     if (buchon_grid_bridge.get("scope") != "point-buchon-geoid03-vdatum-raw-grid-vs-api-diagnostic"
             or buchon_grid_bridge.get("sample_count") != 12
@@ -274,7 +279,7 @@ def build(root):
             or buchon_grid_bridge.get("source_depth_upper_uncertainty_verified") is not False
             or buchon_grid_bridge.get("fishing_target") is not False):
         raise ValueError("Point Buchon VDatum grid/API bridge changed; review before promotion")
-    monterey_bag_gap = load(root, monterey_bag_gap_path)
+    monterey_bag_gap = read(monterey_bag_gap_path)
     if (monterey_bag_gap.get("scope") != "monterey-17-research-outlines-noaa-nos-bag-catalog-gap"
             or monterey_bag_gap.get("research_outline_count") != 17
             or monterey_bag_gap.get("outlines_with_downloadable_bag_catalog_leads") != 0
@@ -283,7 +288,7 @@ def build(root):
             or monterey_bag_gap.get("depth_uncertainty_gate_satisfied") is not False
             or monterey_bag_gap.get("fishing_target") is not False):
         raise ValueError("Monterey NOAA NOS BAG catalog gap changed; review before promotion")
-    monterey_bluetopo = load(root, monterey_bluetopo_path)
+    monterey_bluetopo = read(monterey_bluetopo_path)
     if (monterey_bluetopo.get("scope") != "monterey-17-research-outlines-bluetopo-pixel-contributor-screen"
             or monterey_bluetopo.get("research_outline_count") != 17
             or monterey_bluetopo.get("historical_rockfish_positive_outline_count") != 4
@@ -293,7 +298,7 @@ def build(root):
             or monterey_bluetopo.get("full_original_cell_depth_and_uncertainty_verified") is not False
             or monterey_bluetopo.get("fishing_target") is not False):
         raise ValueError("Monterey BlueTopo pixel contributor evidence changed; review before promotion")
-    monterey_1995 = load(root, monterey_1995_path)
+    monterey_1995 = read(monterey_1995_path)
     if (monterey_1995.get("scope") != "monterey-1995-original-multibeam-research-overlap"
             or monterey_1995.get("outlines_reviewed") != 17
             or monterey_1995.get("outlines_with_original_cells") != 14
@@ -303,7 +308,7 @@ def build(root):
             or monterey_1995.get("independence_from_2016_composite_established") is not False
             or monterey_1995.get("fishing_target") is not False):
         raise ValueError("Monterey 1995 original-source research status changed")
-    monterey_1998 = load(root, monterey_1998_path)
+    monterey_1998 = read(monterey_1998_path)
     if (monterey_1998.get("scope") != "monterey-1998-original-em300-research-overlap"
             or monterey_1998.get("outlines_reviewed") != 17
             or monterey_1998.get("outlines_with_original_cells") != 7
@@ -314,7 +319,7 @@ def build(root):
             or monterey_1998.get("independence_from_2016_composite_established") is not False
             or monterey_1998.get("fishing_target") is not False):
         raise ValueError("Monterey 1998 EM300 original-source research status changed")
-    monterey_merge = load(root, monterey_merge_path)
+    monterey_merge = read(monterey_merge_path)
     if (monterey_merge.get("scope") != "monterey-usgs-2m-noaa-2013-merge-lineage-gap"
             or monterey_merge.get("public_accuracy_layer_at_research_cells_obtained") is not False
             or monterey_merge.get("public_source_inventory_at_research_cells_obtained") is not False
@@ -323,7 +328,7 @@ def build(root):
             or monterey_merge.get("chart_datum_depth_qualified") is not False
             or monterey_merge.get("fishing_target") is not False):
         raise ValueError("Monterey NOAA 2013 merge lineage or hold status changed")
-    monterey_points = load(root, monterey_points_path)
+    monterey_points = read(monterey_points_path)
     if (monterey_points.get("scope") != "monterey-noaa-2013-merge-acoustic-point-support"
             or monterey_points.get("outlines_reviewed") != 17
             or monterey_points.get("outlines_with_class13_points") != 17
@@ -335,7 +340,7 @@ def build(root):
                    or row.get("fishing_target") is not False
                    for row in monterey_points.get("outlines", []))):
         raise ValueError("Monterey acoustic-point support or hold status changed")
-    monterey_tracks = load(root, monterey_tracks_path)
+    monterey_tracks = read(monterey_tracks_path)
     if (monterey_tracks.get("scope") != "monterey-17-ncei-footprint-vs-trackline-survey-leads"
             or monterey_tracks.get("outlines_reviewed") != 17
             or monterey_tracks.get("camera_positive_outlines_with_2009_central_monterey_trackline") != 2
@@ -347,10 +352,10 @@ def build(root):
                    or row.get("fishing_target") is not False
                    for row in monterey_tracks.get("outlines", []))):
         raise ValueError("Monterey NCEI survey trackline lead or hold status changed")
-    monterey_2009_beams = load(root, monterey_2009_beams_path)
-    monterey_producer = load(root, monterey_producer_path)
-    monterey_project = load(root, monterey_project_path)
-    monterey_coned = load(root, monterey_coned_path)
+    monterey_2009_beams = read(monterey_2009_beams_path)
+    monterey_producer = read(monterey_producer_path)
+    monterey_project = read(monterey_project_path)
+    monterey_coned = read(monterey_coned_path)
     if (monterey_coned.get("scope") != "monterey-2017-coned-original-source-footprints-over-17-research-outlines"
             or monterey_coned.get("research_outlines_checked") != 17
             or monterey_coned.get("source_object_ids_intersecting_outlines") != [6, 10, 29]
@@ -382,7 +387,7 @@ def build(root):
                    for ident in ("023", "046"))
             or monterey_2009_beams.get("fishing_target") is not False):
         raise ValueError("Monterey original 2009 valid-beam support or hold status changed")
-    monterey_cell_join = load(root, monterey_cell_join_path)
+    monterey_cell_join = read(monterey_cell_join_path)
     if (monterey_cell_join.get("scope") != "monterey-2009-original-beams-to-usgs-native-cell-screen"
             or [(monterey_cell_join.get("outlines", {}).get(ident, {}).get("unique_paired_class3_band_cells_under_source_beams"),
                  monterey_cell_join.get("outlines", {}).get(ident, {}).get("unique_3x3_stable_class3_band_cells_under_source_beams"))
@@ -393,8 +398,8 @@ def build(root):
                    for ident in ("023", "046"))
             or monterey_cell_join.get("fishing_target") is not False):
         raise ValueError("Monterey GSF-to-USGS cell support or hold status changed")
-    monterey_video_beam = load(root, monterey_video_beam_path)
-    monterey_rov = load(root, monterey_rov_path)
+    monterey_video_beam = read(monterey_video_beam_path)
+    monterey_rov = read(monterey_rov_path)
     if (monterey_rov.get("scope") != "monterey-zenodo-rov-to-original-research-outline-overlap"
             or len(monterey_rov.get("outlines", {})) != 17
             or monterey_rov.get("outlines", {}).get("023", {}).get("interior_sensitivity", {}).get("25", {}).get("subunits") != 28
@@ -422,16 +427,16 @@ def build(root):
             or pigeon_video.get('biological_observation_gate_satisfied') is not False
             or pigeon_video.get('qualified_waypoints') != 0):
         raise ValueError('W00614 original USGS video observation coverage changed')
-    estero_direct = load(root, estero_direct_path)
-    estero_direct_character = load(root, estero_direct_character_path)
-    estero_bag_gap = load(root, estero_bag_gap_path)
+    estero_direct = read(estero_direct_path)
+    estero_direct_character = read(estero_direct_character_path)
+    estero_bag_gap = read(estero_bag_gap_path)
     if (estero_bag_gap.get('scope') != 'estero-60-research-block-noaa-nos-bag-catalog-gap'
             or estero_bag_gap.get('bag_survey_count') != 0
             or estero_bag_gap.get('qualified_waypoints') != 0
             or estero_bag_gap.get('fishing_target') is not False):
         raise ValueError('Estero bounded BAG catalog status changed')
-    estero_inventory = load(root, estero_inventory_path)
-    estero_camera = load(root, estero_camera_path)
+    estero_inventory = read(estero_inventory_path)
+    estero_camera = read(estero_camera_path)
     if (estero_camera.get("scope") != "estero-original-camera-to-private-300ft-block-gap"
             or estero_camera.get("research_block_count") != 60
             or estero_camera.get("camera_records") != 5936
@@ -440,17 +445,17 @@ def build(root):
             or estero_camera.get("biological_observation_gate_satisfied") is not False
             or estero_camera.get("qualified_waypoints") != 0):
         raise ValueError("Estero original camera-to-block support changed")
-    buchon_ncei = load(root, buchon_ncei_path)
-    buchon_ncei_index = load(root, buchon_ncei_index_path)
-    buchon_beams = load(root, buchon_beams_path)
-    buchon_caris = load(root, buchon_caris_path)
-    buchon_2009 = load(root, buchon_2009_path)
-    buchon_a3_lineage = load(root, buchon_a3_lineage_path)
-    buchon_2009_terrain = load(root, buchon_2009_terrain_path)
-    buchon_2009_access = load(root, buchon_2009_access_path)
-    buchon_rov_cell = load(root, buchon_rov_cell_path)
-    buchon_cmecs = load(root, buchon_cmecs_path)
-    buchon_cmecs_candidate = load(root, buchon_cmecs_candidate_path)
+    buchon_ncei = read(buchon_ncei_path)
+    buchon_ncei_index = read(buchon_ncei_index_path)
+    buchon_beams = read(buchon_beams_path)
+    buchon_caris = read(buchon_caris_path)
+    buchon_2009 = read(buchon_2009_path)
+    buchon_a3_lineage = read(buchon_a3_lineage_path)
+    buchon_2009_terrain = read(buchon_2009_terrain_path)
+    buchon_2009_access = read(buchon_2009_access_path)
+    buchon_rov_cell = read(buchon_rov_cell_path)
+    buchon_cmecs = read(buchon_cmecs_path)
+    buchon_cmecs_candidate = read(buchon_cmecs_candidate_path)
     cmecs_depth = buchon_cmecs.get("groups", {}).get("original_csumb_depth", {})
     cmecs_rov = buchon_cmecs.get("groups", {}).get("historical_rov", {})
     if (buchon_cmecs.get("scope") != "point-buchon-cmecs-geologic-interpretation-private-block-review"
@@ -485,7 +490,7 @@ def build(root):
                 "chart_mllw_depth_and_upper_uncertainty_verified", "full_route_and_fishing_date_cleared",
                 "fishing_target", "exportable"))):
         raise ValueError("Point Buchon historical ROV original-cell status changed")
-    buchon_2009_vdatum = load(root, buchon_2009_vdatum_path)
+    buchon_2009_vdatum = read(buchon_2009_vdatum_path)
     if (buchon_2009.get("scope") != "point-buchon-2009-csumb-original-products-vs-2008-usgs-character"
             or buchon_2009.get("inner_grid_metadata_survey_year") != 2009
             or buchon_2009.get("bundled_bathy_trackline_year") != 2007
@@ -852,10 +857,20 @@ def build(root):
         })
     if len(sectors) != 6 or len({s["sector_id"] for s in sectors}) != 6:
         raise ValueError("Incomplete or duplicate Central Coast sector plan")
+    # Retain the referenced receipts whose bytes are pinned but not parsed.
+    for path in (
+        conception_gap_path,
+        conception_ladder_path,
+        conception_rugged_path,
+        conception_8m_path,
+        conception_access_path,
+        conception_enc_seabed_path,
+    ):
+        source_sha256[path] = digest(root, path)
     return {
         "schema_version": 1, "scope": "monterey-to-point-conception-300ft-qualification-work-queue",
         "status": "research-only", "depth_ceiling_ft": 300,
-        "source_sha256": {p: digest(root, p) for p in (queue_path, ledger_path, conception_gap_path, conception_ladder_path, conception_rugged_path, conception_8m_path, conception_access_path, conception_enc_seabed_path, buchon_path, buchon_ncei_path, buchon_beams_path, buchon_caris_path, buchon_2009_path, buchon_a3_lineage_path, buchon_2009_terrain_path, buchon_2009_access_path, buchon_rov_cell_path, buchon_cmecs_path, buchon_cmecs_candidate_path, buchon_2009_vdatum_path, buchon_private_access_path, buchon_grid_bridge_path, monterey_bag_gap_path, monterey_bluetopo_path, monterey_1995_path, monterey_1998_path, monterey_merge_path, monterey_points_path, monterey_tracks_path, monterey_2009_beams_path, monterey_producer_path, monterey_project_path, monterey_coned_path, monterey_cell_join_path, monterey_video_beam_path, monterey_rov_path, cal_dig_rov_path, dataone_rov_path, estero_path, estero_direct_path, estero_direct_character_path, estero_bag_gap_path, estero_inventory_path, estero_camera_path, bss03_video_path, bss03_access_path, bss03_datum_path, bss03_caris_path, bss03_tpe_path, bss03_vessel_path, pigeon_video_path, pigeon_noaa_rov_path, pigeon_lander_path, mare_2016_path, mare_2016_service_path, mare_2016_overlap_path)},
+        "source_sha256": source_sha256,
         "release_gate_ids": list(RELEASE_GATES),
         "tracks": [{"id": k, "requirement": v,
                     "acceptance_test": TRACK_PROTOCOLS[k][0],

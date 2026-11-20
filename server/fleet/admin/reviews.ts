@@ -25,8 +25,8 @@
 //
 // vessel_id defaults to proposal_json.vessel_id, then (except advisor-link) the review's
 // subject_id; mmsi to candidate_json.mmsi; vessel_class to proposal_json.vessel_class.
-// The review update runs first in the batch, and every other write is conditioned on
-// that decision being the stored one, so two admins deciding at once cannot both apply.
+// Fact writes require the stored decision. Advisor links run first while the review
+// is open, and the decision then requires the requested link in the same batch.
 // Repeating the stored decision answers {review, repeated: true}; a different one on a
 // closed review is a conflict.
 import {canonicalJson} from '../ids.ts';
@@ -159,20 +159,29 @@ export async function decideFleetReview(db: D1Database, id: string, input: Decis
   const guard: Guard = {sql: 'EXISTS (SELECT 1 FROM fleet_reviews WHERE id=? AND decided_by=? AND decided_at=? AND decision_json=?)', args: [id, by, now, decisionJson]};
   const writes: D1PreparedStatement[] = [];
   if (Object.keys(cols).length) writes.push(...(await editStatements(db, vesselId!, cols, cols as Record<string, JsonValue>, by, now, guard)).statements);
-  if (boatId !== null) {
-    const link = await linkStatements(db, vesselId!, boatId, false, now, guard);
+  const linkWrites: D1PreparedStatement[] = [];
+  let linkRequired = '';
+  const linkArgs: SqlValue[] = [];
+  if (review.kind === 'advisor-link' && action === 'same-vessel') {
+    const open: Guard = {sql: "EXISTS (SELECT 1 FROM fleet_reviews WHERE id=? AND status='open')", args: [id]};
+    const link = await linkStatements(db, vesselId!, boatId, false, now, open);
     if ('status' in link) return link.status === 'not-found' ? {status: 'not-found'} : {status: link.status, error: link.error};
-    writes.push(...link.statements);
+    linkWrites.push(...link.statements);
+    // A zero-row link write is fine only when the requested pair is already linked.
+    linkRequired = ' AND EXISTS (SELECT 1 FROM advisor_boats WHERE id=? AND fleet_vessel_id=?)';
+    linkArgs.push(boatId, vesselId);
   }
   const status = action === 'dismiss' ? 'dismissed' : 'decided';
   const results = await db.batch([
-    db.prepare(`UPDATE fleet_reviews SET status=?,decision_json=?,decided_by=?,decided_at=? WHERE id=? AND status='open'`)
-      .bind(status, decisionJson, by, now, id),
+    ...linkWrites,
+    db.prepare(`UPDATE fleet_reviews SET status=?,decision_json=?,decided_by=?,decided_at=? WHERE id=? AND status='open'${linkRequired}`)
+      .bind(status, decisionJson, by, now, id, ...linkArgs),
     ...writes,
   ]);
-  if (!(results[0]?.meta.changes)) {
+  if (!(results[linkWrites.length]?.meta.changes)) {
     const stored = await db.prepare('SELECT * FROM fleet_reviews WHERE id=?').bind(id).first<ReviewRow>();
     if (stored && essence(parse(stored.decision_json)) === essence(decision)) return {status: 'ok', value: {review: view(stored), repeated: true}};
+    if (linkRequired && stored?.status === 'open') return {status: 'conflict', error: 'the link changed while saving; reload and retry'};
     return {status: 'conflict', error: `review already ${stored?.status ?? 'closed'}`};
   }
   const stored = await db.prepare('SELECT * FROM fleet_reviews WHERE id=?').bind(id).first<ReviewRow>();

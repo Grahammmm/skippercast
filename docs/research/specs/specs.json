@@ -1,0 +1,594 @@
+{
+ "generated": "2026-11-19",
+ "prepared_for": "Hermes build agent",
+ "repo": "https://github.com/Grahammmm/skippercast",
+ "repo_commit": "fa9c358",
+ "format": "rea feature lifecycle (spec.md, plan.md, tasks.md per feature; README roadmap)",
+ "rea": {
+  "repo": "https://github.com/morluto/rea",
+  "version": "rea-agents 6.9.0",
+  "local_clone": "/workspace/skippercast/rea (research-box checkout; not in this repository)",
+  "evidence_dir": "docs/research/specs/rea-evidence",
+  "web_bundle_runs": [
+   {
+    "target": "https://fishare.app/offshore-pro",
+    "result": "only /api/pageview endpoint; no feature evidence"
+   },
+   {
+    "target": "https://www.fishorpass.com/how-it-works",
+    "result": "per-script analysis deadline; no endpoints recovered"
+   }
+  ],
+  "not_run": [
+   "saltyoffshore.com/app (login wall; no login attempted)",
+   "native iOS/Android apps (no binaries; Hopper/Ghidra/IDA not installed)"
+  ]
+ },
+ "effort_scale": "estimates: S days, M weeks, L a month or more",
+ "specs": [
+  {
+   "id": "01",
+   "slug": "point-readout-and-ramps",
+   "title": "Full point readout and adjustable colour ranges",
+   "goal": "One tap lists every drawn layer's value with source and age; water-temp ramp can fit the view or be set by hand",
+   "priority": 1,
+   "effort_estimate": "S",
+   "depends_on": [],
+   "owner_gate": false,
+   "layers": [
+    "water temp",
+    "chlorophyll",
+    "wind",
+    "currents",
+    "swell",
+    "fronts",
+    "contrast"
+   ],
+   "files": {
+    "combined": "docs/research/specs/01-point-readout-and-ramps.md",
+    "spec": "docs/research/specs/01-point-readout-and-ramps/spec.md",
+    "plan": "docs/research/specs/01-point-readout-and-ramps/plan.md",
+    "tasks": "docs/research/specs/01-point-readout-and-ramps/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "A Chart tap returns a list of readings, one per drawn field layer, in rail order, instead of only the first non-null one. Existing single-reading consumers keep working."
+    },
+    {
+     "id": "R2",
+     "text": "Chlorophyll gets a `reading(at)`: the value of the observed native cell that contains the point (no interpolation), with sample date and age. Points outside cells read \"no retrieval here\"."
+    },
+    {
+     "id": "R3",
+     "text": "Wind gets a `reading(at)` from the same hourly field it draws: speed, gust where held, the direction it blows from, model and run."
+    },
+    {
+     "id": "R4",
+     "text": "Every reading keeps the source's own words for product, age and error, taken from the layer's existing basis or status. No new claim is made."
+    },
+    {
+     "id": "R5",
+     "text": "The Water temp legend row offers three range modes: `analysis` (today's behaviour, the default), `view` (fit to the samples inside the current viewport, re-fitted on `moveend`), and `custom` (two-handle slider, 0.5 \u00b0F steps, clamped to the analysis's own extremes)."
+    },
+    {
+     "id": "R6",
+     "text": "The range drives the texture colour table (`colourTable`/`fieldTexture`) and the legend label. Contours stay at 0.5 \u00b0F inside the chosen range. Swell and chlorophyll ramps are unchanged in this increment."
+    },
+    {
+     "id": "R7",
+     "text": "The range mode and custom ends are part of the shareable state (`web/share-link.ts`, `web/state.ts`) under a new parameter `sstRange` (`view` or `<min>-<max>` in \u00b0F). Absent or invalid means `analysis`."
+    },
+    {
+     "id": "R8",
+     "text": "All new copy is in `catalog/app/strings.json` with English and Spanish."
+    }
+   ]
+  },
+  {
+   "id": "02",
+   "slug": "observed-lookback",
+   "title": "Look-back playback for observed layers",
+   "goal": "Step back 7 days of SST, fronts and chlorophyll on the time dock",
+   "priority": 2,
+   "effort_estimate": "M",
+   "depends_on": [
+    "01 (soft)"
+   ],
+   "owner_gate": false,
+   "layers": [
+    "water temp",
+    "SST fronts",
+    "chlorophyll"
+   ],
+   "files": {
+    "combined": "docs/research/specs/02-observed-lookback.md",
+    "spec": "docs/research/specs/02-observed-lookback/spec.md",
+    "plan": "docs/research/specs/02-observed-lookback/plan.md",
+    "tasks": "docs/research/specs/02-observed-lookback/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "The pipeline keeps the last 7 daily frames of `sst-analysis`, `chlorophyll-observation` and `sst-fronts` per region, each with its own observation time, SHA-256, product and resolution. Each frame is immutable once published."
+    },
+    {
+     "id": "R2",
+     "text": "`habitat-dynamics.json` gains an optional `history` array per layer, `[{sample_at, tiles:[{path, sha256, bytes}]}]`, newest first, at most 7 entries. `sst-fronts` gains `conditions/regions/{region}/sst-fronts/{YYYY-MM-DD}.json` plus an index."
+    },
+    {
+     "id": "R3",
+     "text": "The browser loader (`web/map/habitat-feed.ts`) verifies history tiles with the same checks as current tiles (region, path pattern, length, SHA-256, fields, grid, bounds). One failing tile refuses that day only."
+    },
+    {
+     "id": "R4",
+     "text": "The dock offers past days only for regions whose manifest carries history. Past days are local days in the region's zone."
+    },
+    {
+     "id": "R5",
+     "text": "On a past day: layers with time behaviour `observed` draw that day's frame. Layers that are `hour`-only (forecasts) do not draw, and their rail entries state why. `static` layers are unchanged."
+    },
+    {
+     "id": "R6",
+     "text": "The age gate for a past frame is \"observation date equals the selected day\". The live `max_age_hours` gate applies only to Today. The legend and basis always print the frame's own date."
+    },
+    {
+     "id": "R7",
+     "text": "Play over past days skips missing days, stops at Today, pauses when the page is hidden, and honours reduced motion."
+    },
+    {
+     "id": "R8",
+     "text": "`day` accepts `-1`\u2026`-7` in links and state. Values out of range or unsupported fall back to Today, keeping today's rule that a kept-but-unshowable value is reported, not silently reset."
+    },
+    {
+     "id": "R9",
+     "text": "An optional backfill job may populate the 7 days for a new region from the same reviewed source (no new source), so the feature works on day one."
+    }
+   ]
+  },
+  {
+   "id": "03",
+   "slug": "spot-water-alerts",
+   "title": "Water-condition alerts on saved spots",
+   "goal": "Push when water at a private saved spot meets the user's condition; new-analysis alerts",
+   "priority": 3,
+   "effort_estimate": "M",
+   "depends_on": [],
+   "owner_gate": false,
+   "layers": [
+    "water temp",
+    "chlorophyll",
+    "contrast"
+   ],
+   "files": {
+    "combined": "docs/research/specs/03-spot-water-alerts.md",
+    "spec": "docs/research/specs/03-spot-water-alerts/spec.md",
+    "plan": "docs/research/specs/03-spot-water-alerts/plan.md",
+    "tasks": "docs/research/specs/03-spot-water-alerts/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "A new private table `spot_watches` (owner, spot_id, layer, op, a, b, enabled, last_state, last_fired_at, last_sample_at, created_at). At most 5 watches per spot and 50 per owner. It is never read by a public route, feed or preview, matching the `saved_spots` privacy rule."
+    },
+    {
+     "id": "R2",
+     "text": "API: `GET/POST /api/spots/:id/watches`, `PATCH/DELETE /api/spots/:id/watches/:wid`, all owner-scoped and validated (layer \u2208 {water-temp, chlorophyll, sst-contrast}; ops; finite values in the layer's valid range; `between` needs a < b)."
+    },
+    {
+     "id": "R3",
+     "text": "Evaluation runs inside the existing trip-check path, once per new live publication (`server/trip-queue.ts`), reading the region's `habitat-dynamics.json` tiles from `FEEDS`. It samples the native cell containing the spot (no interpolation; outside the grid or a gap gives `unknown`)."
+    },
+    {
+     "id": "R4",
+     "text": "It fires only on a false \u2192 true transition with a newer `sample_at` than the last evaluation. An `unknown` result never fires and never resets state."
+    },
+    {
+     "id": "R5",
+     "text": "Delivery reuses `subscriptions` and `sendPush`, with an idempotent event id `spotwatch:{wid}:{sample_at}`. Events go to a new `spot_alert_events` table, or to `alert_events` with `trip_id` made nullable plus a `kind` value. Choose one, and record the choice in an ADR (`docs/engineering/adr/`)."
+    },
+    {
+     "id": "R6",
+     "text": "The message names the spot, the value with units, the product and the sample date, and the user's condition. It never says \"fish\", \"bite\" or \"hot spot\"."
+    },
+    {
+     "id": "R7",
+     "text": "New-analysis alerts are per owner per region per layer, at most one a day."
+    },
+    {
+     "id": "R8",
+     "text": "The cost ceiling (`server/cost-ceiling.ts`) is respected: in degraded mode, no evaluation runs and nothing fires."
+    },
+    {
+     "id": "R9",
+     "text": "Deleting a spot cascades to its watches. **Export my records** includes the watches."
+    }
+   ]
+  },
+  {
+   "id": "04",
+   "slug": "heading-aware-comfort",
+   "title": "Heading-aware comfort and calibration",
+   "goal": "Ride-by-heading rose for out/back runs; verdicts calibrated from the owner's comfort reports",
+   "priority": 4,
+   "effort_estimate": "M",
+   "depends_on": [],
+   "owner_gate": false,
+   "layers": [
+    "sea conditions (swell, wind)"
+   ],
+   "files": {
+    "combined": "docs/research/specs/04-heading-aware-comfort.md",
+    "spec": "docs/research/specs/04-heading-aware-comfort/spec.md",
+    "plan": "docs/research/specs/04-heading-aware-comfort/plan.md",
+    "tasks": "docs/research/specs/04-heading-aware-comfort/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "Add a pure `headingCosts(hour: FeedHour, course: number, boat: BoatFactors) \u2192 {score, factor, relative, sector}` in `web/score.ts`. The relative swell angle is `angleBetween(course, swell_from)`, where 0 = head seas. A disclosed multiplier on the seas cost and the chop cost applies by sector: head (0\u201345\u00b0), bow quarter (45\u201380\u00b0), beam (80\u2013110\u00b0), stern quarter (110\u2013150\u00b0), following (150\u2013180\u00b0). Starting factors are written in `THRESHOLDS.heading` and documented. They are heuristics: head 1.25, bow quarter 1.1, beam 1.1 with an extra roll charge when period \u2264 boat.chopPeriod \u00d7 1.5, stern quarter 0.9, following 0.85."
+    },
+    {
+     "id": "R2",
+     "text": "`rateComfort` and `hourScores` keep their current results when no course is given. The heading score is an extra rating and never replaces the day verdict's rules."
+    },
+    {
+     "id": "R3",
+     "text": "The Boat brief computes outbound and return courses from the existing water route (start \u2192 end bearing of the route polyline in `web/brief/run.ts` / `web/route.ts`). It renders a rose of 8 sector scores for the dock hour."
+    },
+    {
+     "id": "R4",
+     "text": "Comfort feedback pre-fills `heading`, `phase` and the hour's `wind`, `sea` and `period` from the trip plan and the forecast. The user can edit any field."
+    },
+    {
+     "id": "R5",
+     "text": "Calibration: `GET /api/comfort/calibration` returns, per owner and boat name, the mean residual (reported \u2212 model score) by sector group (head / beam / following) with counts. It needs at least 5 reports in a group. Residuals are shrunk toward 0 by `n / (n + 5)` and clamped to \u00b12 points."
+    },
+    {
+     "id": "R6",
+     "text": "The client applies the calibration offset to the heading scores and the day verdict only when the owner opts in (default on after 5 reports, with a visible \"calibrated\" tag and an off switch). Offsets are stored server-side with the account, never in links."
+    },
+    {
+     "id": "R7",
+     "text": "`docs/boat-profile.md` and `docs/conditions-model.md` are updated: the Limits section no longer says heading is ignored, and the new factors and calibration are listed."
+    },
+    {
+     "id": "R8",
+     "text": "Copy never says \"safe\", \"unsafe\" or \"seaworthy\". It keeps the \"comfort estimate, not a safety clearance\" wording."
+    }
+   ]
+  },
+  {
+   "id": "05",
+   "slug": "chlorophyll-edges-eddies-ssh",
+   "title": "Chlorophyll edges, eddies and sea-surface height",
+   "goal": "Colour edges, model eddies and SSH beside existing SST fronts",
+   "priority": 5,
+   "effort_estimate": "M",
+   "depends_on": [
+    "01",
+    "02 (soft)"
+   ],
+   "owner_gate": false,
+   "layers": [
+    "chlorophyll",
+    "currents",
+    "SSH"
+   ],
+   "files": {
+    "combined": "docs/research/specs/05-chlorophyll-edges-eddies-ssh.md",
+    "spec": "docs/research/specs/05-chlorophyll-edges-eddies-ssh/spec.md",
+    "plan": "docs/research/specs/05-chlorophyll-edges-eddies-ssh/plan.md",
+    "tasks": "docs/research/specs/05-chlorophyll-edges-eddies-ssh/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "A pipeline step `chl_edges.py` derives edges from the `chlorophyll-observation` tiles. It applies the `sst_fronts.py` method to log10(chl), keeps only cells whose log-change across neighbours exceeds a documented threshold, takes the ridge, and links it into lines of at least 5 cells. Its uncertainty band is half a cell. Its age and status rules match `sst_fronts.py`, with a new `chl-edges` feed in `catalog/feed-health.json`."
+    },
+    {
+     "id": "R2",
+     "text": "Extend `wcofs_surface` (or add `wcofs_derived`) to also read `zeta[0]` on the same subset and frames. Publish it as layer `wcofs-ssh` (cm, minus the regional mean per frame) in `habitat-dynamics.json`, with the same SHA-256 tile rules."
+    },
+    {
+     "id": "R3",
+     "text": "Eddy detection runs per WCOFS frame using Okubo\u2013Weiss (W = s_n\u00b2 + s_s\u00b2 \u2212 \u03c9\u00b2) on the surface currents. A connected region with W < \u22120.2\u00b7\u03c3_W is a candidate, kept if it is at least 4 cells across and its outline closes. The outline is the boundary polygon, the sense is the sign of \u03c9, and the size is its equivalent diameter. Each eddy is labelled \"model (WCOFS), not observed\". It is published as `wcofs-eddies`."
+    },
+    {
+     "id": "R4",
+     "text": "The client adds layer-registry entries following the existing card rules (legend, basis sentence naming product, grid and age, attribution, time tag, age limit): `chl-edges` (observed), `ssh` (hour), `eddies` (hour). Each has a `reading(at)`."
+    },
+    {
+     "id": "R5",
+     "text": "Edges are drawn under the MPA fill and above the fields, consistent with `fronts.ts`. Colours come from palette tokens."
+    },
+    {
+     "id": "R6",
+     "text": "If spec 02 has landed, `chl-edges` publishes per-day history like `sst-fronts`."
+    }
+   ]
+  },
+  {
+   "id": "06",
+   "slug": "catch-conditions",
+   "title": "Conditions recorded with each catch",
+   "goal": "Private conditions snapshot on every catch-log entry plus 'my patterns'",
+   "priority": 6,
+   "effort_estimate": "M",
+   "depends_on": [
+    "02",
+    "03",
+    "01"
+   ],
+   "owner_gate": false,
+   "layers": [
+    "all layers"
+   ],
+   "files": {
+    "combined": "docs/research/specs/06-catch-conditions.md",
+    "spec": "docs/research/specs/06-catch-conditions/spec.md",
+    "plan": "docs/research/specs/06-catch-conditions/plan.md",
+    "tasks": "docs/research/specs/06-catch-conditions/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "Add a new nullable `conditions` JSON column on `catch_log` (migration). The shape is versioned: `{v:1, at, layers:{water_temp:{value, unit:'F', product, sample_at}|{missing:reason}, contrast:\u2026, front_nm:\u2026, chlorophyll:\u2026, current:{kn, toward_deg, run, valid_at}\u2026, swell:\u2026, wind:\u2026, tide:{stage, height_ft, station}}}`."
+    },
+    {
+     "id": "R2",
+     "text": "The snapshot is computed server-side on create, and when position or time changes on patch, from the region's published feeds in `FEEDS`. It uses the native-cell samplers shared with spec 03. Observed layers use the frame whose day equals `started_at`'s local day (current or spec 02 history). Forecast layers use the hour nearest `started_at` only if that publication is still held. Otherwise they're `missing:'not archived'`."
+    },
+    {
+     "id": "R3",
+     "text": "Entries without a position get only regional values (tide, and wind/swell at the region's forecast point), clearly labelled \"region, no position\"."
+    },
+    {
+     "id": "R4",
+     "text": "The snapshot is private, like the coordinates. It is never in a public route, feed, preview, analytics point or log line."
+    },
+    {
+     "id": "R5",
+     "text": "**My patterns**: a client-side aggregation over the owner's entries (up to the existing 2,000-entry export bound) by water-temp band (1 \u00b0F) and tide stage, fish vs blank counts. It is hidden when n < 10 and always shows n."
+    },
+    {
+     "id": "R6",
+     "text": "The CSV adds snapshot columns. The JSON export includes the object."
+    },
+    {
+     "id": "R7",
+     "text": "Copy uses \"your log\" language and never \"predicts\" or \"best\"."
+    }
+   ]
+  },
+  {
+   "id": "07",
+   "slug": "subsurface-depth-ladder",
+   "title": "Subsurface depth ladder",
+   "goal": "WCOFS temperature at 0-100 m, thermocline, mixed layer, salinity",
+   "priority": 7,
+   "effort_estimate": "L",
+   "depends_on": [
+    "05",
+    "01"
+   ],
+   "owner_gate": true,
+   "layers": [
+    "subsea weather",
+    "salinity"
+   ],
+   "files": {
+    "combined": "docs/research/specs/07-subsurface-depth-ladder.md",
+    "spec": "docs/research/specs/07-subsurface-depth-ladder/spec.md",
+    "plan": "docs/research/specs/07-subsurface-depth-ladder/plan.md",
+    "tasks": "docs/research/specs/07-subsurface-depth-ladder/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "The pipeline reads WCOFS `temp` at depth indexes for 0, 10, 20, 30, 50 and 100 m, and `salt` at 0 m, on the same regional subset, frames and contract checks as `wcofs_surface`. Frames are f000\u2013f072 every 6 h, to keep within budget. Total cells per frame are capped by a new `WCOFS_DEPTH_BUDGET` (for example 6 levels \u00d7 \u2264 15,000 cells)."
+    },
+    {
+     "id": "R2",
+     "text": "Derived per cell and frame:\n- Thermocline depth is the mid-depth of the level pair with the maximum \u2212dT/dz across levels 0\u2013100 m (1, 2, 4 \u2026 100 m available), but only where max \u2212dT/dz \u2265 0.05 \u00b0C/m. Otherwise it is `none` (\"well mixed\").\n- Mixed-layer depth is the shallowest depth where T < T(10 m) \u2212 0.2 \u00b0C (de Boyer Mont\u00e9gut criterion), interpolating linearly between levels. It is labelled \"estimated from model levels\"."
+    },
+    {
+     "id": "R3",
+     "text": "Publish layers `wcofs-temp-depth` (fields per level), `wcofs-salt-surface`, `wcofs-thermocline` and `wcofs-mld` in `habitat-dynamics.json` with the SHA-256 tile rules, `max_age_hours` 36 like WCOFS today, and `catalog/layer-inventory.json` entries."
+    },
+    {
+     "id": "R4",
+     "text": "Client entries: `subsurface-temp` (hour; depth state `depth=0|10|20|30|50|100|thermocline|mld` in links) and `salinity` (hour). Each follows the card rules and says \"model (NOAA WCOFS), not observed\"."
+    },
+    {
+     "id": "R5",
+     "text": "The ramp for temperature at depth reuses the SST tokens with its own range per depth. Salinity uses a new haline ramp token set."
+    },
+    {
+     "id": "R6",
+     "text": "The point readout includes a 0\u2013100 m profile sparkline at the tapped cell for the dock hour."
+    },
+    {
+     "id": "R7",
+     "text": "Offline packs don't include these layers in this increment, and the rail says so."
+    }
+   ]
+  },
+  {
+   "id": "08",
+   "slug": "gpx-import-and-fuel",
+   "title": "GPX import and fuel estimate",
+   "goal": "Import chartplotter waypoints into saved spots; opt-in fuel estimate in the Boat brief",
+   "priority": 8,
+   "effort_estimate": "S",
+   "depends_on": [],
+   "owner_gate": false,
+   "layers": [
+    "base map",
+    "boat run"
+   ],
+   "files": {
+    "combined": "docs/research/specs/08-gpx-import-and-fuel.md",
+    "spec": "docs/research/specs/08-gpx-import-and-fuel/spec.md",
+    "plan": "docs/research/specs/08-gpx-import-and-fuel/plan.md",
+    "tasks": "docs/research/specs/08-gpx-import-and-fuel/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "The account panel offers Import GPX. It accepts a single `.gpx` file of at most 1 MiB (`MAX_GPX_BYTES`), parsed by `readGpxWaypoints` in the browser. Route and track points are reported but not imported (the reader already refuses them)."
+    },
+    {
+     "id": "R2",
+     "text": "Every candidate is screened with the existing protected-area screen (`dist/geo-screen.js` `screenPlace`/`placeRefused`). The same refusal rules as saving a mark apply: inside, within 70 m, unchecked, or a screen older than 36 hours all mean not saved."
+    },
+    {
+     "id": "R3",
+     "text": "Saving respects `MAX_SPOTS = 100`, `NAME_UNITS = 80` and `NOTE_CHARS = 1000`. Add `POST /api/spots/batch` (at most 100 per request, all-or-nothing validation, one transaction), or reuse single creates with a progress bar. Either way, a partial failure reports which ones failed."
+    },
+    {
+     "id": "R4",
+     "text": "No GPX content is logged or sent anywhere except the confirmed spots to the owner's own route."
+    },
+    {
+     "id": "R5",
+     "text": "The boat profile gets an optional `burn_gph` (0.5\u2013200), with manual entry only. The AI lookup must not fill it in this increment."
+    },
+    {
+     "id": "R6",
+     "text": "The Boat brief shows the fuel line only when `burn_gph` and `cruise_kn` are set and the run basis is `water`. Gallons = 2 \u00d7 nm / cruise_kn \u00d7 burn_gph, rounded up to whole gallons. The thirds rule is OK when the round trip \u2264 2/3 \u00d7 `fuel_gal`, and \"check fuel\" otherwise. Without `fuel_gal`, only the gallons are shown."
+    },
+    {
+     "id": "R7",
+     "text": "Copy keeps \"estimate, not a fuel plan\" and never says \"enough fuel\" or \"safe range\". `docs/boat-profile.md` and the `run.ts` header comment are updated."
+    }
+   ]
+  },
+  {
+   "id": "09",
+   "slug": "text-advisor-launch",
+   "title": "Text Advisor launch",
+   "goal": "Run the owner's launch sequence for the built advisor",
+   "priority": 9,
+   "effort_estimate": "S",
+   "depends_on": [
+    "owner items B-E"
+   ],
+   "owner_gate": true,
+   "layers": [
+    "all layers"
+   ],
+   "files": {
+    "combined": "docs/research/specs/09-text-advisor-launch.md",
+    "spec": "docs/research/specs/09-text-advisor-launch/spec.md",
+    "plan": "docs/research/specs/09-text-advisor-launch/plan.md",
+    "tasks": "docs/research/specs/09-text-advisor-launch/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "The agent verifies the engineering is complete. All TA tasks in `docs/plans/text-advisor/10-work-breakdown.md` are marked as built, and `node --test tests/test_advisor_*.mjs` plus the golden conversations pass on current `main`."
+    },
+    {
+     "id": "R2",
+     "text": "The agent prepares, but does not execute, the flip sequence (`11-testing-rollout.md` \u00a7 Flip order). It produces a checklist PR or issue comment listing each owner item A\u2013E with its current state, derived from repo variables or secrets presence where readable (`gh variable list`, `gh secret list`, names only)."
+    },
+    {
+     "id": "R3",
+     "text": "For each step the owner authorises, the agent runs the exact commands from \u00a7 Flip order, waits for the deploy run to finish green, and runs `node scripts/advisor/preflight.mjs` for that stage. It records the dated results in the plan's status log."
+    },
+    {
+     "id": "R4",
+     "text": "The agent never sets secrets, buys numbers, signs into Apple, Meta or Twilio accounts, or changes caps. Those are owner steps (README \"How to use this plan\" item 5; AGENTS.md \"does not authorize \u2026 new paid services, changes to credentials\")."
+    },
+    {
+     "id": "R5",
+     "text": "After replies go on, the agent monitors the admin Funnel and the kill-switch runbooks (`docs/operations/runbooks/advisor-*.md`) for 72 hours, and reports any trip of a cap."
+    },
+    {
+     "id": "R6",
+     "text": "The site surfaces the advisor only after replies are on: the contact card or deep link per `08-website.md`, and the landing link behind the same flag."
+    }
+   ]
+  },
+  {
+   "id": "10",
+   "slug": "coverage-and-distribution",
+   "title": "Coverage and distribution",
+   "goal": "Second active region per the existing costed plan, and a store-listed wrapper",
+   "priority": 10,
+   "effort_estimate": "L",
+   "depends_on": [
+    "owner decisions"
+   ],
+   "owner_gate": true,
+   "layers": [
+    "all layers"
+   ],
+   "files": {
+    "combined": "docs/research/specs/10-coverage-and-distribution.md",
+    "spec": "docs/research/specs/10-coverage-and-distribution/spec.md",
+    "plan": "docs/research/specs/10-coverage-and-distribution/plan.md",
+    "tasks": "docs/research/specs/10-coverage-and-distribution/tasks.md"
+   },
+   "requirements": [
+    {
+     "id": "R1",
+     "text": "Region: execute `docs/plans/second-active-region.md` \u00a75 \"Costed plan\" in its dependency order. Phase 0 is the Morro Bay refinement (M1a, M1c, M3, M4; M1b is an owner gate). Phase 1 is the Southern California gaps (S1a\u2013S3; S1c is an owner gate). Phase 2 is B6 (encode the approved `active` bar in `src/skippercast/platform/contracts.py` with a failing-first test) and B7."
+    },
+    {
+     "id": "R2",
+     "text": "Before any status change, `node scripts/check_region_promotion.mjs southern-california` must exit 0 on fresh data. Paste the output into the PR. PASS is not permission; the owner promotes."
+    },
+    {
+     "id": "R3",
+     "text": "Agents never change `regions/*/region.json` status, the roadmap order or data-rights decisions without the owner's recorded decision (`AGENTS.md`; second-active-region \u00a76)."
+    },
+    {
+     "id": "R4",
+     "text": "Distribution (separate PR series): a Trusted Web Activity for Google Play (Bubblewrap), and a minimal iOS wrapper (Capacitor or a WKWebView shell) loading `https://skippercast.com/map`. The service worker, offline pack and passkeys must keep working. Passkeys in WKWebView need associated domains (`apple-app-site-association` served from `dist/.well-known/`). Push needs the platform's own path on iOS (web push works in iOS 16.4+ home-screen apps only). The spec's first task is a feasibility receipt."
+    },
+    {
+     "id": "R5",
+     "text": "Store accounts, listings, privacy labels and payments are owner steps. The agent prepares the listing text, screenshots from `scripts/showcase_capture.mjs`, and the privacy-label answers from `docs/legal/`, then stops."
+    },
+    {
+     "id": "R6",
+     "text": "Specs 01\u201308 must not assume Morro Bay. They read the region from state and feeds."
+    }
+   ]
+  }
+ ],
+ "build_lanes": {
+  "A_map": [
+   "01",
+   "02",
+   "05",
+   "07"
+  ],
+  "B_account_server": [
+   "03",
+   "06"
+  ],
+  "C_boat": [
+   "04",
+   "08"
+  ],
+  "owner_gated": [
+   "09",
+   "10"
+  ]
+ },
+ "open_questions_for_owner": [
+  "What does 'subsea weather' mean: subsurface temperature/salinity (spec 07), currents (already shipped), or something else?",
+  "Branch prefix for Hermes PRs (AGENTS.md names codex/ and claude/ only)",
+  "Text Advisor owner items B1-B7 and accounts/secrets C-E (spec 09)",
+  "Second active region: SOCAL, CAMBRIA or HOLD (spec 10; second-active-region.md sections 6 and 8)",
+  "Store distribution yes/no and platforms (spec 10)"
+ ],
+ "data_sources_inventory": "docs/research/data-sources/ (guides included; 2026-11-19 sample files are not in this repository)",
+ "references": {
+  "inspiration": "docs/research/inspiration/skippercast_inspiration.json",
+  "competitors": "docs/research/competitors/competitors.json"
+ }
+}

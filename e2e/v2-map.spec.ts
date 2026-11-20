@@ -73,6 +73,10 @@ test('3D shows the terrain; switching to 2D keeps place, target, profile, hour a
   await toggle(page, 'Chart').click();
   await expect(host).toBeHidden();
   await expect(page.locator('.app-map')).toBeVisible();
+  // Chart may mount late or already have moved while hidden. Check its rendered camera too:
+  // the URL alone can still look right when the automatic 3D entry zoom has leaked into Chart.
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await expect(page.locator('.app-chart')).toHaveAttribute('data-view', PLACE.view);
   // The DOM can reflect the choice before Playwright receives the history URL update.
   await expect.poll(() => params(page)).toMatchObject({...PLACE, presentation: 'chart'});
   await v2.a11y('v2-map-chart');
@@ -457,19 +461,28 @@ test('the Chart shows only a touch-sized Sources link on a phone and on the desk
 
 test('Chart → 3D → Chart keeps the centre within one zoom step', async ({page, v2}) => {
   await holdCoastData(page);
+  (await syntheticTerrain(page)).release();
   await v2.open('app', {...PLACE, presentation: 'chart'});
   const chart = page.locator('.app-chart');
   await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
   const before = viewOf(await chart.getAttribute('data-view'));
   await toggle(page, '3D').click();
-  await expect(page.locator('.app-terrain')).toBeVisible();
+  const host = page.locator('.app-terrain');
+  const canvas = host.locator('canvas');
+  await expect(canvas).toBeVisible();
+  await expect(host.locator('#loading')).toHaveCount(0);
+  // The renderer reports user moves to the link. Pan out and back without changing the entry zoom.
+  await canvas.press('ArrowLeft');
+  await canvas.press('ArrowRight');
+  const entryZoom = before.zoom - 0.5;
+  await expect.poll(() => viewOf(params(page).view).zoom, {message: 'the link records the half-step wider 3D entry zoom'}).toBe(entryZoom);
   await toggle(page, 'Chart').click();
   await expect(chart).toBeVisible();
   const after = viewOf(await chart.getAttribute('data-view'));
   expect(Math.abs(after.latitude - before.latitude)).toBeLessThan(0.01);
   expect(Math.abs(after.longitude - before.longitude)).toBeLessThan(0.01);
   expect(Math.abs(after.zoom - before.zoom)).toBeLessThanOrEqual(1);
-  expect(viewOf(params(page).view).zoom, 'the link keeps the place').toBeCloseTo(before.zoom, 0);
+  await expect.poll(() => viewOf(params(page).view).zoom, {message: 'the link keeps the settled zoom on return to Chart'}).toBe(entryZoom);
 });
 
 // Seafloor (FE-14): a synthetic publication (tests/fixtures/seafloor/chart.pmtiles, built by
@@ -758,17 +771,22 @@ const SWELL_POINT = {lon: -120.98, lat: 35.35};
 // reef marks and the protected areas, so a deep open-water contour and a clear edge are the reliable pick targets.
 const CONTOUR_POINT = {lon: -120.9499, lat: 35.2903};
 const EDGE_POINT = {lon: -120.9681, lat: 35.2592};
-async function serveOcean(page: Page) {
-  const now = Date.now(), three = 3 * HOUR_MS, first = Math.floor(now / three) * three - three, iso = (ms: number) => new Date(ms).toISOString();
-  const cells = [];
-  // Seventeen columns reach -120.60, over the basemap fixture's land (its tile's east half, east of -120.76).
-  for (let j = 0; j < 9; j++) for (let i = 0; i < 17; i++) {
-    const lon = +(-121.24 + i * 0.04).toFixed(6), lat = +(35.16 + j * 0.04).toFixed(6), uMs = 0.15 + i * 0.03, vMs = 0.12 - j * 0.02;
-    cells.push({lat, lon, uMs, vMs, speedKnots: Math.hypot(uMs, vMs) * 1.943844492, towardDeg: (Math.atan2(uMs, vMs) * 180 / Math.PI + 360) % 360});
-  }
+async function serveOcean(page: Page, now = Date.now()) {
+  const three = 3 * HOUR_MS, first = Math.floor(now / three) * three - three, iso = (ms: number) => new Date(ms).toISOString();
+  const frames = [0, 1, 2, 3].map(k => {
+    const [uMs, vMs] = k < 2 ? [0.3, 0.4] : [-0.5, -1.2];
+    const speedKnots = Math.hypot(uMs, vMs) * 1.943844492, towardDeg = (Math.atan2(uMs, vMs) * 180 / Math.PI + 360) % 360;
+    const cells = [];
+    // Seventeen columns reach -120.60, over the basemap fixture's land (its tile's east half, east of -120.76).
+    for (let j = 0; j < 9; j++) for (let i = 0; i < 17; i++) {
+      const lon = +(-121.24 + i * 0.04).toFixed(6), lat = +(35.16 + j * 0.04).toFixed(6);
+      cells.push({lat, lon, uMs, vMs, speedKnots, towardDeg});
+    }
+    return {validAt: iso(first + k * three), cells};
+  });
   const wcofs = {id: 'wcofs', kind: 'forecast', label: 'NOAA WCOFS surface forecast', url: 'https://example.test/wcofs', fetchedAt: iso(now - 600_000),
     issuedAt: iso(now - three), sampleAt: null, nativeResolutionKm: 4, sampleStride: 1, horizontalDatum: 'NAD83', surfaceOnly: true,
-    attribution: 'NOAA', license: 'public-domain-us-gov', limitations: 'Surface only.', frames: [0, 1, 2, 3].map(k => ({validAt: iso(first + k * three), cells}))};
+    attribution: 'NOAA', license: 'public-domain-us-gov', limitations: 'Surface only.', frames};
   await page.route('**/api/coast/ocean', route => route.fulfill({json: {schemaVersion: 1, countyId: 'slo', generatedAt: iso(now - 300_000), currents: [wcofs], cloud: null, sources: []}}));
 }
 const flow = (page: Page) => page.locator('.app-chart canvas.chart-flow--dash');
@@ -804,19 +822,36 @@ const clickChartPoint = async (page: Page, point: {x: number; y: number}) => {
 
 test('Currents draw the bound forecast as animated streamlines, read on click and follow ?current=', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
-  await serveOcean(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, current: 'wcofs'});
+  const now = Date.parse('2026-11-19T18:00:00Z');
+  await page.clock.setFixedTime(new Date(now));
+  await serveOcean(page, now);
+  await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline currents test'}}));
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, current: 'wcofs', hour: hourParam(now)});
+  if (!narrow(page)) await expect(page.locator('.app-first-answer')).toBeVisible();
   await expect(flow(page)).toHaveAttribute('data-motion', 'animated');
   expect(Number(await flow(page).getAttribute('data-paths')), 'streamlines over the field').toBeGreaterThan(10);
   const drawn = await flowOnLand(page, CURRENT_VIEW);
   expect(drawn.land, 'the land mask clips paths, arrowheads and source dots').toBe(0);
   expect(drawn.water).toBeGreaterThan(1000);
   // A click on open water inside the field reads the blended current (clear of the always-on depth contours).
-  const currentProbe = await chartPoint(page, CURRENT_VIEW, CURRENT_POINT.lon, CURRENT_POINT.lat);
-  await clickChartPoint(page, currentProbe);
+  const pick = async () => {
+    await collapseSheet(page);
+    await clickChartPoint(page, await chartPoint(page, CURRENT_VIEW, CURRENT_POINT.lon, CURRENT_POINT.lat));
+  };
+  const reading = page.locator('.app-mark .ui-reading');
+  await pick();
   await expect(page.locator('.app-mark h2')).toHaveText('Surface current');
-  await expect(page.locator('.app-mark .ui-reading')).toHaveText(/^\d\.\d\d kt toward \d{1,3}° true$/);
+  // 3–4–5 triangle: 0.5 m/s (0.97 kt), 37° clockwise from north.
+  await expect(reading).toHaveText('0.97 kt toward 37° true');
   await expect(page.locator('.app-mark-source')).toHaveText('NOAA WCOFS surface forecast · issued 3 h ago');
+
+  const slider = page.getByRole('slider', {name: 'Hour', exact: true});
+  for (let k = 0; k < 3; k++) await slider.press('ArrowRight');
+  await expect.poll(() => urlHour(page)).toBe(hourParam(now + 3 * HOUR_MS));
+  await expect(reading).toHaveCount(0);
+  await pick();
+  // 5–12–13 triangle in the southwest quadrant: 1.3 m/s (2.53 kt), 180° + 23°.
+  await expect(reading).toHaveText('2.53 kt toward 203° true');
 
   await openLayers(page);
   const entry = page.locator('.ui-rail-item', {hasText: 'Currents'});

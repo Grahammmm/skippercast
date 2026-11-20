@@ -272,6 +272,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // change. Rebind only MapStage.tsx.
   // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
   // MB-14: MapStage.tsx passes the 3D sky tokens to the stage and adds a 3D-fallback status line and a zoom hint on the existing app-stage-note class; BODY09 mounts Reports/CatchCards, never MapStage. No paint, token, assertion or threshold change. Rebind only MapStage.tsx.
+  // MB-14 phone query: MapStage.tsx only reads the phone width query from stage.ts (PHONE_QUERY, below 900 px) for the 3D zoom offer; BODY09 never mounts MapStage. Rebind only MapStage.tsx.
   // MB-11: the Chart legend gains depth-ramp/survey-detail chips; BODY09 mounts Reports/CatchCards, never MapStage. No catch
   // markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
   "web/app/MapStage.tsx": "3b28eef0401dcfc458b2d280e73626702b100ed814a430c5915aad90407335ac",
@@ -439,8 +440,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // #2490: dependency versions and lockfile resolutions changed; BODY09 still
   // bundles and measures the real Reports paint with unchanged inputs and gates.
   // Rebind both manifests and rerun the rendered contrast and fail-closed controls.
-  "package.json": "1a0f80f659e1edda323fe90947fbd5093f1d642b484f15f8e264b23cb2b09aec",
-  "pnpm-lock.yaml": "c13839dc5adfd7fda24886a1fec77e6404c18e4dedc236a58f06caf8a542e707",
+  // SCA-026: The dev-only esbuild advisory override changes no contrast or catch-sheet inputs.
+  "package.json": "352415f5bf7a630374c314e90cb584e2348401319ac678ca531ecaf7a5791ed3",
+  // SCA-026: The dev-only esbuild lock resolution changes no contrast or catch-sheet inputs.
+  "pnpm-lock.yaml": "fc12ec668d88f564cc828f9e54e863fa990fc8e7bf7afd46923a84d5e7c53075",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {

@@ -223,7 +223,7 @@ const pageHidden = signal(false);
 export type StageTheme = 'light' | 'dark';
 /** How a stage hears a theme change: the notify returns once the repaint settled; the result stops listening. */
 export type ThemeSubscribe = (notify: (theme: StageTheme) => Promise<void>) => () => void;
-const rootTheme = (): StageTheme => typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+const rootTheme = (): StageTheme => typeof document !== 'undefined' && document.documentElement?.dataset?.theme === 'light' ? 'light' : 'dark';
 /**
  * The default subscription: the Settings choice (themeChoice) and the OS scheme while Auto is chosen. Both write the root's
  * `data-theme` before they notify, so the theme read here is already the effective one. No observer of the attribute itself.
@@ -250,6 +250,10 @@ export const threeDOffered = (zoom: number | null | undefined, phone: boolean): 
 /** The camera a 3D choice starts from: the Chart or 2D camera pitched to ENTRY_PITCH, with the given bearing, `drop` zoom levels wider. */
 export const entryCamera = (c: Camera, bearing: number, drop = ENTRY_ZOOM_DROP): Camera =>
   ({latitude: c.latitude, longitude: c.longitude, zoom: clamp(c.zoom - drop, 0, 22), bearing, pitch: ENTRY_PITCH});
+
+/** Whether the camera is still where 3D left it: the same zoom (0.05) and the same centre, within 2 screen pixels (360° of longitude is 256 px at zoom 0). */
+export const sameSpot = (a: Camera, b: Camera): boolean =>
+  Math.abs(a.zoom - b.zoom) < 0.05 && Math.max(Math.abs(a.latitude - b.latitude), Math.abs(a.longitude - b.longitude)) <= 2 * 360 / (256 * 2 ** b.zoom);
 
 /** A 3D view that holds under this many frames a second for the whole window goes back to 2D. */
 export const MIN_FPS = 24, FPS_WINDOW_MS = 2000;
@@ -398,13 +402,16 @@ export function createStage(options: StageOptions): Stage {
   let shownOptions = NATIVE_TERRAIN_DEFAULTS;
   let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, noticeTimer: ReturnType<typeof setTimeout> | undefined;
   // MB-14: the 3D frame watch (armed once the terrain has loaded), the entry camera's bookkeeping and the theme last painted.
-  let fpsArmed = false, last3dZoom: number | undefined, lastBearing: number | undefined, lastShown: string | undefined, entryPending = false, painted: StageTheme | undefined = typeof document === 'undefined' ? undefined : rootTheme();
+  let fpsArmed = false, last3d: Camera | undefined, lastBearing: number | undefined, lastShown: string | undefined, entryPending = false, painted: StageTheme | undefined = typeof document === 'undefined' ? undefined : rootTheme();
+  let entry: {base: Camera; pose: Camera} | undefined;
+  // Synthetic browser terrain tests opt out of timing software WebGL; other sessions keep the 24 fps floor.
+  const ignoreFps = (globalThis as {__skippercastE2eIgnoreTerrainFps?: boolean}).__skippercastE2eIgnoreTerrainFps === true;
   const monitor = createFrameMonitor(() => {
     // Slow 3D goes back to 2D, with a notice. The link is rewritten in place, so Back does not return to the slow view.
     if (!alive || shownPresentation.peek() !== '3d') return;
     fpsFallback.value = true; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { fpsFallback.value = false; }, FALLBACK_NOTICE_MS);
     setParams({presentation: '2d'});
-  });
+  }, ignoreFps ? 0 : MIN_FPS);
   // Without ?hour= the terrain shows the current whole hour; the shared clock moves it on at each hour boundary, with the dock.
   const clock = options.clock ?? (options.now ? createHourClock({read: options.now, doc}) : appClock);
   const releaseClock = clock.retain();
@@ -561,8 +568,8 @@ export function createStage(options: StageOptions): Stage {
   }
 
   const visibility = (): void => { pageHidden.value = !!doc.hidden; monitor.reset(); };
-  // A 3D choice after Chart or 2D starts at the entry camera. Leaving 3D changes nothing (one camera for every view), so a straight
-  // return to 3D, the camera still where 3D left it, is not made wider again: the half zoom level is for a view that moved.
+  // A 3D choice after Chart or 2D starts at the entry camera. A straight return from 2D, the camera still where 3D left it,
+  // is not made wider again: the half zoom level is for a view that moved.
   // `opening`: the page itself opened in 3D. A link that names an orbit (bearing and pitch) is kept as shared; one that does not
   // gets the entry pose. With no camera yet (the region's centre still arriving) the entry waits for the home camera.
   const enter3d = (opening: boolean): void => {
@@ -570,12 +577,14 @@ export function createStage(options: StageOptions): Stage {
     if (!c) { entryPending = true; return; }
     entryPending = false;
     if (opening && c.pitch !== undefined) return;
-    const back = last3dZoom !== undefined && Math.abs(c.zoom - last3dZoom) < 0.05;
-    camera.value = entryCamera(c, c.bearing ?? lastBearing ?? 0, back ? 0 : ENTRY_ZOOM_DROP);
+    const back = last3d !== undefined && sameSpot(c, last3d);
+    const pose = entryCamera(c, c.bearing ?? lastBearing ?? 0, back ? 0 : ENTRY_ZOOM_DROP);
+    entry = {base: entry?.pose === c ? entry.base : c, pose};
+    camera.value = pose;
   };
   const leave3d = (): void => {
     const c = camera.peek();
-    if (c) { last3dZoom = c.zoom; lastBearing = c.bearing ?? lastBearing; }
+    if (c) { last3d = c; lastBearing = c.bearing ?? lastBearing; }
   };
   // The repaint for a theme switch: sky, fog and draped colours change in place; the stage keeps the palette its next drape reads.
   const paintTheme = (theme: StageTheme): void => {
@@ -599,7 +608,17 @@ export function createStage(options: StageOptions): Stage {
       if (now === was) return;
       monitor.reset();
       // The first run has no earlier view: a page opened in 3D is an entry too, kept as it is only when its link names an orbit.
-      if (now === '3d') { fpsFallback.value = false; clearTimeout(noticeTimer); enter3d(was === undefined); } else { entryPending = false; if (was === '3d') leave3d(); }
+      if (now === '3d') { fpsFallback.value = false; clearTimeout(noticeTimer); enter3d(was === undefined); }
+      else {
+        entryPending = false;
+        if (was === '3d') leave3d();
+        if (now === 'chart') {
+          // Don't publish the automatic terrain entry pose as a Chart move. A real terrain gesture or
+          // a new link has already replaced the pose and remains the shared camera, even before its URL settles.
+          if (entry && camera.peek() === entry.pose) camera.value = entry.base;
+          entry = undefined;
+        }
+      }
     }),
     // The first terrain choice mounts the renderer; Chart only hides it (setVisible), so switching back is instant.
     effect(() => { if (shownPresentation.value !== 'chart') void mount(); }),

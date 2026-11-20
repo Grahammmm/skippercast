@@ -161,10 +161,16 @@ def main():
     report, private = build(blocks, *(json.loads(path.read_text())
                                       for path in (args.mpas, args.federal, args.enc)))
     report["input_sha256"] = {key: sha256_file(path) for key, path in source_paths.items()}
-    if args.verify and stable(report) != stable(json.loads(args.verify.read_text())):
-        raise ValueError("Point Buchon original-cell access result changed; review before publication")
+    private_bytes = (json.dumps(private, separators=(",", ":")) + "\n").encode("utf-8")
+    report["private_research_blocks_sha256"] = hashlib.sha256(private_bytes).hexdigest()
+    if args.verify:
+        expected = json.loads(args.verify.read_text())
+        # Historical snapshots verify the aggregate only; they cannot admit a join.
+        expected.setdefault("private_research_blocks_sha256", report["private_research_blocks_sha256"])
+        if stable(report) != stable(expected):
+            raise ValueError("Point Buchon original-cell access result changed; review before publication")
     private_blocks.parent.mkdir(parents=True, exist_ok=True)
-    private_blocks.write_text(json.dumps(private, separators=(",", ":")) + "\n")
+    private_blocks.write_bytes(private_bytes)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(report["totals"])

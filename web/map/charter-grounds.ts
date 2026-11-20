@@ -29,7 +29,7 @@ import {cloudLayerIds} from './clouds.ts';
 import type {Engine, Overlay} from './engine.ts';
 import type {MarkScreen} from './habitat.ts';
 import {layerEntry, overlayFeatures, setRailNote, setTerrainLayer} from './layers.ts';
-import {MARK_PICK, chartPick, markData, markScreen} from './marks.ts';
+import {MARK_PICK, chartPick, markData, markMetadataFailed, markScreen, screenedAvailability, type OverlayAvailability} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {camera} from './stage.ts';
 import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
@@ -98,6 +98,15 @@ export function shownGrounds(evidence: Evidence | null, target: string, p: Profi
   return (evidence?.grounds ?? []).filter(g => g.precision !== BROAD && g.map_species.some(id => matchesTargetSpecies(id, target)) &&
     g.reports.some(r => r.species.some(id => matchesTargetSpecies(id, target))) && withinDepth(p, g.depth_ft[1]) && screened(g, g.geometry, screen));
 }
+
+const position = (p: unknown): boolean => Array.isArray(p) && p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]);
+const ringOk = (r: unknown): boolean => Array.isArray(r) && r.length >= 4 && r.every(position);
+const polygonOk = (c: unknown): boolean => Array.isArray(c) && c.length > 0 && c.every(ringOk);
+/** A ground's outline must be a Polygon or MultiPolygon with real coordinates: the hatching and the screen read them directly, so a shell is a failed file. */
+export const groundGeometryOk = (g: unknown): boolean => {
+  const {type, coordinates} = (g ?? {}) as Partial<Geometry>;
+  return type === 'Polygon' ? polygonOk(coordinates) : type === 'MultiPolygon' && Array.isArray(coordinates) && coordinates.length > 0 && coordinates.every(polygonOk);
+};
 
 const rings = (g: Geometry): number[][][] => g.type === 'Polygon' ? g.coordinates as number[][][] : g.type === 'MultiPolygon' ? (g.coordinates as number[][][][]).flat() : [];
 
@@ -197,6 +206,8 @@ export function groundMark(g: Ground, evidence: Evidence): ChartMark {
 export interface GroundsState {readonly drawn: number; readonly note: string; readonly audit: string | null; readonly copy?: StatusCopy}
 /** What the Fleet entry's legend row shows for the grounds. */
 export const groundsState = signal<GroundsState>({drawn: 0, note: '', audit: null});
+const groundsCheck = signal<OverlayAvailability | null>(null);
+export const groundsAvailability: ReadonlySignal<OverlayAvailability | null> = groundsCheck;
 
 export interface FleetLayerOptions {engine: ReadonlySignal<Engine | null>; fetchFn?: typeof fetch; page?: () => string; palette?: () => Palette}
 
@@ -206,7 +217,7 @@ export function assetLoader<T>(fetchFn: typeof fetch, page: () => string, valid:
   const cache = new Map<string, Promise<T | null>>();
   return (path: string): Promise<T | null> => {
     let p = cache.get(path), retry = false;
-    if (!p) cache.set(path, p = fetchFn(new URL(path, page()).href, {signal: AbortSignal.timeout(15000)})
+    if (!p) cache.set(path, p = Promise.resolve().then(() => fetchFn(new URL(path, page()).href, {signal: AbortSignal.timeout(15000)}))
       .then(r => r.ok ? r.json().catch((e: unknown) => (retry = !(e instanceof SyntaxError), null)) : (retry = r.status === 429 || (r.status >= 500 && r.status < 600), null), () => (retry = true, null))
       .then(d => valid(d) ? d as T : null, () => null)
       .then(d => { if (retry && cache.get(path) === p) cache.delete(path); return d; }));
@@ -216,14 +227,18 @@ export function assetLoader<T>(fetchFn: typeof fetch, page: () => string, valid:
 
 /** Draws the grounds while the Fleet entry is on; created with the Chart (web/map/chart.ts `layers`). */
 export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette()}: FleetLayerOptions) {
-  const load = assetLoader<Evidence>(fetchFn, page, d => Array.isArray((d as Evidence | null)?.grounds));
-  const evidence = signal<{path: string; data: Evidence | null} | null>(null);
+  const load = assetLoader<Evidence>(fetchFn, page, d => Array.isArray((d as Evidence | null)?.grounds) && (d as Evidence).grounds.every(g =>
+    typeof g?.id === 'string' && Number.isFinite(g.latitude) && Number.isFinite(g.longitude) && Array.isArray(g.depth_ft)
+    && Array.isArray(g.map_species) && Array.isArray(g.reports) && g.reports.every(r => Array.isArray(r?.species)) && groundGeometryOk(g.geometry)));
+  const loaded = signal<{binding: NonNullable<typeof markData.value>; data: Evidence | null} | null>(null);
   const on = computed(() => layers.value.includes('fleet'));
-  const path = computed(() => { const m = markData.value; return m && m.region.id === region.value ? m.region.assets?.charters ?? '' : null; });
+  const binding = computed(() => { const m = markData.value; return m?.region.id === region.value ? m : null; });
+  const path = computed(() => binding.value ? binding.value.region.assets?.charters ?? '' : null);
+  const evidence = computed(() => { const e = loaded.value; return e?.binding === binding.value ? e : null; });
   const target = computed(() => species.value ?? PROFILE_TABLE[profile.value].defaultTarget);
   const shown = computed(() => {
     const e = evidence.value;
-    return e && e.path === path.value && e.data ? shownGrounds(e.data, target.value, profile.value, markScreen.value) : [];
+    return e?.data ? shownGrounds(e.data, target.value, profile.value, markScreen.value) : [];
   });
   const hatchZoom = computed(() => {
     const view = camera.value;
@@ -233,13 +248,17 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
   let drawn = false, drawnOn: Engine | null = null;
   const disposers = [
     effect(() => {
-      const p = path.value;
-      if (!on.value || !p || evidence.peek()?.path === p && evidence.peek()?.data) return;
-      void load(p).then(data => { if (path.peek() === p) evidence.value = {path: p, data}; });
+      const p = path.value, b = binding.value;
+      if (!on.value || !p || !b || evidence.peek()?.data) return;
+      let current = true;
+      void load(p).then(data => { if (current) loaded.value = {binding: b, data}; });
+      return () => { current = false; };
     }),
     effect(() => {
-      const p = path.value, e = evidence.value, list = shown.value, ready = !!e && e.path === p;
+      const p = path.value, e = evidence.value, list = shown.value, ready = !!e;
       const supported = ['lingcod', 'rockfish'].some(s => matchesTargetSpecies(s, target.value)), screen = markScreen.value;
+      groundsCheck.value = p === null ? (markMetadataFailed.value ? 'failed' : null) : !p ? 'no-product'
+        : !e ? null : !e.data ? 'failed' : screenedAvailability(e.data.grounds.length, list.length, screen);
       const key: keyof typeof NOTES | 'screen' | '' = !on.value ? '' : p === null ? 'loading' : !p ? 'none' : !ready ? 'loading' : !e.data ? 'failed'
         : !supported ? 'species' : screen.status !== 'ready' ? 'screen' : list.length ? '' : 'filtered';
       const note = key === '' ? '' : key === 'screen' ? screen.note : NOTES[key];
@@ -273,7 +292,7 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
     return g && e?.data ? groundMark(g, e.data) : null;
   };
   return {
-    destroy() { for (const dispose of disposers) dispose(); setTerrainLayer(REGISTRY_ID, null); groundsState.value = {drawn: 0, note: '', audit: null}; setRailNote('fleet', ''); },
+    destroy() { for (const dispose of disposers) dispose(); groundsCheck.value = null; setTerrainLayer(REGISTRY_ID, null); groundsState.value = {drawn: 0, note: '', audit: null}; setRailNote('fleet', ''); },
     pick: {layers: [GROUNDS_FILL] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => groundPick(properties?.id)},
   };
 }
