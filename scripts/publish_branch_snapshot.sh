@@ -6,8 +6,8 @@
 #       Make <dir> hold exactly what <branch> on origin holds now: a detached
 #       worktree of the published commit, or an empty repository when the branch
 #       does not exist yet. Re-running it after someone else published re-bases
-#       <dir> on their commit (and discards local changes); it is a no-op when
-#       <dir> already holds the published commit.
+#       <dir> on their commit (and discards local changes). When HEAD matches
+#       origin, refuse local changes and leave the directory intact.
 #
 #   scripts/publish_branch_snapshot.sh <branch> <dir> <message>
 #       Commit everything in <dir> (git add -A: the directory IS the snapshot)
@@ -35,12 +35,19 @@ remote_head() {  # sha of origin's <branch>, or empty when it does not exist
 }
 
 load() {
-  local branch=$1 dir=$2 remote current
+  local branch=$1 dir=$2 remote current status
   remote=$(remote_head "$branch")
   if [ -d "$dir" ]; then
     own_repo "$dir"
     current=$(git -C "$dir" rev-parse -q --verify HEAD || true)
-    [ "$current" = "$remote" ] && return 0
+    if [ "$current" = "$remote" ]; then
+      status=$(git -C "$dir" status --porcelain=v1 --untracked-files=all) || return 1
+      [ -z "$status" ] || {
+        echo "::error title=Feed branch::$dir is dirty; use a fresh staging directory or resolve local changes before retrying" >&2
+        return 1
+      }
+      return 0
+    fi
     [ -n "$remote" ] || { echo "::error title=Feed branch::$branch vanished from origin; $dir still holds ${current:0:12}" >&2; return 1; }
     echo "::warning title=Feed branch::$branch moved on origin (${current:0:12} -> ${remote:0:12}); reloading $dir"
     git -C "$dir" fetch -q --depth=1 origin "refs/heads/$branch"

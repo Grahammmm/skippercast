@@ -167,3 +167,99 @@ def test_feather_width_is_validated(tmp_path):
         with pytest.raises(ValueError, match='feather_m'):
             cm.mosaic(region, table, tmp_path / 'out', reserve_gib=0, feather_m=bad)
     assert not (tmp_path / 'out').exists()
+
+
+def mixed_support_sources(tmp_path):
+    region = tmp_path / 'region.json'
+    bounds = transform_bounds('EPSG:3310', 'EPSG:4326', 0, -900, 800, 0)
+    region.write_text(json.dumps({'id': 'mixed-support', 'bounds': bounds}))
+    fine, coarse, evidence = (tmp_path / name for name in ('a.tif', 'b.tif', 'support.tif'))
+    # Offset and stripe individual 4 m pixels to expose a different sampling kernel/overview.
+    west, north = -80, 80
+    yy, xx = np.mgrid[0:270, 0:120]
+    values = np.full((270, 120), 3, dtype='uint8')
+    values[:, 40:52:2] = 1
+    values[:, 52:65] = 2
+    values[:, 65:70] = 0  # elevation exists, but evidence has nodata
+    values[160:245, -4] = 1  # x=385 m: the fine-side slope sample, not the edge cell at x=395 m
+    write_grid(fine, west, north, 120, 270, -10 + (yy + xx) * 0.0001, 4)
+    write_grid(coarse, 200, north, 50, 108, np.full((108, 50), -9.5), 10)
+    with rasterio.open(evidence, 'w', driver='GTiff', height=270, width=120, count=1,
+                       dtype='uint8', crs='EPSG:3310', transform=from_origin(west, north, 4, 4), nodata=0) as grid:
+        grid.write(values, 1)
+        grid.build_overviews([2], rasterio.enums.Resampling.nearest)
+    table = tmp_path / 'sources.json'
+    unbound = row('a', fine, 4)
+    doc = {'schema_version': 1, 'sources': [row('b', coarse, 10), unbound]}
+    return region, table, doc, evidence, values
+
+
+def test_mosaic_carries_only_winning_support_and_feathers_with_lowest_class(tmp_path):
+    # At the real raster boundary: a losing legacy grid must not downgrade the hard winner;
+    # the same grid must downgrade the winning measured cells whenever it joins the blend.
+    region, table, doc, evidence, native = mixed_support_sources(tmp_path)
+    table.write_text(json.dumps(doc))
+    legacy = cm.mosaic(region, table, tmp_path / 'legacy', reserve_gib=0)
+    doc['sources'][1].update(support_path=evidence.name, support_sha256=cm.file_hash(evidence))
+    table.write_text(json.dumps(doc))
+    hard, soft = tmp_path / 'hard', tmp_path / 'soft'
+    cm.mosaic(region, table, hard, reserve_gib=0, feather_m=0)
+    cm.mosaic(region, table, soft, reserve_gib=0)
+    _, codes, transform = read(hard)
+    with rasterio.open(hard / 'support_class.tif') as raster:
+        classes = raster.read(1)
+        assert (raster.transform, raster.nodata, raster.dtypes) == (transform, 0, ('uint8',))
+        assert not raster.overviews(1)
+    x = transform.c + (np.arange(codes.shape[1]) + 0.5) * 10
+    y = transform.f - (np.arange(codes.shape[0]) + 0.5) * 10
+    rr, cc = np.nonzero(codes == 1)
+    expected = native[((80 - y[rr]) // 4).astype(int), ((x[cc] + 80) // 4).astype(int)]
+    assert set(expected) == {0, 1, 2, 3}
+    np.testing.assert_array_equal(classes[rr, cc], np.where(expected == 0, 2, expected))
+    assert np.all(classes[codes == 2] == 2) and np.any(codes == 2)
+    assert np.any(codes == 0)
+    np.testing.assert_array_equal(classes == 0, codes == 0)
+
+    with rasterio.open(soft / 'support_class.tif') as raster:
+        blended = raster.read(1)
+    assert np.all(blended <= classes)
+    far = np.abs(x - 400) >= 40
+    np.testing.assert_array_equal(blended[:, far], classes[:, far])
+    col = int(np.flatnonzero(x == 395)[0])
+    top = int(np.flatnonzero(y == -95)[0])
+    bottom = int(np.flatnonzero(y == -715)[0])
+    assert classes[top, col:col + 2].tolist() == [3, 2]
+    assert blended[top, col:col + 2].tolist() == [2, 2]
+    assert classes[bottom, col:col + 2].tolist() == [3, 2]
+    assert blended[bottom, col:col + 2].tolist() == [1, 1]
+    manifest = json.loads((soft / 'manifest.json').read_text())
+    assert manifest['seam_feather']['changed_cells'] > 0
+    entry = manifest['outputs'].pop('support_class')
+    assert entry == {'path': 'support_class.tif', 'sha256': cm.file_hash(soft / 'support_class.tif'),
+                     'bytes': (soft / 'support_class.tif').stat().st_size}
+    assert manifest['outputs'] == legacy['outputs']
+    assert not (tmp_path / 'legacy' / 'support_class.tif').exists()
+
+
+@pytest.mark.parametrize('defect', ['stale pin', 'shifted grid', 'cap'])
+def test_support_input_is_bound_to_the_winning_grid_and_can_only_lower(tmp_path, defect):
+    # Otherwise a stale/shifted raster could certify unrelated pixels, or an R3 cap be ignored.
+    region, table, doc, evidence, _ = mixed_support_sources(tmp_path)
+    if defect == 'shifted grid':
+        with rasterio.open(evidence, 'r+') as raster:
+            raster.transform = from_origin(-76, 80, 4, 4)
+    doc['sources'][1].update(support_path=evidence.name,
+                             support_sha256='a' * 64 if defect == 'stale pin' else cm.file_hash(evidence))
+    if defect == 'cap':
+        doc['sources'][1]['support_class_cap'] = 1
+    table.write_text(json.dumps(doc))
+    out = tmp_path / 'result'
+    if defect != 'cap':
+        with pytest.raises(ValueError, match='Support hash changed' if defect == 'stale pin' else 'aligned uint8'):
+            cm.mosaic(region, table, out, reserve_gib=0)
+        assert not out.exists()
+    else:
+        cm.mosaic(region, table, out, reserve_gib=0, feather_m=0)
+        _, codes, _ = read(out)
+        with rasterio.open(out / 'support_class.tif') as raster:
+            np.testing.assert_array_equal(raster.read(1), codes)

@@ -7,8 +7,8 @@ import {configureStore, syncFromURL} from '../web/state.ts';
 
 const PAGE = 'https://s.test/map';
 const settle = async () => { for (let i = 0; i < 8; i++) await new Promise(resolve => setTimeout(resolve, 0)); };
-// Fabricated, location-free payloads: targets carry only an id and a label.
-const targets = (prefix, n) => Array.from({length: n}, (_, i) => ({id: `${prefix}-${i}`, name: `${prefix} mark ${i}`}));
+// Fabricated payloads: targets carry the id, label and a synthetic point the atlas validator (web/map/marks.ts `validAtlas`) requires.
+const targets = (prefix, n) => Array.from({length: n}, (_, i) => ({id: `${prefix}-${i}`, name: `${prefix} mark ${i}`, label: `${prefix} mark ${i}`, latitude: 35 + i / 100, longitude: -121 - i / 100}));
 const REGION = {id: 'morro-bay', name: 'Synthetic Bay', assets: {atlas: 'data/atlas.json'}};
 const ALT_REGION = {id: 'synthetic-other', name: 'Synthetic Other', assets: {atlas: 'regions/synthetic-other/atlas.json'}};
 const OWN = {targets: targets('own', 5)};            // the selected region's full atlas

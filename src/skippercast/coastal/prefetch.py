@@ -199,17 +199,53 @@ class GuardedSink:
         return result
 
 
-def mirror_urls(path):
-    """URLs receipted in a mirror manifest; unparseable lines are stale and carry none."""
-    urls = []
+# Facts that identify a downloaded entity; two receipts for one URL must agree on every one.
+IDENTITY_KEYS = ('final_url', 'sha256', 'bytes', 'path', 'verification')
+
+
+def valid_final_url(value):
+    """A receipt's final URL is evidence only when present as an absolute http(s) URL.
+
+    Two missing (None == None) or malformed values must never count as agreeing.
+    """
+    if not isinstance(value, str) or not value or any(c.isspace() or not c.isprintable() or c == '\\' for c in value):
+        return False
+    try:
+        parts = urlsplit(value)
+        host = parts.hostname
+        parts.port  # parsed lazily: a non-numeric or out-of-range port raises ValueError here
+    except ValueError:
+        return False
+    return parts.scheme in ('http', 'https') and bool(host) and not parts.fragment
+
+
+def raw_receipts(path, *, strict):
+    """Every receipt line in file order, never collapsed by URL.
+
+    The primary manifest is strict (a corrupt line raises, as always). A mirror may hold stale
+    lines: unparseable ones carry no receipt.
+    """
+    rows = []
     for line in path.read_text().splitlines():
         try:
             row = json.loads(line)
         except ValueError:
+            if strict:
+                raise
             continue
-        if isinstance(row, dict) and isinstance(row.get('url'), str):
-            urls.append(row['url'])
-    return urls
+        if strict or (isinstance(row, dict) and isinstance(row.get('url'), str)):
+            rows.append(row)
+    return rows
+
+
+def mirror_records(path):
+    """Receipts in a mirror manifest by URL (last wins); unparseable lines are stale."""
+    return {row['url']: row for row in raw_receipts(path, strict=False)}
+
+
+def mirror_urls(path):
+    """URLs receipted in a mirror manifest."""
+    return list(mirror_records(path))
 
 
 class Prefetch:
@@ -372,15 +408,21 @@ class Prefetch:
         directory = safe_path(self.root / source)
         directory.mkdir(parents=True, exist_ok=True)
         path = safe_path(directory / 'manifest.jsonl')
-        records = {}
-        if path.exists():
-            for line in path.read_text().splitlines():
-                row = json.loads(line)
-                records[row['url']] = row
         mirror = self.mirror / (source + '.jsonl')
-        if mirror.exists() and set(mirror_urls(mirror)) - set(records):
+        primary_rows = raw_receipts(path, strict=True) if path.exists() else []
+        mirror_rows = raw_receipts(mirror, strict=False) if mirror.exists() else []
+        records = {row['url']: row for row in primary_rows}
+        if set(row['url'] for row in mirror_rows) - set(records):
             # A lost or truncated primary must never erase the only other copy of receipts.
             raise Hold(f'Mirror manifest has receipts the primary lacks; preserve both: {mirror}')
+        # One identity check over every raw line of both copies, before anything is flushed:
+        # two receipts for one URL that differ on any identity fact (within a file or across
+        # files, in any order) mean neither copy is authoritative. Write nothing.
+        seen = {}
+        for row in primary_rows + mirror_rows:
+            identity = tuple(row.get(key) for key in IDENTITY_KEYS)
+            if seen.setdefault(row['url'], identity) != identity:
+                raise Hold(f'Receipts for one URL contradict each other; preserve both: {path} {mirror}')
         self.records[source] = records
         self.flush_manifest(source)  # repair a stale/missing second copy after a crash
 
@@ -414,6 +456,43 @@ class Prefetch:
         modified = head.get('Last-Modified')
         return bool(modified and response.get('Last-Modified') not in (None, modified))
 
+    def finish_receipted_partial(self, row, final, partial, meta_path, record):
+        """The ONE decision point for a complete .part (crash between receipt and rename).
+
+        No request is made and no ranges are stitched. Every identity must agree:
+        reviewed publisher digest (and size, when pinned), URL, final path, the
+        manifest receipt and the partial's own receipt, and the file size must equal
+        the receipted size exactly (larger or smaller is never promoted or truncated
+        here). With no manifest receipt it returns None and fetch() applies the
+        normal resume rules. A manifest receipt is only written once the whole file
+        verified, so with one present the outcome is promote or hold: a partial or
+        checkpoint that disagrees with it is never resumed, truncated or re-fetched.
+        """
+        if not (record and (partial.exists() or meta_path.exists())):
+            return None
+        held = Hold('Partial disagrees with its complete manifest receipt; preserve for operator')
+        if not (row.get('sha256') and partial.is_file() and meta_path.is_file()):
+            raise held
+        size = partial.stat().st_size
+        meta = read_json(meta_path)
+        if not (size and (row.get('bytes') is None or row['bytes'] == size)
+                and record.get('bytes') == size and meta.get('bytes') == size
+                and meta.get('total') == size and meta.get('url') == row['url']
+                and record.get('url') == row['url']
+                and record.get('path') == str(final.absolute())
+                and record.get('verification') == 'publisher-sha256'
+                and valid_final_url(meta.get('final_url'))
+                and meta.get('final_url') == record.get('final_url')):
+            raise held
+        sha = digest(partial)
+        if not (sha == row['sha256'] == record.get('sha256') == meta.get('sha256')):
+            raise held
+        record.update(licence=row['licence'], segments=row['segments'])
+        self.flush_manifest(row['source'])
+        os.replace(partial, final)
+        meta_path.unlink()
+        return size
+
     def fetch(self, row):
         self.guard()
         directory = self.root / row['source']
@@ -433,6 +512,9 @@ class Prefetch:
                 self.flush_manifest(row['source'])
                 return size
             raise Hold(f'Existing final file lacks matching verified receipt; preserve and investigate: {final}')
+        size = self.finish_receipted_partial(row, final, partial, meta_path, record)
+        if size is not None:
+            return size
 
         headers = {'Accept-Encoding': 'identity'}
         head = self.request('HEAD', row['url'], headers=headers, max_bytes=0)
@@ -453,6 +535,11 @@ class Prefetch:
             if (type(offset) is not int or not 0 <= offset <= total
                     or partial.stat().st_size < offset):
                 raise Hold('Partial size/hash mismatch; preserve for operator')
+            if offset == total:
+                # No manifest receipt (finish_receipted_partial() decides every receipted
+                # partial), so nothing confirms this complete checkpoint. Never re-receipt,
+                # truncate or promote it here.
+                raise Hold('Complete partial lacks agreeing receipts or exact size; preserve for operator')
             prefix = hashlib.sha256()
             with partial.open('rb') as stream:
                 remaining = offset

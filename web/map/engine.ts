@@ -105,6 +105,8 @@ export interface Engine {
   setData(sourceId: string, data: SourceData): void;
   /** How many features of `layerId` are drawn in view now (labels count once placed). */
   rendered(layerId: string): number;
+  /** Unique scalar values of this property from features intersecting the rendered viewport. */
+  renderedValues(layerId: string, property: string): ReadonlySet<string>;
   readonly view: MapView;
   /**
    * Draw registry layer `layer`'s overlay under map layer `before`, or under the first drawn layer of
@@ -421,6 +423,14 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       else { early?.data.delete(sourceId); fill(sourceId, data); }
     },
     rendered: layerId => map.getLayer(layerId) ? map.queryRenderedFeatures({layers: [layerId]}).length : 0,
+    renderedValues(layerId, property) {
+      const values = new Set<string>();
+      if (map.getLayer(layerId)) for (const feature of map.queryRenderedFeatures({layers: [layerId]})) {
+        const value = feature.properties[property];
+        if (typeof value === 'string') values.add(value);
+      }
+      return values;
+    },
     view: {
       container: () => map.getCanvasContainer(),
       size: () => ({width: host.clientWidth, height: host.clientHeight}),

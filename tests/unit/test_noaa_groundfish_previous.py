@@ -1,10 +1,12 @@
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
 from scripts import collect_noaa_groundfish_areas as noaa
+from tests.unit.test_noaa_groundfish_shapes import fake
 
 SCOPE = 'noaa-west-coast-groundfish-conservation-areas'
 FEATURE = {'type': 'Feature', 'geometry': None, 'properties': {}}
@@ -78,7 +80,8 @@ class PreviousSnapshotTest(unittest.TestCase):
         self.assertEqual(self.output.read_bytes(), b'{"keep": "me"}\n')
 
     def test_usable_previous_is_retained_with_unchanged_message(self):
-        self.previous.write_text(json.dumps(snapshot()))
+        original = noaa.collect(getter=fake(), now=datetime(2024, 1, 1, tzinfo=timezone.utc))
+        self.previous.write_text(json.dumps(original))
         with self.assertRaises(SystemExit) as caught:
             self.run_main(error=ValueError('NOAA down'))
         self.assertEqual(str(caught.exception.code),
@@ -87,7 +90,9 @@ class PreviousSnapshotTest(unittest.TestCase):
         self.assertEqual(written['status'], 'retained')
         self.assertEqual(written['refresh_issue'], 'NOAA down')
         self.assertIn('refresh_attempted_at', written)
-        self.assertEqual(written['features'], [FEATURE, FEATURE])
+        self.assertEqual(written['retrieved_at'], original['retrieved_at'])
+        self.assertEqual(written['features'], original['features'])
+        self.assertEqual(written['source_layers'], original['source_layers'])
 
     def test_no_previous_reraises_original_error(self):
         for previous in (False, True):  # absent flag, or flag naming a missing file

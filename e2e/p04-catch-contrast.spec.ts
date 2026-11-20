@@ -271,12 +271,15 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // never MapStage or PresentationToggle; no CSS, token, class, catch markup, paint, contrast(), assertion or threshold
   // change. Rebind only MapStage.tsx.
   // MB-08: Reports/CatchCards mounts neither the Chart-only depth shading control nor its layer. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "07c9cf39e007a91e0784c31cdcdc6248946b7f4c55fa21c301f020265cfd877a",
+  // MB-11: the Chart legend gains depth-ramp/survey-detail chips; BODY09 mounts Reports/CatchCards, never MapStage. No catch
+  // markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "9f184910b8ff4fec1059c997c2d2f8b8f39a5f94283209583264a94373d9d768",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
   // MB-22 adds Chart-only survey ink, halo and tints; Reports catch paint is unchanged.
-  "web/tokens.css": "3d2a47d465afd1b920d91ea1519c03420a5925ca0790aafffffffef768194e32",
+  // MB-11: Chart legend colours/layout only (ramp-B chips, survey-detail chips, dim note); Reports catch text and backing do not use them. Rebind only tokens.css.
+  "web/tokens.css": "f19461672d1d4d71e8d010513090c436ea57b283b8878fe89a09ad5ae2943886",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -314,7 +317,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCB-11: app.css changes only the wide-desktop (min-width: 1280px) masthead and command bar layout (fixed two-line place name, flex order, auto margins, a time window minimum width); the Reports catch sheet mounts neither, and no colour, backing or catch paint changed. Rebound from the final bytes.
   // MAIN-RED-5: Chart loading-status hit-testing only; Reports paint/backing and thresholds unchanged.
   // MAIN-RED-7: app.css adds one landscape-phone sheet-footer link spacing rule (the Reports catch sheet mounts no sheet footer); no colour, backing or catch paint changed. Rebound from the final bytes.
-  "web/app/app.css": "ea47a308ed3ed26a56558714894a22425f65244a647fc22916e9e73bdbb92591",
+  // MB-11: adds only .legend-* / chip rules for the Chart legend; no Reports catch class, colour or backdrop changes. Rebind only app.css.
+  "web/app/app.css": "0b82fdd43853e76e54c14dc8df48094cdd012598a61157086e12cd64387ab297",
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
   // UXFIX-11: app.css adds only the phone sheet day-chip row pin (.app-sheet-hour); the Reports catch sheet mounts no hour sheet, so no catch paint or backing changes. Rebound from the final bytes.
@@ -418,7 +422,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SCA-317: checker only rebinds the History target-size stylesheet hash; contrast math is unchanged.
   // MB-22 rebinds only the tokensCss surface hash. BODY09 paint, contrast logic and assertions are unchanged.
   // MAP-SOURCES-PAGE-1: only the legendTsx surface hash and its comment change; contrast math and gates unchanged.
-  "scripts/check_contrast.mjs": "8ca18920e32a19f262954b1ff2317f3a61336cfb752f1e8c6f520cfe37f58fc1",
+  // MB-11: contrast check gains the legend chip/panel pairs only; no existing pair, assertion or threshold changes. Rebind only check_contrast.mjs.
+  "scripts/check_contrast.mjs": "15100c475818b2f231fac83216b523c71666afcbd6eb60dea7b8dce8af113af8",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-05: check_contrast.mjs also pins the new tokensCss hash; contrast() is untouched. Rebound from the final bytes.
@@ -432,8 +437,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // #2490: dependency versions and lockfile resolutions changed; BODY09 still
   // bundles and measures the real Reports paint with unchanged inputs and gates.
   // Rebind both manifests and rerun the rendered contrast and fail-closed controls.
-  "package.json": "1a0f80f659e1edda323fe90947fbd5093f1d642b484f15f8e264b23cb2b09aec",
-  "pnpm-lock.yaml": "c13839dc5adfd7fda24886a1fec77e6404c18e4dedc236a58f06caf8a542e707",
+  // SCA-026: The dev-only esbuild advisory override changes no contrast or catch-sheet inputs.
+  "package.json": "352415f5bf7a630374c314e90cb584e2348401319ac678ca531ecaf7a5791ed3",
+  // SCA-026: The dev-only esbuild lock resolution changes no contrast or catch-sheet inputs.
+  "pnpm-lock.yaml": "fc12ec668d88f564cc828f9e54e863fa990fc8e7bf7afd46923a84d5e7c53075",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {

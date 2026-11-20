@@ -30,6 +30,8 @@ test('terrain does not clip hatches; Chart hatches and both pick paths are uncha
     fetchFn: async () => ({ok: true, json: async () => ({audit_date: '2026-01-02', grounds: [ground]})})});
   t.after(() => { controller.destroy(); markData.value = null; markScreen.value = CHECKING; });
   await new Promise(resolve => setImmediate(resolve));
+  // Loading validates the outline (one read, not a hatch call); count only the reads after it.
+  hatchReads = 0;
   assert.equal(terrainLayers.value[GROUNDS_SOURCE], undefined, 'an unready screen admits no drape');
 
   markScreen.value = {...CHECKING, status: 'ready'};

@@ -25,6 +25,7 @@ from research.scripts.discover_usgs_map_blocks import approved
 MAX_ARCHIVE_BYTES = 300_000_000
 MAX_TIFF_BYTES = 600_000_000
 MAX_VAT_BYTES = 2_000_000
+GRID_KINDS = {'bathymetry', 'seafloor_character'}
 
 
 def parse_vat(raw, observed):
@@ -143,17 +144,35 @@ def inspect_archive(path, record, description):
                 'nodata_value':float(raster.nodata) if raster.nodata is not None else None}
 
 
+def inspection_summary(rows, omissions, id_key):
+    # Keep prerequisite holds out of products: downstream raster consumers
+    # still see exactly the products for which inspection was attempted.
+    for group in (rows, omissions):
+        group.sort(key=lambda row: (row[id_key], row['kind'], row['archive_url']))
+    failed = [row['archive_url'] for row in rows if row['status'] != 'ok']
+    issues = failed + [row['archive_url'] for row in omissions]
+    count = len(rows) + len(omissions)
+    return {'product_count': count, 'inspected_count': len(rows) - len(failed),
+            'health': {'status': 'empty' if not count else 'degraded' if issues else 'ok', 'issues': issues},
+            'products': rows, 'omissions': omissions}
+
+
 def inspect(blocks, metadata, cache, *, fetcher=download, max_workers=3):
     if blocks.get('scope')!='usgs-state-waters-map-block-links' or metadata.get('scope')!='usgs-state-waters-native-metadata':
         raise ValueError('Invalid USGS source inventory scope')
     reviewed={(row['block_id'],row['kind'],row['metadata_url']):row for row in metadata['records'] if row['status']=='ok'}
-    tasks=[]
+    tasks, omissions = [], []
     for block in blocks['blocks']:
         for kind,products in block['products'].items():
+            if kind not in GRID_KINDS:continue
             for product in products:
                 key=(block['id'],kind,product['metadata_url'])
                 if key in reviewed:
                     tasks.append((block['id'],kind,product,reviewed[key]))
+                else:
+                    omissions.append({'block_id': block['id'], 'kind': kind,
+                                      'archive_url': product['archive_url'], 'metadata_url': product['metadata_url'],
+                                      'issue': 'No successful original metadata audit'})
     def one(task):
         ident,kind,product,record=task
         url=product['archive_url']
@@ -179,19 +198,17 @@ def inspect(blocks, metadata, cache, *, fetcher=download, max_workers=3):
                 ident,kind,product,record=task
                 rows.append({'block_id':ident,'kind':kind,'archive_url':product['archive_url'],
                              'metadata_url':record['metadata_url'],'status':'failed','issue':str(error)[:180]})
-    rows.sort(key=lambda row:(row['block_id'],row['kind'],row['archive_url']))
-    issues=[row['archive_url'] for row in rows if row['status']!='ok']
     return {'schema_version':1,'scope':'usgs-state-waters-native-grid-audit',
             'collected_at':datetime.now(timezone.utc).isoformat(),
             'method':'Original USGS ZIP and native GeoTIFF pixel inspection. No NAVD88-to-MLLW conversion, no species habitat or closure clearance; no fishing targets published.',
             'fishing_target':False,'exportable':False,
-            'product_count':len(rows),'inspected_count':len(rows)-len(issues),
-            'health':{'status':'ok' if not issues else 'degraded','issues':issues},'products':rows}
+            **inspection_summary(rows, omissions, 'block_id')}
 
 
 def signature(report):
     return {'scope':report['scope'],'product_count':report['product_count'],
             'inspected_count':report['inspected_count'],
+            'omissions':report.get('omissions', []),
             'products':[{key:value for key,value in row.items() if key!='surveyed_at'}
                         for row in report['products']]}
 
