@@ -301,6 +301,9 @@ def main(argv=None, environ=None, opener=urlopen, github_opener=urlopen, now=Non
         print(r2_meter_line(now, args.r2_meter))
         return 0
     environ = os.environ if environ is None else environ
+    if environ.get('ENABLE_ANALYTICS') != 'true':
+        print('Operations report skipped: ENABLE_ANALYTICS is not true (docs/cloudflare.md#observability).')
+        return 0
     token, account = environ.get('CF_ANALYTICS_TOKEN', '').strip(), environ.get('CLOUDFLARE_ACCOUNT_ID', '').strip()
     summary = environ.get('GITHUB_STEP_SUMMARY')
     if not token or not account:
