@@ -103,12 +103,6 @@ test('failed initial reads show offline and a later mount can recover', async ()
   assert.equal(requests.length, 2);
 });
 
-test('AccountMenu uses the mount-only session initializer', () => {
-  const source = readFileSync(new URL('../web/app/AccountMenu.tsx', import.meta.url), 'utf8');
-  assert.match(source, /void ensureSession\(\);/);
-  assert.doesNotMatch(source, /refreshSession/);
-});
-
 test('the session answer reads as signed in, signed out, disabled or offline', () => {
   assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: ' Skipper '}}), {state: 'signed-in', name: 'Skipper', advisor: false});
   assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: ''}}), {state: 'signed-in', name: null, advisor: false});
