@@ -140,7 +140,7 @@ def to_bytes(rgb):
 class Nearshore:
     """All derived layers of one grid window, computed from a ``view('baked')`` only."""
 
-    def __init__(self, elevation, cell_m, bounds, baked):
+    def __init__(self, elevation, cell_m, bounds, baked, *, sky_view_join=None):
         _require_view(baked, ("baked",), "the nearshore engine")
         z = np.array(elevation, dtype=np.float64)
         if z.ndim != 2 or min(z.shape) < 1:
@@ -169,6 +169,12 @@ class Nearshore:
         self.x = west + (np.arange(z.shape[1]) + 0.5) * cell_m
         self.y = north - (np.arange(z.shape[0]) + 0.5) * cell_m
         self._shade = self._piles = self._land_shade = None
+        self._sky_view_join = sky_view_join
+
+    def _normalized_sky_view(self):
+        sv = self.style["shading"]["sky_view"]
+        svf = _sky_view(self.filled, self.cell_m, _cells(sv["radius_m"], self.cell_m), sv["ve"], sv["directions"])
+        return np.clip((svf - sv["norm_floor"]) / (1 - sv["norm_floor"]), 0, 1)
 
     # ------------------------------------------------------------------ step 4: shade
     def shade(self):
@@ -179,9 +185,12 @@ class Nearshore:
             fine = hs6 - ndimage.gaussian_filter(hs6, s["hp_sigma_m"] / cell, mode="nearest")
             dy, dx = _gradient(z, cell, cell)
             slope = np.degrees(np.arctan(np.hypot(dx, dy)))
-            sv = s["sky_view"]
-            svf = _sky_view(z, cell, _cells(sv["radius_m"], cell), sv["ve"], sv["directions"])
-            svf_norm = np.clip((svf - sv["norm_floor"]) / (1 - sv["norm_floor"]), 0, 1)
+            svf_norm = self._normalized_sky_view()
+            if self._sky_view_join is not None:
+                lower, weight = self._sky_view_join
+                band = weight < 1
+                w = weight[band]
+                svf_norm[band] = w * svf_norm[band] + (1 - w) * lower._normalized_sky_view()[band]
             cs = s["cast_shadow"]
             shadow = _cast_shadow(z, cell, cs["azimuth_deg"], cs["altitude_deg"], cs["ve"], _cells(cs["search_m"], cell))
             shade = (s["base"] + s["gain"] * (hs6 - hs["flat_reference"])

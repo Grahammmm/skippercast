@@ -159,6 +159,8 @@ def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chun
                 window = Window(left, top, right - left, bottom - top)
                 core = np.s_[halo:halo + h, halo:halo + w]
             transform = ds.window_transform(window)
+            bounds = array_bounds(*z.shape, transform)
+            sky_view_join = None
             if lower:
                 elev = np.full(z.shape, builder.NODATA, dtype='float32')
                 for other, is_native in lower:
@@ -167,9 +169,15 @@ def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chun
                         elev, _ = builder.feather_tier(elev, coarser, cell)
                     else:
                         elev[np.isfinite(coarser)] = coarser[np.isfinite(coarser)]
-                elev, _ = builder.feather_tier(elev, z, cell)
+                beneath = elev
+                elev, weight = builder.feather_tier_with_weight(beneath, z, cell)
+                if (weight[core] < 1).any():
+                    # Only the sky-view factor joins. The feathered depth, piles,
+                    # and native alpha still come from the original path.
+                    sky_view_join = (Nearshore(np.where(beneath != builder.NODATA, beneath, np.nan),
+                                              cell, bounds, baked), weight)
                 z = np.where(elev != builder.NODATA, elev, np.nan)
-            image = Nearshore(z, cell, array_bounds(*z.shape, transform), baked)
+            image = Nearshore(z, cell, bounds, baked, sky_view_join=sky_view_join)
             for variant, output in outputs.items():
                 rgba = np.zeros((4, h, w), dtype='uint8')
                 rgba[:3, valid] = to_bytes(image.base(variant)[core])[valid].T
