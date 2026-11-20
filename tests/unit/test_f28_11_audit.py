@@ -1,9 +1,7 @@
 """F28-11: a clipped read cannot support grading the full outline.
 
 Run `python -B -m tests.unit.test_f28_11_audit` with survey dependencies
-for the read-only baseline comparison (exit 1 on a contract mismatch).
-Required pytest checks exercise the valid control; the known-gap comparison
-is opt-in until both graders enforce complete support.
+for the read-only comparison (exit 1 on a contract mismatch).
 """
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -80,9 +78,11 @@ def _replay(grader, root, *, include_edge=False):
     bag.write_bytes(b'synthetic BAG identity only\n')
     props = {'survey_id': 'H000', 'noaa_bag_sha256': sha256(bag.read_bytes()).hexdigest(),
              'native_resolution_m': [2., 2.], 'fishing_target': False, 'exportable': False}
-    footprints = {'interior': box(4, 4, 56, 56), 'edge': box(12, 4, 64, 56)}
+    footprints = {'interior': box(4, 4, 56, 56), 'edge': box(12, 4, 64, 56),
+                  'edge-sliver': box(8.1, 4, 60.1, 56)}
     assert box(0, 0, 60, 60).covers(footprints['interior'])
     assert not box(0, 0, 60, 60).covers(footprints['edge'])
+    assert not box(0, 0, 60, 60).covers(footprints['edge-sliver'])
     assert all(p.area == 2704 for p in footprints.values())  # Above regional 2500 m² floor.
     features = [{'geometry': mapping(poly), 'properties': {**props, 'id': name}}
                 for name, poly in footprints.items() if include_edge or name == 'interior']
@@ -138,6 +138,20 @@ def test_fully_measured_outline_retains_terrain_metrics(grader, tmp_path):
     # Catch an over-broad hold or a change to the complete-support inputs.
     rows, expected = _replay(grader, tmp_path)
     _check_interior(rows['interior'], expected)
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize('grader', ['regular', 'regional'])
+def test_edge_crossing_outline_is_held_even_when_returned_centers_qualify(grader, tmp_path):
+    rows, _ = _replay(grader, tmp_path, include_edge=True)
+    # Catch both silently clipped reads and a center-only check that misses
+    # a subpixel protrusion beyond the raster even with all 676 centers measured.
+    for name, count in [('edge', 624), ('edge-sliver', 676)]:
+        row = rows[name]
+        assert row['qualified_native_cells'] == count
+        assert row['status'] == 'held-native-cell-gap'
+        assert row['terrain'] is None
+        assert row.get('sampled_original_depth_ft') is None
 
 
 def _baseline():
