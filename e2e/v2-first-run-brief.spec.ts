@@ -2,13 +2,47 @@ import {test, expect, THROTTLED_MOBILE} from './fixtures.ts';
 import type {CDPSession, Page} from '@playwright/test';
 import {stubLiveFeeds, stubForecast} from '../scripts/measure_startup.mjs';
 import {readFileSync} from 'node:fs';
-import {forecastFixture} from './forecast-fixture.ts';
+import {forecastFixture, sharedForecastPoint} from './forecast-fixture.ts';
 import {regionWarmList} from '../web/landing/region-warm.ts';
 
 const FUNNEL_BUDGET_MS = 30_000;
 const PORT_KEY = 'skippercast-home-port-v1';
 const cells = [['morro', 'morro-bay', 'boat'], ['morro', 'morro-bay', 'shore'],
   ['morro', 'morro-bay', 'spear'], ['morro', 'morro-bay', 'kayak'], ['monterey', 'monterey-point-sur', 'boat']];
+
+test.describe('forecast fixture contract', () => {
+  const query = (search: string) => new URL(`/api/om/v1/forecast?${search}`, 'https://fixture.invalid');
+  for (const [label, search, error] of [
+    ['missing coordinates', '', /latitude and longitude/],
+    ['mismatched lists', 'latitude=0,1&longitude=2', /latitude and longitude/],
+    ['empty station', 'latitude=0,,1&longitude=2,3,4', /latitude and longitude/],
+    ['non-finite station', 'latitude=Infinity&longitude=2', /latitude and longitude/],
+    ['out-of-range station', 'latitude=0&longitude=181', /latitude and longitude/],
+    ['unsupported wind unit', 'latitude=0&longitude=2&wind_speed_unit=wrong', /wind_speed_unit/],
+  ] as const) test(`rejects ${label} instead of serving calm weather`, () => {
+    expect(() => forecastFixture(query(search), 0)).toThrow(error);
+  });
+
+  test('pairs stations in order and returns readings in requested or default units', () => {
+    for (const [suffix, unit, reading] of [['', 'km/h', 11.1], ['&wind_speed_unit=kmh', 'km/h', 11.1],
+      ['&wind_speed_unit=kn', 'kn', 6]] as const) {
+      const rows = forecastFixture(query(`latitude=0,1&longitude=2,-3&hourly=wind_speed_10m&timeformat=unixtime${suffix}`), 0);
+      if (!Array.isArray(rows)) throw new Error('Expected a multistation result');
+      expect(rows.map(row => [row.latitude, row.longitude, row.hourly_units.wind_speed_10m, row.hourly.wind_speed_10m?.[0]])).toEqual([
+        [0, 2, unit, reading], [1, -3, unit, reading],
+      ]);
+    }
+  });
+
+  test('keeps the shared feed in the units the brief requires', () => {
+    const point = {latitude: 0, longitude: 2};
+    const wind = sharedForecastPoint({...point, hourly: {wind_speed_10m: [], visibility: [], temperature_2m: []}});
+    const waves = sharedForecastPoint({...point, hourly: {wave_height: []}});
+    expect(wind.hourly_units).toEqual({time: 'unixtime', wind_speed_10m: 'kn', visibility: 'm', temperature_2m: '°F'});
+    expect(waves.hourly_units).toEqual({time: 'unixtime', wave_height: 'ft'});
+  });
+});
+
 // The mobile CPU throttle belongs to the measured window only: from the user's first request until the brief's verdict word
 // is on screen. Everything after that is an assertion about what the page shows, and the /map page it lands on starts the
 // whole map there (SC0922-05: docs/diagnostics/SC0922-05.md), so a 4x throttle would multiply the map's startup into every
@@ -24,12 +58,7 @@ async function prepare(page: Page, region = 'morro-bay') {
   const definition = JSON.parse(readFileSync(new URL(`../dist/regions/${region}/region.json`, import.meta.url), 'utf8'));
   await page.route('**/api/forecast?*', route => {
     const feed = stubForecast(definition);
-    for (const model of Object.values(feed.models)) model.data = model.data.map(point => {
-      const url = new URL('https://fixture.invalid/forecast');
-      url.search = new URLSearchParams({latitude: String(point.latitude), longitude: String(point.longitude),
-        hourly: Object.keys(point.hourly).filter(key => key !== 'time').join(',')}).toString();
-      return forecastFixture(url);
-    });
+    for (const model of Object.values(feed.models)) model.data = model.data.map(sharedForecastPoint);
     return route.fulfill({json: feed});
   });
   await page.addInitScript(() => {
