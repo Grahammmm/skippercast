@@ -24,10 +24,35 @@ _COMPONENT = re.compile(r'[A-Za-z0-9_-][A-Za-z0-9._-]*')
 _RESERVED = {'qa', 'qa.json', 'release.json', 'envelope.json', 'approval.json', 'shots', 'qwen.md'}
 _MBARI = re.compile(r'\bmbari\b|monterey bay aquarium research institute', re.I)
 _UNKNOWN_LICENSE = {'unknown', 'unlicensed', 'unresolved', 'metadata-review-needed'}
+STYLE_KEYS = {'baked', 'contours', 'habitat', 'built_with'}
 
 
 class ReleaseError(ValueError):
     """A relief release or review gate failed; do not publish it."""
+
+
+def validate_style(value):
+    if (not isinstance(value, dict) or value.keys() != STYLE_KEYS
+            or not is_sha256(value['baked'])
+            or any(value[key] is not None and not is_sha256(value[key]) for key in ('contours', 'habitat'))
+            or not isinstance(value['built_with'], str)
+            or not re.fullmatch(r'[a-z0-9.-]{1,64}', value['built_with'])):
+        raise ReleaseError('invalid relief style block')
+
+
+def style_from_receipts(upstream_docs):
+    tiles = upstream_docs.get('tiles.public', {})
+    params = tiles.get('params', {})
+    if params.get('engine') != 'nearshore':
+        return None
+    contours = upstream_docs.get('contours', {}).get('params', {})
+    if contours.get('set') == 'ft-v3' and not is_sha256(contours.get('contours')):
+        raise ReleaseError('invalid ft-v3 contours receipt digest')
+    value = dict(baked=params.get('baked'), habitat=None,
+                 contours=contours['contours'] if contours.get('set') == 'ft-v3' else None,
+                 built_with=tiles.get('metrics', {}).get('style', {}).get('built_with'))
+    validate_style(value)
+    return value
 
 
 def decode_document(data: bytes) -> dict:
@@ -247,8 +272,10 @@ def main(argv=None) -> int:
 
     provenance = {}
     inventory = []
+    producer_docs = {}
 
     def plan(upstream):
+        producer_docs.update(upstream)
         # Require every actual layer to come from a current producer receipt.
         provenance.update((row['path'], row) for doc in upstream.values() for row in doc['outputs'])
         if 'inventory' in upstream:
@@ -294,6 +321,9 @@ def main(argv=None) -> int:
         release = dict(metadata, schema=RELEASE_SCHEMA, generation=pending['generation'],
                        code_sha=code_sha, private=False, disclaimer=DISCLAIMER,
                        layers=rows, digest_root_sha256=next((r['sha256'] for r in rows if r['path'] == DIGEST_ROOT), None))
+        style = style_from_receipts(producer_docs)
+        if style is not None:
+            release['style'] = style
         release_layers(release)
         (out_dir / 'release.json').write_bytes(receipts.canonical(release))
 

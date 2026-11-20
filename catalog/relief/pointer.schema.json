@@ -14,6 +14,7 @@
     "sha256": {"$ref": "#/$defs/sha256"},
     "bytes": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
     "digest_root_sha256": {"$ref": "#/$defs/sha256"},
+    "style": {"$ref": "#/$defs/style"},
     "previous": {
       "oneOf": [
         {"type": "null"},
@@ -25,7 +26,8 @@
             "generation": {"$ref": "#/$defs/sha256"},
             "release_sha256": {"$ref": "#/$defs/sha256"},
             "envelope_sha256": {"$ref": "#/$defs/sha256"},
-            "sha256": {"$ref": "#/$defs/sha256"}
+            "sha256": {"$ref": "#/$defs/sha256"},
+            "style": {"$ref": "#/$defs/style"}
           }
         }
       ]
@@ -33,6 +35,17 @@
   },
   "unevaluatedProperties": false,
   "$defs": {
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baked", "contours", "habitat", "built_with"],
+      "properties": {
+        "baked": {"$ref": "#/$defs/sha256"},
+        "contours": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "habitat": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "built_with": {"type": "string", "pattern": "^[a-z0-9.-]{1,64}(?![\\s\\S])"}
+      }
+    },
     "sha256": {"type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]+$"},
     "text": {"type": "string", "pattern": "\\S"},
     "zoom": {"type": "integer", "minimum": 8, "maximum": 17},
