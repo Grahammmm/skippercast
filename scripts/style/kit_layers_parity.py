@@ -71,24 +71,22 @@ class Kit:
             self.files[rel] = digest
 
     def verify(self):
-        # Includes the entire reference import/fixture closure, including inputs
-        # opened indirectly by selftest and the comparator. Refuse extra files.
-        paths = set()
-        for p in self.root.rglob('*'):
-            rel = p.relative_to(self.root)
-            if p.is_symlink():
-                raise ValueError(f'kit contains a link: {rel}')
-            if p.is_file():
-                if rel not in self.files or sha(p) != self.files[rel]:
-                    raise ValueError(f'kit file mismatch: {rel}')
-                paths.add(rel)
-            elif not p.is_dir():
-                raise ValueError(f'kit contains a non-regular entry: {rel}')
-        if paths != self.files.keys():
-            raise ValueError('kit files are missing')
         for name, rel in TOKENS.items():
             if sha(ROOT / 'style' / name) != self.files[rel]:
                 raise ValueError(f'repository token bytes differ: {name}')
+
+    def stage(self, target):
+        # Only manifested files enter the subprocess/import tree. In particular,
+        # never execute unmanifested bytecode left behind by another local run.
+        for rel, digest in self.files.items():
+            source, destination = self.root / rel, target / rel
+            if source.resolve(strict=True) != source or not source.is_file():
+                raise ValueError(f'kit input is not an ordinary file: {rel}')
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+            if sha(destination) != digest:
+                raise ValueError(f'kit file mismatch: {rel}')
+        self.root = target
 
 
 def scope_golden(kit, case, target, only_keys):
@@ -182,6 +180,7 @@ def main():
         raise ValueError(f'outputs must stay under {OUTPUT}')
     kit = Kit(args.kit)
     kit.verify()
+
     identity = {
         'repo_head': checked('git', 'rev-parse', 'HEAD'),
         'kit_zip_sha256': json.loads((ROOT / 'style/index.json').read_text())['layers']['layers-v1.0.0']['kit_zip_sha256'],
@@ -205,6 +204,7 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX)
         with tempfile.TemporaryDirectory(dir=key_dir) as staging:
             target = Path(staging)
+            kit.stage(target / 'kit')
             env['TMPDIR'] = staging
             env['MPLCONFIGDIR'] = str(target / 'mpl')
             oracle_log = key_dir / 'selftest.log'
@@ -212,7 +212,7 @@ def main():
                 output = checked('bash', kit.root / 'selftest.sh', sys.executable, cwd=kit.root, env=env)
                 if not any(line.startswith('SELFTEST OK') for line in output.splitlines()):
                     raise ValueError('kit oracle did not print SELFTEST OK')
-                oracle_log.write_text(output + '\n')
+                oracle_log.write_text('SELFTEST OK\n')
             results = {case: one_case(kit, adapters[case], target, args, env) for case in cases}
             report_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
             (target / 'parity.json').write_bytes(json_bytes({
