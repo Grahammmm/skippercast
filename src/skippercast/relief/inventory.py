@@ -29,7 +29,7 @@ Metadata rules (nothing here certifies a cell; QA checks the emitted evidence):
 from __future__ import annotations
 
 import gzip
-import json
+import os
 import struct
 
 from skippercast.relief import mosaic, package, receipts
@@ -54,6 +54,8 @@ def archive_metadata(path):
         if len(header) != 127 or header[:8] != b'PMTiles\x03':
             raise InventoryError('expected a PMTiles v3 archive')
         offset, length = struct.unpack_from('<QQ', header, 24)
+        if offset < len(header) or offset + length > os.fstat(stream.fileno()).st_size:
+            raise InventoryError('PMTiles metadata span is outside the archive payload')
         stream.seek(offset)
         data = stream.read(length)
     if len(data) != length:
@@ -63,10 +65,10 @@ def archive_metadata(path):
         data = gzip.decompress(data)
     elif compression not in (0, 1):
         raise InventoryError('unsupported PMTiles metadata compression')
-    doc = json.loads(data)
-    if not isinstance(doc, dict):
-        raise InventoryError('PMTiles metadata is not an object')
-    return doc
+    try:
+        return package.decode_document(data)
+    except ValueError as exc:
+        raise InventoryError(f'invalid PMTiles metadata: {exc}') from exc
 
 
 def owned(doc, prefix=package.LAYERS):
