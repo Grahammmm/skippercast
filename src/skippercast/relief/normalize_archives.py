@@ -82,8 +82,17 @@ def select_member(source, family, member):
     return member, usgs_geotiff if is_zip else arcgrid
 
 
+def _unique_lidar_index_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f'duplicate lidar index key: {key!r}')
+        result[key] = value
+    return result
+
+
 def lidar_pair(index, ident):
-    document = json.loads(index.read_text())
+    document = json.loads(index.read_text(), object_pairs_hook=_unique_lidar_index_object)
     if (not isinstance(document, dict) or document.get('schema_version') != 1
             or not isinstance(document.get('files'), list)):
         raise ValueError('expected a lidar-grid index v1')
