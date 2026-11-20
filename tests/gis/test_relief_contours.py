@@ -56,6 +56,62 @@ def write_grid(path, values, crs, transform):
     return path
 
 
+@pytest.mark.parametrize('admission', ['allowed', 'cell-cap', 'memory-low', 'memory-unknown'])
+def test_region_trace_admission(tmp_path, monkeypatch, builder, admission):
+    # The native guard must not stop a region trace, and refusals must precede mosaic reads.
+    import numpy as np
+    import rasterio
+    from rasterio.transform import from_origin
+
+    from skippercast.relief import contours, receipts
+
+    tool = contours.producer()
+    _, source = builder
+    values = np.tile(np.linspace(-1, -100, 20, dtype='float32'), (20, 1))
+    crs, transform = 'EPSG:32610', from_origin(690000, 3915000, 10, 10)
+    elevation = write_grid(tmp_path / 'elevation.tif', values, crs, transform)
+    with rasterio.open(elevation) as grid:
+        profile = grid.profile
+    with rasterio.open(tmp_path / 'contributor.tif', 'w', **(profile | {'dtype': 'uint16', 'nodata': 0})) as ds:
+        ds.write(np.ones(values.shape, dtype='uint16'), 1)
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36], 'source_bindings': {'bathymetry': [SOURCE]}}
+    row = {'id': SOURCE, 'source_id': SOURCE, 'sha256': digest(elevation), 'vertical_datum': 'MLLW'}
+    manifest = {'seam_feather': {'feather_m': 0}, 'sources': [{'id': SOURCE, 'code': 1}]}
+    job = tool, region, {SOURCE: source}, [(row, elevation, None, None, None)], set(), manifest, tmp_path
+    monkeypatch.setattr(tool.preflight, 'MAX_PIXELS', 100)
+    monkeypatch.setattr(contours, 'CONTOUR_MAX_CELLS', values.size - (admission == 'cell-cap'))
+    monkeypatch.setattr(contours, 'TRACE_BYTES_PER_CELL', 10)
+    # Exactly half available is allowed; one byte less must hold rather than consume all available RAM.
+    available = None if admission == 'memory-unknown' else 2 * values.size * 10 - (admission == 'memory-low')
+    monkeypatch.setattr(contours, '_mem_available', lambda: available)
+    if admission == 'allowed':
+        collection, _ = contours.trace(job)
+        assert {f['properties']['source_id'] for f in collection['features']} == {SOURCE}
+        return
+    monkeypatch.setattr(contours, 'mosaic_samples', lambda *_: pytest.fail('read mosaic before admission'))
+    error, reason = {
+        'cell-cap': (ValueError, 'contour mosaic exceeds the cell budget'),
+        'memory-low': (receipts.Held, 'contour trace needs'),
+        'memory-unknown': (receipts.Held, 'cannot determine MemAvailable'),
+    }[admission]
+    with pytest.raises(error, match=reason):
+        contours.trace(job)
+
+
+def test_native_detail_keeps_native_window_cap(geographic_twin, monkeypatch):
+    # Raising the region cap must not permit a larger native window read.
+    import numpy as np
+
+    from skippercast.relief import contours
+
+    tool = contours.producer()
+    projected, *_ = geographic_twin
+    monkeypatch.setattr(tool.preflight, 'MAX_PIXELS', 99)
+    with tool.open_geotiff(projected, normalized=True) as grid:
+        with pytest.raises(SystemExit, match='v2 native window exceeds 99 pixels'):
+            tool.v2_native(grid, (0, 0, 5), np.ones((2, 2), dtype=bool), None)
+
+
 @pytest.fixture
 def geographic_twin(tmp_path):
     import numpy as np
