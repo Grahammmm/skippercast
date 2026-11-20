@@ -127,12 +127,18 @@ dbTest('GET /api/admin/boats: pending first, with owner, last report, 30-day rep
   assert.doesNotMatch(text, /SECRET/, 'no phone_enc or phone_hash leaves the server');
   const {boats} = JSON.parse(text);
   assert.deepEqual(boats.map(b => b.id), ['b2', 'b1', 'b3'], 'pending, verified, rejected');
-  const sea = boats[1];
+  assert.deepEqual([boats[1].crew_count, boats[1].has_note], [1, true]);
+  const expand = async id => {
+    const {text} = await call(worker, env, 'GET', `/api/admin/boats/${id}`);
+    assert.doesNotMatch(text, /SECRET/);
+    return JSON.parse(text).boat;
+  };
+  const sea = await expand('b1');
   assert.deepEqual(sea.owner, {id: 'c1', channel: 'imessage', language: 'en', display_name: 'Dana', role: 'skipper', status: 'active'});
   assert.deepEqual([sea.last_report_date, sea.reports_30d, sea.posts, sea.consent], ['2026-10-03', 2, 0, 'given'], 'published reports only; the 30 days count back from today');
   assert.deepEqual(sea.crew.map(c => [c.contact_id, c.display_name, c.channel]), [['c2', 'Deckhand Lu', 'sms']], 'active crew only');
   assert.equal(sea.consent_note.note, 'said yes on the dock');
-  assert.deepEqual([boats[0].owner, boats[0].last_report_date, boats[0].reports_30d, boats[0].consent, boats[0].review_open], [null, null, 0, 'not given', true]);
+  assert.deepEqual([(await expand('b2')).owner, boats[0].last_report_date, boats[0].reports_30d, boats[0].consent, boats[0].review_open], [null, null, 0, 'not given', true]);
   assert.equal(boats[2].consent, 'revoked');
 });
 

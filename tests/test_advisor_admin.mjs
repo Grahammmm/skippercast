@@ -183,7 +183,14 @@ dbTest('each kind carries what its card needs, and no phone number or hash reach
   };
   const response = await get(real, env, '/api/admin/reviews', ADMIN), text = await response.text();
   assert.doesNotMatch(text, /SECRET/, 'phone_enc and phone_hash never leave the server');
-  const by = Object.fromEntries(JSON.parse(text).items.map(i => [i.kind, i]));
+  const items = JSON.parse(text).items;
+  assert.ok(items.every(item => !('detail' in item)));
+  const by = Object.fromEntries(await Promise.all(items.map(async item => {
+    const detail = await get(real, env, `/api/admin/reviews/${item.id}`, ADMIN);
+    const expanded = await detail.text();
+    assert.doesNotMatch(expanded, /SECRET/);
+    return [item.kind, JSON.parse(expanded).review];
+  })));
   assert.deepEqual(Object.keys(by).sort(), ['conversation', 'media', 'post', 'report', 'skipper']);
   const m = by.media.detail.media;
   assert.equal(m.thumb, '/api/admin/media/p1');
