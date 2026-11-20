@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import sqlite3
 import struct
+from tempfile import NamedTemporaryFile
 from urllib.request import Request, urlopen
 
 from pyproj import Transformer
@@ -19,23 +20,37 @@ ROOT = Path(__file__).resolve().parents[2]
 URL = ("https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/"
        "CA_Central_CoNED_DEM_2017_8657/CentCA_Topobathy_DEM_Spatial_Metadata.gpkg")
 SHA256 = "721c073303b60a09d479256b1ccb1d1e3b7088232f7a6a3f8837ef0fd3feb379"
+SOURCE_SIZE = 120_184_832
 TABLE = "CentCA_Topobathy_DEM_Spatial_Metadata_v3"
 CONTEXT = ROOT / "research/receipts/usgs-offshore-monterey-hard-context.geojson"
 MATRIX = ROOT / "research/receipts/monterey-original-300-paired-review.json"
 
 
 def verified_source(path: Path, fetch: bool) -> None:
-    if fetch:
-        request = Request(URL, headers={"User-Agent": "SkipperCast-source-audit/1.0"})
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with urlopen(request, timeout=120) as response, path.open("wb") as output:
+    if not fetch:
+        _check_source(path)
+        return
+
+    request = Request(URL, headers={"User-Agent": "SkipperCast-source-audit/1.0"})
+    path.parent.mkdir(parents=True, exist_ok=True)
+    output = NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.", suffix=".partial", delete=False)
+    staged = Path(output.name)
+    try:
+        with output, urlopen(request, timeout=120) as response:
             total = 0
             while chunk := response.read(1 << 20):
                 total += len(chunk)
-                if total > 121_000_000:
+                if total > SOURCE_SIZE:
                     raise ValueError("NOAA spatial metadata package oversized")
                 output.write(chunk)
-    if not path.exists() or path.stat().st_size != 120_184_832:
+        _check_source(staged)
+        staged.replace(path)
+    finally:
+        staged.unlink(missing_ok=True)
+
+
+def _check_source(path: Path) -> None:
+    if not path.exists() or path.stat().st_size != SOURCE_SIZE:
         raise ValueError("NOAA spatial metadata package missing or changed")
     digest = hashlib.sha256()
     with path.open("rb") as stream:

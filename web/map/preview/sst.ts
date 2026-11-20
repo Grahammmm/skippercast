@@ -5,7 +5,7 @@ import type {Overlay} from '../engine.ts';
 import type {Palette} from '../palette.ts';
 import {PREVIEW_DATA, type PreviewAttach} from '../preview-layers.ts';
 import {paintEdits} from '../theme-restyle.ts';
-import {ageText, BEFORE_APP_LAYERS, expireWhenStale, freshWithin, getJson, handle, hoursOld, utc} from './common.ts';
+import {ageText, BEFORE_APP_LAYERS, expireWhenStale, freshWithin, getJson, handle, hoursOld, isPositiveFiniteHours, utc} from './common.ts';
 
 export const SST_CELLS = 'preview-sst-cells', SST_BREAKS = 'preview-sst-breaks', SST_HALO = 'preview-sst-break-halo', SST_LINES = 'preview-sst-break-line';
 
@@ -14,7 +14,7 @@ interface SstDoc {data_time: string; max_age_hours: number; colours: string[]; c
 export function readSst(raw: unknown): SstDoc {
   const d = raw as Partial<SstDoc> | null;
   const collection = (v: unknown): boolean => !!v && (v as {type?: unknown}).type === 'FeatureCollection' && Array.isArray((v as {features?: unknown}).features);
-  if (!d || typeof d.data_time !== 'string' || !(Number(d.max_age_hours) > 0) || !Array.isArray(d.colours) || !collection(d.cells) || !collection(d.breaks)) {
+  if (!d || typeof d.data_time !== 'string' || !isPositiveFiniteHours(d.max_age_hours) || !Array.isArray(d.colours) || !collection(d.cells) || !collection(d.breaks)) {
     throw new Error('analysis file is not a valid SST preview');
   }
   return d as SstDoc;
