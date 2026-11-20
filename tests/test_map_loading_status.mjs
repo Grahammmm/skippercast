@@ -115,8 +115,9 @@ test('the rough seafloor label shows on the Chart while seafloorRough holds, in 
   });
 });
 
-// DATA-LIVE-9 / RETURN 1. Contract: the relief's honesty line (estimated · blank = no survey data · NOT FOR NAVIGATION)
-// shows for exactly as long as the relief is drawn, including while waypoint placement is armed. Believable bug: hiding the
+// DATA-LIVE-9 / RETURN 1 (MB-11 copy update). Contract: the relief's honesty line (estimated from survey grids · NOT FOR NAVIGATION)
+// shows for exactly as long as the relief is drawn, including while waypoint placement is armed. The old "blank = no survey data"
+// clause was dropped: blank tiles must not be read as "no survey" (Design Lock). Believable bug: hiding the
 // note on arming (it was `armed ? null : <DepthShadingNote />`) leaves a drawn relief with no honesty line.
 test('the relief honesty line stays while waypoint placement is armed and goes only when the relief is retired', async () => {
   await withMount(CHART, async ({root}) => {
@@ -124,7 +125,7 @@ test('the relief honesty line stays while waypoint placement is armed and goes o
     await act(() => { mapFirstIdle.value = true; chartFailed.value = false; reliefDrawn.value = false; });
     assert.equal(note(), undefined, 'nothing drawn: nothing said');
     await act(() => { reliefDrawn.value = true; });
-    assert.match(text(note()), /^Depth shading: estimated.*blank = no survey data.*NOT FOR NAVIGATION$/);
+    assert.match(text(note()), /^Depth shading: estimated from survey grids · NOT FOR NAVIGATION$/);
     await act(() => { beginWaypointPlacement('morro-bay', () => {}); });
     assert.ok(note(), 'armed with the relief drawn: the honesty line is still shown');
     assert.match(text(note()), /NOT FOR NAVIGATION/);

@@ -8,6 +8,10 @@ name: Fleet AIS health
 # the last processor run is more than 3 hours old (or the Worker cannot say), and closes
 # it on recovery, as feed-freshness.yml does. No checkout: nothing from the repository
 # runs here. Runbook: docs/operations/runbooks/fleet-ais-down.md.
+# This public monitor stays hosted here; the fleet jobs it watches (fleet-ais, fleet-osint,
+# fleet-registry, fleet-ais-listener) run from the private Grahammmm/skippercast-ops repository.
+# This repository's ENABLE_FLEET only switches this monitor; the jobs' own switch is the
+# private repository's ENABLE_FLEET.
 on:
   schedule:
     - cron: "41 * * * *"
@@ -41,11 +45,21 @@ jobs:
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$BASE/api/fleet/jobs" | jq -r .value)"
           body="$(curl -fsS --retry 3 --max-time 30 -H "Authorization: Bearer $token" \
             "$BASE/api/fleet/jobs/health?region=$REGION")"
-          if [ $? -ne 0 ] || ! jq -e '.checks' >/dev/null 2>&1 <<<"$body"; then
-            message="Fleet AIS health for $REGION is unknown: the Worker's health route did not answer."
+          if [ $? -ne 0 ] || ! stale="$(jq -ers '
+            # Require one reply and the exact check set before trusting recovery.
+            # The message needs stale_after_s and every age_s (a number, or null for "never seen").
+            select(length == 1) | .[0] | select(type == "object")
+            | select((.stale_after_s | type) == "number" and
+                (.checks | type) == "object" and
+                (.checks | keys) == ["heartbeat", "last_message", "processed"] and
+                all(.checks[]; type == "object" and (.stale | type) == "boolean" and
+                    has("age_s") and ((.age_s | type) == "number" or .age_s == null)))
+            | select(.stale == any(.checks[]; .stale))
+            | .stale | tostring
+          ' 2>/dev/null <<<"$body")"; then
+            message="Fleet AIS health for $REGION is unknown: the Worker's health route did not return a complete, consistent reply."
             stale=true
           else
-            stale="$(jq -r '.stale' <<<"$body")"
             message="$(jq -r --arg region "$REGION" '"Fleet AIS health for \($region) (stale after \(.stale_after_s / 3600) h): " +
               ([.checks | to_entries[] | "\(.key) " + (if .value.age_s == null then "never seen" else "\((.value.age_s / 36 | floor) / 100) h old" end)
                 + (if .value.stale then " (stale)" else "" end)] | join(", ")) + "."
@@ -66,13 +80,14 @@ jobs:
         run: |
           gh label create fleet-ais-stale --color B60205 --description "Charter fleet AIS listener or processor stopped" 2>/dev/null || true
           existing="$(gh issue list --label fleet-ais-stale --state open --json number --jq '.[0].number')"
-          runs="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/fleet-ais.yml"
+          # The processor runs in the private ops repository (operators only), not in this one.
+          runs="${GITHUB_SERVER_URL}/Grahammmm/skippercast-ops/actions/workflows/fleet-ais.yml"
           runbook="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/operations/runbooks/fleet-ais-down.md"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$MESSAGE"
           else
             gh issue create --label fleet-ais-stale --title "Fleet AIS listener or processor is stale" \
-              --body "$MESSAGE"$'\n\n'"Processor runs: $runs"$'\n\n'"Runbook: $runbook"
+              --body "$MESSAGE"$'\n\n'"Processor runs (private, operators only): $runs"$'\n\n'"Runbook: $runbook"
           fi
           exit 1
       - name: Close the fleet-ais-stale issue after recovery

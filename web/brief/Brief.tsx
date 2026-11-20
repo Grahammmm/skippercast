@@ -45,6 +45,7 @@ import {loadSkill, skillFile, skillLine, skillSummary} from './skill.ts';
 import {activeBoatFactors, savedBoat} from '../../dist/boat-handling.js';
 import {boatBasisName, boatRangeNote, REFERENCE_BOAT_NAME, type SavedBoatLike} from '../boat-range.ts';
 import {language, localeOf, num, shortDate, t, type Language, type StringId} from '../i18n.ts';
+import {reportDay} from '../reports-copy.ts';
 import {boatSaved} from '../boat-entry.ts';
 import type {BoatFactors} from '../score.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
@@ -915,10 +916,13 @@ export const Caveat = ({brief}: {brief: BriefModel | null}) => <p class="app-cav
 /** The beach notice link, the fleet line and the local-report line, each only when the model has it. */
 export function BriefLinks({brief}: {brief: BriefModel | null}) {
   if (!brief) return null;
+  const {fleet} = brief, lang = language.value;
   return (
     <ul class="app-brief-links">
-      {brief.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">{t('brief.notice', language.value, {name: brief.notice.name})}</a></li> : null}
-      {brief.fleet ? <li><a href={brief.fleet.href}>{brief.fleet.text}</a></li> : null}
+      {brief.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">{t('brief.notice', lang, {name: brief.notice.name})}</a></li> : null}
+      {fleet ? <li>{'notAvailable' in fleet ? (fleet.lastSourceDay
+        ? t('reports.evidence.not_available_since', lang, {date: reportDay(fleet.lastSourceDay, lang)})
+        : t('reports.evidence.not_available', lang)) : <a href={fleet.href}>{fleet.text}</a>}</li> : null}
       <li class="app-local" data-available={String(brief.localReport.available)}>{brief.localReport.text}</li>
     </ul>
   );

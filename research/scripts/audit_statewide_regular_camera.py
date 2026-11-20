@@ -10,8 +10,12 @@ import hashlib
 import json
 from pathlib import Path
 
+from research.lib.paths import ROOT
 from research.scripts.audit_regular_bag_camera import review
 from research.scripts.audit_usgs_video_observations import load_archive, open_original_zip, sector_for
+
+
+CANONICAL_RECEIPT = Path("research/receipts/noaa-statewide-regular-camera-review.json")
 
 
 def rocky_camera_positions(manifest, cache):
@@ -138,10 +142,17 @@ def reviewed_hazards(catalog, report_cache, survey_id, report_url):
 
 
 def audit_all(source, manifest, snapshot, sectors, holds, bag_cache, video_cache, *, hazard_catalog=None, report_cache=None, limit=None):
+    if limit is not None and limit < 0:
+        raise ValueError("limit must be non-negative")
     positions = rocky_camera_positions(manifest, video_cache)
     pairs = candidate_pairs(source, positions)
+    available_pairs = len(pairs)
     if limit is not None:
         pairs = pairs[:limit]
+    unattempted_pairs = available_pairs - len(pairs)
+    scope = "statewide-original-camera-regular-bag-discovery-review"
+    if unattempted_pairs:
+        scope += "-partial"
     held = {item["survey_id"]: item["reason"] for item in holds["holds"]}
     hazard_catalog = hazard_catalog or {"surveys": []}
     report_cache = report_cache or Path("var/noaa-report-cache")
@@ -182,13 +193,14 @@ def audit_all(source, manifest, snapshot, sectors, holds, bag_cache, video_cache
     mpa = snapshot["sources"]["mpas"]
     mpa_digest = hashlib.sha256(json.dumps(mpa["data"]["geojson"], sort_keys=True,
                                           separators=(",", ":")).encode()).hexdigest()
-    return {"schema_version": 1, "scope": "statewide-original-camera-regular-bag-discovery-review",
+    return {"schema_version": 1, "scope": scope, "limit": limit,
             "reviewed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "cdfw_mpa_source_url": mpa["data"]["source_url"],
             "cdfw_mpa_retrieved_at": mpa["data_retrieved_at"],
             "cdfw_mpa_geojson_sha256": mpa_digest,
             "original_bag_catalog_count": len(source["files"]),
-            "candidate_pairs_with_actual_rocky_camera_positions": len(pairs),
+            "candidate_pairs_with_actual_rocky_camera_positions": available_pairs,
+            "attempted_pairs": len(pairs), "unattempted_pairs": unattempted_pairs,
             "reviewed_pairs": len(rows), "failed_or_uncached_pairs": failures,
             "summary": dict(Counter({"pairs_with_qualified_windows": sum(bool(r["counts"].get("qualified_rocky_camera_windows")) for r in rows),
                                      "distinct_surveys_with_qualified_windows": len({r["survey_id"] for r in rows if r["counts"].get("qualified_rocky_camera_windows")}),
@@ -213,17 +225,30 @@ def main():
     p.add_argument("--report-cache", type=Path, default=Path("var/noaa-report-cache"))
     p.add_argument("--bag-cache", type=Path, default=Path("var/noaa-native-cache"))
     p.add_argument("--video-cache", type=Path, default=Path("var/usgs-video-cache"))
-    p.add_argument("--limit", type=int, help="Bounded diagnostic run; omit for a complete review")
-    p.add_argument("--output", type=Path, default=Path("research/receipts/noaa-statewide-regular-camera-review.json"))
+    p.add_argument("--limit", type=int, help="Non-negative pair cap for diagnostics; requires a separate --output")
+    p.add_argument("--output", type=Path, help=f"Receipt path (unlimited default: {CANONICAL_RECEIPT})")
     a = p.parse_args()
+    if a.limit is not None:
+        if a.limit < 0:
+            p.error("--limit must be non-negative")
+        if a.output is None:
+            p.error("--limit requires a separate --output")
+        # Protect both the cwd-relative default and the checkout's receipt when
+        # the operator runs from elsewhere. Resolve symlinks and check hardlinks.
+        for canonical in (CANONICAL_RECEIPT, ROOT / CANONICAL_RECEIPT):
+            if (a.output.resolve() == canonical.resolve()
+                    or (a.output.exists() and canonical.exists() and a.output.samefile(canonical))):
+                p.error("--limit requires an --output separate from the canonical receipt")
+    output = a.output if a.output is not None else CANONICAL_RECEIPT
     result = audit_all(json.loads(a.audit.read_text()), json.loads(a.manifest.read_text()),
                        json.loads(a.mpas.read_text()), json.loads(a.sectors.read_text())["sectors"],
                        json.loads(a.holds.read_text()), a.bag_cache, a.video_cache,
                        hazard_catalog=json.loads(a.hazards.read_text()), report_cache=a.report_cache,
                        limit=a.limit)
-    a.output.parent.mkdir(parents=True, exist_ok=True)
-    a.output.write_text(json.dumps(result, indent=2) + "\n")
-    print(result["candidate_pairs_with_actual_rocky_camera_positions"], "pairs;",
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(result, indent=2) + "\n")
+    print(result["scope"], result["attempted_pairs"], "of",
+          result["candidate_pairs_with_actual_rocky_camera_positions"], "pairs attempted;",
           result["summary"])
 
 

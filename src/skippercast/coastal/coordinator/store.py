@@ -641,7 +641,7 @@ class Store:
             if existing and existing["result_sha"] == result_ref["sha256"]:
                 if preliminary.get("sourcefree_contract"):
                     from .source_free import verify_completion
-                    verify_completion(self,preliminary,token,result)
+                    verify_completion(self,preliminary,token,result_ref,result)
                 return False
             self._lease(job_id, token)
             job = json.loads(existing["record_json"])
@@ -650,10 +650,14 @@ class Store:
                     raise ValueError("result identity mismatch: "+field)
             if job.get("sourcefree_contract") and result.get("state")=="done":
                 if next_job or result.get("next_job"):raise ValueError("source-free lane forbids automatic successors")
-                from .source_free import commit,verify_completion
-                verify_completion(self,job,token,result)
-                if settle_budget:self.budget_for(json.loads(self.db.execute("SELECT record_json FROM segments WHERE segment_id=?",(job["segment_id"],)).fetchone()[0])["region"]).charge(token,bytes=0,requests=0)
-                return commit(self,job,token,result_ref,result)
+                from .source_free import commit
+
+                def settle():
+                    if settle_budget:
+                        record=self.db.execute("SELECT record_json FROM segments WHERE segment_id=?",(job["segment_id"],)).fetchone()[0]
+                        self.budget_for(json.loads(record)["region"]).charge(token,bytes=0,requests=0)
+
+                return commit(self,job,token,result_ref,result,settle=settle)
             if job.get("execution_contract"):
                 if next_job:raise ValueError("authenticated lane forbids automatic successors")
                 return self._finish_authenticated(job,token,result_ref,result,existing)

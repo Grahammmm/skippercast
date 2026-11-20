@@ -16,6 +16,8 @@ import time
 import unittest
 from pathlib import Path
 
+import pytest
+
 from skippercast.coastal.handoff.common import digest
 from skippercast.coastal.output_writer import (
     COMPACT_V3_PROFILE, MAX_FILES, ManagedOutputs, declaration, register_disjoint)
@@ -161,9 +163,9 @@ class LedgerReadCost(unittest.TestCase):
 
 
 class PreservedAttempt5Ledger(unittest.TestCase):
+    @pytest.mark.host_archive
     def test_attempt5_ledger_is_accepted_unchanged(self):
-        """Read-only. Off the maintainer machine (CI) the ledger is absent and this is a no-op,
-        like the other preserved-ledger checks (strict CI skips are allow-listed only)."""
+        """Read-only check of the preserved ledger, if available on the maintainer machine."""
         if not ATTEMPT5_LEDGER.is_file():
             return
         before = ATTEMPT5_LEDGER.stat()

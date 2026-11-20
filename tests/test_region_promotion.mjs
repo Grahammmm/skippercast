@@ -116,6 +116,36 @@ test('one healthy critical source tolerates a partial outage; whole-kind aged ou
   assert.equal(row(await s.run(),'feeds').pass,false);
 });
 
+test('status-ok backups are age-limited; a healthy primary turns a whole-kind loss into a partial outage', async t => {
+  const checked = NOW - 3600000;
+  const ago = hours => new Date(checked - hours * 3600000).toISOString();
+  const backup = data => ({kind:'observation', status:'ok', fallback_for:'synthetic-primary', checked_at:ago(0), ...data});
+  // A fresh retrieval cannot renew the sample. The same feed-built clock and limits
+  // apply as in the daily freshness monitor, not the time the preflight happens to run.
+  const old = backup({data:{sample_at:ago(13)}, data_retrieved_at:ISO});
+  for (const [name, substitute, primary, daily, pass, detail] of [
+    ['old sample, recent retrieval', old, false, false, false, /degraded-observation-sources/],
+    ['undated', backup({}), false, false, false, /degraded-observation-sources/],
+    ['at the live limit at check time', backup({data:{sample_at:ago(12)}}), false, false, true, /backup observation within limit/],
+    ['old backup, healthy primary', old, true, false, true, /partial outage: observation/],
+    ['ordinary healthy primary', null, true, false, true, null],
+    ['same sample within the daily limit', old, false, true, true, /backup observation within limit/],
+    ['past the daily limit', backup({data:{sample_at:ago(49)}}), false, true, false, /degraded-observation-sources/],
+  ]) {
+    await t.test(name, async () => {
+      const s = site();
+      const sources = s.files[daily ? dailyPath(s.id) : livePath(s.id)].sources;
+      if (!primary) delete sources.observation;
+      if (substitute) sources.backup = substitute;
+      const result = await s.run(), feeds = row(result, 'feeds');
+      assert.equal(feeds.pass, pass, JSON.stringify(feeds));
+      assert.equal(result.pass, pass, JSON.stringify(result));
+      if (detail) assert.match(feeds.detail, detail);
+      else assert.doesNotMatch(feeds.detail, /partial outage|backup/);
+    });
+  }
+});
+
 test('tide station, source health, coverage, predictions and units must be usable now', async () => {
   for (const mutate of [
     s => { delete s.region.stations.tide; }, s => { s.daily.sources.tides.data.station='9999999'; },

@@ -61,7 +61,7 @@
       "label": "App page (brief, map) scripts (first load)",
       "kind": "first_load_js",
       "entry": "app.html",
-      "max_bytes": 1111000,
+      "max_bytes": 1116000,
       "history": [
         {
           "max_bytes": 1160000,
@@ -90,6 +90,18 @@
         {
           "max_bytes": 1111000,
           "reason": "Budget drift, raised by the budget-drift bot (SC-CI-2 first run on main 114079ae1; earlier hand-set ceilings left 0.1% to 2.3% margins). App page (brief, map) scripts (first load): main measures 1,057,712 bytes, 99.9% of the 1,059,000 byte budget; ceiling = ceil(1,057,712 x 1.05 / 1,000) x 1,000 = 1,111,000 (5.0% headroom)."
+        },
+        {
+          "max_bytes": 1113000,
+          "reason": "Raised 1,111,000 to 1,113,000 (MB-11, PR #2928). The Chart relief and survey-detail legend this PR adds (web/app/Legend.tsx, web/map/bottom-relief.ts, depth-contours.ts, palette.ts and the English strings it reads) takes the app first-load scripts to 1,111,819 bytes on this branch merged with main f47fb6bb0 (main alone measures 1,107,319), 819 bytes over the 1,111,000 budget; the budget moves up 2,000 bytes (0.1% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 1115000,
+          "reason": "Raised 1,113,000 to 1,115,000 (MAIN-RED-SKIPPERCAST, t_ca5bf6ac). Main e24cebb1c builds the app first-load scripts at 1,113,187 bytes (assets/main 329.1 KB, strings.en.generated 200.2 KB, Brief 92.5 KB and others), 187 bytes over the 1,113,000 budget after the concurrent merges of #2966, #2967, #2970, #2971 and #2975 (last green main b0560360a), each of which passed CI on its own head. This change touches no app code; the budget moves up 2,000 bytes (0.2% headroom over that build), no more."
+        },
+        {
+          "max_bytes": 1116000,
+          "reason": "FE20 marks availability: the app first-load scripts measure 1,115,146 bytes on the FE20 branch merged with main 5c51ba4e2, 146 bytes over the previous limit. The new limit retains 854 bytes of headroom. Other budgets are unchanged."
         }
       ]
     },
@@ -97,7 +109,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 83000,
+      "max_bytes": 84000,
       "history": [
         {
           "max_bytes": 71000,
@@ -146,6 +158,10 @@
         {
           "max_bytes": 83000,
           "reason": "Budget drift, raised by the budget-drift bot (SC-CI-2 first run on main 114079ae1; earlier hand-set ceilings left 0.1% to 2.3% margins). App page (brief, map) styles (first load): main measures 78,662 bytes, 99.6% of the 79,000 byte budget; ceiling = ceil(78,662 x 1.05 / 1,000) x 1,000 = 83,000 (5.5% headroom)."
+        },
+        {
+          "max_bytes": 84000,
+          "reason": "Raised 83,000 to 84,000 (MB-11, PR #2928). The legend rules this PR adds in web/app/app.css (depth ramp, survey-detail chips, estimated and set-aware states) and the legend colour tokens in web/tokens.css take the app first-load styles to 83,158 bytes on this branch merged with main f47fb6bb0 (main alone measures about 78.5 KB), 158 bytes over the 83,000 budget; the budget moves up 1,000 bytes (1.0% headroom over that build), no more."
         }
       ]
     },

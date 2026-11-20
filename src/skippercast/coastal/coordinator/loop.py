@@ -16,6 +16,23 @@ from ..client_policy import heartbeat_detail
 from .store import FencedLease, Store, process_identity
 
 
+# Reviewed first-party imports outside the coastal and seafloor trees, including
+# package initializers. Keep this list aligned with the worker import closure;
+# do not walk unrelated platform/util modules or the artifact root.
+_SHARED_RUNTIME_MODULES = (
+    "skippercast",
+    "skippercast.http",
+    "skippercast.paths",
+    "skippercast.platform",
+    "skippercast.platform.bottom_targets",
+    "skippercast.platform.contracts",
+    "skippercast.util",
+    "skippercast.util.hashing",
+    "skippercast.util.time",
+    "skippercast.util.units",
+)
+
+
 def implementation_hashes(root):
     # Artifact roots may be outside a checkout. Identity comes from the code
     # actually imported by this Python environment, including installed wheels.
@@ -31,6 +48,11 @@ def implementation_hashes(root):
                             and "__pycache__" not in path.parts)
     if not evidence:
         raise ValueError("current executable package identity unavailable")
+    for name in _SHARED_RUNTIME_MODULES:
+        module_file = importlib.import_module(name).__file__
+        if not module_file:
+            raise ValueError(f"current executable module identity unavailable: {name}")
+        evidence.append((name, hashlib.sha256(Path(module_file).read_bytes()).hexdigest()))
     versions = {}
     for name in ("rasterio", "pyproj", "shapely", "h5py", "numpy", "jsonschema"):
         try:

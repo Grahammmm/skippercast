@@ -26,7 +26,7 @@ import {chosenCurrent} from '../map/frames.ts';
 import {COASTLINE_SOURCE} from '../map/layers.ts';
 import {readPalette, type Palette} from '../map/palette.ts';
 import {terrainHour} from '../map/stage.ts';
-import {BASEMAP_ATTRIBUTION, basemapArchive, basemapStyle} from '../map/style.ts';
+import {basemapArchive, basemapStyle} from '../map/style.ts';
 import {language, t} from './i18n.ts';
 
 /** The order the landing looks for a fresh frame in: the forecast (the app's proposed boat default, #482), then observed HF radar. */
@@ -160,14 +160,9 @@ export function NightMap({page, region, onState, load = loadLibrary, fetchFn = (
   return <div class="landing-night" ref={host} data-state={nightState.value} data-currents={currentsState.value.drawn ? 'drawn' : undefined} aria-hidden="true" />;
 }
 
-/** The footer's credit for what the night map draws, once it has drawn: the basemap, and the drawn currents' basis (source, age and what the motion means). */
-export function NightCredit() {
+/** The footer's note on what the night map draws, once it has drawn: the drawn currents' basis (age and what the motion means). No source credit: the Sources page lists them (MAP-SOURCES-PAGE-1). */
+export function NightNote() {
   if (nightState.value !== 'ready') return null;
   const currents = currentsState.value;
-  return (
-    <>
-      <p class="landing-credit" data-credit="basemap">{t('landing.credit.basemap', language.value, {attribution: BASEMAP_ATTRIBUTION})}</p>
-      {currents.drawn ? <p class="landing-credit" data-credit="currents">{t('landing.credit.currents', language.value, {basis: currents.basis})}</p> : null}
-    </>
-  );
+  return currents.drawn ? <p class="landing-credit" data-credit="currents">{t('landing.credit.currents', language.value, {basis: currents.basis})}</p> : null;
 }

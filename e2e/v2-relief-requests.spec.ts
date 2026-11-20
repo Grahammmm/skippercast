@@ -47,7 +47,9 @@ test('MB-12: a theme toggle with the layer off triggers no resource request', as
   await page.locator('.app-account-trigger').click();
   const theme = page.getByRole('region', {name: 'Map theme'});
   await expect(theme).toBeVisible();
-  await page.waitForLoadState('networkidle');
+  // Opening the account menu loads boat presets even after the theme controls are visible.
+  // Wait for a rendered preset so those setup requests are not counted as theme requests.
+  await expect(page.locator('.app-account-panel:visible button[data-preset]').first()).toBeVisible();
   const before = all.length;
   for (const choice of ['Light', 'Dark', 'Light']) {
     const button = theme.getByRole('button', {name: choice, exact: true});

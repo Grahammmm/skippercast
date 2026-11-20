@@ -546,16 +546,5 @@ class CommandTests(unittest.TestCase):
         self.assertIsInstance(bf.backfill_store(root), AisStore)
 
 
-class WorkflowTests(unittest.TestCase):
-    def test_fleet_ais_takes_a_backfill_month(self):
-        text = (ROOT / ".github" / "workflows" / "fleet-ais.yml").read_text()
-        self.assertIn("      backfill_month:\n", text)
-        self.assertIn("BACKFILL_MONTH: ${{ inputs.backfill_month }}", text)
-        self.assertIn('python -m skippercast.fleet.ais backfill --region "$REGION" --month "$BACKFILL_MONTH"', text)
-        self.assertIn("timeout-minutes: ${{ inputs.backfill_month && 150 || 25 }}", text)
-        self.assertEqual(text.count("inputs.backfill_month"), 2, "the input reaches the script through the environment")
-        self.assertNotRegex(text, r"(contents|actions|issues|pull-requests): write")
-
-
 if __name__ == "__main__":
     unittest.main()

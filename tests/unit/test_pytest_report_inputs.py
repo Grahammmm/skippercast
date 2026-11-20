@@ -42,6 +42,8 @@ class PytestReportInputsTest(unittest.TestCase):
 
     def run_main(self, *argv):
         out, err = io.StringIO(), io.StringIO()
+        if '--ci-runs' in argv:
+            argv += ('--required-job', 'check')
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = pytest_report.main([str(arg) for arg in argv])
         return code, out.getvalue(), err.getvalue()
@@ -153,18 +155,18 @@ class PytestReportInputsTest(unittest.TestCase):
                         {'startedAt': RUN['updatedAt'], 'completedAt': RUN['updatedAt']},
                         {'startedAt': '2026-11-01T02:00:00-08:00', 'completedAt': '2026-11-01T02:05:00-08:00'}):
             with self.subTest(changes=changes):
-                text, ok = pytest_report.ci_budget([self.run_with_job(**changes)])
+                text, ok = pytest_report.ci_budget([self.run_with_job(**changes)], {'check'})
                 self.assertTrue(ok)
                 self.assertIn('Feature admission may continue.', text)
-        _, ok = pytest_report.ci_budget([self.run_with_job(completedAt='2026-11-01T02:05:01-08:00')])
+        _, ok = pytest_report.ci_budget([self.run_with_job(completedAt='2026-11-01T02:05:01-08:00')], {'check'})
         self.assertFalse(ok)
 
     def test_invalid_run_cannot_be_rescued_or_pollute_totals(self):
         bad = self.run_with_job(startedAt='2026-10-31T10:00:00Z', completedAt='2026-10-31T10:30:00Z') | {'databaseId': 9}
-        good_only, _ = pytest_report.ci_budget([RUN])
+        good_only, _ = pytest_report.ci_budget([RUN], {'check'})
         for runs in ([RUN, bad], [bad, RUN]):
             with self.subTest(first=runs[0]['databaseId']):
-                text, ok = pytest_report.ci_budget(runs)
+                text, ok = pytest_report.ci_budget(runs, {'check'})
                 self.assertFalse(ok)
                 self.assertIn('| 9 | — | unknown | incomplete receipt |', text)
                 self.assertIn('| 1/check | — | 3.83 | success |', text)
@@ -175,7 +177,7 @@ class PytestReportInputsTest(unittest.TestCase):
     def test_skipped_job_without_timestamps_stays_zero_minutes(self):
         run = copy.deepcopy(RUN)
         run['jobs'].append({'name': 'deploy', 'conclusion': 'skipped'})
-        text, ok = pytest_report.ci_budget([run])
+        text, ok = pytest_report.ci_budget([run], {'check'})
         self.assertTrue(ok)
         self.assertIn('| 1/deploy | — | 0.00 | skipped |', text)
 

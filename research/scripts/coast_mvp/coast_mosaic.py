@@ -376,6 +376,28 @@ def feather_raster(depth_path, codes_path, target_path, *, feather_m=FEATHER_M, 
     return pairs, changed, largest
 
 
+def estimate_bytes(sources, west, south, east, north, cells):
+    """Estimate scratch bytes from source headers and the snapped 10 m grid."""
+    block_m = 256 * 10
+    cols = math.ceil((east - west) / block_m)
+    rows = math.ceil((north - south) / block_m)
+    # Final/intermediate COGs and overviews, plus an allowance for every tile
+    # in each full-extent warped TIFF, even if the source misses the grid.
+    estimated = 40 * cells + 4096 * cols * rows * len(sources)
+    for source in sources:
+        with rasterio.open(source['path']) as grid:
+            x0, y0, x1, y1 = transform_bounds(grid.crs, 'EPSG:3310', *grid.bounds, densify_pts=21)
+        x0, y0 = max(x0, west), max(y0, south)
+        x1, y1 = min(x1, east), min(y1, north)
+        if x0 >= x1 or y0 >= y1:
+            continue
+        # Round outward from the grid origin so partial edge blocks are charged.
+        touched_cols = math.ceil((x1 - west) / block_m) - math.floor((x0 - west) / block_m)
+        touched_rows = math.ceil((north - y0) / block_m) - math.floor((north - y1) / block_m)
+        estimated += 4 * 256**2 * min(cols, touched_cols) * min(rows, touched_rows)
+    return estimated
+
+
 def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_000_000, feather_m=FEATHER_M):
     """feather_m=0 turns the seam feather off (hard finest-first boundaries, the pre-MB-02 output)."""
     if isinstance(feather_m, bool) or not isinstance(feather_m, (int, float)) or not math.isfinite(feather_m) \
@@ -404,9 +426,10 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
     while not ancestor.exists():
         ancestor = ancestor.parent
     sources = load_sources(sources_file)
+    estimated_bytes = estimate_bytes(sources, west, south, east, north, cells)
     support_sources = sum(row.get('support_path') is not None for row in sources)
-    # Materialized source grids + final/intermediate COGs and overviews.
-    estimated_bytes = cells * (40 + 4 * len(sources) + (3 + support_sources if support_sources else 0))
+    if support_sources:
+        estimated_bytes += cells * (3 + support_sources)
     if shutil.disk_usage(ancestor).free - estimated_bytes < reserve_gib * 1024**3:
         raise ValueError('Free-space reserve would be crossed')
     output.mkdir(parents=True)

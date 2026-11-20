@@ -34,8 +34,8 @@ const dock = (nowISO, query, tz = LA) => {
 test('fall-back: the two 1 am selections read PDT then PST', () => {
   const a = dock('2026-10-31T19:00:00Z', '&hour=2026-11-01T08:00Z');
   const b = dock('2026-10-31T19:00:00Z', '&hour=2026-11-01T09:00Z');
-  assert.deepEqual([a.readout, a.value, a.zone], ['Tomorrow · 1 am', '1', 'PDT']);
-  assert.deepEqual([b.readout, b.value, b.zone], ['Tomorrow · 1 am', '2', 'PST']);
+  assert.deepEqual([a.readout, a.value, a.zone], ['Tomorrow · 1 am PDT', '1', 'PDT']);
+  assert.deepEqual([b.readout, b.value, b.zone], ['Tomorrow · 1 am PST', '2', 'PST']);
 });
 
 test('spring-forward: 1 am PST then 3 am PDT, no invented 2 am', () => {

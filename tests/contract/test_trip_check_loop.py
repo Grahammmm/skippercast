@@ -317,13 +317,15 @@ class RulesAlarmWorkflowTests(unittest.TestCase):
         }
     '''
 
-    def run_rules(self, **values):
+    def run_rules(self, expect_exit=0, **values):
         workflow = (ROOT / '.github/workflows/feed-freshness.yml').read_text()
         step = workflow.split('      - name: Probe the rules card and alert once when it is blank\n', 1)[1]
         defaults = dict(FAIL_REGION='', PROBE_EXIT='3', EXISTING='0', LIST_FAIL='0')
         defaults.update(values)
         result, log, summary = run_shell(run_block(step), self.MOCKS, **defaults)
-        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.returncode, expect_exit, result.stderr)
+        # A failed issue call is an undelivered alarm; only that fails the run (SCA-310).
+        self.assertEqual('::error title=Fishing rules alarm::' in result.stdout, bool(expect_exit))
         self.assertEqual([line.split('|')[1] for line in log.splitlines() if line.startswith('probe|')],
                          list(self.REGIONS))
         self.assertTrue(all(region in summary for region in self.REGIONS))
@@ -351,7 +353,7 @@ class RulesAlarmWorkflowTests(unittest.TestCase):
         self.assertNotIn('gh|issue edit', log)
 
     def test_issue_list_failure_cannot_create_a_duplicate(self):
-        log = self.run_rules(FAIL_REGION=self.REGIONS[0], LIST_FAIL='1')
+        log = self.run_rules(expect_exit=1, FAIL_REGION=self.REGIONS[0], LIST_FAIL='1')
         self.assertNotIn('gh|issue create', log)
         self.assertNotIn('gh|issue close', log)
 
@@ -366,8 +368,29 @@ class TokenScopeTests(unittest.TestCase):
             self.assertNotIn('CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}', text, name)
 
     def test_deploy_keeps_the_full_token(self):
+        # Worker deploy/rollback keep their original credential. Giving STAGE a
+        # broad fallback or moving the R2 token to job env would widen exposure.
+        import yaml
+
         text = (ROOT / '.github' / 'workflows' / 'deploy-cloudflare.yml').read_text()
-        self.assertNotIn('R2_PUBLISH_TOKEN', text)
+        workflow = yaml.safe_load(text)
+        jobs = workflow['jobs']
+        broad, narrow = 'CLOUDFLARE_API_TOKEN', 'R2_PUBLISH_TOKEN'
+        for name in ('deploy', 'rollback'):
+            job = jobs[name]
+            self.assertEqual(job['env'][broad], '${{ secrets.CLOUDFLARE_API_TOKEN }}', name)
+            self.assertNotIn(narrow, repr(job), name)
+
+        stage = jobs['stage_relief']
+        final = stage['steps'][-1]
+        self.assertEqual(final['run'], 'python3 -I .stage-controller/scripts/relief/stage_release.py')
+        self.assertEqual(final['env'].get(narrow), '${{ secrets.R2_PUBLISH_TOKEN }}')
+        # Only the final env key and its exact secret reference may mention it.
+        # Check source and parsed uses (including inherited YAML aliases).
+        self.assertEqual(text.count(narrow), 2)
+        self.assertEqual(repr(workflow).count(narrow), 2)
+        self.assertNotIn(broad, repr(stage))
+        self.assertNotIn(broad, repr(workflow.get('env', {})))
 
 
 if __name__ == '__main__':

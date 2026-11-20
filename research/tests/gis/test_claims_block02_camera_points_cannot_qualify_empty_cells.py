@@ -5,7 +5,8 @@ import unittest
 import numpy as np
 from rasterio.transform import from_origin
 
-from research.scripts.audit_bss02_video_grid_overlap import near_valid_pixel, inspect
+from research.scripts.audit_bss02_video_grid_overlap import (
+    OFF_KEY, UNKNOWN_KEY, inspect, legacy_view, near_valid_pixel, receipt_matches_baseline)
 from research.lib.receipts import RECEIPTS
 from research.lib.paths import ROOT
 
@@ -65,7 +66,7 @@ class VideoGridOverlapTest(unittest.TestCase):
         video = json.loads((ROOT / 'research/catalog/usgs-video-cruises.json').read_text())
         actual = inspect(bss, video, bss_cache, video_cache)
         expected = json.loads((RECEIPTS / 'bss02-video-grid-overlap.json').read_text())
-        self.assertEqual(actual, expected)
+        self.assertEqual(legacy_view(actual), expected)
 
     def test_adjacent_block_reproduces_when_cached(self):
         bss_cache = ROOT / 'var/review/csumb-bss-cache'
@@ -78,7 +79,36 @@ class VideoGridOverlapTest(unittest.TestCase):
         video = json.loads((ROOT / 'research/catalog/usgs-video-cruises.json').read_text())
         actual = inspect(bss, video, bss_cache, video_cache)
         expected = json.loads((RECEIPTS / 'bss03-video-grid-overlap.json').read_text())
-        self.assertEqual(actual, expected)
+        self.assertEqual(legacy_view(actual), expected)
+
+    # Contract: --verify against a reviewed receipt written before the unknown
+    # class existed still works, and still fails on any changed aggregate.
+    # Bug caught: comparing the split receipt to a legacy one with plain
+    # equality always fails on the new key, or a loose fold hides a real change.
+    def test_legacy_baseline_verifies_split_receipt_without_rewriting_it(self):
+        baseline = json.loads((RECEIPTS / 'bss03-video-grid-overlap.json').read_text())
+        self.assertNotIn(UNKNOWN_KEY, baseline)
+        off = baseline[OFF_KEY]
+        for unknown in (0, 3, off):
+            split = {**baseline, OFF_KEY: off - unknown, UNKNOWN_KEY: unknown}
+            self.assertTrue(receipt_matches_baseline(split, baseline))
+        self.assertEqual(baseline[OFF_KEY], 8)  # the reviewed aggregate is untouched
+
+    def test_legacy_baseline_still_rejects_changed_aggregates(self):
+        baseline = json.loads((RECEIPTS / 'bss03-video-grid-overlap.json').read_text())
+        split = {**baseline, OFF_KEY: 5, UNKNOWN_KEY: 3}
+        for key, value in (
+                (OFF_KEY, 6),  # off + unknown no longer equals the reviewed total
+                (UNKNOWN_KEY, 2),
+                ('rock_boulder_cobble_windows_on_derived_rough_class', 4),
+                ('camera_records_within_100m_of_valid_depth_pixel', 64)):
+            with self.subTest(key=key):
+                self.assertFalse(receipt_matches_baseline({**split, key: value}, baseline))
+
+    def test_baseline_with_unknown_key_is_compared_exactly(self):
+        baseline = {'a': 1, OFF_KEY: 5, UNKNOWN_KEY: 3}
+        self.assertTrue(receipt_matches_baseline(dict(baseline), baseline))
+        self.assertFalse(receipt_matches_baseline({**baseline, OFF_KEY: 6, UNKNOWN_KEY: 2}, baseline))
 
 
 if __name__ == '__main__':

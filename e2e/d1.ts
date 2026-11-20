@@ -25,10 +25,16 @@ async function endpoint(): Promise<{url: string; token: string}> {
 /** Run SQL (one or more statements, applied as one batch) against the local D1 the dev server uses; the rows of the last statement. */
 export async function d1(sql: string): Promise<Record<string, unknown>[]> {
   const {url, token} = await endpoint();
-  const res = await fetch(url, {method: 'POST', headers: {authorization: `Bearer ${token}`, 'content-type': 'application/json'}, body: JSON.stringify({sql})});
-  const text = await res.text();
-  let body: {results?: Record<string, unknown>[]; error?: string};
-  try { body = JSON.parse(text); } catch { throw Error(`d1 failed (${res.status}): ${text.slice(0, 300)}\nSQL: ${sql.slice(0, 500)}`); }
-  if (!res.ok) throw Error(`d1 failed (${res.status}): ${body.error ?? 'no reason'}\nSQL: ${sql.slice(0, 500)}`);
-  return body.results ?? [];
+  let status: number | undefined;
+  try {
+    const res = await fetch(url, {method: 'POST', headers: {authorization: `Bearer ${token}`, 'content-type': 'application/json'}, body: JSON.stringify({sql})});
+    status = res.status;
+    if (res.ok) {
+      const body: {results?: Record<string, unknown>[]} = await res.json();
+      return body.results ?? [];
+    }
+  } catch {
+    // Transport and parser errors can contain request or response data, too.
+  }
+  throw Error(`D1 query failed (${status === undefined ? 'no HTTP status' : `HTTP ${status}`})`);
 }

@@ -28,19 +28,28 @@ def _block(text, key, indent):
     return "\n".join(children)
 
 
+# The four browser shards are separate jobs (not a matrix) so a job-level `if` can skip them
+# while each still reports its own `e2e (N)` context.
+SHARD_JOB_IDS = ("e2e", "e2e-2", "e2e-3", "e2e-4")
+
+
 class RequiredChecksTests(unittest.TestCase):
-    def test_saved_contexts_match_browser_matrix_and_keep_receipted_checks(self):
+    def test_saved_contexts_match_browser_shard_jobs_and_keep_receipted_checks(self):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-        browser = _block(_block(workflow, "jobs", 0), "e2e", 2)
-        # GitHub names an unnamed, single-axis matrix job <job-id> (<value>).
-        self.assertNotRegex(browser, r"(?m)^    (?:name|'name'|\"name\") *:", "Review changed e2e job names")
-        matrix = _block(_block(browser, "strategy", 4), "matrix", 6)
-        shards = re.fullmatch(r"        shard: *(\[[^\n]*\]) *(?:#.*)?", matrix)
-        if shards is None:
-            self.fail("Review the e2e context names if the shard matrix changes shape")
-        shard_numbers = json.loads(shards[1])
-        self.assertTrue(shard_numbers and all(type(n) is int and n > 0 for n in shard_numbers))
-        self.assertEqual(len(shard_numbers), len(set(shard_numbers)), "Duplicate e2e shard")
+        jobs = _block(workflow, "jobs", 0)
+        shard_numbers = []
+        for job_id in SHARD_JOB_IDS:
+            job = _block(jobs, job_id, 2)
+            self.assertNotIn("matrix:", job, f"{job_id} must stay one explicit shard job")
+            name = re.search(r"(?m)^    name: *(.+?) *$", job)
+            shard = re.search(r"(?m)^      SHARD: *'(\d+)' *$", job)
+            if name is None or shard is None:
+                self.fail(f"{job_id} needs an explicit name and its SHARD env for its required context")
+            self.assertEqual(name[1], f"e2e ({shard[1]})", f"{job_id} context must match its shard")
+            shard_numbers.append(int(shard[1]))
+        self.assertEqual(shard_numbers, list(range(1, len(SHARD_JOB_IDS) + 1)), "Shards must be 1..N in order")
+        # Every shard shares one step list, whose divisor must equal the shard count.
+        self.assertIn(f'pnpm e2e --shard="$SHARD/{len(SHARD_JOB_IDS)}"', _block(jobs, "e2e", 2))
 
         names = [*NON_BROWSER_CHECKS, *(f"e2e ({n})" for n in shard_numbers)]
         expected = [{"context": name, "app_id": ACTIONS_APP_ID} for name in names]

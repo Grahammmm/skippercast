@@ -41,8 +41,8 @@ function database() {
 }
 const pairs = sql => sql.prepare('SELECT trip_id,report_kind,report_ref,match,confidence,created_at FROM fleet_trip_reports ORDER BY report_kind,report_ref').all().map(r => ({...r}));
 const expected = id => ({trip_id: 'trip-example', report_kind: 'landing', report_ref: id, match: 'alias-port-date', confidence: 0.8, created_at: now});
-async function sweep(db, rows) {
-  await db.batch([advisorPrune(db, scope), ...landingPrune(db, 'CA', scope, rows), advisorPairs(db, scope, now), ...landingPairs(db, 'CA', scope, rows, now)]);
+async function sweep(db, {rows, conflictedIds}) {
+  await db.batch([advisorPrune(db, scope), ...landingPrune(db, 'CA', scope, rows, conflictedIds), advisorPairs(db, scope, now), ...landingPairs(db, 'CA', scope, rows, now)]);
 }
 
 test('primary regression', async t => {
@@ -51,7 +51,7 @@ test('primary regression', async t => {
   // Preserve it as observed data BEFORE the semantic assertion, not a harness pass.
   const {sql, db} = database();
   try {
-    try { await sweep(db, result.rows); }
+    try { await sweep(db, result); }
     catch (error) { t.diagnostic(`observed product exception: ${error.code ?? ''}: ${error.message}`); }
     assert.deepEqual(result.rows, [], 'conflicting normalized names must withhold this report ID');
     assert.deepEqual(pairs(sql), [], 'withheld report creates no landing pair');
@@ -60,12 +60,14 @@ test('primary regression', async t => {
 
 test('healthy control', async () => {
   const result = await collect([healthy, {...healthy, boat: 'ALPHA EXAMPLE'}], [], ['morro-bay']);
-  assert.deepEqual(result, {rows: [row(healthy)], feeds: 1, unavailable: 0});
+  assert.deepEqual(result.rows, [row(healthy)]);
+  assert.equal(result.feeds, 1);
+  assert.equal(result.unavailable, 0);
   const {sql, db} = database();
   try {
-    await sweep(db, result.rows);
+    await sweep(db, result);
     assert.deepEqual(pairs(sql), [expected(healthy.id)]);
-    await sweep(db, result.rows);
+    await sweep(db, result);
     assert.deepEqual(pairs(sql), [expected(healthy.id)], 'repeat remains one pair');
   } finally { sql.close(); }
 });
@@ -87,7 +89,7 @@ if (process.env.SP1302_BASELINE !== '1') {
       }
       for (const [left, right] of [[[a,a],[other]], [[other],[a,a]]]) {
         const result = await collect(left, right);
-        assert.deepEqual(result, {rows: [], feeds: 2, unavailable: 0});
+        assert.deepEqual(result, {rows: [], conflictedIds: [a.id], feeds: 2, unavailable: 0});
       }
     }
     assert.deepEqual((await collect([a,a])).rows, [row(a)], 'conflict state is per call');
@@ -108,21 +110,21 @@ if (process.env.SP1302_BASELINE !== '1') {
         [row(a), {...row(south), port: 'santa-barbara'}]);
     }
     assert.deepEqual(await collect([a,b,a,healthy], [south]), {
-      rows: [row(healthy), {...row(south), port: 'santa-barbara'}], feeds: 2, unavailable: 0,
+      rows: [row(healthy), {...row(south), port: 'santa-barbara'}], conflictedIds: [a.id], feeds: 2, unavailable: 0,
     });
     assert.deepEqual(await collect(new Error('synthetic feed unavailable'), [south]), {
-      rows: [{...row(south), port: 'santa-barbara'}], feeds: 2, unavailable: 1,
+      rows: [{...row(south), port: 'santa-barbara'}], conflictedIds: [], feeds: 2, unavailable: 1,
     });
     pairingDeps.readFeed = async () => ({notReports: []});
-    assert.deepEqual(await landingRows(['morro-bay'], from), {rows: [], feeds: 1, unavailable: 1});
-    assert.deepEqual(await landingRows([], from), {rows: [], feeds: 0, unavailable: 0});
+    assert.deepEqual(await landingRows(['morro-bay'], from), {rows: [], conflictedIds: [], feeds: 1, unavailable: 1});
+    assert.deepEqual(await landingRows([], from), {rows: [], conflictedIds: [], feeds: 0, unavailable: 0});
   });
 
-  test('A3 D1 conflict omission preserves stored pairs and healthy ranking and advisor attribution', async () => {
+  test('A3 D1 retires conflicted pairs and preserves healthy ranking and advisor attribution', async () => {
     const {sql, db, insert} = database();
     try {
       insert.run('trip-short-example', '2026-10-01T08:00:00.000Z', 30, now);
-      await sweep(db, (await collect([a])).rows);
+      await sweep(db, await collect([a]));
       assert.deepEqual(pairs(sql), [expected(a.id)]);
       // Insert a linked published advisor report using the same migrated schema.
       sql.prepare(`INSERT INTO advisor_boats(id,slug,name,port,region,status,created_at,updated_at,fleet_vessel_id)
@@ -130,24 +132,24 @@ if (process.env.SP1302_BASELINE !== '1') {
       sql.prepare(`INSERT INTO advisor_reports(id,boat_id,region,port,report_date,counts_json,source,status,created_at,updated_at)
         VALUES('advisor-example','boat-example','morro-bay','morro-bay','2026-10-01','{}','sms','published',?,?)`).run(now, now);
       const freshConflict = {...a, id: 'new-conflict-example'};
-      await sweep(db, (await collect([a,b,a,freshConflict,{...freshConflict, boat: b.boat},healthy])).rows);
+      await sweep(db, await collect([a,b,a,freshConflict,{...freshConflict, boat: b.boat},healthy]));
       assert.deepEqual(pairs(sql), [
         {...expected('advisor-example'), report_kind: 'advisor', match: 'boat-date', confidence: 0.9},
-        expected(a.id), expected(healthy.id),
-      ], 'old conflicted pair remains; new conflicted ID omitted; healthy and advisor pair');
+        expected(healthy.id),
+      ], 'old conflict is pruned; new conflict is withheld; healthy and advisor pair');
       insert.run('trip-earlier-example', '2026-10-01T10:00:00.000Z', 70, now);
-      await sweep(db, (await collect([a,b,healthy])).rows);
+      await sweep(db, await collect([a,b,healthy]));
       assert.deepEqual(pairs(sql), [
         {...expected('advisor-example'), trip_id: 'trip-earlier-example', report_kind: 'advisor', match: 'boat-date', confidence: 0.9},
-        expected(a.id), {...expected(healthy.id), trip_id: 'trip-earlier-example'},
-      ], 'only visible reports rerank, preserving omitted historical attribution');
+        {...expected(healthy.id), trip_id: 'trip-earlier-example'},
+      ], 'healthy reports rerank and conflicts remain withheld');
       const before = pairs(sql);
       const missing = await collect(new Error('synthetic unavailable'), [], ['morro-bay']);
-      assert.deepEqual(missing, {rows: [], feeds: 1, unavailable: 1});
-      await sweep(db, missing.rows);
+      assert.deepEqual(missing, {rows: [], conflictedIds: [], feeds: 1, unavailable: 1});
+      await sweep(db, missing);
       assert.deepEqual(pairs(sql), before, 'unavailable landing reports retain stored pairings');
       sql.prepare("UPDATE advisor_reports SET status='withdrawn' WHERE id='advisor-example'").run();
-      await sweep(db, []);
+      await sweep(db, {rows: [], conflictedIds: []});
       assert.deepEqual(pairs(sql), before.filter(r => r.report_kind === 'landing'));
     } finally { sql.close(); }
   });
