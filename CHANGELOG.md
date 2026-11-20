@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The 3D seabed defaults to the same fixed depth colours as the region’s 2D relief when the region publishes a recognised look. The view-adaptive option is still available, and the default height stays at 2×.
+
 - SC2252-11: open an editable trip alert from the brief's lower-exposure window. Nothing is saved until you press Save.
 - SC-NEXT-09: the coverage and forecast skill pages follow your language choice. Published region and buoy names and forecast scoring are unchanged.
 - MAP-SOURCES-PAGE-1: the map no longer draws source, survey or credit text (attribution control, legend credits, card source lines, landing credits); one small "Sources" link in the map corner opens the Sources page. Measured/estimated/unsurveyed labels and no-data hatching are unchanged.

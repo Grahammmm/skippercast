@@ -105,15 +105,21 @@ class _Archive:
         header = self.read(0, HEADER_SIZE)
         if header[:8] != b'PMTiles\x03':
             raise DigestError('expected a PMTiles v3 archive')
-        root, root_len, _, _, leaves, leaves_len, tiles, tiles_len, addressed = struct.unpack_from('<9Q', header, 8)
+        root, root_len, metadata, metadata_len, leaves, leaves_len, tiles, tiles_len, addressed = struct.unpack_from(
+            '<9Q', header, 8)
         if root < HEADER_SIZE or root + root_len > ROOT_READ_SIZE:
             raise DigestError('PMTiles root directory is outside the app reader’s initial 16 KiB range')
         self.root = (root, root_len)
         self.leaves = (leaves, leaves_len)
         self.tiles = (tiles, tiles_len)
-        for start, length in (self.root, self.leaves, self.tiles):
-            if length and (start < HEADER_SIZE or start + length > self.size):
+        sections = (self.root, (metadata, metadata_len), self.leaves, self.tiles)
+        previous_end = HEADER_SIZE
+        for start, length in sorted(section for section in sections if section[1]):
+            if start < HEADER_SIZE or start + length > self.size:
                 raise DigestError('PMTiles section is outside the archive')
+            if start < previous_end:
+                raise DigestError('PMTiles sections overlap')
+            previous_end = start + length
         self.directory_compression, self.tile_compression = header[97:99]
         if any(c not in (0, 1, 2) for c in (self.directory_compression, self.tile_compression)):
             raise DigestError('compression not supported by the app’s default PMTiles reader')
