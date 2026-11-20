@@ -257,11 +257,16 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
     from skippercast.platform import depth_contours as dc
     from skippercast.relief import contours, receipts
 
-    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36], 'source_bindings': {'bathymetry': [SOURCE, 'excluded']}}
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36], 'source_bindings': {'bathymetry': ['coarse', 'excluded']}}
     _, source = builder
-    sources = {SOURCE: source, 'excluded': {**source, 'rights': {**source['rights'], 'public_display': 'excluded'}},
-               'unbound': source, 'coarse': source}
-    region['source_bindings']['bathymetry'].append('coarse')
+    source['rights']['license'] = 'public-domain'
+    not_cleared = {k: v for k, v in source['rights'].items() if k != 'owner_public_display'}
+    sources = {SOURCE: {**source, 'review_status': 'candidate', 'publication_allowed': False},
+               'excluded': {**source, 'rights': {**source['rights'], 'public_display': 'excluded'}},
+               'unreviewed': {**source, 'publication_allowed': False, 'rights': not_cleared},
+               'mbari-lineage': {**source, 'provider': 'Monterey Bay Aquarium Research Institute'},
+               'missing-licence': {**source, 'rights': {**source['rights'], 'license': '  '}},
+               'nonpublic': source, 'coarse': {**source, 'rights': not_cleared}}
     monkeypatch.setattr(contours, 'load_region', lambda *_: region)
     monkeypatch.setattr(contours, 'load_catalogs', lambda *_: ({}, sources))
     root = tmp_path / 'repo'
@@ -305,7 +310,9 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
 
     rows = [{**row(SOURCE, native), 'support_path': str(support), 'support_sha256': digest(support)},
             row('coarse', coarse), row('excluded', tmp_path / 'never-open.tif'),
-            row('unbound', tmp_path / 'unbound.tif')]
+            row('unreviewed', tmp_path / 'unreviewed.tif'), row('mbari-lineage', tmp_path / 'mbari.tif'),
+            row('missing-licence', tmp_path / 'unlicensed.tif'),
+            {**row('nonpublic', tmp_path / 'nonpublic.tif'), 'rights_class': 'private'}]
 
     def select(out):
         (out / 'native.json').write_bytes(receipts.canonical(rows[:1]))
@@ -347,15 +354,19 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
     assert cli.main(args) == 0 and path.read_bytes() == first
     receipt = json.loads(first)
     assert receipt['status'] == 'ok' and receipt['attempt'] == 1 and receipts.check(r, 'contours').done
+    # Selection may bind the owner-cleared original, but neither a valid mosaic nor an owner marker
+    # grants clearance to nonpublic, MBARI, excluded or unlicensed rows.
     assert {entry['source_id']: entry['reason'] for entry in receipt['params']['refused_sources']} == {
-        'excluded': 'not cleared for public display', 'unbound': 'not a static region bathymetry binding'}
+        'excluded': 'not cleared for public display', 'unreviewed': 'publication_allowed is false',
+        'mbari-lineage': 'MBARI lineage', 'missing-licence': 'licence mismatch', 'nonpublic': 'not a public selector row'}
     assert receipt['metrics']['mosaic_gap_blocks'] == 12 * 40
     assert all(receipts.check(r, stage, 'public').done for stage in ('tiles', 'zone'))
     assert [row['path'] for row in receipt['outputs']] == [
         'layers/contours/contours-overview.geojson', 'layers/contours/contours.geojson']
     output = r.dir / 'layers/contours/contours.geojson'
     full = json.loads(output.read_bytes())
-    dc.check_contours(full, region, sources)
+    dc.check_selected_contours(full, region, sources, {SOURCE, 'coarse'})
+    assert full['provenance']['sources_omitted'] == []
     assert {s['source_id']: s['sha256'] for s in full['provenance']['sources']} == {
         SOURCE: digest(original), 'coarse': digest(coarse)}
     assert str(tmp_path) not in output.read_text()
