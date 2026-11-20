@@ -13,6 +13,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.dont_write_bytecode = True  # --check must also work in a pristine checkout without writes.
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # sibling layers_fragment when imported as a module
 from skippercast.style import _read_index, _verified_tokens, load_layers
 from layers_fragment import fragment
 
