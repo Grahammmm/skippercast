@@ -51,6 +51,7 @@ from .shoreline import simplify
 from ..util.units import FT_PER_M
 
 SCHEMA_VERSION = 1
+UNSTATED_SURVEY_DATE = "unstated"
 INTERVAL_FT = 30
 # Every INDEX_FT multiple is an index line: drawn heavier and labelled at lower zoom.
 INDEX_FT = 150
@@ -243,6 +244,19 @@ def _survey_date(value):
     return True
 
 
+def selected_survey_date(source):
+    """Read the reviewed catalog date, using the R5b token only when neither field is present."""
+    if 'survey_date' in source:
+        value = source['survey_date']
+    elif 'survey_year' in source:
+        value = str(source['survey_year'])
+    else:
+        return UNSTATED_SURVEY_DATE
+    if not _survey_date(value):
+        raise ValueError('Invalid reviewed survey date or year')
+    return value
+
+
 class _ContoursHeld(ValueError):
     """An explicit publication hold on the region's contour import."""
 
@@ -287,7 +301,7 @@ def omitted_selected_sources(selected, sources, listed):
 
 
 def check_selected_contours(collection, region, sources, selected):
-    """Check R5b contours against the admitted source IDs from the attested selection."""
+    """Check R5b contours against the attested selection; dates may be explicitly unstated."""
     _require_not_held(collection, region)
 
     def selected_bathymetry(ident, source, bound, allowed):
@@ -345,8 +359,9 @@ def _check(collection, region, sources, allowed, *, binding=_bound_bathymetry, s
         reviewed = sources.get(ident) or {}
         if not binding(ident, reviewed, bound, allowed):
             raise ValueError(f"Depth contour source {ident} is not an approved bathymetry binding of {region['id']}")
-        if not SHA256.fullmatch(str(entry.get('sha256'))) or not _survey_date(entry.get('survey_date')) \
-                or not entry.get('vertical_datum'):
+        survey_date = entry.get('survey_date')
+        date_ok = _survey_date(survey_date) or (selected is not None and survey_date == UNSTATED_SURVEY_DATE)
+        if not SHA256.fullmatch(str(entry.get('sha256'))) or not date_ok or not entry.get('vertical_datum'):
             raise ValueError(f"Depth contour source {ident} lacks its grid hash, survey date or datum")
         counts = entry.get('provenance_counts', {})
         if not isinstance(entry.get('ec_version', ''), str) or not isinstance(counts, dict) \
