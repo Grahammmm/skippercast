@@ -19,16 +19,21 @@ class RangeHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def send_head(self):
-        match = re.fullmatch(r'bytes=(\d*)-(\d*)', self.headers.get('Range', ''))
+        match = re.fullmatch(r'bytes=([0-9]*)-([0-9]*)', self.headers.get('Range', ''))
         path = Path(self.translate_path(self.path))
         if not match or not path.is_file():
             return super().send_head()
-        size = path.stat().st_size
         start, end = match.groups()
-        first = size - int(end) if not start else int(start)
+        if not (start or end):
+            return super().send_head()
+        size = path.stat().st_size
+        first = max(0, size - int(end)) if not start else int(start)
         last = size - 1 if not start or not end else min(int(end), size - 1)
         if first > last or first >= size:
-            self.send_error(416)
+            self.send_response(416)
+            self.send_header('Content-Range', f'bytes */{size}')
+            self.send_header('Content-Length', '0')
+            self.end_headers()
             return None
         handle = path.open('rb')
         handle.seek(first)

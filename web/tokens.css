@@ -144,6 +144,10 @@
   --map-contour-deep: #e6eff4;
   --map-contour-deep-halo: #07131d;
   --map-nosurvey: #3b5566;
+  /* MAP-DESIGN-LOCK 10.2: the 3D view's sky (top), horizon and fog, repainted in place on a theme switch. */
+  --map-sky: #0b1a26;
+  --map-horizon: #13283a;
+  --map-fog: #0b1a26;
   --map-survey-ink: #ffffff;
   --map-survey-halo: #07131d;
   --map-survey-tint-1: #ffffff;
@@ -245,6 +249,9 @@
   --map-contour-deep: #e6eff4;
   --map-contour-deep-halo: #07131d;
   --map-nosurvey: #9fb3bf;
+  --map-sky: #cfe3ee;
+  --map-horizon: #eef5f8;
+  --map-fog: #eef5f8;
   --map-legend-panel: color-mix(in srgb, #ffffff 94%, transparent);
   --map-legend-border: #cfdbe2;
   --map-legend-depth-ring: rgba(118, 137, 154, .55);

@@ -34,6 +34,10 @@ export const MANIFEST = Object.freeze({
  * win). `release()` answers both once; until then they are held exactly like every other coast request.
  */
 export async function syntheticTerrain(page: Page): Promise<{release(): void}> {
+  // These tests exercise interactions, not GPU speed. Apply on each load, including a reopened share link.
+  await page.addInitScript(() => {
+    (window as Window & {__skippercastE2eIgnoreTerrainFps?: boolean}).__skippercastE2eIgnoreTerrainFps = true;
+  });
   let released = false;
   const waiting: (() => void)[] = [];
   const hold = (answer: (route: Route) => Promise<void>) => (route: Route) => {
