@@ -37,7 +37,7 @@
       "label": "Landing page styles (first load)",
       "kind": "first_load_css",
       "entry": "landing.html",
-      "max_bytes": 33000,
+      "max_bytes": 39000,
       "history": [
         {
           "max_bytes": 26000,
@@ -58,6 +58,10 @@
         {
           "max_bytes": 33000,
           "reason": "Budget drift, raised by the budget-drift bot (main 0d38840e5e). Landing page styles (first load): main measures 30,832 bytes, 99.5% of the 31,000 byte budget; ceiling = ceil(30,832 x 1.05 / 1,000) x 1,000 = 33,000 (7.0% headroom)."
+        },
+        {
+          "max_bytes": 39000,
+          "reason": "MSKL-1 layer tokens: the additive skl block in web/tokens.css (all-layers kit v1.0.0) adds 6,132 bytes to this group; main 2aaa85a63b124c331db3d5fd1f37cd86f8baa68b measures 31,917, this build 38,049; ceiling = next 1,000 above the build."
         }
       ]
     },
@@ -117,7 +121,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 88000,
+      "max_bytes": 91000,
       "history": [
         {
           "max_bytes": 71000,
@@ -174,6 +178,10 @@
         {
           "max_bytes": 88000,
           "reason": "Budget drift, raised by the budget-drift bot (main 0d38840e5e). App page (brief, map) styles (first load): main measures 83,158 bytes, 99.0% of the 84,000 byte budget; ceiling = ceil(83,158 x 1.05 / 1,000) x 1,000 = 88,000 (5.8% headroom)."
+        },
+        {
+          "max_bytes": 91000,
+          "reason": "MSKL-1 layer tokens: the additive skl block in web/tokens.css (all-layers kit v1.0.0) adds 6,132 bytes to this group; main 2aaa85a63b124c331db3d5fd1f37cd86f8baa68b measures 84,243, this build 90,375; ceiling = next 1,000 above the build."
         }
       ]
     },

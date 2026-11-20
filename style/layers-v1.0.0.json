@@ -1,0 +1,1655 @@
+{
+ "$schema_note": "Single source of truth for every SkipperCast map layer's look (owner picks of 2026-11-19 PST). One look per layer, no alternatives. Colours are hex sRGB; [zoom, value] pairs are stops (linear unless the key ends in _by_zoom with a step meaning noted); a string 'base:a.b' is the value at a.b in the nearshore base tokens (base_tokens.path); 'stacking:a.b' is the value at a.b in stacking.json. _pt sizes are typographic points in the reference renderer (MapLibre px use the same number). Every script in reference/, the MapLibre fragment and the style guide read these values.",
+ "version": "1.0.0",
+ "date": "2026-11-19 PST",
+ "status": {
+  "picks": {
+   "sst-fill": "SST-B",
+   "sst-breaks": "BREAKS-D",
+   "chlorophyll": "CHL-B",
+   "kd490": "KD-B",
+   "ssh": "SSH-B",
+   "upwelling": "UPW-A",
+   "currents": "CUR-C",
+   "subsurface-temp": "SUB-A",
+   "salinity": "SAL-B",
+   "sea-ice": "ICE-B",
+   "wind": "WIND-A",
+   "pressure": "PRES-A",
+   "waves-swell": "WAVE-A",
+   "tides": "TIDE-A",
+   "precip-radar": "RADAR-C",
+   "clouds": "CLOUD-A",
+   "visibility-fog": "VIS-B",
+   "stations": "STN-B",
+   "marine-zones-mpas": "ZONE-A",
+   "kelp-habitat": "KELP-D",
+   "places": "PLACE-A",
+   "spots-marks": "SPOT-B",
+   "routes-tracks": "ROUTE-A",
+   "ais-fleet": "AIS-A"
+  },
+  "presets": {
+   "STACK-A": "offshore (z9)",
+   "NEAR-D": "nearshore (z13)"
+  },
+  "changed_from_recommended": {
+   "currents": "CUR-C replaces recommended CUR-B",
+   "wind": "WIND-A replaces recommended WIND-B"
+  },
+  "deferred": [
+   "night themes",
+   "3D"
+  ]
+ },
+ "base_tokens": {
+  "path": "../nearshore-kit/style-guide/style-tokens.json",
+  "version": "1.0.0",
+  "never_copy": "reference base values with base:…; do not copy numbers"
+ },
+ "step_rule": "keys ending _by_zoom hold step stops: the value of the last stop whose zoom ≤ the current zoom",
+ "common": {
+  "ink": "base:contours.ink",
+  "halo": "base:typography.halo",
+  "light_line": "#F4F7FA",
+  "secondary": "#4a5560",
+  "neutral": "#9aa3ad",
+  "accent": "base:typography.arc_label.color",
+  "font": "base:typography.map_font",
+  "reference_font": "base:typography.reference_kit_font",
+  "town": {
+   "dot_pt": 2.6,
+   "dot": "base:contours.ink",
+   "dot_outline": "#FFFFFF",
+   "dot_outline_pt": 0.6,
+   "label_pt": 7.5,
+   "label_halo_pt": 2.6,
+   "label_offset_frac_of_view_width": 0.012
+  },
+  "legend": {
+   "box_axes_frac": [
+    0.04,
+    0.05,
+    0.42,
+    0.028
+   ],
+   "background": "#FFFFFF",
+   "background_alpha": 0.82,
+   "title_pt": 6.8,
+   "tick_pt": 6.5
+  },
+  "note_label": {
+   "size_pt": 7,
+   "halo_pt": 2.6
+  },
+  "units_rule": "°F, ft, kt, nm, hPa, psu as shown; times local PST/PDT; never mix units on one card"
+ },
+ "views": {
+  "REG": {
+   "extent": [
+    -122.0,
+    -120.55,
+    34.75,
+    35.95
+   ],
+   "px_width": 700,
+   "zoom": 9,
+   "dem": "fixtures/base/REG.npz",
+   "depth_contours_ft": [
+    300,
+    600,
+    1800,
+    3000
+   ],
+   "name": "Piedras Blancas → Pt Sal"
+  },
+  "MB": {
+   "extent": [
+    -121.06,
+    -120.74,
+    35.15,
+    35.5
+   ],
+   "px_width": 700,
+   "zoom": 11,
+   "dem": "fixtures/base/MB.npz",
+   "depth_contours_ft": [
+    60,
+    150,
+    300,
+    600
+   ],
+   "name": "Estero Bay / Morro Bay → Pt Buchon"
+  },
+  "OFF": {
+   "extent": [
+    -126.0,
+    -119.0,
+    32.0,
+    38.5
+   ],
+   "px_width": 700,
+   "zoom": 7,
+   "dem": "fixtures/base/OFF.npz",
+   "depth_contours_ft": [
+    600,
+    6000
+   ],
+   "name": "Central California offshore"
+  },
+  "SYN": {
+   "extent": [
+    -127.0,
+    -116.0,
+    31.0,
+    40.0
+   ],
+   "px_width": 700,
+   "zoom": 6,
+   "dem": "fixtures/base/SYN.npz",
+   "depth_contours_ft": [
+    600,
+    6000
+   ],
+   "name": "California synoptic"
+  },
+  "BER": {
+   "extent": [
+    -180.0,
+    -150.0,
+    58.0,
+    72.0
+   ],
+   "px_width": 700,
+   "zoom": 4,
+   "dem": "fixtures/base/BER.npz",
+   "depth_contours_ft": [
+    300,
+    600
+   ],
+   "name": "Bering/Chukchi (sea-ice example only)"
+  }
+ },
+ "regional_base": {
+  "what": "the nearshore house base (depth ramp × relief, land) at regional zooms z4–z13, computed from the view DEM with the base tokens",
+  "shade_rule": "shade = clip(base:shading.base + base:shading.gain × (hillshade_water − base:shading.hillshade.flat_reference), shade_clip); hillshade with base:shading.hillshade.lights/altitude_deg and VE from base ve_rule at the view cell size",
+  "shade_clip": [
+   0.55,
+   1.15
+  ],
+  "land_rule": "base:surface.land colour × clip(shade_base + shade_gain × hillshade_land, land_shade_clip)",
+  "land_shade_clip": [
+   0.6,
+   1.08
+  ],
+  "downsample_rule": "when the output cell is > 1.5 × the source cell, Gaussian pre-blur σ = 0.5 × out/src cells (area average), then bilinear",
+  "contours": {
+   "color": "base:contours.ink",
+   "width_pt": 0.45,
+   "opacity": 0.3,
+   "smooth_sigma_px": 1.0
+  },
+  "desaturation_rule": "rgb' = rgb × (1 − d) + luma × d, luma = Rec.709; d = stacking:base_desaturation_when_field_on while any colour field or particle-over-fill layer is on",
+  "nearshore_tiles": "above the regional zooms the app draws the nearshore kit's tiles (nearshore-kit/), the same tokens"
+ },
+ "layers": {
+  "sst-fill": {
+   "pick": "SST-B",
+   "name": "Angler 1° bands",
+   "app_layer_ids": [
+    "water-temp"
+   ],
+   "slot": "color_field",
+   "view": "REG",
+   "zoom": 9,
+   "units": "°F",
+   "value": "analysed_sst °C × 9/5 + 32",
+   "ramp_stops": [
+    "#2c1a6b",
+    "#2f4fc4",
+    "#2aa7e0",
+    "#38d1b0",
+    "#8ee05a",
+    "#f2e33a",
+    "#f6a02a",
+    "#e2482a",
+    "#a3161f"
+   ],
+   "band_step_f_by_zoom": [
+    [
+     0,
+     1.0
+    ],
+    [
+     13,
+     0.5
+    ]
+   ],
+   "band_colors_rule": "n bands between the stretch limits; band i takes the ramp colour at position i/(n−1), linear in sRGB between ramp_stops",
+   "stretch": {
+    "method": "percentile of visible water cells",
+    "low_pct": 2,
+    "high_pct": 98,
+    "round": "floor/ceil to band_step_f",
+    "user_lock": "the user may lock the range; the legend says 'auto-stretched' only when not locked"
+   },
+   "band_edge": {
+    "color": "#FFFFFF",
+    "width_pt": 0.35,
+    "opacity": 0.6,
+    "hide_when_any_on": [
+     "isolines",
+     "particles",
+     "arrows_barbs"
+    ]
+   },
+   "water_only": true,
+   "opacity": "stacking:opacity_by_zoom.color_field",
+   "legend": {
+    "title": "SST °F, {step}° bands, auto-stretched",
+    "tick_every_bands": 2,
+    "format": "{:.0f}"
+   },
+   "data_age": {
+    "status": "repo",
+    "rule": "analysis and its retrieval each under 72 h old (at most 5 min ahead of the clock) and the source status ok (or a regional feed's 'retained' with its own max_age_hours); otherwise nothing draws and the legend gives the reason and the analysis date (web/map/sst.ts)",
+    "max_age_h": 72
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "NASA JPL MUR SST v4.1 (jplMURSST41, ERDDAP coastwatch.pfeg)",
+    "res": "0.01° (~1 km)",
+    "time": "Nov 18 1 AM PST",
+    "area": "Piedras Blancas–Pt Sal",
+    "data_time_utc": "2026-11-18T09:00:00"
+   }
+  },
+  "sst-breaks": {
+   "pick": "BREAKS-D",
+   "name": "Isotherms + break glow",
+   "app_layer_ids": [
+    "water-temp-contours",
+    "sst-contrast",
+    "sst-fronts"
+   ],
+   "slot": "isolines",
+   "view": "REG",
+   "zoom": 9,
+   "source_field": "sst-fill value (same analysis)",
+   "smooth_sigma_px": 1.5,
+   "isolines": {
+    "minor_step_f_by_zoom": [
+     [
+      0,
+      0.5
+     ],
+     [
+      13,
+      0.25
+     ]
+    ],
+    "index_step_f_by_zoom": [
+     [
+      0,
+      2.0
+     ],
+     [
+      13,
+      0.5
+     ]
+    ],
+    "color_by_zoom": [
+     [
+      0,
+      "#F4F7FA"
+     ],
+     [
+      12,
+      "base:contours.ink"
+     ]
+    ],
+    "minor": {
+     "width_pt": 0.4,
+     "opacity": 0.525
+    },
+    "index": {
+     "width_pt": 0.9,
+     "opacity": 0.75
+    },
+    "label": {
+     "size_pt": 6.5,
+     "decimals_by_zoom": [
+      [
+       0,
+       0
+      ],
+      [
+       13,
+       1
+      ]
+     ],
+     "suffix": "°",
+     "halo_pt": 2.2,
+     "halo_color_rule": "ink halo under light lines, white halo under ink lines"
+    }
+   },
+   "glow": {
+    "gradient": "|∇SST| in °F per nautical mile on the SST grid after a Gaussian σ glow_sigma_px pre-smooth; computed on water only, never across no-data (cells within 2 px of no-data are dropped)",
+    "glow_sigma_px": 1.2,
+    "threshold_f_per_nm": 0.32,
+    "domain_f_per_nm": [
+     0.32,
+     0.55
+    ],
+    "threshold_note": "absolute, so tiles and regions match at seams; equals the 92nd percentile of the approved Nov 18 MUR render (0.317 °F/nm), top = its 99.5th (0.548)",
+    "ramp_stops": [
+     "#ffd9a0",
+     "#ff9a3c",
+     "#e2482a"
+    ],
+    "opacity": 0.75
+   },
+   "auto_isotherms": "with SST fill on and BREAKS off, the same isolines (no glow) draw from stacking:isolines_from_zoom",
+   "data_age": {
+    "status": "repo",
+    "rule": "same analysis as sst-fill, same 72 h gate; fronts from the sst-fronts feed keep its own 48 h max_age_hours (catalog/feed-health.json), capped at 72 h (web/map/fronts.ts)",
+    "max_age_h": 72
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "NASA JPL MUR SST v4.1 (jplMURSST41, ERDDAP coastwatch.pfeg)",
+    "res": "0.01° (~1 km)",
+    "time": "Nov 18 1 AM PST",
+    "area": "Piedras Blancas–Pt Sal",
+    "data_time_utc": "2026-11-18T09:00:00"
+   }
+  },
+  "chlorophyll": {
+   "pick": "CHL-B",
+   "name": "Water color (angler)",
+   "app_layer_ids": [
+    "chlorophyll"
+   ],
+   "slot": "color_field",
+   "view": "REG",
+   "zoom": 9,
+   "units": "mg/m³",
+   "ramp_stops": [
+    "#1b2f8f",
+    "#1f5fc8",
+    "#2ba3d6",
+    "#36c2a0",
+    "#7fcf4a",
+    "#d9d838",
+    "#f0a22e",
+    "#d9452a",
+    "#9a1a1a"
+   ],
+   "domain_mg_m3": [
+    0.05,
+    20
+   ],
+   "scale": "log10",
+   "composite": {
+    "method": "per-cell median of the daily passes in the window",
+    "window_days": 8,
+    "min_valid_passes": 1,
+    "gaps": "cloud gaps stay transparent, never interpolated"
+   },
+   "water_only": true,
+   "opacity": "stacking:opacity_by_zoom.color_field",
+   "legend": {
+    "title": "chl mg/m³ · blue = clean water",
+    "ticks_mg_m3": [
+     0.1,
+     0.3,
+     1,
+     3,
+     10
+    ]
+   },
+   "meaning": "blue = clean, green = transition, yellow-red = dirty (angler convention); surface chlorophyll proxy, not bait or fish",
+   "data_age": {
+    "status": "repo",
+    "rule": "sample older than 96 h is withheld (web/map/chlorophyll.ts, legend 'Withheld at 96 h')",
+    "max_age_h": 96
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "NOAA-20 VIIRS chlorophyll-a, US sector daily (noaacwN20VIIRSchlaSectorUSDaily, ERDDAP coastwatch.noaa.gov)",
+    "res": "~750 m",
+    "time": "8-day median Nov 10–Nov 17",
+    "area": "Piedras Blancas–Pt Sal",
+    "data_time_utc": "2026-11-17T19:23:12"
+   }
+  },
+  "kd490": {
+   "pick": "KD-B",
+   "name": "Light-depth bands",
+   "app_layer_ids": [
+    "kd490 (new)"
+   ],
+   "slot": "color_field",
+   "view": "REG",
+   "zoom": 9,
+   "units": "ft",
+   "value": "estimated light depth = 3.28084 / Kd490 (1/m); label it an estimate",
+   "bands_ft": [
+    0,
+    10,
+    20,
+    30,
+    50,
+    80
+   ],
+   "colors": [
+    "#5a3a1a",
+    "#8b6a3a",
+    "#b9a76a",
+    "#8fc1b0",
+    "#3f9cc0"
+   ],
+   "clip_ft": 79,
+   "composite": {
+    "method": "per-cell median of the daily passes in the window",
+    "window_days": 8,
+    "min_valid_passes": 1,
+    "gaps": "cloud gaps stay transparent"
+   },
+   "water_only": true,
+   "opacity": "stacking:opacity_by_zoom.color_field",
+   "legend": {
+    "title": "est. light depth ft (1/Kd490)"
+   },
+   "data_age": {
+    "status": "new layer, follows chlorophyll",
+    "rule": "same VIIRS daily feed as chlorophyll: withheld past 96 h",
+    "max_age_h": 96
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "NOAA-20 VIIRS Kd(490), US sector daily (noaacwN20VIIRSkd490SectorUSDaily)",
+    "res": "~750 m",
+    "time": "8-day median Nov 10–Nov 17",
+    "area": "Piedras Blancas–Pt Sal",
+    "data_time_utc": "2026-11-17T19:23:12"
+   }
+  },
+  "ssh": {
+   "pick": "SSH-B",
+   "name": "Altimetry lines",
+   "app_layer_ids": [
+    "ssh (spec 05)"
+   ],
+   "slot": "isolines",
+   "view": "OFF",
+   "zoom": 7,
+   "units": "cm",
+   "value": "sea level anomaly × 100",
+   "step_cm": 5,
+   "range_cm": [
+    -30,
+    30
+   ],
+   "positive": {
+    "color": "#ff6b57",
+    "width_pt": 1.0,
+    "dash": null
+   },
+   "negative": {
+    "color": "#6fb3ff",
+    "width_pt": 1.0,
+    "dash": [
+     4,
+     3
+    ]
+   },
+   "zero": {
+    "color": "#F4F7FA",
+    "width_pt": 0.6
+   },
+   "legend": {
+    "title": "— high (+5 cm)   - - low (−5 cm)"
+   },
+   "data_age": {
+    "status": "spec 05",
+    "rule": "daily product; withheld past 72 h; with WCOFS missing or stale, SSH and eddies are withheld with the WCOFS status (spec 05)",
+    "max_age_h": 72
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "NOAA CoastWatch blended SSH anomaly (noaacwBLENDEDsshDaily)",
+    "res": "0.25°",
+    "time": "Nov 17 (daily)",
+    "area": "Central California offshore 32–38.5°N",
+    "data_time_utc": "2026-11-17T12:00:00"
+   }
+  },
+  "upwelling": {
+   "pick": "UPW-A",
+   "name": "Coast ribbon",
+   "app_layer_ids": [
+    "upwelling (catalog)"
+   ],
+   "slot": "ribbon",
+   "view": "SYN",
+   "zoom": 6,
+   "units": "m²/s (CUTI)",
+   "lat_range": [
+    31,
+    40
+   ],
+   "cell": {
+    "height_deg_lat": 0.96,
+    "width_deg_lon": 0.9,
+    "offset_from_coast_deg_lon": 0.05,
+    "coast_rule": "first land cell east of coast_search_from_lon on the latitude row",
+    "coast_search_from_lon": -125.5
+   },
+   "ramp_stops": [
+    "#8b5a2b",
+    "#e9e4d8",
+    "#2bb3c0",
+    "#0b5d8a"
+   ],
+   "domain_m2_s": [
+    -1,
+    2
+   ],
+   "opacity": 0.9,
+   "value_label": {
+    "size_pt": 7,
+    "offset_deg_lon": -1.9,
+    "format": "{:.1f}"
+   },
+   "legend": {
+    "title": "CUTI m²/s · {date}",
+    "ticks": [
+     -1,
+     0,
+     1,
+     2
+    ]
+   },
+   "data_age": {
+    "status": "new layer",
+    "rule": "the index is published with a 6–8 week lag: always print the index date; never call it current; withheld when the latest day is older than 90 days",
+    "withhold_after_days": 90
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "CUTI & BEUTI daily (erdCUTIdaily / erdBEUTIdaily, ERDDAP coastwatch.pfeg; Jacox et al.)",
+    "res": "1° latitude bands along coast",
+    "time": "latest day in feed 2026-09-27 (index published with lag)",
+    "area": "31–40°N, 35°N = Morro Bay"
+   }
+  },
+  "currents": {
+   "pick": "CUR-C",
+   "name": "Speed fill + streamlines",
+   "app_layer_ids": [
+    "currents"
+   ],
+   "slot": "color_field+particles",
+   "view": "REG",
+   "zoom": 9,
+   "units": "kt",
+   "value": "hypot(u, v) m/s × 1.94384",
+   "fill": {
+    "ramp_stops": [
+     "#fffdcd",
+     "#e1cd73",
+     "#aaac20",
+     "#5f920c",
+     "#187328",
+     "#144b2a",
+     "#172313"
+    ],
+    "domain_kt": [
+     0,
+     1.2
+    ],
+    "water_only": true,
+    "opacity": "stacking:opacity_by_zoom.color_field"
+   },
+   "streamlines": {
+    "color": "#FFFFFF",
+    "width_pt": 0.6,
+    "density": 1.6,
+    "arrow_size": 0.6,
+    "sample_grid": 80,
+    "rule": "integrated from the HF-radar u/v on an 80×80 view grid; no line where u/v is no data"
+   },
+   "representations": {
+    "solo": [
+     "fill",
+     "streamlines"
+    ],
+    "fill_taken_by_other_layer": [
+     "streamlines"
+    ]
+   },
+   "legend": {
+    "title": "current kt",
+    "ticks": [
+     0,
+     0.5,
+     1.0
+    ]
+   },
+   "data_age": {
+    "status": "repo",
+    "rule": "HF radar hourly; withheld past its age limit (legend: 'legend.fresh.limit.currents'; HF radar and WCOFS gate differently, web/map/freshness.ts)",
+    "max_age_h": 6
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "HF radar surface currents, US West Coast 6 km — NDBC THREDDS hfradar_uswc_6km",
+    "res": "6 km",
+    "time": "Nov 19 10 AM PST",
+    "area": "Piedras Blancas–Pt Sal",
+    "data_time_utc": "2026-11-19T18:00:00"
+   }
+  },
+  "subsurface-temp": {
+   "pick": "SUB-A",
+   "name": "Depth slider map",
+   "app_layer_ids": [
+    "subsurface (spec 07)"
+   ],
+   "slot": "color_field",
+   "view": "REG",
+   "zoom": 9,
+   "units": "°F",
+   "depth_stops_ft": [
+    0,
+    50,
+    100,
+    200,
+    300
+   ],
+   "default_depth_ft": 100,
+   "ramp_stops": [
+    "#042333",
+    "#2c3395",
+    "#744992",
+    "#b15f82",
+    "#eb7958",
+    "#fbb43d",
+    "#e8fa5b"
+   ],
+   "stretch": {
+    "method": "percentile of visible water cells",
+    "low_pct": 2,
+    "high_pct": 98,
+    "round": "floor/ceil to whole °F"
+   },
+   "vertical": "linear between the model's own levels; never extrapolated below the deepest valid level",
+   "isotherms": {
+    "step_f": 1,
+    "color": "#F4F7FA",
+    "width_pt": 0.4,
+    "opacity": 0.525
+   },
+   "depth_chip": {
+    "format": "depth: 0 · 50 · [100] · 200 ft",
+    "size_pt": 7
+   },
+   "water_only": true,
+   "opacity": "stacking:opacity_by_zoom.color_field",
+   "legend": {
+    "title": "temp at {depth} ft ({m} m) °F"
+   },
+   "data_age": {
+    "status": "spec 07 (proposed limit)",
+    "rule": "model run older than 72 h is withheld; the legend prints the run time",
+    "max_age_h": 72
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "HYCOM ESPC-D-V02 3-D temperature (t3z), ncss.hycom.org",
+    "res": "1/12° (~8 km), 40 levels",
+    "time": "Nov 17 1 AM PST",
+    "area": "Morro Bay coast, 0–300 m",
+    "data_time_utc": "2026-11-17T09:00:00"
+   }
+  },
+  "salinity": {
+   "pick": "SAL-B",
+   "name": "Model haline fill",
+   "app_layer_ids": [
+    "salinity (spec 07)"
+   ],
+   "slot": "color_field",
+   "view": "REG",
+   "zoom": 9,
+   "units": "psu",
+   "ramp_stops": [
+    "#2a186c",
+    "#14439c",
+    "#206e8b",
+    "#3c9387",
+    "#5ab978",
+    "#aad85c",
+    "#fdef9a"
+   ],
+   "stretch": {
+    "method": "percentile of visible water cells",
+    "low_pct": 2,
+    "high_pct": 98,
+    "round_decimals": 2
+   },
+   "water_only": true,
+   "opacity": "stacking:opacity_by_zoom.color_field",
+   "legend": {
+    "title": "salinity psu",
+    "format": "{:.2f}"
+   },
+   "data_age": {
+    "status": "spec 07 (proposed limit)",
+    "rule": "model run older than 72 h is withheld",
+    "max_age_h": 72
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "HYCOM ESPC-D-V02 surface salinity (s3z), ncss.hycom.org",
+    "res": "1/12°",
+    "time": "Nov 17 1 AM PST",
+    "area": "Morro Bay coast",
+    "data_time_utc": "2026-11-17T09:00:00"
+   }
+  },
+  "sea-ice": {
+   "pick": "ICE-B",
+   "name": "White veil + 15% edge",
+   "app_layer_ids": [
+    "sea-ice (new)"
+   ],
+   "slot": "veil",
+   "view": "BER",
+   "zoom": 4,
+   "units": "% concentration",
+   "veil": {
+    "color": "#FFFFFF",
+    "max_alpha": 0.95,
+    "alpha_rule": "alpha = max_alpha × concentration/100"
+   },
+   "edge": {
+    "level_pct": 15,
+    "color": "#d9452a",
+    "width_pt": 1.0
+   },
+   "coast_buffer_px": 5,
+   "legend": {
+    "title": "white = ice · red line = 15% edge"
+   },
+   "not_local": "No sea ice exists on the Central Coast; the golden is a Bering/Chukchi example so the style is testable.",
+   "data_age": {
+    "status": "new layer (proposed limit)",
+    "rule": "daily product; withheld past 72 h",
+    "max_age_h": 72
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "Univ. Bremen AMSR2 ASI 6.25 km (GeoTIFF)",
+    "res": "6.25 km",
+    "time": "Nov 18, 2026 (daily)",
+    "area": "NOT LOCAL — Bering/Chukchi Sea example (no sea ice on the Central Coast)",
+    "data_time_utc": "2026-11-18T12:00:00"
+   }
+  },
+  "wind": {
+   "pick": "WIND-A",
+   "name": "Windy-style fill + particles",
+   "app_layer_ids": [
+    "wind"
+   ],
+   "slot": "color_field+particles",
+   "view": "REG",
+   "zoom": 9,
+   "units": "kt",
+   "fill": {
+    "ramp_kt": [
+     [
+      0.0,
+      "#6271B7"
+     ],
+     [
+      1.9,
+      "#39619F"
+     ],
+     [
+      5.8,
+      "#4A94A9"
+     ],
+     [
+      9.7,
+      "#4D8D7B"
+     ],
+     [
+      13.6,
+      "#53A553"
+     ],
+     [
+      17.5,
+      "#359F35"
+     ],
+     [
+      21.4,
+      "#A79D51"
+     ],
+     [
+      25.3,
+      "#9F7F3A"
+     ],
+     [
+      29.2,
+      "#A16C5C"
+     ],
+     [
+      33.0,
+      "#813A4E"
+     ],
+     [
+      36.9,
+      "#AF5088"
+     ],
+     [
+      40.8,
+      "#754A93"
+     ],
+     [
+      46.7,
+      "#6D61A3"
+     ],
+     [
+      52.5,
+      "#44698D"
+     ]
+    ],
+    "over_land": true,
+    "opacity": "stacking:opacity_by_zoom.color_field"
+   },
+   "particles": {
+    "color": "#FFFFFF",
+    "width_pt": 0.8,
+    "trail_steps": 12,
+    "count": 900,
+    "step_frac_of_view_width": 0.00414,
+    "seed": 3,
+    "opacity": 0.9,
+    "fade": "linear tail → head",
+    "over_land": true
+   },
+   "barbs": {
+    "use": "the stacking fallback when wind loses the particle slot (see stacking.json precedence)",
+    "color_on_field": "#FFFFFF",
+    "color_on_light_base": "base:contours.ink",
+    "halo": "base:contours.ink",
+    "halo_pt": 1.6,
+    "length_pt": 5.5,
+    "width_pt": 0.8,
+    "stride_cells": 4,
+    "offset_cells": 1,
+    "min_spacing_px": 48
+   },
+   "representations": {
+    "solo": [
+     "fill",
+     "particles"
+    ],
+    "fill_taken_by_other_layer": [
+     "particles"
+    ],
+    "particles_taken_by_currents": [
+     "barbs"
+    ]
+   },
+   "legend": {
+    "title": "wind kt",
+    "ticks": [
+     0,
+     10,
+     20,
+     30,
+     40,
+     50
+    ]
+   },
+   "data_age": {
+    "status": "repo",
+    "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld",
+    "forecast_gate": {
+     "run_max_h": 36,
+     "retrieved_max_h": 6,
+     "ahead_max_min": 5,
+     "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
+    }
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "NOAA HRRR 3 km via Open-Meteo (models=gfs_hrrr), 10 m wind + gusts",
+    "res": "3 km model, sampled 0.05°",
+    "time": "Nov 19 1 PM PST",
+    "area": "Piedras Blancas–Pt Sal"
+   }
+  },
+  "pressure": {
+   "pick": "PRES-A",
+   "name": "Isobars + H/L",
+   "app_layer_ids": [
+    "pressure (new)"
+   ],
+   "slot": "isolines",
+   "view": "SYN",
+   "zoom": 6,
+   "units": "hPa",
+   "presmooth_sigma_cells": 1,
+   "step_hpa": 2,
+   "levels_hpa": [
+    990,
+    1038
+   ],
+   "bold_every_hpa": 4,
+   "width_pt": {
+    "minor": 0.6,
+    "bold": 1.1
+   },
+   "color": "#F4F7FA",
+   "label": {
+    "size_pt": 6.5,
+    "on": "bold isobars",
+    "halo": "base:contours.ink",
+    "halo_pt": 2.2
+   },
+   "centers": {
+    "smooth_sigma_cells": 2,
+    "window_cells": 9,
+    "border_cells": 2,
+    "high": "#2e6fd8",
+    "low": "#c0392b",
+    "letter_pt": 16,
+    "value_pt": 7,
+    "value_offset_deg_lat": -0.45,
+    "halo_pt": 3
+   },
+   "min_zoom": 4,
+   "max_zoom": 10,
+   "data_age": {
+    "status": "new layer",
+    "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld",
+    "forecast_gate": {
+     "run_max_h": 36,
+     "retrieved_max_h": 6,
+     "ahead_max_min": 5,
+     "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
+    }
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "NOAA GFS 0.25° via Open-Meteo (gfs_seamless), mean sea-level pressure",
+    "res": "0.25°",
+    "time": "Nov 18 10 PM PST",
+    "area": "California synoptic 31–40°N"
+   }
+  },
+  "waves-swell": {
+   "pick": "WAVE-A",
+   "name": "Height fill + direction",
+   "app_layer_ids": [
+    "swell"
+   ],
+   "slot": "color_field+arrows",
+   "view": "REG",
+   "zoom": 9,
+   "units": "ft",
+   "value": "significant wave height m × 3.28084",
+   "fill": {
+    "ramp_stops": [
+     "#f1edec",
+     "#dfbcb0",
+     "#d08b73",
+     "#c0583b",
+     "#a62225",
+     "#730e27",
+     "#3c0912"
+    ],
+    "domain_ft": [
+     0,
+     30
+    ],
+    "water_only": true,
+    "opacity": "stacking:opacity_by_zoom.color_field",
+    "gaps": "model cells with no data (near the coast) stay empty; never extended"
+   },
+   "arrows": {
+    "color": "#F4F7FA",
+    "stride_cells": 3,
+    "offset_cells": 1,
+    "unit_length": true,
+    "pivot": "middle",
+    "width_frac": 0.004,
+    "scale": 30,
+    "water_only": true,
+    "direction": "toward (from the 'from' direction + 180°)"
+   },
+   "representations": {
+    "solo": [
+     "fill",
+     "arrows"
+    ],
+    "fill_taken_by_other_layer": [
+     "arrows"
+    ],
+    "arrow_slot_taken_by_wind_barbs": [
+     "fill only"
+    ]
+   },
+   "legend": {
+    "title": "wave height ft (Hs)",
+    "ticks": [
+     0,
+     10,
+     20,
+     30
+    ]
+   },
+   "data_age": {
+    "status": "repo",
+    "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld; nearshore model rings keep their own 48 h issue / 3 h fetch limits (web/map/swell.ts)",
+    "forecast_gate": {
+     "run_max_h": 36,
+     "retrieved_max_h": 6,
+     "ahead_max_min": 5,
+     "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
+    }
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "Open-Meteo Marine API (ECMWF WAM / GFS-Wave blend, cell_selection=sea) + CDIP 076 Diablo Canyon (NDBC 46215) check",
+    "res": "~5 km grid sampled 0.05°",
+    "time": "Nov 19 1 PM PST",
+    "area": "Piedras Blancas–Pt Sal"
+   }
+  },
+  "tides": {
+   "pick": "TIDE-A",
+   "name": "Pin + 24 h curve",
+   "app_layer_ids": [
+    "tides (station panel)"
+   ],
+   "slot": "points",
+   "view": "MB",
+   "zoom": 11,
+   "units": "ft MLLW",
+   "pin": {
+    "color": "#2b6c9d",
+    "size_pt": 9,
+    "outline": "#FFFFFF",
+    "outline_pt": 1.5
+   },
+   "curve": {
+    "color": "#2b6c9d",
+    "width_pt": 1.6,
+    "window_h": [
+     -6,
+     18
+    ],
+    "inset_axes_frac": [
+     0.08,
+     0.06,
+     0.86,
+     0.3
+    ],
+    "background": "#FFFFFF",
+    "background_alpha": 0.9
+   },
+   "now": {
+    "color": "#B23A1A",
+    "width_pt": 1,
+    "dot_pt": 4
+   },
+   "hilo_label": {
+    "size_pt": 6,
+    "format": "{type} {ft:.1f}\\n{time}"
+   },
+   "stage_label": {
+    "format": "{ft:.1f} ft ↑|↓",
+    "size_pt": 9,
+    "color": "#2b6c9d",
+    "weight": "bold"
+   },
+   "datum": "MLLW",
+   "time": "local (PST/PDT)",
+   "data_age": {
+    "status": "repo",
+    "rule": "predictions labelled stale after 36 h, observations after 3 h; pins keep stale readings with their original times (web/map/station-model.ts)",
+    "max_age_h": 36,
+    "observation_stale_h": 3,
+    "prediction_stale_h": 36
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "NOAA CO-OPS 9412110 Port San Luis: 6-min predictions, hi/lo, observed water level (MLLW, ft, LST)",
+    "res": "station",
+    "time": "Nov 18–21, 2026, now = Nov 19 2:00 PM PST",
+    "area": "Port San Luis (nearest CO-OPS harmonic station to Morro Bay)"
+   }
+  },
+  "precip-radar": {
+   "pick": "RADAR-C",
+   "name": "Four-step rain",
+   "app_layer_ids": [
+    "radar (new)"
+   ],
+   "slot": "radar",
+   "view": "REG",
+   "zoom": 9,
+   "units": "dBZ",
+   "bands_dbz": [
+    [
+     15,
+     "#9ec9e8",
+     "light"
+    ],
+    [
+     25,
+     "#3f8fd1",
+     "moderate"
+    ],
+    [
+     35,
+     "#f2b134",
+     "heavy"
+    ],
+    [
+     45,
+     "#d9452a",
+     "intense"
+    ]
+   ],
+   "top_dbz": 80,
+   "hide_below_dbz": 15,
+   "over_land": true,
+   "opacity": "stacking:opacity_by_zoom.radar",
+   "legend": {
+    "title": "light · moderate · heavy · intense"
+   },
+   "animation": "loop the last 2 h at 2-min frames, 10 fps; reduced motion shows the newest frame only",
+   "data_age": {
+    "status": "new layer (proposed limit)",
+    "rule": "newest frame older than 15 min is withheld (MRMS updates every 2 min)",
+    "max_age_min": 15
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "NOAA MRMS MergedReflectivityQCComposite (noaa-mrms-pds S3)",
+    "res": "0.01° (~1 km), 2-min",
+    "time": "Nov 18, 2026 9:00 PM PST (05:00Z Nov 19)",
+    "area": "Piedras Blancas–Pt Sal (front passage)",
+    "data_time_utc": "2026-11-19T05:00:35"
+   }
+  },
+  "clouds": {
+   "pick": "CLOUD-A",
+   "name": "White cloud veil",
+   "app_layer_ids": [
+    "clouds"
+   ],
+   "slot": "veil",
+   "view": "REG",
+   "zoom": 9,
+   "units": "K (band 13 brightness temperature)",
+   "veil": {
+    "color": "#FFFFFF",
+    "alpha_rule": "alpha = clip((warm_k − BT)/range_k, 0, 1) × stacking:opacity_by_zoom.cloud_veil",
+    "warm_k": 285,
+    "range_k": 60
+   },
+   "over_land": true,
+   "base_desaturation": 0,
+   "data_age": {
+    "status": "repo",
+    "rule": "frames older than 90 min are not shown (web/map/freshness.ts clouds 90 min)",
+    "max_age_min": 90
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "GOES-18 ABI L2 CMIP, PACUS sector, band 13 (10.3 µm clean IR) — noaa-goes18 S3",
+    "res": "2 km, 5-min",
+    "time": "Nov 18, 2026 9:01 PM PST",
+    "area": "Piedras Blancas–Pt Sal",
+    "data_time_utc": "2026-11-19T05:01:00"
+   }
+  },
+  "visibility-fog": {
+   "pick": "VIS-B",
+   "name": "Visibility categories",
+   "app_layer_ids": [
+    "visibility (new)"
+   ],
+   "slot": "color_field",
+   "view": "REG",
+   "zoom": 9,
+   "units": "nm",
+   "value": "visibility m / 1852",
+   "bands_nm": [
+    0,
+    0.5,
+    1,
+    3,
+    5
+   ],
+   "colors": [
+    "#d9452a",
+    "#f6a02a",
+    "#f2e33a",
+    "#e6efc2"
+   ],
+   "labels": [
+    "<½ nm",
+    "½–1",
+    "1–3",
+    "3–5"
+   ],
+   "hide_at_or_above_nm": 5,
+   "water_only": true,
+   "opacity": "stacking:opacity_by_zoom.color_field",
+   "legend": {
+    "title": "visibility nm"
+   },
+   "data_age": {
+    "status": "new layer",
+    "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld",
+    "forecast_gate": {
+     "run_max_h": 36,
+     "retrieved_max_h": 6,
+     "ahead_max_min": 5,
+     "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
+    }
+   },
+   "desaturates_base": true,
+   "source": {
+    "source": "NOAA HRRR surface visibility via Open-Meteo (gfs_hrrr)",
+    "res": "3 km model, sampled 0.05°",
+    "time": "Nov 18 7 PM PST",
+    "area": "Piedras Blancas–Pt Sal (rain-reduced visibility during the front)"
+   }
+  },
+  "stations": {
+   "pick": "STN-B",
+   "name": "Data chips",
+   "app_layer_ids": [
+    "stations"
+   ],
+   "slot": "points",
+   "view": "REG",
+   "zoom": 9,
+   "pin": {
+    "color": "#2b6c9d",
+    "size_pt": 7,
+    "outline": "#FFFFFF",
+    "outline_pt": 1.3
+   },
+   "chip": {
+    "fill": "#FFFFFF",
+    "fill_alpha": 0.95,
+    "stroke": "#2b6c9d",
+    "stroke_pt": 0.6,
+    "text": "base:contours.ink",
+    "size_pt": 6.2,
+    "lines": [
+     "{name}",
+     "{wspd}G{gust} kt · {wvht} ft @{dpd}s · {wtmp}°F"
+    ],
+    "missing_rule": "omit a missing reading's part; never print MM or 0 for missing"
+   },
+   "collision": "hide the lowest-priority chip, keep its pin",
+   "data_age": {
+    "status": "repo",
+    "rule": "pins keep stale readings labelled stale with their original times: observations after 3 h, predictions after 36 h (web/map/station-model.ts)",
+    "observation_stale_h": 3,
+    "prediction_stale_h": 36
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "NDBC realtime2 (buoys 46011, 46028, 46215/CDIP 076, 46259/CDIP 222, 46286/CDIP 285; C-MAN/NOS mbxc1, pslc1)",
+    "res": "points",
+    "time": "latest obs ~Nov 19, 2026 12:50–1:10 PM PST",
+    "area": "Morro Bay coast"
+   }
+  },
+  "marine-zones-mpas": {
+   "pick": "ZONE-A",
+   "name": "Hazard tint + MPA fills",
+   "app_layer_ids": [
+    "mpas",
+    "zones (new)"
+   ],
+   "slot": "polygons",
+   "view": "REG",
+   "zoom": 9,
+   "zone_line": {
+    "color": "#9aa3ad",
+    "width_pt": 0.9,
+    "dash": [
+     4,
+     3
+    ]
+   },
+   "zone_label": {
+    "color": "#4a5560",
+    "size_pt": 7,
+    "text": "zone id"
+   },
+   "hazard_fill": {
+    "opacity": 0.18,
+    "colors": {
+     "Small Craft Advisory": "#f6a02a",
+     "Gale Warning": "#d9452a",
+     "Gale Watch": "#f2b134"
+    },
+    "default_color": "#f6a02a",
+    "opacity_rule": "min(opacity, stacking:opacity_by_zoom.habitat_fill)",
+    "events": [
+     "Small Craft Advisory",
+     "Gale Warning",
+     "Gale Watch",
+     "Hazardous Seas Warning"
+    ],
+    "while": "alert onset ≤ now < ends"
+   },
+   "mpa": {
+    "fill_opacity": 0.32,
+    "fill_opacity_rule": "min(fill_opacity, stacking:opacity_by_zoom.habitat_fill)",
+    "line_pt": 1.0,
+    "colors": {
+     "SMR": "#d9452a",
+     "SMCA": "#2e6fd8",
+     "SMCA (No-Take)": "#7b3fb0",
+     "SMP": "#36a26b",
+     "SMRMA": "#36a26b"
+    },
+    "default_color": "#2e6fd8",
+    "label": {
+     "size_pt": 6.3,
+     "color": "by type",
+     "short_name": [
+      [
+       " State Marine ",
+       " "
+      ],
+      [
+       "Conservation Area",
+       "SMCA"
+      ],
+      [
+       "Reserve",
+       "SMR"
+      ]
+     ]
+    }
+   },
+   "rule_text": "an area without an outline may still be protected; check current rules",
+   "data_age": {
+    "status": "repo (mpas) + new (zones)",
+    "rule": "alerts are live: a hazard tint shows only while its alert is active and is removed at 'ends'; MPA outlines follow the protected-areas rule row"
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "NWS marine zones (api.weather.gov/zones/coastal) + active alerts (api.weather.gov/alerts/active?area=PZ); CDFW MPAs from repo protected-areas.geojson",
+    "res": "vector",
+    "time": "alerts fetched Nov 19, 2026 ~1:52 PM PST",
+    "area": "Piedras Blancas–Pt Sal"
+   }
+  },
+  "kelp-habitat": {
+   "pick": "KELP-D",
+   "name": "Kelp + shore type",
+   "app_layer_ids": [
+    "habitat",
+    "shore-runs"
+   ],
+   "slot": "polygons",
+   "view": "MB",
+   "zoom": 11,
+   "kelp": {
+    "fill": "#6b7f2a",
+    "opacity": 0.65,
+    "opacity_with_color_field": 0.55,
+    "line": null
+   },
+   "shore": {
+    "width_pt": 3,
+    "halo": "base:typography.halo",
+    "halo_pt": 4.5,
+    "colors": {
+     "rock": "#7a3e12",
+     "rocky": "#7a3e12",
+     "sand": "#e0b84a",
+     "mixed": "#b08a5a",
+     "gravel": "#9a8a70"
+    },
+    "default_color": "#9a8a70",
+    "key": "first word of 'substrate', lower case"
+   },
+   "legend": {
+    "title": "kelp green · shore: rock brown, sand gold"
+   },
+   "data_age": {
+    "status": "dated",
+    "rule": "annual canopy survey: always print the survey month (Sept 2024); never presented as current canopy"
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "Planet Dove kelp canopy polygons Sept 2024 (Zenodo record 17644635) + repo shore-habitat (NOAA ESI)",
+    "res": "3 m imagery-derived polygons",
+    "time": "Sept 2024 (annual)",
+    "area": "Estero Bay: Cayucos–Pt Buchon"
+   }
+  },
+  "places": {
+   "pick": "PLACE-A",
+   "name": "Ramp glyphs + pier lines",
+   "app_layer_ids": [
+    "launch points"
+   ],
+   "slot": "points",
+   "view": "MB",
+   "zoom": 11,
+   "ramp": {
+    "glyph": "triangle-up",
+    "color": "#2b6c9d",
+    "size_pt": 9,
+    "outline": "#FFFFFF",
+    "outline_pt": 1.2,
+    "label_pt": 7,
+    "label_strip": " Facility"
+   },
+   "pier": {
+    "color": "base:contours.ink",
+    "width_pt": 2.2,
+    "halo": "base:typography.halo",
+    "halo_extra_pt": 2,
+    "label_pt": 6.5,
+    "label_at": "seaward end"
+   },
+   "data_age": {
+    "status": "static",
+    "rule": "static reference data"
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "Repo launch-points.json (CA DBW) + OpenStreetMap piers/slipways/marinas (Overpass, fetched Nov 19, 2026)",
+    "res": "points / pier lines",
+    "time": "static",
+    "area": "Estero Bay; cluster view = whole coast"
+   }
+  },
+  "spots-marks": {
+   "pick": "SPOT-B",
+   "name": "Ranked badges",
+   "app_layer_ids": [
+    "marks",
+    "trip-ranked"
+   ],
+   "slot": "points",
+   "view": "MB",
+   "zoom": 11,
+   "rank_by": "habitat_score (descending) of the atlas targets in view — a habitat rank, not a fish score",
+   "top_n": 10,
+   "badge": {
+    "fill": "#B23A1A",
+    "outline": "#FFFFFF",
+    "outline_pt": 1.4,
+    "size_pt": 13,
+    "text": "#FFFFFF",
+    "text_pt": 7.5,
+    "weight": "bold"
+   },
+   "others": {
+    "color": "#9aa3ad",
+    "size_pt": 2.5,
+    "hide_with_color_field": true
+   },
+   "data_age": {
+    "status": "dated",
+    "rule": "atlas edition date printed on the card (2026-09-27)"
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "Repo atlas-marks.json (USGS-surveyed habitat targets, habitat_score/grade/rank)",
+    "res": "points",
+    "time": "atlas edition 2026-09-27",
+    "area": "Estero Bay–Pt Buchon"
+   }
+  },
+  "routes-tracks": {
+   "pick": "ROUTE-A",
+   "name": "Amber route + legs",
+   "app_layer_ids": [
+    "planning-route"
+   ],
+   "slot": "route",
+   "view": "MB",
+   "zoom": 11,
+   "route": {
+    "color": "#E39B2D",
+    "width_pt": 3,
+    "halo": "base:typography.halo",
+    "halo_pt": 5,
+    "cap": "round"
+   },
+   "waypoint": {
+    "fill": "#E39B2D",
+    "outline": "#FFFFFF",
+    "outline_pt": 1.4,
+    "size_pt": 11,
+    "text": "#FFFFFF",
+    "text_pt": 7
+   },
+   "leg_label": {
+    "color": "#8a5a10",
+    "size_pt": 7,
+    "format": "{nm:.1f} nm",
+    "skip_first_leg": true
+   },
+   "recorded_track": {
+    "color": "#2b6c9d",
+    "width_pt": 2,
+    "opacity": 0.85,
+    "breadcrumb_every_min": 5,
+    "under_planned_route": true
+   },
+   "data_age": {
+    "status": "plan",
+    "rule": "a plan, not a track; wind along the route follows the wind forecast gate",
+    "forecast_gate": {
+     "run_max_h": 36,
+     "retrieved_max_h": 6,
+     "ahead_max_min": 5,
+     "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
+    }
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "Planning route from repo data: Morro Bay public launch → departure point → top 3 ranked atlas targets",
+    "res": "vector",
+    "time": "plan",
+    "area": "Morro Bay → Pt Buchon"
+   }
+  },
+  "ais-fleet": {
+   "pick": "AIS-A",
+   "name": "Amber cross-hatch",
+   "app_layer_ids": [
+    "commercial-ais"
+   ],
+   "slot": "polygons",
+   "view": "REG",
+   "zoom": 9,
+   "fill": {
+    "color": "#E39B2D",
+    "opacity": "stacking:opacity_by_zoom.habitat_fill",
+    "hatch": "xx"
+   },
+   "line": {
+    "color": "#E39B2D",
+    "width_pt": 1.2
+   },
+   "label": {
+    "color": "#8a5a10",
+    "size_pt": 6.5,
+    "max_chars": 30
+   },
+   "meaning": "historical apparent commercial fishing effort cells (statistical grid), not catch rates or a popularity ranking",
+   "data_age": {
+    "status": "dated",
+    "rule": "historical (2024) dataset: print its activity dates; never presented as live"
+   },
+   "desaturates_base": false,
+   "source": {
+    "source": "Repo commercial-ais-effort.geojson (Global Fishing Watch apparent fishing effort, aggregated cells)",
+    "res": "GFW 0.01°-cell aggregates",
+    "time": "as built in repo",
+    "area": "Piedras Blancas–Pt Sal"
+   }
+  }
+ },
+ "display_sampling": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+ "acceptance": {
+  "base": {
+   "what": "regional house base raster per view",
+   "mean_abs_per_channel_max": 0.25,
+   "p99_abs_per_channel_max": 2,
+   "deltaE2000_mean_max": 0.25,
+   "deltaE2000_p95_max": 1.0,
+   "ssim_min": 0.999
+  },
+  "field": {
+   "what": "the layer's own RGBA raster at the view grid (alpha applied), premultiplied over #808080, plus alpha",
+   "mean_abs_per_channel_max": 0.5,
+   "p99_abs_per_channel_max": 3,
+   "deltaE2000_mean_max": 0.35,
+   "deltaE2000_p95_max": 1.5,
+   "ssim_min": 0.998,
+   "alpha_mean_abs_max": 0.004
+  },
+  "composed": {
+   "what": "reference compositor output (vectors drawn with the pinned matplotlib)",
+   "mean_abs_per_channel_max": 0.5,
+   "deltaE2000_mean_max": 0.5,
+   "ssim_min": 0.995
+  },
+  "metrics": {
+   "what": "numbers in metrics.json (stretch limits, thresholds, counts, data stats)",
+   "rel_tol": 0.001,
+   "abs_tol": 0.01
+  },
+  "live_map_screenshot": {
+   "what": "app screenshot at the case view vs composed golden, same extent and size; structure only, fonts differ",
+   "deltaE2000_mean_max": 3.0,
+   "ssim_min": 0.85
+  }
+ }
+}
