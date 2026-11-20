@@ -31,6 +31,7 @@ def prune(published,incoming):
         if target.is_symlink():raise ValueError(f'Habitat region folder is a link: {ident}')
         keep=set()
         for path in (manifest,target/'habitat-dynamics.json'):
+            if path.is_symlink():raise ValueError(f'Habitat manifest is a link: {ident}/{path.name}')
             if not path.exists():continue
             data=_load(path,ident)
             if data.get('region_id')!=ident or data.get('schema_version')!=1:raise ValueError(f'Habitat identity mismatch: {ident}')
