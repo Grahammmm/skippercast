@@ -1,8 +1,7 @@
 """F21-13 / SCA-609: AIS receipts must preserve source, field, value and time.
 
-Run ``python -m tests.unit.test_f21_13_audit`` for the offline baseline.
-Exit 1 reports a gap, not desired behavior. The affected joint-window case
-is not a required test until the production repair (SCA-460).
+Run ``python -m tests.unit.test_f21_13_audit`` for the offline replay.
+Exit 1 reports a provenance gap in the joint-window case.
 """
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
@@ -57,6 +56,12 @@ def test_separate_windows_keep_each_call_sign_with_its_source_and_time(tmp_path)
     # The same two rows in disjoint windows are a valid control: even this
     # case would fail if retrieval time were used instead of observation time.
     assert replay(tmp_path, ((START, SPLIT), (SPLIT, END))) == EXPECTED
+
+
+def test_joint_window_keeps_each_call_sign_with_its_source_and_time(tmp_path):
+    # An MMSI-level cross-product writes four claims at the first time instead
+    # of the two messages actually observed.
+    assert replay(tmp_path, ((START, END), (START, END))) == EXPECTED
 
 
 def report(label, actual):

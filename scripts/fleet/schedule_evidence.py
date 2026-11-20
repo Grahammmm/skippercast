@@ -36,6 +36,7 @@ from skippercast.fleet.adapters.landing_pages import (
 from skippercast.fleet.adapters.teck_reports import teck_client  # noqa: E402
 
 PARSER_VERSION = "fleet-schedule-evidence-v1"
+AIS_IDENTITY_PARSER_VERSION = "fleet-ais-identity-evidence-v2"
 DEFAULT_MAX_PAGES = 20
 MAX_INDEX_PAGES_PER_RUN = 16
 MAX_AIS_TRIP_ASSESSMENTS_PER_RUN = 150
@@ -487,6 +488,7 @@ def read_static_candidates(state_path: Path, boat_name: str, start: datetime, en
         entry = by_mmsi.setdefault(row["mmsi"], {
             "mmsi": row["mmsi"], "ais_names": set(), "call_signs": set(), "ship_types": set(),
             "sources": set(), "first_static_utc": None, "last_static_utc": None, "static_rows": 0,
+            "identity_observations": set(),
         })
         entry["ais_names"].add(row["name"] or "")
         if row["call_sign"]:
@@ -494,7 +496,13 @@ def read_static_candidates(state_path: Path, boat_name: str, start: datetime, en
         if row["ship_type"] is not None:
             entry["ship_types"].add(row["ship_type"])
         entry["sources"].add(row["source"])
-        observed = datetime.fromtimestamp(row["ts"] / 1000, timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        instant = datetime.fromtimestamp(row["ts"] / 1000, timezone.utc)
+        observed = instant.isoformat(timespec="seconds").replace("+00:00", "Z")
+        observed_exact = instant.isoformat(timespec="milliseconds" if instant.microsecond else "seconds").replace("+00:00", "Z")
+        for field, value in (("mmsi", row["mmsi"]), ("vessel_name", row["name"]),
+                             ("call_sign", row["call_sign"]), ("ship_type", row["ship_type"])):
+            if value is not None and value != "":
+                entry["identity_observations"].add((row["source"], field, str(value), observed_exact))
         entry["first_static_utc"] = min(entry["first_static_utc"] or observed, observed)
         entry["last_static_utc"] = max(entry["last_static_utc"] or observed, observed)
         entry["static_rows"] += 1
@@ -613,26 +621,22 @@ IDENTITY_FIELD_ALLOWLIST = frozenset({"mmsi", "vessel_name", "call_sign", "ship_
 def store_ais_identity_evidence(conn: sqlite3.Connection, trip_id: str, revision: int,
                                 candidate: dict, retrieved_at: str) -> int:
     """Store only allowlisted identity fields from AIS statics, labelled self-reported."""
-    fields = [("mmsi", str(candidate["mmsi"]), None)]
-    fields.extend(("vessel_name", value, candidate["first_static_utc"]) for value in candidate["ais_names"])
-    fields.extend(("call_sign", value, candidate["first_static_utc"]) for value in candidate["call_signs"])
-    fields.extend(("ship_type", str(value), candidate["first_static_utc"]) for value in candidate["ship_types"])
     inserted = 0
-    for source_id in candidate["sources"]:
-        for field_name, field_value, observed_at in fields:
+    with conn:
+        for source_id, field_name, field_value, observed_at in candidate["identity_observations"]:
             if field_name not in IDENTITY_FIELD_ALLOWLIST:
                 raise ValueError("identity field is outside the approved facts-only schema")
-            record_id = stable_id("ais-static", source_id, str(candidate["mmsi"]), field_name, field_value,
-                                  observed_at or "")
+            # A corrected receipt must not collide with a legacy receipt that happens to match.
+            record_id = stable_id(AIS_IDENTITY_PARSER_VERSION, source_id, str(candidate["mmsi"]),
+                                  field_name, field_value, observed_at)
             evidence_id = stable_id(trip_id, str(revision), record_id)
-            with conn:
-                cursor = conn.execute("""INSERT OR IGNORE INTO identity_evidence
+            cursor = conn.execute("""INSERT OR IGNORE INTO identity_evidence
                     (evidence_id,trip_id,schedule_revision,candidate_mmsi,source_class,source_id,
                      source_record_id,source_url,field_name,field_value,observed_at_utc,retrieved_at,
                      parser_version,rights,rights_basis,uncertainty)
                     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (evidence_id, trip_id, revision, candidate["mmsi"], "ais-self-reported", source_id,
-                     record_id, None, field_name, field_value, observed_at, retrieved_at, PARSER_VERSION,
+                     record_id, None, field_name, field_value, observed_at, retrieved_at, AIS_IDENTITY_PARSER_VERSION,
                      "internal-only", "AIS static message; source terms pending owner/counsel review; private matching only",
                      "AIS static fields are self-reported and do not establish vessel identity"))
             inserted += cursor.rowcount
@@ -664,6 +668,7 @@ def assess_ais(conn: sqlite3.Connection, state_path: Path, fleet_var: Path, regi
             candidate["port_presence"] = read_port_presence(state_path, candidate["mmsi"],
                                                               trip["port_id"], trip["scheduled_date_local"])
             store_ais_identity_evidence(conn, trip["trip_id"], trip["revision"], candidate, stamp(now))
+            del candidate["identity_observations"]  # Keep the existing assessment summary shape.
             candidate["evidence_origin"] = "AIS self-reported static fields; no official FCC/PSIX corroboration"
             candidate["interpretation"] = "name-match-candidate-only; not identity approval or proof of trip"
             evidences.append(candidate)
