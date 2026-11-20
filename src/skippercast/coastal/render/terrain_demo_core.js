@@ -119,10 +119,15 @@ const TerrainCore = (() => {
     }
     return sums.map(n => { const length=Math.hypot(...n)||1; return n.map(x=>x/length); });
   }
-  function raster(payload, projected, width, height, vertexNormals = null) {
-    const depth = new Float64Array(width * height).fill(NaN), z = new Float64Array(width * height).fill(-Infinity);
-    const triangles = new Int32Array(width * height).fill(-1);
-    const shadeNormals = vertexNormals ? new Float32Array(width*height*3) : null;
+  // Passing the previous surface opts into overwriting its planes in place.
+  function raster(payload, projected, width, height, vertexNormals = null, previous = null) {
+    const size = width * height;
+    const view = previous?.depth.length === size && Boolean(previous.shadeNormals) === Boolean(vertexNormals)
+      ? previous
+      : {depth: new Float64Array(size), z: new Float64Array(size), triangles: new Int32Array(size),
+        shadeNormals: vertexNormals ? new Float32Array(size * 3) : null};
+    const {depth, z, triangles, shadeNormals} = view;
+    depth.fill(NaN); z.fill(-Infinity); triangles.fill(-1); shadeNormals?.fill(0);
     payload.faces.forEach((face,index) => {
       const [a,b,c] = face.map(i=>projected[i]);
       const det=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);
@@ -151,7 +156,7 @@ const TerrainCore = (() => {
         }
       }
     });
-    return {depth,z,triangles,shadeNormals};
+    return view;
   }
   const MAX_FLOW_FACES = 131072, MAX_FLOW_CANDIDATES = 262144, MAX_FLOW_SEGMENTS = 8192;
   function pchip4(a,b,c,d,t) {
