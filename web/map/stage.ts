@@ -403,6 +403,7 @@ export function createStage(options: StageOptions): Stage {
   let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, noticeTimer: ReturnType<typeof setTimeout> | undefined;
   // MB-14: the 3D frame watch (armed once the terrain has loaded), the entry camera's bookkeeping and the theme last painted.
   let fpsArmed = false, last3d: Camera | undefined, lastBearing: number | undefined, lastShown: string | undefined, entryPending = false, painted: StageTheme | undefined = typeof document === 'undefined' ? undefined : rootTheme();
+  let entry: {base: Camera; pose: Camera} | undefined;
   // Synthetic browser terrain tests opt out of timing software WebGL; other sessions keep the 24 fps floor.
   const ignoreFps = (globalThis as {__skippercastE2eIgnoreTerrainFps?: boolean}).__skippercastE2eIgnoreTerrainFps === true;
   const monitor = createFrameMonitor(() => {
@@ -567,8 +568,8 @@ export function createStage(options: StageOptions): Stage {
   }
 
   const visibility = (): void => { pageHidden.value = !!doc.hidden; monitor.reset(); };
-  // A 3D choice after Chart or 2D starts at the entry camera. Leaving 3D changes nothing (one camera for every view), so a straight
-  // return to 3D, the camera still where 3D left it, is not made wider again: the half zoom level is for a view that moved.
+  // A 3D choice after Chart or 2D starts at the entry camera. A straight return from 2D, the camera still where 3D left it,
+  // is not made wider again: the half zoom level is for a view that moved.
   // `opening`: the page itself opened in 3D. A link that names an orbit (bearing and pitch) is kept as shared; one that does not
   // gets the entry pose. With no camera yet (the region's centre still arriving) the entry waits for the home camera.
   const enter3d = (opening: boolean): void => {
@@ -577,7 +578,9 @@ export function createStage(options: StageOptions): Stage {
     entryPending = false;
     if (opening && c.pitch !== undefined) return;
     const back = last3d !== undefined && sameSpot(c, last3d);
-    camera.value = entryCamera(c, c.bearing ?? lastBearing ?? 0, back ? 0 : ENTRY_ZOOM_DROP);
+    const pose = entryCamera(c, c.bearing ?? lastBearing ?? 0, back ? 0 : ENTRY_ZOOM_DROP);
+    entry = {base: entry?.pose === c ? entry.base : c, pose};
+    camera.value = pose;
   };
   const leave3d = (): void => {
     const c = camera.peek();
@@ -605,7 +608,17 @@ export function createStage(options: StageOptions): Stage {
       if (now === was) return;
       monitor.reset();
       // The first run has no earlier view: a page opened in 3D is an entry too, kept as it is only when its link names an orbit.
-      if (now === '3d') { fpsFallback.value = false; clearTimeout(noticeTimer); enter3d(was === undefined); } else { entryPending = false; if (was === '3d') leave3d(); }
+      if (now === '3d') { fpsFallback.value = false; clearTimeout(noticeTimer); enter3d(was === undefined); }
+      else {
+        entryPending = false;
+        if (was === '3d') leave3d();
+        if (now === 'chart') {
+          // Don't publish the automatic terrain entry pose as a Chart move. A real terrain gesture or
+          // a new link has already replaced the pose and remains the shared camera, even before its URL settles.
+          if (entry && camera.peek() === entry.pose) camera.value = entry.base;
+          entry = undefined;
+        }
+      }
     }),
     // The first terrain choice mounts the renderer; Chart only hides it (setVisible), so switching back is instant.
     effect(() => { if (shownPresentation.value !== 'chart') void mount(); }),

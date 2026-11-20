@@ -73,6 +73,10 @@ test('3D shows the terrain; switching to 2D keeps place, target, profile, hour a
   await toggle(page, 'Chart').click();
   await expect(host).toBeHidden();
   await expect(page.locator('.app-map')).toBeVisible();
+  // Chart may mount late or already have moved while hidden. Check its rendered camera too:
+  // the URL alone can still look right when the automatic 3D entry zoom has leaked into Chart.
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await expect(page.locator('.app-chart')).toHaveAttribute('data-view', PLACE.view);
   // The DOM can reflect the choice before Playwright receives the history URL update.
   await expect.poll(() => params(page)).toMatchObject({...PLACE, presentation: 'chart'});
   await v2.a11y('v2-map-chart');
