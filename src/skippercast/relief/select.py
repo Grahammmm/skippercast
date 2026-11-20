@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import sys
 
 import numpy as np
 import rasterio
@@ -154,11 +155,31 @@ def twins(row, cache, sha):
 
 
 def pinned_grid(folder, sha):
-    side = read_json(local_path(folder / 'sidecar.json'))
+    sidecar = local_path(folder / 'sidecar.json')
+    try:
+        side = read_json(sidecar)
+    except (ValueError, RecursionError) as exc:
+        raise ValueError('normalized_sidecar_malformed') from exc
+    if not isinstance(side, dict):
+        raise ValueError('normalized_sidecar_malformed')
+    pins = side.get('outputs')
+    params = side.get('params', {})
+    resolution = side.get('resolution_m')
+    # Validate the fields selection consumes before using them as pins,
+    # geometry or support-policy inputs. Leave value and byte checks below.
+    if (not isinstance(pins, dict) or 'grid.tif' not in pins
+            or any(not isinstance(digest, str) for digest in pins.values())
+            or not isinstance(params, dict)
+            or (params.get('label') is not None and not isinstance(params['label'], str))
+            or not isinstance(side.get('vertical_datum', 'unstated'), str)
+            or not isinstance(resolution, (int, float)) or isinstance(resolution, bool)
+            or not 0 < resolution <= sys.float_info.max
+            or not isinstance(side.get('crs'), str)
+            or not isinstance(side.get('shape'), list) or not isinstance(side.get('transform'), list)):
+        raise ValueError('normalized_sidecar_malformed')
     if (side.get('schema') != 'sc-relief-normalized/1' or side.get('original_sha256') != sha
             or side.get('units') != 'm' or side.get('value_convention') != UP):
         raise ValueError('normalized sidecar does not bind this original metre elevation grid')
-    pins = side['outputs']
     grid = local_path(folder / 'grid.tif')
     support = local_path(folder / 'support.tif')
     def verify(path):

@@ -93,6 +93,7 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
   setSunAzimuth:live(degrees=>viewer.setSunAzimuth(degrees),undefined),
   setPhotoMix:live(mix=>viewer.setPhotoMix(mix),undefined),
   setFixedRamp:live(fixed=>viewer.setFixedRamp(fixed),undefined),
+  setReliefLook:live(key=>viewer.setReliefLook(key),'legacy'),
   setSourceCoverage:live(visible=>viewer.setSourceCoverage(visible),undefined),
   setHabitatVisible:live(visible=>viewer.setHabitatVisible(visible),undefined),
   zoom:live(direction=>viewer.zoom(direction),undefined),

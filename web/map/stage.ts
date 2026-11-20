@@ -51,6 +51,7 @@ import {themeChoice} from '../theme-choice.ts';
 import {createThemeWatcher} from './theme-restyle.ts';
 import {C2_ENABLED, C2_RELEASES} from './c2-releases.ts';
 import type {C2View} from './terrain.js';
+import {LEGACY_LOOK, resolveRelief} from './relief-data.ts';
 
 /** The C2 flag (M9, web/map/c2-releases.ts): whether release views mount, and each listed region's manifest. */
 export interface C2Flag {readonly enabled: boolean; readonly releases: Readonly<Record<string, string>>}
@@ -165,6 +166,8 @@ export type TerrainLoader = () => Promise<TerrainModule>;
 const loadTerrain: TerrainLoader = () => import('./terrain.js');
 
 export interface StageOptions {
+  /** Same-origin fetch for the regional relief pointer (injected by offline fixtures). */
+  reliefFetch?: typeof fetch;
   /** The element whose shadow root the terrain mounts into. */
   host: HTMLElement;
   load?: TerrainLoader;
@@ -281,7 +284,7 @@ export function createFrameMonitor(onSlow: () => void, minFps = MIN_FPS, windowM
 export const fpsFallback = signal(false);
 const FALLBACK_NOTICE_MS = 10_000;
 
-/** The terrain's display options (FE-80), starting from the native panel's defaults; the Seafloor rail entry sets them. */
+/** The terrain's display options (FE-80); the Seafloor rail entry sets them. */
 export interface TerrainOptions {
   /** Seabed relief exaggeration, 1 (true scale) to 12. */
   readonly relief: number;
@@ -303,8 +306,27 @@ export const TERRAIN_DEFAULTS: TerrainOptions = Object.freeze({relief: 2, water:
 // The standalone coast embed still starts at 5×; apply the host's choice before load().
 const NATIVE_TERRAIN_DEFAULTS: TerrainOptions = {...TERRAIN_DEFAULTS, relief: 5};
 export const terrainOptions = signal<TerrainOptions>(TERRAIN_DEFAULTS);
+const terrainRamp = signal<'legacy' | 'known' | 'unknown'>('legacy');
+const kitFixed = signal(true);
+export const terrainFixedRamp = computed(() => terrainRamp.value === 'known' ? kitFixed.value : terrainRamp.value === 'legacy' && terrainOptions.value.fixedRamp);
 export function setTerrainOption<K extends keyof TerrainOptions>(name: K, value: TerrainOptions[K]): void {
+  if (name === 'fixedRamp' && terrainRamp.peek() !== 'legacy') {
+    if (terrainRamp.peek() === 'known') kitFixed.value = value === true;
+    return;
+  }
   terrainOptions.value = {...terrainOptions.peek(), [name]: value};
+}
+
+/** Same reviewed regional pointer as Chart; do not fetch its raster or read lineage. */
+async function regionalReliefLook(id: string, fetchFn: typeof fetch, signal: AbortSignal): Promise<string | null | undefined> {
+  try {
+    const response = await fetchFn(new URL(`catalog/relief/${encodeURIComponent(id)}.json`, location.href), {redirect: 'error', signal});
+    if (response.status === 404) return undefined;
+    if (!response.ok) return null;
+    const selected = resolveRelief(id, await response.json());
+    if (selected.status !== 'ready') return null;
+    return selected.archive.look === LEGACY_LOOK ? undefined : selected.archive.look;
+  } catch { return null; }
 }
 /** The last terrain inspection, with the renderer's measured or modelled label and source clock verbatim; null when it clears. */
 export const terrainReading = signal<CoastReading | null>(null);
@@ -386,7 +408,7 @@ export function drape(h: Pick<CoastHandle, 'setOverlay' | 'removeOverlay'>, feed
 }
 
 export function createStage(options: StageOptions): Stage {
-  const {host, load = loadTerrain, doc = document, viewDelay = 400} = options;
+  const {host, load = loadTerrain, doc = document, viewDelay = 400, reliefFetch = typeof window === 'undefined' ? undefined : fetch} = options;
   const handle = signal<CoastHandle | null>(null);
   // A mounted C2 release view (M9); either renderer records the region it mounted for.
   const c2View = signal<C2View | null>(null);
@@ -448,7 +470,7 @@ export function createStage(options: StageOptions): Stage {
     const h = handle.peek();
     handle.value = null; applied = {}; draped = new Map(); coarsened.clear(); if (terrainCoarsened.peek().length) terrainCoarsened.value = []; terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
     fpsArmed = false; monitor.reset();
-    shownOptions = NATIVE_TERRAIN_DEFAULTS; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
+    shownOptions = NATIVE_TERRAIN_DEFAULTS; terrainRamp.value = 'legacy'; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
     terrainHabitat.value = null; rankedReefs = null;
     h?.destroy();
   };
@@ -623,7 +645,27 @@ export function createStage(options: StageOptions): Stage {
     // The first terrain choice mounts the renderer; Chart only hides it (setVisible), so switching back is instant.
     effect(() => { if (shownPresentation.value !== 'chart') void mount(); }),
     effect(() => { const h = handle.value, state = wanted.value; if (h) apply(h, state); }),
-    effect(() => { const h = handle.value, wanted = terrainOptions.value, on = layers.value.includes('seafloor'); if (h) shownOptions = applyOptions(h, wanted, on, shownOptions); }),
+    effect(() => {
+      const h = handle.value, id = region.value;
+      if (!h || !reliefFetch) return;
+      // Never leave the previous region's kit applied while a new pointer loads.
+      if (terrainRamp.peek() !== 'legacy') {
+        h.setReliefLook(undefined);
+        shownOptions = {...shownOptions, fixedRamp: false};
+        terrainRamp.value = 'legacy';
+      }
+      if (!id) return;
+      const abort = new AbortController();
+      void regionalReliefLook(id, reliefFetch, AbortSignal.any([abort.signal, AbortSignal.timeout(5000)])).then(key => {
+        if (abort.signal.aborted || key === undefined || handle.peek() !== h) return;
+        const mode = h.setReliefLook(key);
+        shownOptions = {...shownOptions, fixedRamp: mode === 'known'};
+        kitFixed.value = true;
+        terrainRamp.value = mode;
+      });
+      return () => abort.abort();
+    }),
+    effect(() => { const h = handle.value, wanted = {...terrainOptions.value, fixedRamp: terrainFixedRamp.value}, on = layers.value.includes('seafloor'); if (h) shownOptions = applyOptions(h, wanted, on, shownOptions); }),
     effect(() => { const h = handle.value, feeds = terrainLayers.value; if (h && overlayPalette) { draped = drape(h, feeds, overlayPalette, draped, coarsened); publishCoarsened(); } }),
     // A link selection (a mark, a terrain habitat, Back) or a new region replaces a picked overlay's card.
     effect(() => { selection.value; habitat.value; region.value; terrainPick.value = null; terrainReading.value = null; }),
