@@ -7,8 +7,9 @@
 //                      since Meta keeps a Story's insights only while it is up
 //
 // One row per post, surface and local day in advisor_post_stats (an UPSERT, so a
-// rerun the same day replaces the numbers): Meta's values are lifetime totals, so
-// the latest row is the post's current count and the rows by day are its growth.
+// rerun the same day replaces the numbers it measured). Meta's values are lifetime
+// totals. Facebook engagement keeps the last measured counts and their individual
+// timestamps in the latest row when a new reading is incomplete.
 // Columns: views, reach, likes, comments (a Story's `replies`), saved, shares,
 // follows, profile_visits; link_taps stays 0 (no media metric gives it). raw_json
 // keeps every metric read (profile_activity and ig_reels_avg_watch_time have no
@@ -78,7 +79,11 @@ export async function readInstagram(cfg: MetaConfig, mediaId: string, kind: stri
   return {columns, metrics: values, notes};
 }
 
-/** One Page post's reading: its unique reach (post_impressions_unique), reactions, comments and shares; parts Meta refuses count 0 with a note. */
+const FACEBOOK_ENGAGEMENT = {likes: 'reactions', comments: 'comments', shares: 'shares'} as const;
+type EngagementColumn = keyof typeof FACEBOOK_ENGAGEMENT;
+const engagementColumns = Object.keys(FACEBOOK_ENGAGEMENT) as EngagementColumn[];
+
+/** One Page post's reading. The metrics map contains only measurements Meta actually returned. */
 export async function readFacebook(cfg: MetaConfig, postId: string): Promise<Reading | null> {
   const notes: string[] = [], metrics: Record<string, number> = {};
   let reached = false;
@@ -106,13 +111,53 @@ export async function readFacebook(cfg: MetaConfig, postId: string): Promise<Rea
   return {columns, metrics, notes};
 }
 
+interface StatsRaw {
+  metrics?: Record<string, number>;
+  notes?: string[];
+  engagement_measured_at?: Record<EngagementColumn, string | null>;
+}
+
+function statsRaw(row: Record<string, unknown>): StatsRaw {
+  try { return JSON.parse(String(row.raw_json)) ?? {}; } catch { return {}; }
+}
+
+function measuredAt(row: Record<string, unknown>, raw: StatsRaw, column: EngagementColumn): string | null {
+  // Legacy rows have no per-metric timestamps. Only a provider value present in
+  // raw_json is evidence of measurement; the integer column may be a placeholder.
+  if (raw.engagement_measured_at) return raw.engagement_measured_at[column] ?? null;
+  return typeof raw.metrics?.[FACEBOOK_ENGAGEMENT[column]] === 'number' ? String(row.fetched_at) : null;
+}
+
 /** UPSERT the reading for (post, platform, local day of `now`). */
 export async function saveReading(db: D1Database, postId: string, platform: Platform, reading: Reading, now: number): Promise<void> {
   const day = localClock(now, DEFAULT_TZ).date, at = new Date(now).toISOString();
-  const raw = JSON.stringify({metrics: reading.metrics, ...(reading.notes.length ? {notes: reading.notes} : {})});
+  const raw: StatsRaw = {metrics: reading.metrics, ...(reading.notes.length ? {notes: reading.notes} : {})};
+  const columns = {...reading.columns};
+  if (platform === 'facebook') {
+    const timestamps: Record<EngagementColumn, string | null> = {likes: null, comments: null, shares: null};
+    for (const c of engagementColumns) if (reading.metrics[FACEBOOK_ENGAGEMENT[c]] !== undefined) timestamps[c] = at;
+    const missing = engagementColumns.filter(c => timestamps[c] === null);
+    if (missing.length) {
+      // The once-daily slot is the sole Facebook writer. Include the same day,
+      // before the upsert, as well as earlier days (including pre-upgrade rows).
+      const previous = (await db.prepare(`SELECT * FROM advisor_post_stats WHERE post_id=? AND platform='facebook' AND day<=? AND fetched_at<=? ORDER BY day DESC`)
+        .bind(postId, day, at).all<Record<string, unknown>>()).results;
+      for (const row of previous) {
+        const prior = statsRaw(row);
+        for (const c of missing) {
+          if (timestamps[c] !== null) continue;
+          const measured = measuredAt(row, prior, c);
+          if (measured !== null) { timestamps[c] = measured; columns[c] = Number(row[c]); }
+        }
+        if (missing.every(c => timestamps[c] !== null)) break;
+      }
+    }
+    raw.engagement_measured_at = timestamps;
+  }
   await db.prepare(`INSERT INTO advisor_post_stats(post_id,platform,day,${STAT_COLUMNS.join(',')},raw_json,fetched_at) VALUES(?,?,?,${STAT_COLUMNS.map(() => '?').join(',')},?,?)
-    ON CONFLICT(post_id,platform,day) DO UPDATE SET ${STAT_COLUMNS.map(c => `${c}=excluded.${c}`).join(',')},raw_json=excluded.raw_json,fetched_at=excluded.fetched_at`)
-    .bind(postId, platform, day, ...STAT_COLUMNS.map(c => Math.round(reading.columns[c])), raw, at).run();
+    ON CONFLICT(post_id,platform,day) DO UPDATE SET ${STAT_COLUMNS.map(c => `${c}=excluded.${c}`).join(',')},raw_json=excluded.raw_json,fetched_at=excluded.fetched_at
+    WHERE excluded.platform<>'facebook' OR excluded.fetched_at>=advisor_post_stats.fetched_at`)
+    .bind(postId, platform, day, ...STAT_COLUMNS.map(c => Math.round(columns[c])), JSON.stringify(raw), at).run();
 }
 
 const configFor = (env: Env, deps: InsightsDeps): MetaConfig | null => metaConfig(env, {...(deps.fetcher ? {fetcher: deps.fetcher} : {}), ...(deps.sleep ? {sleep: deps.sleep} : {})});
@@ -170,9 +215,13 @@ export async function storyInsightsTick(env: Env, now: number, deps: InsightsDep
   return out;
 }
 
+type SurfaceStats = Record<StatColumn, number> & {day: string; fetched_at: string; notes: string[]};
+type FacebookStats = Omit<SurfaceStats, EngagementColumn> & Record<EngagementColumn, number | null> & {
+  engagement: Record<EngagementColumn, {measuredAt: string | null; stale: boolean}>;
+};
 export interface PostStats {
-  instagram: (Record<StatColumn, number> & {day: string; fetched_at: string; notes: string[]}) | null;
-  facebook: (Record<StatColumn, number> & {day: string; fetched_at: string; notes: string[]}) | null;
+  instagram: SurfaceStats | null;
+  facebook: FacebookStats | null;
   chats: number;
 }
 
@@ -183,14 +232,30 @@ export interface PostStats {
  */
 export async function postStats(db: D1Database, post: {id: string; ig_media_id: string | null}): Promise<PostStats> {
   const rows = (await db.prepare(`SELECT * FROM advisor_post_stats WHERE post_id=? ORDER BY day DESC`).bind(post.id).all<Record<string, unknown>>()).results;
-  const latest = (platform: Platform): PostStats['instagram'] => {
-    const row = rows.find(r => r.platform === platform);
-    if (!row) return null;
-    let notes: string[] = [];
-    try { const raw = JSON.parse(String(row.raw_json)); if (Array.isArray(raw?.notes)) notes = raw.notes.filter((n: unknown): n is string => typeof n === 'string').slice(0, 20); } catch { notes = []; }
+  const surface = (row: Record<string, unknown>, raw: StatsRaw): SurfaceStats => {
+    const notes = Array.isArray(raw.notes) ? raw.notes.filter(n => typeof n === 'string').slice(0, 20) : [];
     return {...Object.fromEntries(STAT_COLUMNS.map(c => [c, Number(row[c]) || 0])) as Record<StatColumn, number>, day: String(row.day), fetched_at: String(row.fetched_at), notes};
   };
+  const ig = rows.find(r => r.platform === 'instagram');
+  const fb = rows.find(r => r.platform === 'facebook');
+  let facebook: FacebookStats | null = null;
+  if (fb) {
+    const raw = statsRaw(fb);
+    const latest = surface(fb, raw);
+    const engagement = {} as FacebookStats['engagement'];
+    const values = {} as Record<EngagementColumn, number | null>;
+    for (const c of engagementColumns) {
+      const at = measuredAt(fb, raw, c);
+      const stale = at !== null && raw.metrics?.[FACEBOOK_ENGAGEMENT[c]] === undefined;
+      engagement[c] = {measuredAt: at, stale};
+      values[c] = at === null ? null : latest[c];
+      // The admin table already displays notes beside the numbers.
+      if (at === null) latest.notes.push(`${c}: unavailable`);
+      else if (stale) latest.notes.push(`${c}: stale (last measured ${at})`);
+    }
+    facebook = {...latest, ...values, engagement};
+  }
   const ids = [post.id, ...(post.ig_media_id ? [post.ig_media_id] : [])];
   const chats = (await db.prepare(`SELECT COUNT(*) AS n FROM advisor_contacts WHERE source_post_id IN (${ids.map(() => '?').join(',')})`).bind(...ids).first<{n: number}>())?.n ?? 0;
-  return {instagram: latest('instagram'), facebook: latest('facebook'), chats};
+  return {instagram: ig ? surface(ig, statsRaw(ig)) : null, facebook, chats};
 }
