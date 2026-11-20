@@ -424,8 +424,9 @@ def mvt(ids, pad=0, layer='habitat'):
     values = [*ids, ''.join(hashlib.sha256(b'%d-%d' % (pad, i)).hexdigest() for i in range(pad // 64 + 1))]
     body = _pb(1, 2, layer.encode()) + _pb(15, 0, 2) + _pb(3, 2, b'id') + _pb(3, 2, b'pad')
     body += b''.join(_pb(4, 2, _pb(1, 2, v.encode())) for v in values)
+    ring = _pb(4, 2, b'\x09\x02\x02\x12\x02\x00\x00\x02\x0f')  # MoveTo, LineTo twice, ClosePath
     for i, _ in enumerate(ids):
-        body += _pb(2, 2, _pb(2, 2, bytes([0, i, 1, len(ids)])) + _pb(3, 0, 3))
+        body += _pb(2, 2, _pb(2, 2, bytes([0, i, 1, len(ids)])) + _pb(3, 0, 3) + ring)
     return gzip.compress(_pb(3, 2, body), mtime=9)
 
 

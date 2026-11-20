@@ -8,6 +8,7 @@ Believable bug: only the eight magic bytes were trusted, so ``b'PMTiles\\x03' + 
 yet ``pass=True`` and the build went on to publish an unusable map (or deleted the prior archive while refusing).
 """
 import gzip
+import struct
 import zlib
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
@@ -65,6 +66,28 @@ MAGIC_ONLY = b'PMTiles\x03' + bytes(200)  # right prefix, zeroed header: compres
 
 def valid_archive():
     return archive(MVT)
+
+
+@pytest.mark.parametrize('case', ['past EOF', 'zero length', 'bad gzip', 'bad JSON', 'non-object', 'non-JSON number'])
+def test_invalid_metadata_fails_control_receipt(case):
+    """Readable directories and tiles must not mask a broken metadata span or invalid metadata JSON."""
+    data = bytearray(valid_archive())
+    offset, length = struct.unpack_from('<QQ', data, 24)
+    if case == 'past EOF':
+        struct.pack_into('<Q', data, 24, len(data) + 1)
+    elif case == 'zero length':
+        struct.pack_into('<Q', data, 32, 0)
+    elif case == 'bad gzip':
+        data[offset:offset + length] = bytes(length)
+    else:
+        document = {'bad JSON': b'{', 'non-object': b'[]', 'non-JSON number': b'{"x":NaN}'}[case]
+        # Put a replacement metadata stream at the end, leaving the real tile and directory intact.
+        metadata = gzip.compress(document, mtime=0)
+        struct.pack_into('<QQ', data, 24, len(data), len(metadata))
+        data.extend(metadata)
+    receipt = rough_first.control_receipt('synthetic-region', bytes(data))
+    assert receipt['pass'] is False and receipt['failed'] == ['unreadable archive']
+    assert 'metadata' in receipt['archive']['reason']
 
 
 def test_valid_ordinary_archive_passes_without_a_reference():
@@ -140,6 +163,12 @@ def _malformed_layers():
         'geometry parameters missing': _tile(_layer(features=[_pb(4, bytes([1 | 2 << 3, 2, 2]))])),
         'geometry must start with MoveTo': _tile(_layer(features=[_pb(4, bytes([2 | 1 << 3, 2, 2]))])),
         'point with a LineTo': _tile(_layer(features=[_field(3, 1) + _pb(4, ok_geometry + bytes([2 | 1 << 3, 2, 2]))])),
+        # Locally valid command integers are not necessarily a complete geometry of the declared type.
+        'point with two MoveTo commands': _tile(_layer(features=[_field(3, 1) + _pb(4, ok_geometry * 2)])),
+        'linestring without LineTo': _tile(_layer(features=[_field(3, 2) + _pb(4, ok_geometry)])),
+        'polygon with only MoveTo': _tile(_layer(features=[_field(3, 3) + _pb(4, ok_geometry)])),
+        'polygon with short LineTo': _tile(_layer(features=[_field(3, 3) + _pb(4, ok_geometry + b'\x0a\x02\x00\x0f')])),
+        'zero command count': _tile(_layer(features=[_field(3, 2) + _pb(4, ok_geometry + b'\x02')])),
         'value with two fields': _tile(_layer(values=[_pb(1, b'x') + _pb(1, b'y')])),
         'value string not utf-8': _tile(_layer(values=[_pb(1, b'\xff')])),
         'feature field with the wrong wire type': _tile(_layer(features=[_pb(1, b'x')])),
@@ -190,6 +219,16 @@ def test_decoded_layer_with_keys_values_and_tags_passes():
     assert receipt['pass'] is True and receipt['failed'] == []
 
 
+def test_multi_geometries_pass():
+    """Accept a single multi-point command and repeated complete line paths and polygon rings."""
+    point = b'\x11\x02\x02\x04\x04'
+    line = b'\x09\x02\x02\x0a\x02\x02'
+    ring = b'\x09\x02\x02\x12\x02\x00\x00\x02\x0f'
+    features = [_field(3, kind) + _pb(4, geometry)
+                for kind, geometry in [(1, point), (2, line * 2), (3, ring * 2)]]
+    assert rough_first.control_receipt('synthetic-region', archive(_tile(_layer(features=features))))['pass'] is True
+
+
 def test_uncompressed_tiles_are_parsed_too():
     data = bytearray(archive(_pb(3, _layer())))
     data[98] = 1  # header: tiles stored uncompressed
@@ -221,6 +260,27 @@ def test_rough_first_fails_when_a_tile_is_corrupt_in_both_archives(zoom):
 def test_rough_first_decodes_every_zoom_before_the_gate_items_run():
     good = {(z, 0, 0): MVT for z in (8, 9, 10, 11, 12, 13, 14, 15)}
     assert 'unreadable archive' not in _evaluate(good, good)['failed']
+
+
+@pytest.mark.parametrize('control_compression, candidate_compression', [(1, 1), (2, 2), (1, 2), (2, 1), (0, 2), (2, 0)])
+def test_rough_first_content_uses_each_archive_compression(control_compression, candidate_compression):
+    """Content must not gunzip raw tiles or use the other archive's compression in a mixed pair."""
+    def packed(compression):
+        payload = MVT if compression == 2 else _pb(3, _layer())
+        entries = [((4 ** z - 1) // 3, 1, len(payload), 1) for z in range(8, 13)]
+        data = bytearray(archive(payload, entries=entries))
+        data[98] = compression
+        return bytes(data)
+
+    reference = rough_first.load_reference(ROOT, 'morro-bay')
+    receipt = rough_first.evaluate('morro-bay', packed(control_compression), packed(candidate_compression), reference)
+    if 0 in (control_compression, candidate_compression):
+        assert receipt['pass'] is False and receipt['failed'] == ['unreadable archive']
+        assert 'unsupported tile compression' in receipt['error']
+    else:
+        item = receipt['gate']['item4_content_z9_11']
+        assert item['pass'] is True and 'error' not in item
+        assert all(row['Rk_occurrences'] == row['Rc_occurrences'] == 1 for row in item['by_zoom'].values())
 
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)

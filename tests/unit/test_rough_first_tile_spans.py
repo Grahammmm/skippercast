@@ -32,11 +32,12 @@ def archive(payload=b'ABCD', *, entries=None, section=None, drop=0):
     root = gzip.compress(directory, mtime=0)
     section = len(payload) if section is None else section
     tiles = sum(e[1] for e in entries)
-    header = b'PMTiles\x03' + struct.pack('<11Q', 127, len(root), 127 + len(root), 0, 0, 0,
-                                          127 + len(root), section, tiles, len(entries), len(entries))
+    metadata = gzip.compress(b'{}', mtime=0)
+    header = b'PMTiles\x03' + struct.pack('<11Q', 127, len(root), 127 + len(root), len(metadata), 0, 0,
+                                          127 + len(root) + len(metadata), section, tiles, len(entries), len(entries))
     header = header.ljust(127, b'\0')
     header = header[:96] + b'\x01\x02\x02\x01' + header[100:]  # clustered, gzip directories, gzip MVT tiles
-    data = header + root + payload
+    data = header + root + metadata + payload
     return data[:len(data) - drop]
 
 
