@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from research.scripts import check_terrain_acceptance
+from skippercast.coastal.handoff.common import ref
 from skippercast.coastal.render import terrain_only
 
 
@@ -45,7 +46,11 @@ def run_captured(root, monkeypatch, capsys):
 
 
 def test_success_and_reuse_keep_full_receipt_only_on_disk(tmp_path, monkeypatch, capsys):
-    acceptance = dict(synthetic=True, limitations=[PRIVATE], crs=PRIVATE)
+    acceptance: dict[str, object] = dict(synthetic=True, limitations=[PRIVATE], crs=PRIVATE)
+    for name, contract in (('terrain', 'coastal-normalized-terrain-v1'), ('mask', 'coastal-native-support-v2')):
+        path = tmp_path / f'{name}.tif'
+        path.write_bytes(b'II*\0' + name.encode())  # Hit authenticates the bytes without opening GDAL.
+        acceptance[name] = ref(tmp_path, path, contract)
     (tmp_path / 'acceptance.json').write_text(json.dumps(acceptance))
     mesh = dict(crs=PRIVATE, crs_wkt=f'{PRIVATE}-wkt', affine=[1, 0, 987654321, 0, -1, 987654321],
                 vertical={'datum': PRIVATE}, nodata=None, support=SimpleNamespace(sum=lambda: 4),

@@ -5,7 +5,8 @@ import math
 import re
 from pathlib import Path
 
-from shapely.geometry import shape
+from shapely.geometry import GeometryCollection, box, mapping, shape
+from shapely.ops import unary_union
 
 PLAIN_ID=re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*')
 
@@ -28,6 +29,7 @@ def split(data,coasts):
         if not (isinstance(band,(list,tuple)) and len(band)==2 and all(latitude(v) for v in band) and band[0]<band[1]):raise ValueError(f'Coast {ident} latitude band invalid')
         bands[ident]=band
     rows={ident:[] for ident in bands}
+    views={ident:[] for ident in bands}
     for i,feature in enumerate(data['features']):
         props=feature.get('properties') if isinstance(feature,dict) else None
         label=props['id'] if isinstance(props,dict) and isinstance(props.get('id'),str) and len(props['id'])<=64 and PLAIN_ID.fullmatch(props['id']) else f'#{i}'
@@ -38,7 +40,34 @@ def split(data,coasts):
         matched=[ident for ident,(lo,hi) in bands.items() if lo<=lat<hi]
         if len(matched)!=1:raise ValueError(f'USGS polygon {label} falls outside one California coast')
         rows[matched[0]].append(feature)
-    return {ident:{key:value for key,value in data.items() if key!='features'}|{'coast_id':ident,'features':features} for ident,features in rows.items()}
+
+        west,south,east,north=geom.bounds
+        for ident,(lo,hi) in bands.items():
+            if north<=lo or south>=hi:
+                continue
+            if lo<=south and north<=hi:
+                views[ident].append(feature)
+                continue
+            piece=geom.intersection(box(west,lo,east,hi))
+            if piece.area<=0:
+                continue
+            if isinstance(piece, GeometryCollection):
+                # A disconnected part can touch the seam without contributing area.
+                piece=unary_union([part for part in piece.geoms if part.area>0])
+            views[ident].append(feature|{'geometry':mapping(piece)})
+
+    ordered=sorted(bands.values())
+    if any(first[1]>second[0] for first,second in zip(ordered,ordered[1:])):
+        raise ValueError('Coast latitude bands overlap')
+
+    # Keep centroid-owned features (and CLI counts) canonical. A separate
+    # GeoJSON foreign member carries the local view only when it differs.
+    metadata={key:value for key,value in data.items() if key not in ('features','regional_features')}
+    return {
+        ident:metadata|{'coast_id':ident,'features':features}
+        |({'regional_features':views[ident]} if views[ident]!=features else {})
+        for ident,features in rows.items()
+    }
 
 
 def main():

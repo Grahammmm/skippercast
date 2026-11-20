@@ -70,6 +70,28 @@ def test_geographic_scheme_selects_tile_and_sector(run_inventory):
     assert [(row['tile'], row['planning_sector_ids']) for row in report['tiles']] == [('FIXTURE', ['0'])]
 
 
+def test_inventory_discovers_clipped_neighboring_coast(run_inventory, tmp_path):
+    from shapely.geometry import box, mapping
+    from research.scripts.inventory_nbs_hard_footprint_tiles import COASTS
+    from research.scripts.split_usgs_context import split
+
+    feature = {'type': 'Feature', 'geometry': mapping(box(11, 21, 12, 24)),
+               'properties': {'id': 'cross', 'block_id': 'block',
+                              'fishing_target': False, 'exportable': False}}
+    data = {'type': 'FeatureCollection', 'scope': 'generalized-statewide-usgs-hard-bottom-context',
+            'features': [feature]}
+    bands = [(20, 22), (22, 25), (25, 26), (26, 27), (27, 28)]
+    shards = split(data, {'regions': [{'id': coast, 'latitude': band}
+                                      for coast, band in zip(COASTS, bands)]})
+    assert shards['northern']['features'] == []
+    for coast, shard in shards.items():
+        (tmp_path / f'{coast}.geojson').write_text(json.dumps(shard))
+    tile = run_inventory()['tiles'][0]
+    assert tile['coasts'] == ['mendocino', 'northern']
+    assert tile['planning_sector_ids'] == ['0']
+    assert tile['source_ids'] == ['block']
+
+
 def test_projected_scheme_holds_instead_of_returning_an_empty_queue(run_inventory):
     # Identical footprint in metres would silently miss an untransformed lon/lat R-tree query.
     with pytest.raises(ValueError, match='unsupported CRS'):
