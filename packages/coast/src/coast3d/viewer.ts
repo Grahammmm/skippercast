@@ -16,7 +16,7 @@ import {surfaceField} from '../map/surface-field.ts';
 import {DEFAULT_COAST_PALETTE as palette} from '../palette.ts';
 import type {CoastOverlayPalette,CoastPalette} from '../palette.ts';
 import type {OceanData} from '../ocean-types.ts';
-import {depthWindow,contourInterval,sunDirection,shadingReadout,reliefChip} from './shading.ts';
+import {depthWindow,contourInterval,sunDirection,shadingReadout,reliefChip,coastLook,KIT_RAMP_CAPACITY,rampMetres} from './shading.ts';
 import {CoastOverlays,terrainSampler,type CoastOverlay,type CoastOverlayDrape,type CoastOverlayPick} from './overlays.ts';
 import type {CoastHabitat,CoastHabitatRank,CoastReading,CoastShading,CoastSky,CoastSourceCoverage,CoastTargetDetail,CoastTheme} from '../embed-types.ts';
 export type {CoastReading,CoastShading,CoastSourceCoverage,CoastTargetDetail};
@@ -38,6 +38,9 @@ export class CoastViewer{
  private relief={value:5};private contours={value:1};private sourceColors={value:0};private waterOpacity={value:.5};
  // Presentation-only shading (shading.ts): ramp window in metres of depth, contour spacing, sun and the land photo blend.
  private rampMin={value:0};private rampMax={value:60};private fixedRamp={value:0};private photoMix={value:1};private contourMinor={value:3.048};private contourIndex={value:15.24};private sunVector={value:new T.Vector3(...sunDirection(305,54))};private sun:T.DirectionalLight|undefined;private sky:T.Texture|undefined;private rampWindow:{min:number;max:number}|null=null;
+ private look:ReturnType<typeof coastLook>;
+ private kitCount={value:0};private kitStops={value:Array.from({length:KIT_RAMP_CAPACITY},()=>new T.Vector4())};
+ private contourInk={value:new T.Color()};
  private alive=true;private frame=0;private resize:ResizeObserver;private refreshTimer=0;private lodTimer=0;private refining=false;private revision=0;
  private perspective:'2d'|'3d'='3d';private orbit=new T.Vector3(-4600,3600,4800);private orthoHeight=7000;private down=[0,0];private ray=new T.Raycaster();
  private reviewed:ReviewedHabitat|null=null;private allFeatures:any[]=[];private features:any[]=[];private selectedTarget:string|null=null;private requestedHabitat:string|null=null;private selectionReceipt:{id:string;expires:number}|null=null;private selectionTimer:ReturnType<typeof setTimeout>|undefined;private selectionAwaitingValidation=false;private reefIndex=0;private habitatGeneration=0;private context:any=null;private currentGeneration=0;
@@ -54,7 +57,7 @@ export class CoastViewer{
  private get maxPolar(){const d=this.options?.maxPitch;return typeof d==='number'&&Number.isFinite(d)&&d>=5&&d<=90?T.MathUtils.degToRad(d):Math.PI*.46;}
  private $<E extends HTMLElement=HTMLElement>(id:string):E{return this.find('[id="'+id+'"]') as E;}
  private find(selector:string){return this.root.querySelector(selector)??this.options?.controls?.querySelector(selector)??null;}
- constructor(host:HTMLElement,options:CoastViewerOptions={}){this.host=host;this.options=options;this.root=options.root??document;this.currentLayer=options.managed?'off':null;
+ constructor(host:HTMLElement,options:CoastViewerOptions={}){this.host=host;this.options=options;this.root=options.root??document;this.currentLayer=options.managed?'off':null;this.contourInk.value.set(this.palette.contour);
   this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));this.renderer.setClearColor(this.skyColors.ground);this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1;
   host.prepend(this.renderer.domElement);this.renderer.domElement.setAttribute('role','img');this.renderer.domElement.setAttribute('aria-label','Coastal terrain; drag to orbit, scroll to zoom, click to inspect source depth');this.renderer.domElement.tabIndex=0;
   this.scene.add(new T.HemisphereLight(this.palette.sky,this.palette.groundLight,.95));const sun=new T.DirectionalLight(this.palette.sun,1.5);this.sun=sun;this.setSun(305);this.scene.add(sun);this.sky=this.skyTexture();this.scene.background=this.sky;this.overlays=new CoastOverlays(options.overlayPalette);this.scene.add(this.terrain,this.waters,this.seams,this.habitat,this.currents,this.overlays.group);
@@ -99,15 +102,30 @@ export class CoastViewer{
   for(const item of this.loaded.values())take(item.grid);if(samples.length<256)for(const grid of [this.overview,this.background])if(grid)take(grid);
   const found=depthWindow(samples,water);if(found){this.rampWindow=found;this.rampMin.value=found.min;this.rampMax.value=found.max;}
   const shown=this.rampWindow,contours=contourInterval(shown?shown.max-shown.min:60,finest);this.contourMinor.value=contours.minor;this.contourIndex.value=contours.index;
-  const readout=shadingReadout(shown,this.fixedRamp.value>0,this.contours.value>0?contours:null),label=this.find('[id="shading-readout"]');if(label)label.textContent=readout;
-  this.options.onShading?.({readout,rampMinM:shown?.min??null,rampMaxM:shown?.max??null,contourMinorM:contours.minor,contourIndexM:contours.index,fixedRamp:this.fixedRamp.value>0,relief:this.relief.value});}
+  const readout=shadingReadout(shown,this.fixedRamp.value>0,this.contours.value>0?contours:null,this.look),label=this.find('[id="shading-readout"]');if(label)label.textContent=readout;
+  const stops=this.fixedRamp.value>0?this.look?.depthStopsFt:undefined;
+  this.options.onShading?.({readout,...(this.look?{noData:this.look.noData}:this.look===null?{unmatched:true}:{}),rampMinM:stops?rampMetres(stops[0]![0]):shown?.min??null,rampMaxM:stops?rampMetres(stops.at(-1)![0]):shown?.max??null,contourMinorM:contours.minor,contourIndexM:contours.index,fixedRamp:this.fixedRamp.value>0,relief:this.relief.value});}
+ /** Restyle existing and future meshes without touching the camera, coverage or source depths. */
+ setReliefLook(key:string|null|undefined):'legacy'|'known'|'unknown'{
+  this.look=coastLook(key);
+  const stops=this.look?.depthStopsFt;
+  this.kitCount.value=stops?.length??0;
+  stops?.forEach(([ft,hex],i)=>{
+   // 2D's baked ramp interpolates sRGB components; linearize only after interpolation in the shader.
+   const c=new T.Color(hex).getRGB(new T.Color(),T.SRGBColorSpace);
+   this.kitStops.value[i]!.set(c.r,c.g,c.b,rampMetres(ft));
+  });
+  this.contourInk.value.set(this.look?.contour??this.palette.contour);
+  this.setFixedRamp(!!this.look);
+  return this.look?'known':this.look===null?'unknown':'legacy';
+ }
  private material(grid:Grid,kind:number,water:boolean,texture?:T.Texture,extent?:number[]){
   const m=kind===3?new T.MeshBasicMaterial({color:this.palette.surface,side:T.DoubleSide}):new T.MeshStandardMaterial({color:this.palette.surface,roughness:water?.75:.88,metalness:0,side:T.DoubleSide,transparent:water,depthWrite:!water});
   m.onBeforeCompile=s=>{
-   Object.assign(s.uniforms,{relief:this.relief,showContours:this.contours,rampMin:this.rampMin,rampMax:this.rampMax,fixedRamp:this.fixedRamp,photoMix:this.photoMix,contourMinor:this.contourMinor,contourIndex:this.contourIndex,sunVector:this.sunVector,depthShallow:{value:new T.Color(this.palette.depthShallow)},depthMid:{value:new T.Color(this.palette.depthMid)},depthChannel:{value:new T.Color(this.palette.depthChannel)},depthDeep:{value:new T.Color(this.palette.depthDeep)},landLow:{value:new T.Color(this.palette.landLow)},landHigh:{value:new T.Color(this.palette.landHigh)},waterTint:{value:new T.Color(this.palette.waterTint)},contourColor:{value:new T.Color(this.palette.contour)},sourceColors:this.sourceColors,waterOpacity:this.waterOpacity,mainCoverage:{value:this.coverage},childCoverage:{value:this.harborCoverage},bounds:{value:new T.Vector4(...this.manifest.bounds as [number,number,number,number])},coverageSize:{value:new T.Vector2(this.cols,this.rows)},waterReference:{value:this.manifest.waterReferenceM},landImage:{value:texture??null},atlasImage:{value:this.atlas??null},atlasExtent:{value:new T.Vector4(...(this.manifest.overviewImagery?.bounds??[0,0,1,1]) as [number,number,number,number])},imageExtent:{value:new T.Vector4(...(extent??[0,0,1,1]) as [number,number,number,number])}});
+   Object.assign(s.uniforms,{relief:this.relief,showContours:this.contours,rampMin:this.rampMin,rampMax:this.rampMax,fixedRamp:this.fixedRamp,photoMix:this.photoMix,contourMinor:this.contourMinor,contourIndex:this.contourIndex,sunVector:this.sunVector,depthShallow:{value:new T.Color(this.palette.depthShallow)},depthMid:{value:new T.Color(this.palette.depthMid)},depthChannel:{value:new T.Color(this.palette.depthChannel)},depthDeep:{value:new T.Color(this.palette.depthDeep)},landLow:{value:new T.Color(this.palette.landLow)},landHigh:{value:new T.Color(this.palette.landHigh)},waterTint:{value:new T.Color(this.palette.waterTint)},contourColor:this.contourInk,kitCount:this.kitCount,kitStops:this.kitStops,sourceColors:this.sourceColors,waterOpacity:this.waterOpacity,mainCoverage:{value:this.coverage},childCoverage:{value:this.harborCoverage},bounds:{value:new T.Vector4(...this.manifest.bounds as [number,number,number,number])},coverageSize:{value:new T.Vector2(this.cols,this.rows)},waterReference:{value:this.manifest.waterReferenceM},landImage:{value:texture??null},atlasImage:{value:this.atlas??null},atlasExtent:{value:new T.Vector4(...(this.manifest.overviewImagery?.bounds??[0,0,1,1]) as [number,number,number,number])},imageExtent:{value:new T.Vector4(...(extent??[0,0,1,1]) as [number,number,number,number])}});
    if(water)s.vertexShader=s.vertexShader.replace('#include <beginnormal_vertex>','vec3 objectNormal=vec3(0.0,1.0,0.0);');
    s.vertexShader='attribute float sourceHeight; attribute float displayHeight; attribute float sourceClass; attribute float sourceTransition; varying float coastTransition; varying float coastHeight; varying float coastSource; varying vec2 coastXZ; varying vec3 coastNormal; uniform float relief; uniform float waterReference;\n'+s.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>\ncoastTransition=sourceTransition;coastHeight=displayHeight;coastSource=sourceClass;coastXZ=position.xz;coastNormal=${kind===3?'vec3(0.0,1.0,0.0)':'objectNormal'};transformed.y=${water?'waterReference':'position.y'};`);
-   s.fragmentShader='varying float coastTransition; varying float coastHeight; varying float coastSource; varying vec2 coastXZ; varying vec3 coastNormal; uniform float rampMin; uniform float rampMax; uniform float fixedRamp; uniform float photoMix; uniform float contourMinor; uniform float contourIndex; uniform vec3 sunVector; uniform vec3 depthShallow; uniform vec3 depthMid; uniform vec3 depthChannel; uniform vec3 depthDeep; uniform vec3 landLow; uniform vec3 landHigh; uniform vec3 waterTint; uniform vec3 contourColor; uniform sampler2D mainCoverage; uniform sampler2D childCoverage; uniform vec4 bounds; uniform vec2 coverageSize; uniform float waterReference; uniform float waterOpacity; uniform float showContours; uniform float sourceColors; uniform sampler2D landImage; uniform vec4 imageExtent; uniform sampler2D atlasImage; uniform vec4 atlasExtent;\n'+s.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+   s.fragmentShader=`uniform int kitCount; uniform vec4 kitStops[${KIT_RAMP_CAPACITY}];\n`+'varying float coastTransition; varying float coastHeight; varying float coastSource; varying vec2 coastXZ; varying vec3 coastNormal; uniform float rampMin; uniform float rampMax; uniform float fixedRamp; uniform float photoMix; uniform float contourMinor; uniform float contourIndex; uniform vec3 sunVector; uniform vec3 depthShallow; uniform vec3 depthMid; uniform vec3 depthChannel; uniform vec3 depthDeep; uniform vec3 landLow; uniform vec3 landHigh; uniform vec3 waterTint; uniform vec3 contourColor; uniform sampler2D mainCoverage; uniform sampler2D childCoverage; uniform vec4 bounds; uniform vec2 coverageSize; uniform float waterReference; uniform float waterOpacity; uniform float showContours; uniform float sourceColors; uniform sampler2D landImage; uniform vec4 imageExtent; uniform sampler2D atlasImage; uniform vec4 atlasExtent;\n'+s.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
     vec2 mainCell=floor((coastXZ-bounds.xy)/4096.0);vec2 childCell=floor((coastXZ-bounds.xy)/1024.0);
     ${kind===4?'if(all(greaterThanEqual(coastXZ,bounds.xy))&&all(lessThanEqual(coastXZ,bounds.zw)))discard;':''}
     ${kind===0?'if(all(greaterThanEqual(mainCell,vec2(0.0)))&&all(lessThan(mainCell,coverageSize))&&texture2D(mainCoverage,(mainCell+.5)/coverageSize).r>.5)discard;':''}
@@ -117,6 +135,17 @@ export class CoastViewer{
     vec3 fixedOcean=d<8.0?mix(depthShallow,depthChannel,smoothstep(0.0,8.0,d)):d<100.0?depthChannel:mix(depthChannel,depthDeep,smoothstep(100.0,1800.0,d));
     float rampT=pow(clamp((d-rampMin)/max(rampMax-rampMin,1.0),0.0,1.0),.8)*3.0;
     vec3 autoOcean=rampT<1.0?mix(depthShallow,depthMid,rampT):rampT<2.0?mix(depthMid,depthChannel,rampT-1.0):mix(depthChannel,depthDeep,rampT-2.0);
+    if(kitCount>0 && fixedRamp>0.0){
+      vec4 lower=kitStops[0];vec3 rgb=lower.rgb;
+      for(int i=1;i<${KIT_RAMP_CAPACITY};i++){
+        if(i>=kitCount)break;
+        vec4 upper=kitStops[i];
+        rgb=mix(lower.rgb,upper.rgb,clamp((d-lower.w)/(upper.w-lower.w),0.0,1.0));
+        if(d<=upper.w)break;
+        lower=upper;
+      }
+      fixedOcean=sRGBTransferEOTF(vec4(rgb,1.0)).rgb;
+    }
     vec3 ocean=mix(autoOcean,fixedOcean,fixedRamp);
     ${water?'if(coastHeight>=waterReference)discard;diffuseColor.rgb=mix(ocean,waterTint,.2);diffuseColor.a=waterOpacity*(.65+.35*smoothstep(0.0,4.0,d));':`diffuseColor.rgb=ocean;
     if(coastHeight>=waterReference){diffuseColor.rgb=mix(landLow,landHigh,clamp(coastHeight/600.0,0.0,1.0));${this.atlas?'vec2 auv=(coastXZ-atlasExtent.xy)/(atlasExtent.zw-atlasExtent.xy);if(all(greaterThanEqual(auv,vec2(0.0)))&&all(lessThanEqual(auv,vec2(1.0)))){vec4 widePhoto=texture2D(atlasImage,vec2(auv.x,1.0-auv.y));diffuseColor.rgb=mix(diffuseColor.rgb,widePhoto.rgb,widePhoto.a*smoothstep(.001,.012,max(widePhoto.r,max(widePhoto.g,widePhoto.b)))*.85*photoMix);}':''}${texture?'vec2 uv=(coastXZ-imageExtent.xy)/(imageExtent.zw-imageExtent.xy);if(all(greaterThanEqual(uv,vec2(0.0)))&&all(lessThanEqual(uv,vec2(1.0)))){vec4 photo=texture2D(landImage,vec2(uv.x,1.0-uv.y));vec2 edgeDistance=min(uv,1.0-uv)*(imageExtent.zw-imageExtent.xy);float photoBlend=smoothstep(0.0,96.0,min(edgeDistance.x,edgeDistance.y));diffuseColor.rgb=mix(diffuseColor.rgb,photo.rgb,photo.a*smoothstep(.001,.012,max(photo.r,max(photo.g,photo.b)))*.85*photoBlend*photoMix);}':''}}
@@ -341,7 +370,7 @@ export class CoastViewer{
  /** Land imagery against shaded relief, 0 (relief) to 1 (photo). */
  setPhotoMix(mix:number){if(Number.isFinite(mix))this.drive('photo-mix',input=>{input.value=String(this.step('photo-mix',mix));},'oninput');}
  /** True restores v1's fixed depth colours; false spans the ramp across the depths in view. */
- setFixedRamp(fixed:boolean){this.drive('fixed-ramp',input=>{input.checked=fixed;},'onchange');}
+ setFixedRamp(fixed:boolean){this.drive('fixed-ramp',input=>{input.checked=fixed&&this.look!==null;},'onchange');}
  /** Colours the terrain by the source behind each sample (the depth display's evidence view). */
  setSourceCoverage(visible:boolean){this.drive('source-coverage',input=>{input.checked=visible;},'onchange');}
  setHabitatVisible(visible:boolean){this.drive('habitat',input=>{input.checked=visible;},'onchange');}

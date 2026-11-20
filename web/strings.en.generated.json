@@ -1151,6 +1151,8 @@
 "rail.terrain.waterHint":{"en":"Illustrative +0.8 m water surface. Not a live tide."},
 "rail.terrain.contours":{"en":"Depth contours · adapt to view"},
 "rail.terrain.fixedRamp":{"en":"Fixed depth colours"},
+"rail.terrain.unmatched":{"en":"Colours not matched to the 2D map"},
+"rail.terrain.noData":{"en":"No depth data"},
 "rail.terrain.sun":{"en":"Sun direction"},
 "rail.terrain.lightingOnly":{"en":"Lighting only"},
 "rail.terrain.heightsUnchanged":{"en":"Heights unchanged"},
