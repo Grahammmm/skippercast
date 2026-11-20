@@ -329,6 +329,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       waterTempState.value = s.drawn && band ? {...s, drawn: {...s.drawn, range: [band.low, band.high]}, basis: `${band.legend}. ${s.basis}`} : s;
       setRailNote(REGISTRY_ID, on.value ? s.note : '', on.value ? s.copy?.note : undefined);
     }),
+    effect(() => engine.value?.view?.on?.('resize', () => { resized.value++; })),
     // A new analysis repaints; no analysis (off, refused, stale) removes the texture and the contours at once.
     effect(() => {
       const e = engine.value, a = status.value.drawn, generation = e ? a?.sst ?? null : null;
@@ -357,8 +358,6 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
         [CONTRAST_LAYER, 'chlorophyll', SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
       painted = a.sst;
-      const stop = e.view?.on?.('resize', () => { resized.value++; });
-      return stop;
     }),
     effect(() => {
       const e = engine.value, a = status.value.drawn, zoom = camera.value?.zoom ?? SST_STYLE.zoom;

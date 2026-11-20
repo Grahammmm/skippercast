@@ -24,7 +24,7 @@ def prepare(kit, out):
         source['sst_c'].astype('<f4').tofile(out / 'sst.f32')
         view.water.astype('<f4').tofile(out / 'water.f32')
         case = {
-            'case': '01-sst-fill', 'view': layer['view'], 'zoom': layer['zoom'],
+            'layer': 'sst-fill', 'view': layer['view'], 'zoom': layer['zoom'],
             'view_grid': {'lon': view.lon.tolist(), 'lat': view.lat.tolist(), 'mask': 'water.f32'},
             'source_grid': {'lon': source['lon'].tolist(), 'lat': source['lat'].tolist(), 'values': 'sst.f32'},
             'data_time_utc': source['time'].item(),

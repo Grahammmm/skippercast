@@ -227,8 +227,9 @@ def main():
     n = sum(r['verdict']['pass'] for r in results.values())
     print(f'LAYERS PARITY {"PASS" if n == len(cases) else "FAIL"} {n}/{len(cases)} key={key[:12]}')
     if args.negative:
-        field = results[cases[0]]['verdict'].get('field', {})
-        return int(field.get('pass') is not False or n != 0)
+        verdict = results[cases[0]]['verdict']
+        return int(verdict.get('field.png', {}).get('pass') is not False
+                   or verdict.get('metrics.json', {}).get('pass') is not True or n != 0)
     return int(n != len(cases))
 
 

@@ -3,8 +3,8 @@ import {sstDataIsFresh} from '../../../web/map/sst.ts';
 import {sstBandModel, sstBandPixels, sstRamp, SST_STYLE} from '../../../web/map/sst-bands.ts';
 
 export async function render(input, {palette, readGrid, now}) {
-  const {case: id, view, zoom, data_time_utc, source_grid: source, view_grid: display} = input;
-  const metrics = {case: id, pick: SST_STYLE.pick, view, zoom, data_time_utc};
+  const {layer, view, zoom, data_time_utc, source_grid: source, view_grid: display} = input;
+  const metrics = {case: layer, pick: SST_STYLE.pick, view, zoom, data_time_utc};
   // The reference fixture exposes one UTC timestamp and no retrieval timestamp.
   const iso = /(?:Z|[+-]\d{2}:\d{2})$/.test(data_time_utc) ? data_time_utc : `${data_time_utc}Z`;
   if (!sstDataIsFresh({analysedAt: iso, fetchedAt: iso}, new Date(now ?? iso))) {
