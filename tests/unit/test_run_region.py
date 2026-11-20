@@ -24,8 +24,8 @@ def _load():
 
 
 RR = _load()
-STAGE_ORDER = ['select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'package',
-               'status', 'contours', 'shots', 'status', 'qa', 'envelope']
+STAGE_ORDER = ['select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'package',
+               'status', 'shots', 'status', 'qa', 'envelope']
 ZONE_ARGS = ['--coarse', '/in/coarse.tif', '--water', '/in/water.geojson', '--coarse-source', 'src-1']
 GEN = 'a' * 64
 SHOT_GEN = 'b' * 64
@@ -128,7 +128,8 @@ def test_chain_order_and_stage_arguments(box, capsys):
         'select': ['--cache', RR.DEFAULT_NORM],
         'mosaic': ['--scope', 'public'], 'tiles': ['--scope', 'public'], 'zone': ['--scope', 'public', *ZONE_ARGS],
         'package': ['--manifest', str(root / 'inventory/manifest.json'), '--upstream', 'tiles:public',
-                    '--upstream', 'digests', '--upstream', 'zone:public', '--upstream', 'inventory'],
+                    '--upstream', 'digests', '--upstream', 'zone:public', '--upstream', 'inventory',
+                    '--upstream', 'contours'],
         'status': ['--json'], 'shots': ['--basemap', str(box.basemap)],
         'qa': ['--generation', GEN, '--release-sha256', hashlib.sha256(RELEASE).hexdigest(),
                '--elevation', str(mosaic / 'elevation.tif'), '--contributor', str(mosaic / 'contributor.tif'),
@@ -253,13 +254,15 @@ def test_runs_under_nice_and_ionice_idle(box):
     assert command == ['nice', '-n', '19', 'ionice', '-c3', 'py', 'region.py', 'tiles', '--region', 'morro-bay', '--out', '/o']
 
 
-def test_stops_at_first_failure_and_reports_stage_and_code(box, capsys):
+@pytest.mark.parametrize('stage, code', [('mosaic', 4), ('contours', 3)], ids=['failed', 'held-contours'])
+def test_stops_at_first_failure_and_reports_stage_and_code(box, capsys, stage, code):
     # Contract: the first non-zero stage ends the run, is named with its code, and its code is the
     # exit status. Bug caught: continuing past a failed stage, or returning 0.
-    box.codes({'mosaic': 4})
-    assert box.run() == 4
-    assert box.ran() == ['select', 'mosaic']
-    assert 'STOPPED at mosaic: exit 4' in capsys.readouterr().out
+    box.codes({stage: code})
+    assert box.run() == code
+    assert box.ran() == STAGE_ORDER[:STAGE_ORDER.index(stage) + 1]
+    assert 'package' not in box.ran()
+    assert f'STOPPED at {stage}: exit {code}' in capsys.readouterr().out
 
 
 def test_unknown_stage_is_not_available_and_stops(box, capsys):
@@ -650,7 +653,7 @@ def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
     assert [line.split()[3] for line in lines] == ['select', 'mosaic']  # '<n>. python region.py <stage>'
     assert '--scope public' in lines[1] and '--scope' not in lines[0]
-    assert 'not run: tiles, zone, digests, inventory, package, contours, shots, qa, envelope' in text
+    assert 'not run: tiles, zone, digests, inventory, contours, package, shots, qa, envelope' in text
     for name in ('stop-file', 'cpu-pressure', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap'):
         assert f'ok     {name}' in text
     assert 'a real run would start' in text
@@ -658,7 +661,7 @@ def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
 
 
 @pytest.mark.parametrize('partial', [[], ['--coarse', '/in/coarse.tif']], ids=['bare', 'partial-zone-inputs'])
-def test_dry_run_without_through_previews_full_chain_only(box, capsys, partial):
+def test_i_dry_run_without_through_previews_full_chain_only(box, capsys, partial):
     # Contract: the bare dry run prints all ten stages without launching or writing. Bugs caught:
     # requiring --through/zone inputs for that preview or crashing while formatting partial inputs.
     args = ['morro-bay', '--out', str(box.out), *partial]
@@ -666,6 +669,9 @@ def test_dry_run_without_through_previews_full_chain_only(box, capsys, partial):
     text = capsys.readouterr().out
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
     assert [line.split()[3] for line in lines] == STAGE_ORDER
+    package_command = lines[STAGE_ORDER.index('package')]
+    assert package_command.endswith('--upstream contours')
+    assert re.search(r'tiles style: nearshore-v1\.0\.0; B=[0-9a-f]{64}', text)
     assert 'REFUSE zone inputs' in text and 'REFUSE shots inputs' in text and 'a real run would be refused' in text
     assert '--generation <generation>' in text and '--release-sha256 <release-sha256>' in text
     with pytest.raises(SystemExit) as stop:

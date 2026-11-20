@@ -37,6 +37,37 @@ function ready(p, observed) {
 }
 const unavailable = reason => ({status: 'unavailable', reason});
 
+// Restore the committed v1 bytes, not the v1.1 pointer's lineage projection.
+// A current-default fallback, stale cached key, or rev-2 object provenance would disagree.
+test('MSK-4 (g): composed pointers drive mixed LOOKS and rollback', () => {
+  const read = name => JSON.parse(readFileSync(new URL(`fixtures/relief/pointer-style/${name}.json`, import.meta.url)));
+  const {web, coast} = read('looks'); // MSK-2 generator output, including the test-only rolling version
+  const selected = new Map([[morro, read('v1')], [draft, pointer(draft)]]);
+  const other = ready(selected.get(draft));
+  const look = () => ready(selected.get(morro)).look;
+  const v1 = look();
+  assert.equal(v1, NEARSHORE_STYLE_DIGESTS.baked);
+  assert.deepEqual(web[v1], NEARSHORE_LOOKS[v1]);
+  assert.deepEqual(web[v1].versions, ['nearshore-v1.0.0']);
+  const v1_1 = read('v1_1-prev-v1');
+  selected.set(morro, v1_1);
+  assert.notEqual(look(), v1);
+  assert.deepEqual(web[look()].versions, ['nearshore-v1.1.0']);
+  assert.equal(coast[look()].depthStopsFt[0][1], '#E0F8F4');
+  assert.equal(coast[v1].depthStopsFt[0][1], '#EAF8F4');
+  selected.set(morro, read('v1'));
+  assert.equal(look(), v1);
+  assert.deepEqual(ready(selected.get(draft)), other);
+  assert.equal(ready(read('legacy')).look, LEGACY_LOOK);
+  assert.equal(coast[LEGACY_LOOK].legacy, true);
+  const noContours = read('v1-no-contours');
+  assert.equal(noContours.style.contours, null);
+  assert.deepEqual(lookDepthKey(ready(noContours).look, 'light', web), lookDepthKey(v1, 'light'));
+  assert.ok(web[ready(noContours).look].chips.length > 0);
+  v1_1.style.built_with = {tiles: 'nearshore-v1.1.0'};
+  assert.equal(ready(v1_1).look, null, 'malformed current style must not inherit previous.style');
+});
+
 const regionsRoot = new URL('../regions/', import.meta.url);
 const regions = globSync('*/region.json', {cwd: fileURLToPath(regionsRoot)}).sort().map(path =>
   JSON.parse(readFileSync(new URL(path, regionsRoot), 'utf8')).id);

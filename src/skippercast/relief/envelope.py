@@ -38,7 +38,9 @@ def _release_and_qa(root: Path, region: str, gen: str, *, expected: dict | None 
     if expected is not None and release_ref != expected.get('release'):
         raise ReleaseError('release.json does not match envelope')
     release = package.decode_document(raw)
-    if (release.keys() != _RELEASE_KEYS or release['schema'] != package.RELEASE_SCHEMA
+    if 'style' in release:
+        package.validate_style(release['style'])
+    if (release.keys() - {'style'} != _RELEASE_KEYS or release['schema'] != package.RELEASE_SCHEMA
             or release['region'] != region or release['generation'] != gen or release['private'] is not False
             or release['disclaimer'] != package.DISCLAIMER or not isinstance(release['code_sha'], str)
             or not re.fullmatch(r'[a-f0-9]{40}', release['code_sha'])):
@@ -110,11 +112,15 @@ def build_pointer(approval: Path, envelope: Path, *, previous: dict | None = Non
         if previous['region'] != release['region']:
             raise ReleaseError('previous pointer belongs to another region')
         prior = {key: previous[key] for key in ('generation', 'release_sha256', 'envelope_sha256', 'sha256')}
+        if 'style' in previous:
+            prior['style'] = previous['style']
     archive = next(row for row in release['layers'] if row['path'] == package.ARCHIVE)
     pointer = {key: release[key] for key in (*package.METADATA, 'generation', 'digest_root_sha256')}
     pointer.update(schema='sc-relief-pointer/1', status='reviewed', private=False,
                    release_sha256=verified.release_sha256, envelope_sha256=verified.envelope_sha256,
                    sha256=archive['sha256'], bytes=archive['bytes'], previous=prior)
+    if 'style' in release:
+        pointer['style'] = release['style']
     package.validate_schema(pointer, schema)
     return pointer
 

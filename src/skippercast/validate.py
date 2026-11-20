@@ -83,6 +83,8 @@ def schemas(directory=SCHEMA_DIR):
     loaded = {}
     for path in sorted(Path(directory).glob("*.schema.json")):
         schema = read_json(path)
+        if "$id" not in schema:
+            continue  # standalone recipe schema (sc-render-v1), loaded by path and byte-pinned by the closure manifest
         loaded[schema["$id"]] = schema
     return loaded
 
