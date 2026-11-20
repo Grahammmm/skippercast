@@ -240,9 +240,15 @@ def sync_legacy(s3, bucket, source, prefix):
     with ThreadPoolExecutor(max_workers=16) as pool:
         list(pool.map(put, data_files))
         list(pool.map(put, pointers))
+    failed = 0
     for start in range(0, len(deletions), 1000):
         chunk = deletions[start:start + 1000]
-        s3.delete_objects(Bucket=bucket, Delete={'Objects': [{'Key': f'{prefix}/{k}'} for k in chunk], 'Quiet': True})
+        result = s3.delete_objects(Bucket=bucket,
+                                   Delete={'Objects': [{'Key': f'{prefix}/{k}'} for k in chunk], 'Quiet': True})
+        failed += len(result.get('Errors', []))
+    # Keep the old index so a retry can delete failed keys; already-absent keys succeed.
+    if failed:
+        raise RuntimeError(f'R2 {bucket}/{prefix}: failed to delete {failed} stale keys; sync index unchanged')
     s3.put_object(Bucket=bucket, Key=index_key, Body=json.dumps(local).encode(), ContentType='application/json')
     return (f'R2 {bucket}/{prefix}: {len(uploads)} uploaded ({len(pointers)} pointers last), '
             f'{len(deletions)} removed, {len(local) - len(uploads)} unchanged.')
