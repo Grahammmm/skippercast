@@ -8,6 +8,7 @@ class CdfwSubstrateTests(unittest.TestCase):
     def test_service_class_and_resolution_must_match_review(self):
         service = {'name': 'biosds3091_cru', 'spatialReference': {'wkid': 3310},
                    'tileInfo': {'format': 'LERC2D', 'rows': 256, 'cols': 256,
+                                'origin': {'x': -436528.970884573, 'y': 459866.804858047},
                                 'lods': [{'level': 7, 'resolution': 40}]}}
         classes = {'features': [{'attributes': {'Value': 1, 'CLASSNAME': 'Hard'}},
                                 {'attributes': {'Value': 2, 'CLASSNAME': 'Soft'}}]}
