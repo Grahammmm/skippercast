@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -102,6 +103,66 @@ def fetch_json(url):
     raise AssertionError("unreachable")
 
 
+def _finite_number(value):
+    try:
+        return type(value) in (int, float) and math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def _positions_ok(coordinates, depth):
+    if not isinstance(coordinates, list) or not coordinates:
+        return False
+    if depth:
+        return all(_positions_ok(child, depth - 1) for child in coordinates)
+    return (len(coordinates) in (2, 3) and all(map(_finite_number, coordinates))
+            and -180 <= coordinates[0] <= 180 and -90 <= coordinates[1] <= 90)
+
+
+def validate_feature_geometries(features, bounds):
+    """Require usable WGS84 shapes intersecting the query envelope, not just their bboxes."""
+    if not isinstance(features, list):
+        raise ValueError("ENC danger features must be a list")
+    if not features:
+        return  # A checked count-zero layer is valid and has no geometry to parse.
+    if (not isinstance(bounds, (list, tuple)) or len(bounds) != 4
+            or not all(map(_finite_number, bounds))
+            or not -180 <= bounds[0] < bounds[2] <= 180
+            or not -90 <= bounds[1] < bounds[3] <= 90):
+        raise ValueError("Invalid ENC danger geometry query envelope")
+
+    from shapely.errors import GEOSException
+    from shapely.geometry import box, shape
+
+    envelope = box(*bounds)
+    kinds = {"Point": 0, "LineString": 1, "Polygon": 2, "MultiPolygon": 3}
+    for feature in features:
+        geometry = feature.get("geometry") if isinstance(feature, dict) else None
+        if not isinstance(geometry, dict):
+            raise ValueError("Unsupported ENC danger geometry")
+        kind = geometry.get("type")
+        if not isinstance(kind, str) or kind not in kinds:
+            raise ValueError("Unsupported ENC danger geometry")
+        coordinates = geometry.get("coordinates")
+        if not isinstance(coordinates, list) or not _positions_ok(coordinates, kinds[kind]):
+            raise ValueError("ENC danger geometry has missing or invalid coordinates")
+        polygons = ([coordinates] if kind == "Polygon" else
+                    coordinates if kind == "MultiPolygon" else [])
+        # GEOS can auto-close an open ring; do not silently repair provider data.
+        if any(len(ring) < 4 or ring[0] != ring[-1] for polygon in polygons for ring in polygon):
+            raise ValueError("ENC danger geometry has an invalid polygon ring")
+        try:
+            feature_shape = shape(geometry)
+            valid = not feature_shape.is_empty and feature_shape.is_valid
+            intersects = valid and feature_shape.intersects(envelope)
+        except (GEOSException, TypeError, ValueError) as error:
+            raise ValueError("Invalid ENC danger geometry shape") from error
+        if not valid:
+            raise ValueError("Invalid ENC danger geometry shape")
+        if not intersects:
+            raise ValueError("ENC danger geometry is disjoint from the query envelope")
+
+
 def query_layer(service, layer, layer_id, bounds):
     root = f"{BASE}/{service}/MapServer/{layer_id}/query"
     common = {"where": "1=1", "geometry": ",".join(map(str, bounds)),
@@ -118,10 +179,8 @@ def query_layer(service, layer, layer_id, bounds):
     if (data.get("type") != "FeatureCollection" or not isinstance(features, list)
             or data.get("exceededTransferLimit") or len(features) != count["count"]):
         raise ValueError("Incomplete or changed ENC feature response")
+    validate_feature_geometries(features, bounds)
     for feature in features:
-        geometry = feature.get("geometry")
-        if not isinstance(geometry, dict) or geometry.get("type") not in ("Point", "LineString", "Polygon", "MultiPolygon"):
-            raise ValueError("Unsupported ENC danger geometry")
         feature["properties"] = {**feature.get("properties", {}),
             "enc_service": service, "enc_layer": layer, "enc_layer_id": layer_id}
     return features, {"service": service, "layer": layer, "layer_id": layer_id,

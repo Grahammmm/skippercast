@@ -29,10 +29,12 @@ import {cloudLayerIds} from './clouds.ts';
 import type {Engine, Overlay} from './engine.ts';
 import type {MarkScreen} from './habitat.ts';
 import {layerEntry, overlayFeatures, setRailNote, setTerrainLayer} from './layers.ts';
-import {MARK_PICK, chartPick, markData, markScreen} from './marks.ts';
+import {MARK_PICK, chartPick, markData, markMetadataFailed, markScreen, screenedAvailability, type OverlayAvailability} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {camera} from './stage.ts';
 import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {LABEL_FONT} from './style.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'charter-grounds';
 export const GROUNDS_SOURCE = 'charter-grounds';
@@ -44,8 +46,8 @@ export const GROUNDS_LINE = 'charter-grounds-line';
 export const GROUNDS_LABEL = 'charter-grounds-label';
 /** Hatch spacing in degrees of longitude plus latitude: about 200 m. */
 export const HATCH_STEP = 0.002;
-/** Names show from this `?view=` zoom, as the protected areas' do. */
-export const LABEL_MIN_ZOOM = 11;
+/** At app z10 the outline gains hatching and a name. */
+export const LABEL_MIN_ZOOM = 10;
 export const BROAD = 'Broad regional name';
 /** Commercial AIS's layers (web/map/commercial-ais.ts): the grounds draw under them. */
 export const AIS_HEAT = 'commercial-ais-heat';
@@ -97,6 +99,15 @@ export function shownGrounds(evidence: Evidence | null, target: string, p: Profi
     g.reports.some(r => r.species.some(id => matchesTargetSpecies(id, target))) && withinDepth(p, g.depth_ft[1]) && screened(g, g.geometry, screen));
 }
 
+const position = (p: unknown): boolean => Array.isArray(p) && p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]);
+const ringOk = (r: unknown): boolean => Array.isArray(r) && r.length >= 4 && r.every(position);
+const polygonOk = (c: unknown): boolean => Array.isArray(c) && c.length > 0 && c.every(ringOk);
+/** A ground's outline must be a Polygon or MultiPolygon with real coordinates: the hatching and the screen read them directly, so a shell is a failed file. */
+export const groundGeometryOk = (g: unknown): boolean => {
+  const {type, coordinates} = (g ?? {}) as Partial<Geometry>;
+  return type === 'Polygon' ? polygonOk(coordinates) : type === 'MultiPolygon' && Array.isArray(coordinates) && coordinates.length > 0 && coordinates.every(polygonOk);
+};
+
 const rings = (g: Geometry): number[][][] => g.type === 'Polygon' ? g.coordinates as number[][][] : g.type === 'MultiPolygon' ? (g.coordinates as number[][][][]).flat() : [];
 
 /**
@@ -130,26 +141,36 @@ function groundOutlines(grounds: readonly Ground[]): Collection {
 }
 
 /** The outlines and their hatching, as the two Chart GeoJSON sources. */
-export function groundCollections(grounds: readonly Ground[]): {outlines: Collection; hatch: Collection} {
+export function groundCollections(grounds: readonly Ground[], zoom?: number): {outlines: Collection; hatch: Collection} {
   return {
     outlines: groundOutlines(grounds),
-    hatch: {type: 'FeatureCollection', features: grounds.map(g => ({type: 'Feature', geometry: {type: 'MultiLineString', coordinates: hatchLines(g.geometry)}, properties: {id: g.id}}))},
+    hatch: {type: 'FeatureCollection', features: grounds.map(g => {
+      // Convert the 16 px perpendicular gap into lon+lat degrees at the ground's
+      // latitude in Web Mercator. Only the integer zoom bucket changes the mesh.
+      const step = zoom === undefined ? HATCH_STEP : 16 * 360 / (256 * 2 ** zoom) * Math.hypot(1, Math.cos(g.latitude * Math.PI / 180));
+      return {type: 'Feature', geometry: {type: 'MultiLineString', coordinates: hatchLines(g.geometry, step)}, properties: {id: g.id}};
+    })},
   };
+}
+
+function groundsLayers(p: Palette): MapLibre.LayerSpecification[] {
+  return [
+    {id: GROUNDS_FILL, type: 'fill', source: GROUNDS_SOURCE, paint: {'fill-color': p.amber, 'fill-opacity': 0}},
+    {id: GROUNDS_HATCH, type: 'line', source: HATCH_SOURCE, minzoom: LABEL_MIN_ZOOM - 1,
+      paint: {'line-color': p.amber, 'line-width': 1.2, 'line-opacity': 0.4}},
+    {id: GROUNDS_LINE, type: 'line', source: GROUNDS_SOURCE, layout: {'line-join': 'round'}, paint: {'line-color': p.amber, 'line-width': 2, 'line-dasharray': [4, 2]}},
+    {id: GROUNDS_LABEL, type: 'symbol', source: GROUNDS_SOURCE, minzoom: LABEL_MIN_ZOOM - 1,
+      layout: {'text-field': ['concat', ['get', 'label'], ' charter area'], 'text-font': [LABEL_FONT], 'text-size': 12, 'text-max-width': 8},
+      paint: {'text-color': p.amber, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
+  ];
 }
 
 /** The sources and layers: a transparent pick fill, the hatch, a dashed outline and the name, in the --fleet colour. */
 export function groundsOverlay(p: Palette, data: {outlines: Collection; hatch: Collection}): Overlay {
-  const fleet = p.amber;
   return {
     sources: {[GROUNDS_SOURCE]: {type: 'geojson', data: data.outlines} as MapLibre.SourceSpecification, [HATCH_SOURCE]: {type: 'geojson', data: data.hatch} as MapLibre.SourceSpecification},
-    layers: [
-      {id: GROUNDS_FILL, type: 'fill', source: GROUNDS_SOURCE, paint: {'fill-color': fleet, 'fill-opacity': 0}},
-      {id: GROUNDS_HATCH, type: 'line', source: HATCH_SOURCE, paint: {'line-color': fleet, 'line-width': 1, 'line-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.25, 12, 0.6]}},
-      {id: GROUNDS_LINE, type: 'line', source: GROUNDS_SOURCE, layout: {'line-join': 'round'}, paint: {'line-color': fleet, 'line-width': 2, 'line-dasharray': [4, 2]}},
-      {id: GROUNDS_LABEL, type: 'symbol', source: GROUNDS_SOURCE, minzoom: LABEL_MIN_ZOOM - 1,
-        layout: {'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 12, 'text-max-width': 8},
-        paint: {'text-color': fleet, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
-    ] as MapLibre.LayerSpecification[],
+    layers: groundsLayers(p),
+    themePaint: palette => paintEdits(groundsLayers(palette)),
   };
 }
 
@@ -185,6 +206,8 @@ export function groundMark(g: Ground, evidence: Evidence): ChartMark {
 export interface GroundsState {readonly drawn: number; readonly note: string; readonly audit: string | null; readonly copy?: StatusCopy}
 /** What the Fleet entry's legend row shows for the grounds. */
 export const groundsState = signal<GroundsState>({drawn: 0, note: '', audit: null});
+const groundsCheck = signal<OverlayAvailability | null>(null);
+export const groundsAvailability: ReadonlySignal<OverlayAvailability | null> = groundsCheck;
 
 export interface FleetLayerOptions {engine: ReadonlySignal<Engine | null>; fetchFn?: typeof fetch; page?: () => string; palette?: () => Palette}
 
@@ -194,7 +217,7 @@ export function assetLoader<T>(fetchFn: typeof fetch, page: () => string, valid:
   const cache = new Map<string, Promise<T | null>>();
   return (path: string): Promise<T | null> => {
     let p = cache.get(path), retry = false;
-    if (!p) cache.set(path, p = fetchFn(new URL(path, page()).href, {signal: AbortSignal.timeout(15000)})
+    if (!p) cache.set(path, p = Promise.resolve().then(() => fetchFn(new URL(path, page()).href, {signal: AbortSignal.timeout(15000)}))
       .then(r => r.ok ? r.json().catch((e: unknown) => (retry = !(e instanceof SyntaxError), null)) : (retry = r.status === 429 || (r.status >= 500 && r.status < 600), null), () => (retry = true, null))
       .then(d => valid(d) ? d as T : null, () => null)
       .then(d => { if (retry && cache.get(path) === p) cache.delete(path); return d; }));
@@ -204,25 +227,38 @@ export function assetLoader<T>(fetchFn: typeof fetch, page: () => string, valid:
 
 /** Draws the grounds while the Fleet entry is on; created with the Chart (web/map/chart.ts `layers`). */
 export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette()}: FleetLayerOptions) {
-  const load = assetLoader<Evidence>(fetchFn, page, d => Array.isArray((d as Evidence | null)?.grounds));
-  const evidence = signal<{path: string; data: Evidence | null} | null>(null);
+  const load = assetLoader<Evidence>(fetchFn, page, d => Array.isArray((d as Evidence | null)?.grounds) && (d as Evidence).grounds.every(g =>
+    typeof g?.id === 'string' && Number.isFinite(g.latitude) && Number.isFinite(g.longitude) && Array.isArray(g.depth_ft)
+    && Array.isArray(g.map_species) && Array.isArray(g.reports) && g.reports.every(r => Array.isArray(r?.species)) && groundGeometryOk(g.geometry)));
+  const loaded = signal<{binding: NonNullable<typeof markData.value>; data: Evidence | null} | null>(null);
   const on = computed(() => layers.value.includes('fleet'));
-  const path = computed(() => { const m = markData.value; return m && m.region.id === region.value ? m.region.assets?.charters ?? '' : null; });
+  const binding = computed(() => { const m = markData.value; return m?.region.id === region.value ? m : null; });
+  const path = computed(() => binding.value ? binding.value.region.assets?.charters ?? '' : null);
+  const evidence = computed(() => { const e = loaded.value; return e?.binding === binding.value ? e : null; });
   const target = computed(() => species.value ?? PROFILE_TABLE[profile.value].defaultTarget);
   const shown = computed(() => {
     const e = evidence.value;
-    return e && e.path === path.value && e.data ? shownGrounds(e.data, target.value, profile.value, markScreen.value) : [];
+    return e?.data ? shownGrounds(e.data, target.value, profile.value, markScreen.value) : [];
   });
+  const hatchZoom = computed(() => {
+    const view = camera.value;
+    return view ? Math.max(LABEL_MIN_ZOOM, Math.min(17, Math.round(view.zoom))) : undefined;
+  });
+  let sentGrounds: Ground[] | null = null;
   let drawn = false, drawnOn: Engine | null = null;
   const disposers = [
     effect(() => {
-      const p = path.value;
-      if (!on.value || !p || evidence.peek()?.path === p && evidence.peek()?.data) return;
-      void load(p).then(data => { if (path.peek() === p) evidence.value = {path: p, data}; });
+      const p = path.value, b = binding.value;
+      if (!on.value || !p || !b || evidence.peek()?.data) return;
+      let current = true;
+      void load(p).then(data => { if (current) loaded.value = {binding: b, data}; });
+      return () => { current = false; };
     }),
     effect(() => {
-      const p = path.value, e = evidence.value, list = shown.value, ready = !!e && e.path === p;
+      const p = path.value, e = evidence.value, list = shown.value, ready = !!e;
       const supported = ['lingcod', 'rockfish'].some(s => matchesTargetSpecies(s, target.value)), screen = markScreen.value;
+      groundsCheck.value = p === null ? (markMetadataFailed.value ? 'failed' : null) : !p ? 'no-product'
+        : !e ? null : !e.data ? 'failed' : screenedAvailability(e.data.grounds.length, list.length, screen);
       const key: keyof typeof NOTES | 'screen' | '' = !on.value ? '' : p === null ? 'loading' : !p ? 'none' : !ready ? 'loading' : !e.data ? 'failed'
         : !supported ? 'species' : screen.status !== 'ready' ? 'screen' : list.length ? '' : 'filtered';
       const note = key === '' ? '' : key === 'screen' ? screen.note : NOTES[key];
@@ -236,11 +272,13 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
       const e = engine.value, list = on.value ? shown.value : [];
       if (!e) return;
       if (!list.length) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
-      const data = groundCollections(list);
+      const data = groundCollections(list, hatchZoom.value);
       // § 9 draw order: above the seafloor, under commercial AIS, the cloud frames and the marks.
-      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, groundsOverlay(palette(), data), [...AIS_LAYERS, ...aisBefore()]);
-      e.setData(GROUNDS_SOURCE, data.outlines); e.setData(HATCH_SOURCE, data.hatch);
-      drawn = true; drawnOn = e;
+      const install = !drawn || e !== drawnOn;
+      if (install) e.setOverlay(REGISTRY_ID, groundsOverlay(palette(), data), [...AIS_LAYERS, ...aisBefore()]);
+      if (install || list !== sentGrounds) e.setData(GROUNDS_SOURCE, data.outlines);
+      e.setData(HATCH_SOURCE, data.hatch);
+      drawn = true; drawnOn = e; sentGrounds = list;
     }),
     // FE-82: the same grounds drape on the terrain (outline and a faint fill; the drape has no hatch); a pick opens the ground's card.
     effect(() => {
@@ -254,7 +292,7 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
     return g && e?.data ? groundMark(g, e.data) : null;
   };
   return {
-    destroy() { for (const dispose of disposers) dispose(); setTerrainLayer(REGISTRY_ID, null); groundsState.value = {drawn: 0, note: '', audit: null}; setRailNote('fleet', ''); },
+    destroy() { for (const dispose of disposers) dispose(); groundsCheck.value = null; setTerrainLayer(REGISTRY_ID, null); groundsState.value = {drawn: 0, note: '', audit: null}; setRailNote('fleet', ''); },
     pick: {layers: [GROUNDS_FILL] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => groundPick(properties?.id)},
   };
 }

@@ -424,7 +424,7 @@ def execute(job,output,*,now):
             provenance=dict(libs={'sourcefree_mapper':'v1'},synthetic=item['packet']['synthetic'],source_accessed=False))
     finally:store.close()
 
-def verify_completion(store,job,token,result):
+def verify_completion(store,job,token,result_ref,result):
     if (job.get('sourcefree_contract')!=CONTRACT or result.get('sourcefree_contract')!=CONTRACT
             or result.get('lease_token')!=token or result.get('state')!='done' or result.get('holds')
             or result['provenance'].get('source_accessed') is not False
@@ -444,15 +444,17 @@ def verify_completion(store,job,token,result):
     if sorted(digest(a) for a in result['artifacts'])!=sorted(digest(a) for a in [result['mapped_core'],*receipt['artifacts']]):
         raise ValueError('exact source-free output artifact set required')
     audit(store)
-
-def commit(store,job,token,result_ref,result):
-    if result_ref['path']!='var/coastal/jobs/'+job['job_id'].replace(':','-')+'/'+token+'/output/result.json':
+    if result_ref['path']!=prefix+'result.json':
         raise ValueError('exact source-free result output ownership required')
-    verify_completion(store,job,token,result)
+
+def commit(store,job,token,result_ref,result,*,settle):
+    """Verify and commit under the caller's fenced transaction, settling only after checks."""
+    verify_completion(store,job,token,result_ref,result)
     for d in result['artifacts']:
         prior=store.db.execute('SELECT produced_by_job FROM artifacts WHERE sha256=? AND path=?',(d['sha256'],d['path'])).fetchone()
         if prior and prior[0]!=job['job_id']:raise ValueError('output producer ownership collision')
         store.db.execute('INSERT OR IGNORE INTO artifacts VALUES(?,?,?,?,?)',(d['sha256'],d['path'],d['bytes'],d['contract'],job['job_id']))
+    settle()
     store.charge(job['job_id'],result['usage'])
     store.db.execute("UPDATE jobs SET state='done',result_sha=?,holds_json='[]' WHERE job_id=?",(result_ref['sha256'],job['job_id']))
     store.db.execute('DELETE FROM leases WHERE job_id=?',(job['job_id'],))
@@ -474,7 +476,7 @@ def recover_completion(store,job_id,recovery_ref):
             prior=store.db.execute("SELECT detail_json FROM events WHERE job_id=? AND kind='sourcefree_recovered' ORDER BY seq DESC LIMIT 1",(job_id,)).fetchone()
             if prior and json.loads(prior[0])['receipt']==recovery_ref:
                 result=load(store.root,result_ref,contract='coastal-stage-result-v1')
-                verify_completion(store,job,receipt['lease_token'],result)
+                verify_completion(store,job,receipt['lease_token'],result_ref,result)
                 return False
             raise ValueError('completed job requires its exact prior recovery receipt')
         lease=store.db.execute('SELECT * FROM leases WHERE job_id=?',(job_id,)).fetchone()
@@ -491,18 +493,18 @@ def recover_completion(store,job_id,recovery_ref):
         result=load(store.root,result_ref,contract='coastal-stage-result-v1')
         if any(result.get(k)!=job[k] for k in IDENTITY_FIELDS):
             raise ValueError('recovery original job identity mismatch')
-        verify_completion(store,job,lease['token'],result)
-        region=store.db.execute('SELECT region FROM segments WHERE segment_id=?',(job['segment_id'],)).fetchone()[0]
-        authority=store.budget_for(region)
-        intent=store.root/'var/coastal/jobs'/job_id.replace(':','-')/lease['token']/'intent.json'
-        if intent.exists():
+        def settle():
+            region=store.db.execute('SELECT region FROM segments WHERE segment_id=?',(job['segment_id'],)).fetchone()[0]
+            authority=store.budget_for(region)
+            intent=store.root/'var/coastal/jobs'/job_id.replace(':','-')/lease['token']/'intent.json'
+            if not intent.exists():
+                raise ValueError('durable runner intent and recovery proof required; external dispatcher recovery unsupported')
             runtime_ref=receipt.get('runtime_recovery')
             if not runtime_ref:raise ValueError('bound stopped durable-runner recovery proof required')
             runtime=load(store.root,runtime_ref)
             authority.recover_uncertain(lease['token'],intent=intent,receipt=runtime)
-        else:
-            raise ValueError('durable runner intent and recovery proof required; external dispatcher recovery unsupported')
-        commit(store,job,lease['token'],result_ref,result)
+
+        commit(store,job,lease['token'],result_ref,result,settle=settle)
         store.event(job_id,'sourcefree_recovered',dict(receipt=recovery_ref,result=result_ref,
             retained_output_reused=True,source_reads=0))
         return True

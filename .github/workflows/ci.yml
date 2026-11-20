@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   # Merge queue: required checks must also report on the queued merge commit.
   merge_group:
     types: [checks_requested]
@@ -19,6 +20,7 @@ on:
 # successful selector reports no web consumers. The non-GIS `check` matrix is
 # unchanged: PRs still select affected core/web areas on Python 3.11 and 3.13.
 # Obsolete PR revisions are cancelled; main, scheduled and dispatched runs never are.
+# PR drafts skip every job (review before CI, G 2026-11-19); required CI runs on ready_for_review and on later pushes to a non-draft PR.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -30,6 +32,7 @@ jobs:
   # Conservative shared-data/unknown fallback; explicit area omissions only.
   # Rename/delete paths are included. Non-PR events select every area.
   changes:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -54,7 +57,7 @@ jobs:
   # Missing/failed/cancelled prerequisites remain non-success in an active run.
   survey-science:
     needs: [changes, survey-tests, check]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -77,7 +80,7 @@ jobs:
           python3 scripts/ci_select.py --gate
   survey-tests:
     needs: changes
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
     # Every event uses the same parallel parts: the two slowest coast modules
     # alone, everything else in `rest` (AUD-SC7). The gate
@@ -164,7 +167,9 @@ jobs:
     # A missing/failed selector does not authorize omission; changes and the roll-up
     # still gate the merge. Non-PR runs always retain the full browser suite.
     needs: changes
-    if: &run-e2e ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.web != 'false') }}
+    if: &run-e2e >-
+      ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.web != 'false')
+      && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -257,7 +262,7 @@ jobs:
     # Accounting only, in the existing nightly schedule. No tests are duplicated,
     # no write token/PR/publication, and a missing/failed shard earns no green day.
     needs: [e2e, e2e-2, e2e-3, e2e-4]
-    if: always() && github.event_name == 'schedule'
+    if: always() && github.event_name == 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -296,7 +301,7 @@ jobs:
   check:
     needs: changes
     # A broken selector runs conservative tests, but cannot pass the final gate.
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
     strategy:
       # Every leg reports: a 3.11 failure must not cancel 3.13 and hide its result.
@@ -405,7 +410,7 @@ jobs:
       # Size budget (SC-PERF-BUDGET-1): file sizes only, no network, no timing. Raising a budget
       # needs a written reason in scripts/perf-budget.json (docs/operations/perf-budget.md).
       # From 97% of a budget the check warns but passes; the budget-drift bot (budget-drift.yml)
-      # raises the ceiling on main, so a feature pull request does not have to (SC-CI-2).
+      # checks main every six hours and proposes raises, so a feature PR with headroom does not have to (SC-CI-2).
       - name: Size budget (first-load files and brief data)
         if: matrix.python == '3.13'
         run: |

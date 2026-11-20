@@ -39,7 +39,7 @@ def source_blocks(archive, class_zip):
         raise ValueError("Original CSUMB or USGS source bytes changed")
     with tempfile.TemporaryDirectory() as temp:
         extract_grids(archive, Path(temp))
-        with rasterio.open(original_tiff(class_zip)) as character:
+        with rasterio.open(original_tiff(class_zip, "character")[0]) as character:
             source = character.read(1)
             to_usgs = Transformer.from_crs("EPSG:26910", "EPSG:32610", always_xy=True)
             for name, spacing, minimum_m, maximum_m in GRIDS:
@@ -161,10 +161,16 @@ def main():
     report, private = build(blocks, *(json.loads(path.read_text())
                                       for path in (args.mpas, args.federal, args.enc)))
     report["input_sha256"] = {key: sha256_file(path) for key, path in source_paths.items()}
-    if args.verify and stable(report) != stable(json.loads(args.verify.read_text())):
-        raise ValueError("Point Buchon original-cell access result changed; review before publication")
+    private_bytes = (json.dumps(private, separators=(",", ":")) + "\n").encode("utf-8")
+    report["private_research_blocks_sha256"] = hashlib.sha256(private_bytes).hexdigest()
+    if args.verify:
+        expected = json.loads(args.verify.read_text())
+        # Historical snapshots verify the aggregate only; they cannot admit a join.
+        expected.setdefault("private_research_blocks_sha256", report["private_research_blocks_sha256"])
+        if stable(report) != stable(expected):
+            raise ValueError("Point Buchon original-cell access result changed; review before publication")
     private_blocks.parent.mkdir(parents=True, exist_ok=True)
-    private_blocks.write_text(json.dumps(private, separators=(",", ":")) + "\n")
+    private_blocks.write_bytes(private_bytes)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(report["totals"])

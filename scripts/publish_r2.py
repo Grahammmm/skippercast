@@ -101,7 +101,7 @@ def archive_inventory(path):
 def archive_commit(path):
     """Read the commit Git embedded in the tar, not a later worktree HEAD."""
     with open(path, 'rb') as archive:
-        result = subprocess.run(['git', 'get-tar-commit-id'], stdin=archive,
+        result = subprocess.run(['git', 'get-tar-commit-id'], stdin=archive, cwd='/',
                                 capture_output=True, text=True, check=True, timeout=30)
     commit = result.stdout.strip()
     if not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', commit):

@@ -24,9 +24,11 @@ The method, kept here so it is tested without the GIS stack:
 - `trace` runs marching squares over the block centres at every INTERVAL_FT
   multiple to SHELF_LIMIT_FT. A square draws only when its four corners are
   valid blocks, so lines stop where the reviewed grid stops.
-- Where two surveys overlap, each block belongs to the first source in the
-  region's bathymetry binding order that fully supports it; every line then
-  comes from one survey and carries that survey's source, date and datum.
+- Overlaps merge cells in binding order within a group of one cell size and
+  datum. In a single group, or if no grid can support the block on its own,
+  a complete seam block is credited to its majority supplier. Across groups,
+  the first complete grid in binding order wins with its own cells and
+  provenance. Contour encoding uses the credited survey's source, date and datum.
 - The survey-edge lines outline each survey's supported blocks: where the
   contours stop because there is no reviewed grid beyond.
 - With an error-correction provenance grid (docs/seafloor-ec.md) a contour is

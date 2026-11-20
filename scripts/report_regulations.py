@@ -46,8 +46,15 @@ def report(root):
             unreadable.append(f'{ident} (listed twice)')
             continue
         seen.add(ident)
+        if region.get('status') == 'failed':
+            lines.extend([f'### {ident}', 'Regional refresh failed. Any retained receipt was not checked.', ''])
+            needs_attention = True
+            continue
         try:
-            section, attention = _region_lines(ident, json.loads((root / 'regions' / ident / 'regulations-health.json').read_text()))
+            data = json.loads((root / 'regions' / ident / 'regulations-health.json').read_text())
+            if not isinstance(data, dict) or data.get('region_id') != ident:
+                raise ValueError('receipt region_id does not match the index')
+            section, attention = _region_lines(ident, data)
         except FileNotFoundError:
             problem = 'missing'
         except (OSError, UnicodeDecodeError, ValueError, RecursionError, KeyError, TypeError, AttributeError) as exc:

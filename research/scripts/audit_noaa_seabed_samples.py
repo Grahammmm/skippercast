@@ -180,19 +180,28 @@ def main() -> None:
     parser.add_argument('--output', type=Path, default=Path('var/review/noaa-seabed-samples-sector-review.json'))
     parser.add_argument('--baseline', type=Path, help='Fail after writing a review artifact when original pages change')
     args = parser.parse_args()
+    temp = args.output.with_suffix(args.output.suffix + '.tmp')
+    baseline = {}
+    if args.baseline:
+        for destination in (args.output, temp):
+            try:
+                aliased = destination.samefile(args.baseline)
+            except FileNotFoundError:
+                continue
+            if aliased:
+                parser.error('--baseline must not refer to --output or its temporary file')
+        baseline = json.loads(args.baseline.read_text())
     if not args.raw_dir.resolve().is_relative_to(Path('var').resolve()):
         raise ValueError('Raw seabed observations must stay under var/')
     packet = json.loads(args.sectors.read_text())
     report = audit(packet['sectors'], args.raw_dir)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    temp = args.output.with_suffix(args.output.suffix + '.tmp')
     temp.write_text(json.dumps(report, indent=2) + '\n')
     temp.replace(args.output)
     print(json.dumps({'samples': report['bounded_original_sample_count'],
                       'assigned': report['assigned_to_browse_sector_count'],
                       'sectors_with_samples': sum(row['historical_sample_count'] > 0 for row in report['sectors'])}))
     if args.baseline:
-        baseline = json.loads(args.baseline.read_text())
         if (baseline.get('bounded_original_sample_count') != report['bounded_original_sample_count']
                 or baseline.get('page_sha256') != report['page_sha256']):
             raise SystemExit('NOAA seabed sample content changed; review before updating the published sector summary')

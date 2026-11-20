@@ -74,7 +74,9 @@ with open(output, "w") as f:
     def test_source_failure_is_not_empty_evidence_and_old_date_stays_old(self):
         config = json.loads((ROOT / "catalog/recent-intel-watchlist.json").read_text())
         config["regions"] = [{"id": "morro-bay", "queries": [{"id": "reef", "text": "Morro Bay lingcod"}]}]
-        previous = {"candidates": [{"id": "old", "url": "https://example.org/old", "published_at": "2026-09-15T00:00:00+00:00", "review_status": "candidate"}]}
+        previous = {"candidates": [{"id": "old", "url": "https://example.org/old", "published_at": "2026-09-15T00:00:00+00:00",
+                                     "region_id": "morro-bay", "query_id": "reef", "source": "reddit",
+                                     "title": "Morro Bay lingcod discussion", "summary": "A synthetic search lead"}]}
 
         def runner(cmd, **kwargs):
             self.assertIn("--no-browser-cookies", cmd)

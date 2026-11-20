@@ -59,11 +59,12 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await expect(page.getByRole('heading', {level: 1, name: 'Review queue'})).toBeVisible();
   const card = page.locator(`#review-${review}`);
   await expect(card).toBeVisible();
+  await card.getByRole('button', {name: 'Details'}).click();
   await expect(card.getByRole('checkbox', {name: 'Person in photo'})).toBeChecked();
   await expect(card).toContainText('E2E angler');
   await checkA11y(page, 'admin-queue', info.project.name);
 
-  await card.focus();
+  await card.getByRole('article').focus();
   await page.keyboard.press('a');
   await expect(page.getByRole('status').filter({hasText: 'Marked approved.'})).toBeVisible();
   await expect(card).toHaveCount(0);
@@ -79,6 +80,7 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await page.getByRole('link', {name: 'Posts'}).click();
   await expect(page.getByRole('heading', {level: 1, name: 'Posts'})).toBeVisible();
   // The draft's card is its post review (contacts.ts reviewId: sha256('post:<post id>:social_draft')[:32]); both projects seed one.
+  await page.locator(`[aria-labelledby="post-${String(post[0]!.id)}-title"]`).getByRole('button', {name: 'Details'}).click();
   const draft = page.locator(`#review-${createHash('sha256').update(`post:${String(post[0]!.id)}:social_draft`).digest('hex').slice(0, 32)}`);
   await expect(draft).toBeVisible();
   await expect(draft).toContainText('Instagram feed, Facebook Page');
@@ -101,6 +103,7 @@ test('an admin signs in, sees the queue and approves a photo review with the key
   await expect(page.getByRole('heading', {name: 'Invite a skipper'})).toBeVisible();
   const boatCard = page.getByRole('article', {name: new RegExp(`E2E Boat ${tag}`)});
   await expect(boatCard).toBeVisible();
+  await boatCard.getByRole('button', {name: 'Details'}).click();
   await checkA11y(page, 'admin-skippers', info.project.name);
   await boatCard.getByRole('link', {name: 'Unnamed contact'}).click();
   await expect(page).toHaveURL(new RegExp(`#contact/${contact}$`));

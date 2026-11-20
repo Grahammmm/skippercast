@@ -17,6 +17,7 @@ async function check(t, {entry = {}, chunks = {}, code = {}, omit = [], invalidM
   const manifest = {
     'app.html': {file: file('app'), isEntry: true, ...entry},
     'landing.html': {file: file('landing'), isEntry: true},
+    '../web/app/early.ts': {file: file('app-early'), isEntry: true},
     ...chunks,
   };
   for (const e of Object.values(manifest)) {

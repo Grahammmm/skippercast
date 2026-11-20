@@ -222,12 +222,19 @@ test('parity with v1\'s screen: the same answers withhold the same marks', async
   assert.deepEqual(await parity(SOCAL, SOCAL_ATLAS, {live: SOCAL_MPAS}), allSocal, 'no closure check: the file\'s own time is weeks old');
 });
 
+// Keep the admitted Morro atlas bytes; attach a synthetic NOAA closure only in the fetch fixture.
+function morroClosure(mark) {
+  return {
+    ['regions/morro-bay/region.json']: {...MORRO, assets: {...MORRO.assets, closures: SOCAL.assets.closures}},
+    [SOCAL.assets.closures]: {...GEAS, region_id: MORRO.id, features: [exclusion(square(mark))]},
+  };
+}
+
 test('a mark inside a closure is hidden; a link to it says why and links NOAA\'s page', async t => {
   t.mock.method(console, 'warn', () => {});
-  const [mark, kept] = SOCAL_ATLAS.targets;
-  const fetchFn = site({live: SOCAL_MPAS, daily: {'additional-closures': record(1, {sha256: GEAS.source_sha256})},
-    patch: {[SOCAL.assets.closures]: withAreas(GEAS, exclusion(square(mark)))}});
-  const marks = await v2Marks('southern-california', fetchFn);
+  const [mark, kept] = ATLAS.targets;
+  const fetchFn = site({live: MPAS, daily: {'additional-closures': record(1, {sha256: GEAS.source_sha256})}, patch: morroClosure(mark)});
+  const marks = await v2Marks(MORRO.id, fetchFn);
   const shown = markSources[MARKS_SOURCE].value.features.map(f => f.properties.id);
   assert.ok(!shown.includes(mark.id), 'the mark inside the closure is not drawn');
   assert.ok(shown.includes(kept.id), 'the others are');
@@ -262,19 +269,23 @@ test('a mark inside a closure is hidden; a link to it says why and links NOAA\'s
 
 test('stale closure input hides every mark and says why; a region change checks again', async t => {
   t.mock.method(console, 'warn', () => {});
-  const live = area => (area === SOCAL.mpa.bounds.join(',') ? SOCAL_MPAS : null);
-  const changed = await v2Marks('southern-california', site({live, daily: {'additional-closures': record(1, {sha256: 'f'.repeat(64)})}}));
+  const mark = ATLAS.targets[0];
+  let fixture = site({live: MPAS, daily: {'additional-closures': record(1, {sha256: 'f'.repeat(64)})}, patch: morroClosure(mark)});
+  const changed = await v2Marks(MORRO.id, url => fixture(url));
   assert.equal(markScreen.value.status, 'stale');
   assert.deepEqual(markSources[MARKS_SOURCE].value.features, [], 'NOAA changed its file since the published closures: nothing shows');
   assert.equal(markNote.value, 'Boundary check stale; fishing targets withheld');
-  setParams({spot: SOCAL_ATLAS.targets[0].id});
+  setParams({spot: mark.id});
   assert.equal(spotCard.value.reading, 'Boundary check stale; fishing targets withheld');
   assert.equal(spotCard.value.source, 'CDFW ds582 checked this session · NOAA closures check unavailable');
   assert.equal(spotCard.value.rules, 'Check current rules and boundaries before you fish.');
   assert.equal(spotCard.value.regulations.href, CDFW_MPA_PAGE);
-  setParams({region: 'morro-bay', spot: null});
+  // Leave the closure fixture and return to the admitted atlas with only its old snapshot.
+  setParams({region: 'cambria-san-simeon', spot: null});
   assert.equal(markScreen.value, CHECKING, 'a new region starts checking at once');
   assert.deepEqual(markSources[MARKS_SOURCE].value.features, []);
+  fixture = site();
+  setParams({region: MORRO.id});
   await settle();
   assert.equal(markScreen.value.status, 'stale', 'no check came back, and the committed snapshot is weeks old');
   assert.equal(markNote.value, 'Boundary check stale; fishing targets withheld');

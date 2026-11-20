@@ -233,6 +233,10 @@ def test_plan_binds_the_reviewed_ledger_head(tmp_path):
     # Unpatched: synthetic bytes are not the signed head.
     with pytest.raises(ValueError, match='charge ledger head'):
         topo.plan(synthetic_amendment(tmp_path), project=tmp_path)
+
+
+@pytest.mark.host_archive
+def test_plan_admits_the_original_signed_ledger(tmp_path):
     if SIGNED_V7[0].is_file():  # maintainer machine: the genuine signed bytes plan cleanly
         plan = topo.plan(SIGNED_V7[0], project=tmp_path)
         assert plan['amendment']['sha256'] == SIGNED_V7[1]

@@ -1,5 +1,6 @@
 """Exercise the audit CLIs' filesystem boundary without real GIS inputs or queries."""
 import importlib
+from hashlib import sha256
 import json
 from pathlib import Path
 import sys
@@ -48,11 +49,11 @@ def cli(request, tmp_path, monkeypatch):
         inputs += ["--bathy", "--rov"] if "rov" in request.param else ["--archive"]
         args = [option for flag in inputs for option in (flag, "synthetic.json")] + ["--private-blocks"]
 
-    def run(private, report):
-        monkeypatch.setattr(sys, "argv", [request.param, *args, str(private), "--output", str(report)])
+    def run(private, report, *extra):
+        monkeypatch.setattr(sys, "argv", [request.param, *args, str(private), "--output", str(report), *extra])
         module.main()
 
-    return run, calls
+    return run, calls, request.param
 
 
 def snapshot():
@@ -64,7 +65,7 @@ def snapshot():
                                  "private-redirect", "public-alias", "same", "report-alias",
                                  "hardlink", "overlapping", "report-directory"])
 def test_unsafe_destinations_fail_before_work_or_writes(cli, case):
-    run, calls = cli
+    run, calls, _ = cli
     root = Path("var/review")
     private = root / "blocks.geojson"
     report = Path("research/receipts/report.json")
@@ -111,11 +112,19 @@ def test_unsafe_destinations_fail_before_work_or_writes(cli, case):
 
 
 def test_private_and_aggregate_outputs_stay_separate(cli):
-    run, calls = cli
+    run, calls, script = cli
     private = Path.cwd() / "var/review/nested/blocks.geojson"
     report = Path("research/receipts/report.json")
-    run(private, report)
+    binds_blocks = script == "point_buchon_2009_access_blocks"
+    if binds_blocks:
+        historical = Path("historical.json")
+        historical.write_text(json.dumps(REPORT))
+        run(private, report, "--verify", str(historical))
+    else:
+        run(private, report)
     assert calls == ["input"]
     assert json.loads(private.read_text()) == PRIVATE
     aggregate = json.loads(report.read_text())
+    if binds_blocks:
+        assert aggregate.pop("private_research_blocks_sha256") == sha256(private.read_bytes()).hexdigest()
     assert {key: value for key, value in aggregate.items() if key != "input_sha256"} == REPORT
