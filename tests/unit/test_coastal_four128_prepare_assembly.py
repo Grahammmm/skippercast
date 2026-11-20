@@ -102,14 +102,16 @@ def scenario(tmp_path, monkeypatch):
             put(old / ('acquire_' + label + '_real_released.json'), template)
         a = amendment()
         # Bind a synthetic ledger head, not a signature claim or a bypassed validator.
-        resource = sys.modules[prepare.budget_limits_bytes.__module__]
-        ledger = copy.deepcopy(resource.CHARGE_LEDGER)
+        # Patch the globals of the function prepare actually calls, not sys.modules[...]: other tests pop and
+        # re-import coastal_four128_resources, so under xdist the sys.modules entry can be a different module
+        # object than the one prepare bound (failure: 'signed amendment differs from reviewed charge ledger head').
+        ledger = copy.deepcopy(prepare.budget_limits_bytes.__globals__['CHARGE_LEDGER'])
         a.update(signer=ledger['head']['signer'], signed_at=ledger['head']['signed_at'],
                  supersedes=dict(sha256=ledger['head']['supersedes_sha256']),
                  retained_output=dict(prior_retained_bytes=cfg['retained']['prior']))
         cfg['inputs']['amendment'] = put(tmp_path / 'amendment.json', a)
         ledger['head']['sha256'] = cfg['inputs']['amendment']['sha256']
-        monkeypatch.setattr(resource, 'CHARGE_LEDGER', ledger)
+        monkeypatch.setitem(prepare.budget_limits_bytes.__globals__, 'CHARGE_LEDGER', ledger)
         for rel in (*adm.CONTROL_PATHS, adm.LEDGER_PATH):
             cfg['controls'][rel] = adm.digest((ROOT / rel).read_bytes())
         controls[:] = [dict(path=rel, bytes=len((ROOT / rel).read_bytes()), sha256=sha) for rel, sha in cfg['controls'].items()]
