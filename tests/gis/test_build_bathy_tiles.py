@@ -219,11 +219,13 @@ class ArchiveTests(unittest.TestCase):
             path = Path(directory) / 'a.pmtiles'
             bt.write_pmtiles(path, tiles, metadata={'name': 'x'}, bounds=(-122.0, 35.0, -121.0, 36.0),
                              minzoom=2, maxzoom=2, center=(2, -121.5, 35.5))
-            header, metadata, by_id, _ = read_archive(path)
+            header, metadata, by_id, data_length = read_archive(path)
         self.assertEqual((header['minzoom'], header['maxzoom'], header['tile_type'], header['clustered']), (2, 2, 2, 1))
         self.assertEqual(header['bounds'], [-122.0, 35.0, -121.0, 36.0])
         self.assertEqual(metadata, {'name': 'x'})
         self.assertEqual({k: by_id[zxy_by_id(*k)] for k in tiles}, tiles)
+        # Readback alone also succeeds if each address stores its own copy.
+        self.assertEqual(data_length, 10)  # One AAAA and one BBBBBB in the tile-data section.
 
 
 class BuildTests(unittest.TestCase):
