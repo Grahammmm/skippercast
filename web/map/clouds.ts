@@ -158,7 +158,10 @@ export function createClouds(options: CloudsOptions): {destroy(): void} {
   const cloud = computed(() => newer(cloudImage(reported()), index.value));
   const selected = computed(() => new Date(dockTime(day.value, hour.value, clock.value, zone()).at));
   const frames = computed(() => on.value ? cloudFrames(cloud.value, selected.value, clock.value, zone()).slice(-MAX_FRAMES) : []);
-  const overlay = computed(() => cloud.value && frames.value.length ? cloudOverlay(cloud.value, frames.value, clock.value) : null);
+  const overlay = computed(() => {
+    const eligible = frames.value;
+    return cloud.value && eligible.length ? cloudOverlay(cloud.value, reduced.value ? eligible.slice(-1) : eligible, clock.value) : null;
+  });
   const canLoop = computed(() => frames.value.length > 1 && !reduced.value);
   const shown = computed(() => { const f = frames.value; return f.length ? f[reduced.value ? f.length - 1 : Math.min(step.value, f.length - 1)]! : null; });
   // No step and no label without a map: MapLibre still loading, or the Chart failed (`chartFailed`).
