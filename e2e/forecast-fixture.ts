@@ -64,13 +64,13 @@ export function forecastFixture(url: URL, now = Date.now()) {
 }
 
 /** The synthetic shared feed has the unit-checked shape of /api/forecast. */
-export function sharedForecastPoint(point: {latitude: number; longitude: number; hourly: Record<string, unknown>}) {
+export function sharedForecastPoint(point: {latitude: number; longitude: number; hourly: Record<string, unknown>}, now = Date.now()) {
   const hourly = Object.keys(point.hourly).filter(key => key !== 'time');
   const url = new URL('https://fixture.invalid/forecast');
   url.search = new URLSearchParams({latitude: String(point.latitude), longitude: String(point.longitude),
     hourly: hourly.join(','), timeformat: 'unixtime', wind_speed_unit: 'kn', temperature_unit: 'fahrenheit',
     length_unit: hourly.includes('wave_height') ? 'imperial' : 'metric'}).toString();
-  const row = forecastFixture(url);
+  const row = forecastFixture(url, now);
   if (!('hourly' in row)) throw new Error('Expected one shared forecast point');
   return row;
 }

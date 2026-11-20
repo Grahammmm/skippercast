@@ -103,7 +103,7 @@ async function stubRegion(page: Page, id: string): Promise<void> {
   await page.route('**/api/forecast?*', route => {
     const feed = stubForecast(definition);
     for (const model of Object.values(feed.models) as {data: {latitude: number; longitude: number; hourly: Record<string, unknown>}[]}[]) {
-      model.data = model.data.map(sharedForecastPoint);
+      model.data = model.data.map(point => sharedForecastPoint(point));
     }
     return route.fulfill({json: feed});
   });
