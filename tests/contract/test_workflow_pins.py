@@ -25,13 +25,18 @@ class WorkflowPinTests(unittest.TestCase):
         for name in ('survey-science', 'e2e', 'check'):
             self.assertRegex(ci, rf'\n  {name}:\n')
 
-    def test_only_obsolete_pr_checks_are_automatically_cancelled(self):
-        ci = (ROOT / '.github/workflows/ci.yml').read_text()
-        header = ci.split('permissions:', 1)[0]
-        # A distinct run ID for non-PR events also prevents replacement of a
-        # pending main push by a manual run, which cannot trigger deployment.
-        self.assertIn('group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}', header)
-        self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", header)
+    def test_main_pushes_only_coalesce_pending_and_prs_cancel_running(self):
+        ci = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+        # Pin the selector and fallback together: a ref-only selector would
+        # let a dispatch on main replace a pending push without deploy coverage.
+        concurrency = ci['concurrency']
+        self.assertEqual({**concurrency, 'group': ' '.join(concurrency['group'].split())}, {
+            'group': "${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') "
+                     "&& format('ci-main-{0}', github.ref) "
+                     "|| format('{0}-{1}-{2}', github.workflow, github.event_name, "
+                     "github.event.pull_request.number || github.run_id) }}",
+            'cancel-in-progress': "${{ github.event_name == 'pull_request' }}",
+        })
         publication = (ROOT / '.github/workflows/seafloor.yml').read_text()
         self.assertIn('group: seafloor-publication', publication)
         self.assertIn('cancel-in-progress: false', publication)
