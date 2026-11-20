@@ -1,5 +1,6 @@
 """Offline real-GDAL controls for the whole-segment research mosaic."""
 import json
+import math
 import shutil
 from types import SimpleNamespace
 
@@ -120,6 +121,42 @@ def test_caps_fail_before_output(tmp_path, monkeypatch):
     source = [{'path': whole}]
     assert estimate_bytes(source, *bounds, cells) - 40 * cells >= 4 * cells
     assert estimate_bytes(source, 20000, 20000, 30250, 30250, cells) == 40 * cells + tile_metadata
+
+
+def test_reserve_charges_exactly_four_extra_bytes_per_cell_for_one_support_source(tmp_path, monkeypatch):
+    region, table = fixture(tmp_path)
+    doc = json.loads(table.read_text())
+    row = doc['sources'][0]
+    support_path = tmp_path / 'support.tif'
+    with rasterio.open(row['path']) as grid:
+        with rasterio.open(support_path, 'w', driver='GTiff', width=grid.width, height=grid.height,
+                           count=1, dtype='uint8', nodata=0, crs=grid.crs,
+                           transform=grid.transform) as support:
+            support.write(np.where(grid.read_masks(1), 1, 0).astype('uint8'), 1)
+    row.update(support_path=str(support_path), support_sha256=file_hash(support_path))
+    supported_table = tmp_path / 'supported-sources.json'
+    supported_table.write_text(json.dumps(doc))
+
+    projected = transform_bounds('EPSG:4326', 'EPSG:3310', *json.loads(region.read_text())['bounds'],
+                                 densify_pts=101)
+    left, bottom = (math.floor(value / 10) for value in projected[:2])
+    right, top = (math.ceil(value / 10) for value in projected[2:])
+    cells = (right - left) * (top - bottom)
+    baseline = estimate_bytes(load_sources(table), left * 10, bottom * 10, right * 10, top * 10, cells)
+    threshold = 250 * 1024**3 + baseline + 4 * cells
+    free = threshold - 1
+    monkeypatch.setattr(shutil, 'disk_usage', lambda _: SimpleNamespace(free=free))
+
+    # Dropping the support charge would admit both runs; overcharging would
+    # reject the supported run even at the exact byte boundary.
+    assert mosaic(region, table, tmp_path / 'without-support')['status'] == 'review_required'
+    out = tmp_path / 'with-support'
+    with pytest.raises(ValueError, match='^Free-space reserve would be crossed$'):
+        mosaic(region, supported_table, out)
+    assert not out.exists()
+
+    free = threshold
+    assert mosaic(region, supported_table, out)['status'] == 'review_required'
 
 
 def test_duplicate_ids(tmp_path):
