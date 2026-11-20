@@ -70,7 +70,7 @@ async function withEdge(fn, caches) {
   try { return await fn({cache, clock}); } finally { globalThis.caches = original; useBucket(null); }
 }
 const path = '/feeds/conditions/latest.json';
-const serve = (headers = {}, p = path) => serveFeed(new Request('https://skippercast.com' + p, {headers}), p, undefined, {build: BUILD});
+const serve = (headers = {}, p = path, query = '') => serveFeed(new Request('https://skippercast.com' + p + query, {headers}), p, undefined, {build: BUILD});
 
 test('a hit makes no R2 read and returns the filled body, ETag and X-Feed-Generation', () => withEdge(async ({cache}) => {
   const w = world(), generation = w.release({'latest.json': '{"cycle":"one"}'}); useBucket({FEEDS: w.bucket});
@@ -103,17 +103,21 @@ test('a Range request on a hit is a 206 from the cache entry with no R2 read', (
   assert.equal(w.reads.length, 0);
 }));
 
-test('an expired entry is not served: the new release shows within max-age', () => withEdge(async ({clock}) => {
+test('distinct verify queries share a stale edge entry until it expires', () => withEdge(async ({clock}) => {
   const w = world(), first = w.release({'latest.json': '{"cycle":"one"}'}); useBucket({FEEDS: w.bucket});
   await (await serve()).text();
   const second = w.release({'latest.json': '{"cycle":"two"}'});
   clock.now = 59_000;  // still within max-age=60: the cached copy, its own generation, no read
   w.reads.length = 0;
-  let r = await serve();
-  assert.equal(r.headers.get('X-SC-Cache'), 'hit'); assert.equal(r.headers.get('X-Feed-Generation'), first);
-  assert.deepEqual(await r.json(), {cycle: 'one'}); assert.equal(w.reads.length, 0);
+  const probe = attempt => serve({'Cache-Control': 'no-cache'}, path, `?verify=42-${attempt}`);
+  // A query-sensitive key or honoring this header as a Worker bypass would read R2 early.
+  for (const attempt of [1, 2]) {
+    const r = await probe(attempt);
+    assert.equal(r.headers.get('X-SC-Cache'), 'hit'); assert.equal(r.headers.get('X-Feed-Generation'), first);
+    assert.deepEqual(await r.json(), {cycle: 'one'}); assert.equal(w.reads.length, 0);
+  }
   clock.now = 60_000;  // max-age reached
-  r = await serve();
+  let r = await probe(3);
   assert.equal(r.headers.get('X-SC-Cache'), 'miss'); assert.equal(r.headers.get('X-Feed-Generation'), second);
   assert.deepEqual(await r.json(), {cycle: 'two'});
   assert.equal(w.reads.length, 3);

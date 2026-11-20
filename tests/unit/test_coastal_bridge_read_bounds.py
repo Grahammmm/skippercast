@@ -130,8 +130,7 @@ def test_binary_artifact_mode_unchanged(tmp_path):
     data = os.urandom(64) * ((CAP + 4096) // 64)
     path = small(tmp_path, "artifact.bin", data)
     ref = dict(path="artifact.bin", sha256=hashlib.sha256(data).hexdigest(), bytes=len(data))
-    assert driver._read(tmp_path, "artifact.bin", metadata=False) == data
-    assert driver._verify(tmp_path, ref, "queue:x", metadata=False) == data
+    assert driver._verify(tmp_path, ref, "queue:x", metadata=False) is None
     with pytest.raises(ValueError, match=REFUSED):
         driver._read(tmp_path, "artifact.bin")
     assert path.read_bytes() == data

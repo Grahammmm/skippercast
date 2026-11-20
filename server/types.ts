@@ -33,4 +33,3 @@ export interface TripRow {
 }
 export interface AlertEventRow {id: string; trip_id: string; owner: string; kind: string; message: string; status: string; created_at: string; delivered_at: string | null}
 export interface SubscriptionRow {id: string; owner: string; endpoint: string; p256dh: string; auth: string; created_at: string}
-export interface CountRow {n: number}

@@ -28,6 +28,7 @@
 //   6. Every surface done -> `posted`, its media `posted`; a surface failed and another
 //      done -> `partial` with the error; none done -> `failed`. A failed surface is not tried again
 //      until the admin retries (opts.retry), and a retry runs only the surfaces without an id.
+//      An ambiguous Page photo/feed create is held for reconciliation, even on an admin retry.
 //      posted_at is recorded with the first successful surface id, not at finalization.
 //
 // TA-S3 (SP-7, SO-5): the post's collaborators (at most 3 usernames; feed images, carousels and
@@ -60,7 +61,7 @@ import {approvalHold, mediaIdsOf} from '../admin/posts.ts';
 import type {PostRow} from '../admin/posts.ts';
 import {COLLABORATORS_MAX, HANDLE, TARGETS_FOR, USER_TAGS_MAX, captionStats} from './drafts.ts';
 import type {Target} from './drafts.ts';
-import {MetaError, fbFeed, fbPhoto, fbPhotoStory, fbVideoReel, igCollaborators, igContainer, igContainerStatus, igPermalink, igPublish, igPublishingLimit, metaConfig, metaConfigured} from './meta.ts';
+import {MetaCreateUncertain, MetaError, fbFeed, fbPhoto, fbPhotoStory, fbVideoReel, igCollaborators, igContainer, igContainerStatus, igPermalink, igPublish, igPublishingLimit, metaConfig, metaConfigured} from './meta.ts';
 import type {Fetcher, IgContainerInput, MetaConfig, UserTag} from './meta.ts';
 import type {ConsumerDeps, AdvisorContactRow} from '../types.ts';
 import type {Env} from '../../env.ts';
@@ -92,7 +93,7 @@ export interface PublishDeps {
   dispatch?: (env: Env, file: string) => Promise<number>;   // the media job dispatch (tests)
 }
 
-interface PublishState {ig_children?: string[]; ig_started_at?: string; ig_error?: string; fb_photos?: string[]; fb_error?: string}
+interface PublishState {ig_children?: string[]; ig_started_at?: string; ig_error?: string; fb_photos?: string[]; fb_error?: string; fb_uncertain?: boolean}
 interface MediaRow {id: string; kind: string; mime: string; r2_key: string; derived_at: string | null; derived_error: string | null; publish_state: string}
 
 const IG_TARGETS: readonly Target[] = ['instagram', 'instagram_story'];
@@ -309,6 +310,14 @@ async function publishFacebook(run: Run): Promise<Step> {
     advisorLog('info', 'advisor_post_published', {surface: 'facebook', kind: post.kind});
     return {status: 'done'};
   } catch (error) {
+    if (error instanceof MetaCreateUncertain) {
+      state.fb_uncertain = true;
+      state.fb_error = `Page create outcome uncertain; reconcile before retrying (${short(error)})`;
+      // Write the hold before finalizing the post, so a resumed `publishing` row
+      // also skips Facebook if the status update is interrupted.
+      await writeState(db, post.id, state, run.at());
+      return {status: 'error', error: state.fb_error};
+    }
     return {status: 'error', error: short(error)};
   }
 }
@@ -372,7 +381,10 @@ export async function publish(env: Env, postId: string, deps: PublishDeps = {}, 
     const {ig, fb} = surfacesOf(post);
     if (!ig && !fb) { error = 'the post has no surface to go to'; await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error}; }
     const state = await readState(db, post.id);
-    if (opts.retry) { delete state.ig_error; delete state.fb_error; }
+    if (opts.retry) {
+      delete state.ig_error;
+      if (!state.fb_uncertain) delete state.fb_error;
+    }
     const claimed = await db.prepare(`UPDATE advisor_posts SET status='publishing',error=NULL,updated_at=? WHERE id=? AND status=?`).bind(at(), post.id, post.status).run();
     if (!claimed.meta.changes) return {outcome: 'skipped', error: 'the post changed'};
     const run: Run = {env, db, cfg, post, media, items, state, base, clock, at, tries: Math.max(1, deps.pollTries ?? POLL_TRIES),

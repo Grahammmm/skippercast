@@ -7,6 +7,17 @@ from pathlib import Path
 import sys
 
 
+def _unranked_reach_count(ready, field):
+    present = unknown = 0
+    for reach in ready:
+        count = reach.get(field)
+        if type(count) is not int or count < 0:
+            unknown += 1
+        elif count > 0:
+            present += 1
+    return f"{present} ({unknown} unknown)" if unknown else str(present)
+
+
 def render(ledger):
     if not isinstance(ledger, dict):
         raise ValueError("Ledger is not an object")
@@ -37,19 +48,27 @@ def render(ledger):
         grouped[reach["region"]].append(reach)
     lines = ["# Committed seafloor status", "",
              "Ledger input hash: `" + ledger["input_hash"] + "`", "",
-             "| Region | Reaches | Valid survey reaches | Screen-ready with habitat | Other states | Tier 1 km² | Tier 2 km² | Live publication |",
-             "| --- | ---: | ---: | ---: | --- | ---: | ---: | --- |"]
+             "| Region | Reaches | Valid survey reaches | Screen-ready with ranked habitat | Other states | "
+             "Screen-ready with unranked search areas | Screen-ready with unranked classified areas | "
+             "Tier 1 km² | Tier 2 km² | Live publication |",
+             "| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | --- |"]
     for region, rows in sorted(grouped.items()):
+        ready = [r for r in rows if r.get("screen", {}).get("status") == "ready"]
         states = defaultdict(int)
         for row in rows:
             states[row.get("status", "unknown")] += 1
         lines.append("| " + " | ".join([
             region, str(len(rows)), str(sum(r["selected_valid_km2"] > 0 for r in rows)),
-            str(sum(r.get("screen", {}).get("status") == "ready" and r["tier2_km2"] > 0 for r in rows)),
+            str(sum(r["tier2_km2"] > 0 for r in ready)),
             ", ".join(f"{k}: {v}" for k, v in sorted(states.items())),
+            _unranked_reach_count(ready, "search_area_count"),
+            _unranked_reach_count(ready, "classified_area_count"),
             f'{sum(r["tier1_km2"] for r in rows):.6f}',
             f'{sum(r["tier2_km2"] for r in rows):.6f}', "Not verified by this report"]) + " |")
     lines += ["", f"Total reaches: {len(reaches)}.", "",
+              "The ranked column requires positive Tier 2 area. Unranked columns count ready",
+              "reaches with recorded areas in each category, not the areas themselves. A reach",
+              "can count in multiple columns. Unknown means a usable count was not recorded.", "",
               "Tier areas are ledger measurements, not catch probability. A screened status",
               "with zero selected survey area is not useful measured coverage. Screen-ready",
               "counts describe saved screens, not current season/gear clearance. Publication",

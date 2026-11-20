@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import hashlib
 from importlib.resources import files
 import json
+import logging
 import math
 import os
 from pathlib import Path
@@ -23,6 +24,7 @@ import time
 from typing import Any
 
 from ..cli import queue_status
+from ..handoff.common import MAX_SOURCE_BYTES
 from . import catalog_bridge, loop
 from .segments import from_bbox, segment
 from .stages import NEXT, ORDER, digest
@@ -41,6 +43,8 @@ SCOPE = "coastal-coordinator-scope-v1"
 SCOPE_KEYS = {"schema", "store", "lineage_jobs", "lineage_charges", "foreign", "events", "last_tick_epoch"}
 MAX_PROBLEMS = 64
 MAX_SUMMARY_BYTES = catalog_bridge.MAX_DOCUMENT_BYTES  # a continuation reads its predecessor under this bound
+_VERIFY_CHUNK_BYTES = 1024 * 1024
+_LOG = logging.getLogger(__name__)
 HEX = re.compile(r"[0-9a-f]{64}")
 LABEL = re.compile(r"[A-Za-z0-9_-]+")
 
@@ -84,21 +88,50 @@ def _parent(root, relative):
         os.close(fd)
 
 
-def _read(root, relative, *, metadata=True):
+@contextmanager
+def _open_regular(root, relative, *, buffering=-1):
     with _parent(root, relative) as (parent, leaf):
         # O_NONBLOCK: a writer-less FIFO must reach the descriptor regularity check below, not wait in open().
         fd = os.open(leaf, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
-        with os.fdopen(fd, "rb") as stream:
+        with os.fdopen(fd, "rb", buffering=buffering) as stream:
             info = os.fstat(stream.fileno())
-            if not stat.S_ISREG(info.st_mode) or metadata and info.st_size > catalog_bridge.MAX_DOCUMENT_BYTES:
-                raise ValueError("regular bounded metadata required")
-            if not metadata:
-                return stream.read()
-            # Bound the bytes actually read: the file may grow after fstat.
-            raw = stream.read(catalog_bridge.MAX_DOCUMENT_BYTES + 1)
-            if len(raw) > catalog_bridge.MAX_DOCUMENT_BYTES:
-                raise ValueError("regular bounded metadata required")
-            return raw
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("regular bounded metadata required" if buffering == -1 else "regular artifact required")
+            yield stream, info.st_size
+
+
+def _read(root, relative):
+    cap = catalog_bridge.MAX_DOCUMENT_BYTES
+    with _open_regular(root, relative) as (stream, size):
+        if size > cap:
+            raise ValueError("regular bounded metadata required")
+        # Bound the bytes actually read: the file may grow after fstat.
+        raw = stream.read(cap + 1)
+        if len(raw) > cap:
+            raise ValueError("regular bounded metadata required")
+        return raw
+
+
+def _verify_binary(root, ref):
+    size = ref["bytes"]
+    if not 0 <= size <= MAX_SOURCE_BYTES:
+        raise ValueError("invalid byte reference")
+    mismatch = "reference hash/bytes mismatch: " + ref["path"]
+    sha = hashlib.sha256()
+    # Unbuffered so a matching declaration permits precisely size + one EOF probe.
+    with _open_regular(root, ref["path"], buffering=0) as (stream, observed):
+        if observed != size:
+            raise ValueError(mismatch)
+        remaining = size
+        while remaining:
+            block = stream.read(min(remaining, _VERIFY_CHUNK_BYTES))
+            if not block:
+                raise ValueError(mismatch)
+            sha.update(block)
+            remaining -= len(block)
+        if stream.read(1) or sha.hexdigest() != ref["sha256"]:
+            raise ValueError(mismatch)
+    _LOG.debug("bridge verified %d binary artifact bytes", size)
 
 
 def _json(root, relative):
@@ -116,10 +149,13 @@ def _verify(root, ref, root_id, *, metadata=True) -> Any:
         raise ValueError("unexpected reference namespace")
     if not HEX.fullmatch(ref.get("sha256", "")) or type(ref.get("bytes")) is not int:
         raise ValueError("invalid byte reference")
-    raw = _read(root, ref["path"], metadata=metadata)
+    if not metadata:
+        _verify_binary(root, ref)
+        return None
+    raw = _read(root, ref["path"])
     if len(raw) != ref["bytes"] or hashlib.sha256(raw).hexdigest() != ref["sha256"]:
         raise ValueError("reference hash/bytes mismatch: " + ref["path"])
-    return json.loads(raw) if metadata else raw
+    return json.loads(raw)
 
 
 def _encode(value):

@@ -183,9 +183,11 @@ class ScheduleEvidenceTests(unittest.TestCase):
             conn = se.open_database(Path(tmp) / "db.sqlite3")
             row = observation()
             se.record_observation(conn, row)
-            candidate = {"mmsi": 999000001, "ais_names": ["Test Boat"], "call_signs": ["TEST"],
-                         "ship_types": [60], "sources": ["aisstream"],
-                         "first_static_utc": "2026-10-01T00:00:00Z"}
+            candidate = {"mmsi": 999000001, "identity_observations": [
+                ("aisstream", field, value, "2026-10-01T00:00:00Z")
+                for field, value in (("mmsi", "999000001"), ("vessel_name", "Test Boat"),
+                                     ("call_sign", "TEST"), ("ship_type", "60"))
+            ]}
             self.assertEqual(se.store_ais_identity_evidence(conn, "trip-a", 1, candidate,
                                                             "2026-10-01T01:00:00Z"), 4)
             columns = {row[1] for row in conn.execute("pragma table_info(identity_evidence)")}

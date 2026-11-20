@@ -48,16 +48,28 @@ export const BASIS = 'inferred-from-movement';
 export const heartbeatKey = (region: string): string => `fleet.ais.${region}.heartbeat`;
 export const processedKey = (region: string): string => `fleet.ais.${region}.processed`;
 
-/** Evidence scoped to the displayed trip, not the vessel's unrelated history.
+/** Evidence scoped to the displayed trips (at most 20), not the vessel's unrelated history.
  * Fishing segments have already passed classify.py's regional sustained-run thresholds. */
-export async function tripActivityClaims(db: D1Database, tripId: string, identityConfirmed: boolean): Promise<Claim[]> {
-  const reports = (await db.prepare(`SELECT rp.report_kind kind, r.source FROM fleet_trip_reports rp
-    LEFT JOIN advisor_reports r ON rp.report_kind='advisor' AND r.id=rp.report_ref WHERE rp.trip_id=?`)
-    .bind(tripId).all<{kind: string; source: string | null}>()).results;
-  const segments = await db.prepare(`SELECT COUNT(*) AS n FROM fleet_segments WHERE trip_id=?
-    AND kind IN ('drift-anchor','troll-slow','troll-pelagic')`).bind(tripId).first<{n: number}>();
-  return [reportClaim(reports.map(r => ({source: r.kind === 'advisor' ? (r.source ? `advisor:${r.source}` : '') : r.kind}))),
-    classifiedAisClaim(segments?.n ?? 0, identityConfirmed)].filter((c): c is Claim => c !== null);
+export async function tripActivityClaims(db: D1Database, trips: readonly {id: string; identityConfirmed: boolean}[]): Promise<Map<string, Claim[]>> {
+  if (!trips.length) return new Map();
+  const ids = trips.map(trip => trip.id);
+  const [reports, segments] = await Promise.all([
+    db.prepare(`SELECT rp.trip_id, rp.report_kind kind, r.source FROM fleet_trip_reports rp
+      LEFT JOIN advisor_reports r ON rp.report_kind='advisor' AND r.id=rp.report_ref WHERE rp.trip_id IN (${marks(ids.length)})`)
+      .bind(...ids).all<{trip_id: string; kind: string; source: string | null}>(),
+    db.prepare(`SELECT trip_id, COUNT(*) AS n FROM fleet_segments WHERE trip_id IN (${marks(ids.length)})
+      AND kind IN ('drift-anchor','troll-slow','troll-pelagic') GROUP BY trip_id`)
+      .bind(...ids).all<{trip_id: string; n: number}>(),
+  ]);
+  const reportsByTrip = new Map<string, {source: string}[]>();
+  for (const r of reports.results) {
+    const sources = reportsByTrip.get(r.trip_id) ?? [];
+    sources.push({source: r.kind === 'advisor' ? (r.source ? `advisor:${r.source}` : '') : r.kind});
+    reportsByTrip.set(r.trip_id, sources);
+  }
+  const segmentsByTrip = new Map(segments.results.map(r => [r.trip_id, r.n]));
+  return new Map(trips.map(({id, identityConfirmed}) => [id, [reportClaim(reportsByTrip.get(id) ?? []),
+    classifiedAisClaim(segmentsByTrip.get(id) ?? 0, identityConfirmed)].filter((c): c is Claim => c !== null)]));
 }
 
 /** Test seam: the clock for received_at, processed.at and health ages. */

@@ -111,6 +111,43 @@ test('head_and_other_methods_do_not_synthesize', async () => {
   }
 });
 
+// An off-by-one, a filled gap, or forwarding the old query breaks this contract.
+test('only receipt-pinned GPX links redirect without old selection', async () => {
+  const links = ['complete', 'drift-lines', 'reef-outlines', 'waypoints'];
+  for (let i = 1; i <= 136; i++) {
+    if (![13, 14, 15, 16].includes(i)) links.push(`targets/SC26-${String(i).padStart(3, '0')}`);
+  }
+  assert.equal(links.length, 136);
+  const env = {ASSETS: {fetch: () => assert.fail('redirect must not look up the old asset')}};
+  for (const file of links) for (const method of ['GET', 'HEAD']) {
+    const path = `/downloads/${file}.gpx`;
+    const r = await call(`${path}?target=old&id=old&lat=1&lon=2#old`, {method, headers: HTML, env});
+    assert.equal(r.status, 302, path);
+    assert.equal(r.headers.get('Location'), '/map#export', path);
+    assert.equal(r.headers.get('Cache-Control'), 'no-store', path);
+    assert.equal(await r.text(), '', path);
+  }
+  for (const file of ['targets/SC26-000.gpx', 'targets/SC26-013.gpx', 'targets/SC26-014.gpx',
+    'targets/SC26-015.gpx', 'targets/SC26-016.gpx', 'targets/SC26-137.gpx', 'complete.GPX',
+    'other.gpx', 'complete.gpx/', '%63omplete.gpx', 'targets//SC26-001.gpx']) {
+    await assertUntouched(await call(`/downloads/${file}`, {headers: HTML}), file);
+  }
+  await assertUntouched(await call('/downloads/complete.gpx', {method: 'POST'}), 'POST');
+});
+
+// A prefix redirect would hide neighboring non-GPX assets.
+test('license and spot notes remain downloadable at their original paths', async () => {
+  const env = {ASSETS: {fetch(request) {
+    const file = new URL(`../dist${new URL(request.url).pathname}`, import.meta.url);
+    return new Response(readFileSync(file));
+  }}};
+  for (const name of ['LICENSE.txt', 'spot-notes.html']) {
+    const r = await call(`/downloads/${name}`, {headers: HTML, env});
+    assert.equal(r.status, 200, name);
+    assert.deepEqual(Buffer.from(await r.arrayBuffer()), readFileSync(new URL(`../dist/downloads/${name}`, import.meta.url)));
+  }
+});
+
 test('public_off_gate_still_hides_directory', async () => {
   const PORTS = [{id: 'morro-bay', name: 'Morro Bay', region: 'morro-bay', status: 'active'}];
   for (const env of [{}, {PUBLIC_PAGES_ENABLED: 'false'}, {PUBLIC_PAGES_ENABLED: 'tru'}]) {

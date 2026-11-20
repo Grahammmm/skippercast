@@ -155,19 +155,6 @@ def _signal_owned_group(identity, sig):
                 pass
 
 
-def _stop_group(identity, grace_s):
-    _signal_owned_group(identity, signal.SIGTERM)
-    end = SYSTEM_CLOCK.monotonic() + grace_s
-    while _group_state(identity) == "live" and SYSTEM_CLOCK.monotonic() < end:
-        time.sleep(0.01)
-    if _group_state(identity) == "live":
-        _signal_owned_group(identity, signal.SIGKILL)
-    end = SYSTEM_CLOCK.monotonic() + max(1.0, grace_s)
-    while _group_state(identity) == "live" and SYSTEM_CLOCK.monotonic() < end:
-        time.sleep(0.01)
-    return _group_state(identity) == "stopped"
-
-
 def _write_state(path, **updates):
     with _locked(path):
         state = json.loads(Path(path).read_text())

@@ -17,6 +17,8 @@ def sha(path):
 
 
 def check(base):
+    if not __debug__:
+        raise RuntimeError('Evidence checks require Python assertions; run without optimization')
     root = Path(__file__).resolve().parents[2]
     assert Path(ld.__file__).resolve() == root / 'src/skippercast/coastal/live_discovery.py'
     live = base / 'live'

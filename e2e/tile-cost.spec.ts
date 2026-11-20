@@ -21,7 +21,7 @@ import {appendFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {APP_VIEWS} from '../web/state.ts';
 import {test, expect, type Page} from '@playwright/test';
-import {aggregate, withFailed, type ResourceEntry, type Row} from './tile-cost.ts';
+import {aggregate, formatByteTotal, readResourceEntries, withFailed, type ResourceEntry, type Row} from './tile-cost.ts';
 import {saveAndPublish} from './tile-cost-publish.ts';
 import config from '../playwright.config.ts';
 
@@ -60,13 +60,6 @@ async function settle(page: Page): Promise<boolean> {
   catch { return false; }
 }
 
-// Resource and navigation entries the page has timed; 0-byte transfers (disk
-// cache, failed requests) read as null: counted, never sized.
-async function readEntries(page: Page): Promise<ResourceEntry[]> {
-  return page.evaluate(() => ([...performance.getEntriesByType('resource'), ...performance.getEntriesByType('navigation')] as PerformanceResourceTiming[])
-    .map(e => ({url: e.name, transfer_bytes: e.transferSize || null, body_bytes: e.encodedBodySize || null})));
-}
-
 for (const view of APP_VIEWS) {
   test(`tile-cost ${view}`, async ({page, baseURL}, info) => {
     const origin = new URL(baseURL!).origin;
@@ -79,7 +72,7 @@ for (const view of APP_VIEWS) {
       await expect(page).toHaveTitle(/SkipperCast/);
       const settled = await settle(page);
       page.off('requestfailed', onFailed);
-      return {entries: withFailed(await readEntries(page), failed), settled};
+      return {entries: withFailed(await page.evaluate(readResourceEntries, origin), failed), settled};
     };
     const cold = await load();   // fresh context: the view's cold cost
     const warm = await load();   // same context and cache: the repeat cost
@@ -104,9 +97,9 @@ test('tile-cost report', async ({}, info) => {
   const kind = (r: Row, name: string) => r.by_kind[name]?.requests ?? 0;
   const remoteLine = (r: Row) => Object.entries(r.remote).map(([host, n]) => `${host}: ${n}`).join(', ') || '—';
   const table = [
-    '| View | Project | Pass | Requests | Transfer B | Cache reused | Reused from cold | Tiles | Feeds | API | Settled |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
-    ...all.map(r => `| ${r.view} | ${r.project} | ${r.pass} | ${r.requests} | ${r.transfer_bytes ?? '—'} | ${r.cache_reused} | ${r.reused_from_cold ?? '—'} | ${kind(r, 'tile')} | ${kind(r, 'feed')} | ${kind(r, 'api')} | ${r.settled ? 'yes' : 'no'} |`),
+    '| View | Project | Pass | Requests | Transfer B | Body B | Cache reused | Reused from cold | Tiles | Feeds | API | Settled |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    ...all.map(r => `| ${r.view} | ${r.project} | ${r.pass} | ${r.requests} | ${formatByteTotal(r.transfer_bytes, r.transfer_measured, r.requests)} | ${formatByteTotal(r.body_bytes, r.body_measured, r.requests)} | ${r.cache_reused} | ${r.reused_from_cold ?? '—'} | ${kind(r, 'tile')} | ${kind(r, 'feed')} | ${kind(r, 'api')} | ${r.settled ? 'yes' : 'no'} |`),
     '',
     'Remote requests (counted, bytes not measured here):',
     ...all.filter(r => r.pass === 'cold').map(r => `| ${r.view} | ${r.project} | ${remoteLine(r)} |`),
