@@ -6,15 +6,52 @@ import json
 
 from skippercast.paths import repo_root
 from skippercast.platform import depth_contours as dc
-from skippercast.platform.contracts import atomic_json, load_catalogs, load_region
-from skippercast.relief import receipts
+from skippercast.platform.contracts import atomic_json, load_catalogs, load_region, owner_display_cleared
+from skippercast.relief import package, receipts
 
 UPSTREAM = ('select', 'mosaic:public')
 TARGET = 'layers/contours'
 SCRIPT = 'scripts/build_depth_contours.py'
 CODE_FILES = (SCRIPT, 'scripts/preflight_native_grid.py', 'skippercast.platform.depth_contours',
-              'skippercast.platform.contracts')
+              'skippercast.platform.contracts', 'skippercast.relief.package')
 MOSAIC = 'mosaic/public'
+
+# Morro Bay's measured 10 m lattice is 130,452,268 cells. Larger regions that
+# exceed this cap need to be split or use a future windowed trace.
+CONTOUR_MAX_CELLS = 160_000_000
+# A 7.68M-cell trace with two contributors and a feathered seam used ~57 B/cell
+# of peak RSS above baseline; round up with at least 25% headroom.
+TRACE_BYTES_PER_CELL = 80
+MEMORY_FRACTION = 0.5
+
+
+def _mem_available():
+    """Return Linux MemAvailable in bytes, or None if it cannot be read."""
+    try:
+        with open('/proc/meminfo', encoding='ascii') as meminfo:
+            for line in meminfo:
+                if line.startswith('MemAvailable:'):
+                    value, unit = line.split()[1:]
+                    kib = int(value)
+                    return kib * 1024 if unit == 'kB' and kib >= 0 else None
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _admit_trace(cells):
+    if cells > CONTOUR_MAX_CELLS:
+        raise ValueError('contour mosaic exceeds the cell budget; use a smaller region window '
+                         f'({cells:,} cells > {CONTOUR_MAX_CELLS:,} cells)')
+    need = cells * TRACE_BYTES_PER_CELL
+    available = _mem_available()
+    if available is None:
+        raise receipts.Held('contour trace cannot determine MemAvailable from /proc/meminfo')
+    if need > MEMORY_FRACTION * available:
+        raise receipts.Held(f'contour trace needs ~{need / 2**30:.2f} GiB, '
+                            f'only {available / 2**30:.2f} GiB available '
+                            f'({MEMORY_FRACTION:.0%} usable for the trace)')
+    return available
 
 
 def producer():
@@ -34,6 +71,20 @@ def attested(ctx, key, relative):
 
 def read(path):
     return json.loads(path.read_bytes())
+
+
+def _metadata_refusal(source):
+    if package._MBARI.search(package._lineage(source)):
+        return 'MBARI lineage'
+    rights = source.get('rights') or {}
+    license_id = rights.get('license')
+    if not isinstance(license_id, str) or not license_id.strip():
+        return 'licence mismatch'
+    # Same rule as the release policy (package._UNKNOWN_LICENSE): an unreviewed licence term is accepted only
+    # where the owner's recorded G display decision clears the source.
+    if license_id.strip().lower() in package._UNKNOWN_LICENSE and not owner_display_cleared(rights):
+        return 'licence mismatch'
+    return None
 
 
 def plan(ctx):
@@ -71,9 +122,11 @@ def plan(ctx):
     input_pins = {r['path']: r['sha256'] for r in ctx.upstream['select']['inputs']}
     for row in rows:
         ident, tile = row['source_id'], row['id']
-        reason = tool.public_refusal(ident, region, sources)
+        reason = tool.public_refusal(ident, region, sources, selected=True)
         if row['rights_class'] != 'public':
             reason = 'not a public selector row'
+        elif reason is None:
+            reason = _metadata_refusal(sources[ident])
         if reason:
             refused.append({'source_id': ident, 'selection_id': tile, 'reason': reason})
             continue
@@ -173,8 +226,8 @@ def trace(job):
                 or (crs, block, e.shape) != (c.crs, c.transform, c.shape)
                 or c.dtypes != ('uint16',) or e.dtypes != ('float32',)):
             raise ValueError('mosaic elevation and contributor must share the 10 m projected lattice')
-        if height * width > tool.preflight.MAX_PIXELS:
-            raise ValueError('contour mosaic exceeds the cell budget; use a smaller region window')
+        cells = height * width
+        _admit_trace(cells)
         feather = manifest['seam_feather']['feather_m']
         if not 0 <= feather <= 200:
             raise ValueError('invalid mosaic seam feather')
@@ -280,7 +333,7 @@ def trace(job):
                   'intervals': dc.v2_intervals(), 'index_depths_ft': list(dc.V2_INDEX_FT),
                   'shelf_limit_ft': dc.V2_SHELF_LIMIT_FT, 'cell_m': dc.V2_CELL_M, 'horizontal_crs': str(crs),
                   'features': len(features), 'sources': list(listed.values()), 'coordinate_decimals': tool.V2_DECIMALS,
-                  'sources_omitted': dc.omitted_sources(region, sources, listed),
+                  'sources_omitted': dc.omitted_selected_sources({row['source_id'] for row, *_ in entries}, sources, listed),
                   'method': 'Native water blocks first, then attributed 10 m mosaic gaps outside blended seams.',
                   'limitations': 'Estimated display contours. Not for navigation. No datum conversion.'}
     return {'type': 'FeatureCollection', 'schema_version': dc.SCHEMA_VERSION, 'features': features,
@@ -296,9 +349,10 @@ def build(ctx, out):
     except SystemExit as exc:
         raise receipts.ReceiptError(str(exc)) from None
     overview = dc.overview_contours(collection)
+    selected = {row['source_id'] for row, *_ in entries}
     for filename, value, budget in (('contours.geojson', collection, dc.MAX_BYTES),
                                      ('contours-overview.geojson', overview, dc.OVERVIEW_MAX_BYTES)):
-        dc.check_contours(value, region, sources)
+        dc.check_selected_contours(value, region, sources, selected)
         if atomic_json(out / filename, value)['bytes'] > budget:
             raise receipts.ReceiptError(f'{filename} exceeds its byte budget')
     return metrics

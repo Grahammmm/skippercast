@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import {globSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
-import {resolveRelief, selectReliefArchives} from '../web/map/relief-data.ts';
+import {lookDepthKey} from '../web/map/legend-model.ts';
+import {NEARSHORE_LOOKS, NEARSHORE_STYLE_DIGESTS} from '../web/map/nearshore-style.gen.ts';
+import {LEGACY_LOOK, resolveRelief, selectReliefArchives} from '../web/map/relief-data.ts';
 
 const morro = 'morro-bay';
 const draft = 'channel-islands-north';
@@ -34,6 +36,37 @@ function ready(p, observed) {
   return result.archive;
 }
 const unavailable = reason => ({status: 'unavailable', reason});
+
+// Restore the committed v1 bytes, not the v1.1 pointer's lineage projection.
+// A current-default fallback, stale cached key, or rev-2 object provenance would disagree.
+test('MSK-4 (g): composed pointers drive mixed LOOKS and rollback', () => {
+  const read = name => JSON.parse(readFileSync(new URL(`fixtures/relief/pointer-style/${name}.json`, import.meta.url)));
+  const {web, coast} = read('looks'); // MSK-2 generator output, including the test-only rolling version
+  const selected = new Map([[morro, read('v1')], [draft, pointer(draft)]]);
+  const other = ready(selected.get(draft));
+  const look = () => ready(selected.get(morro)).look;
+  const v1 = look();
+  assert.equal(v1, NEARSHORE_STYLE_DIGESTS.baked);
+  assert.deepEqual(web[v1], NEARSHORE_LOOKS[v1]);
+  assert.deepEqual(web[v1].versions, ['nearshore-v1.0.0']);
+  const v1_1 = read('v1_1-prev-v1');
+  selected.set(morro, v1_1);
+  assert.notEqual(look(), v1);
+  assert.deepEqual(web[look()].versions, ['nearshore-v1.1.0']);
+  assert.equal(coast[look()].depthStopsFt[0][1], '#E0F8F4');
+  assert.equal(coast[v1].depthStopsFt[0][1], '#EAF8F4');
+  selected.set(morro, read('v1'));
+  assert.equal(look(), v1);
+  assert.deepEqual(ready(selected.get(draft)), other);
+  assert.equal(ready(read('legacy')).look, LEGACY_LOOK);
+  assert.equal(coast[LEGACY_LOOK].legacy, true);
+  const noContours = read('v1-no-contours');
+  assert.equal(noContours.style.contours, null);
+  assert.deepEqual(lookDepthKey(ready(noContours).look, 'light', web), lookDepthKey(v1, 'light'));
+  assert.ok(web[ready(noContours).look].chips.length > 0);
+  v1_1.style.built_with = {tiles: 'nearshore-v1.1.0'};
+  assert.equal(ready(v1_1).look, null, 'malformed current style must not inherit previous.style');
+});
 
 const regionsRoot = new URL('../regions/', import.meta.url);
 const regions = globSync('*/region.json', {cwd: fileURLToPath(regionsRoot)}).sort().map(path =>
@@ -200,4 +233,51 @@ test('z16–17 require certified 1 m water pixels in the shallow band; z18 is ne
     assert.deepEqual(resolveRelief(morro, candidate), unavailable('unknown-resolution'));
   }
   assert.deepEqual(resolveRelief(morro, {...p, maxzoom: 18}), unavailable('metadata'));
+});
+
+// MSK-2 contract (MSK-2 amendment rev 2 A1): the pointer's optional `style` member names the look its tiles were baked with.
+// Only a complete, well-formed member yields its baked digest; anything else is an unknown look (null), never the default
+// look and never a refusal of the reviewed tiles. Believable bugs: a partial or extra-keyed member trusted, or a bad
+// member silently mapped to the legacy ramp-B legend.
+test('the style member resolves a look key or an unknown look, never a refusal', () => {
+  const style = {baked: sha('e'), contours: sha('f'), habitat: sha('1'), built_with: 'nearshore-v1.0.1'};
+  const look = extra => { const r = resolveRelief(morro, {...pointer(), ...extra}); assert.equal(r.status, 'ready'); return r.archive.look; };
+  assert.equal(look({}), LEGACY_LOOK);
+  assert.equal(look({style}), sha('e'));
+  assert.equal(look({style: {...style, habitat: null}}), sha('e'));
+  const {contours: _contours, ...missingContours} = style;
+  for (const bad of [null, 'nearshore-v1.0.0', {...style, extra: 1}, {...style, baked: 'E'.repeat(64)}, missingContours,
+    {...style, habitat: 'x'}, {...style, built_with: {relief: style.built_with}},
+    {...style, built_with: 'Nearshore v1'}, {...style, built_with: 'n'.repeat(65)}]) {
+    assert.equal(look({style: bad}), null, JSON.stringify(bad));
+  }
+});
+
+// A3 rollback replaces the current pointer file, never reads its previous member. A fallback to
+// previous could mislabel current tiles or draw old reviewed tiles after the current pointer is held.
+test('MSK-2: previous is never read to select relief bytes or their legend look', () => {
+  const prior = {...pointer(), style: {baked: NEARSHORE_STYLE_DIGESTS.baked, contours: null, habitat: null, built_with: 'nearshore-v1.0.0'}};
+  assert.equal(ready(prior).look, NEARSHORE_STYLE_DIGESTS.baked, 'the prior file is valid on its own');
+  let reads = 0;
+  const current = edits => Object.defineProperty({...pointer(), sha256: sha('f'), ...edits}, 'previous', {
+    enumerable: true, get() { reads++; return prior; },
+  });
+  const absent = ready(current({}));
+  assert.deepEqual([absent.sha256, absent.look], [sha('f'), LEGACY_LOOK]);
+  const malformed = ready(current({style: null}));
+  assert.deepEqual([malformed.sha256, malformed.look], [sha('f'), null]);
+  assert.deepEqual(resolveRelief(morro, current({status: 'held'})), unavailable('unreviewed'));
+  assert.equal(reads, 0, 'not even inspect the previous pointer');
+});
+
+// Frozen shape (rule-29 checkpoint t_1ed6dc7c): `contours` may be null (tiles built without a contour group). Believable
+// bug: a strict 64-hex check on contours turns such a pointer into an unknown look and hides the depth key.
+test('a style member with contours null still keys the kit depth chips', () => {
+  const style = {baked: NEARSHORE_STYLE_DIGESTS.baked, contours: null, habitat: null, built_with: 'nearshore-v1.0.0'};
+  const r = resolveRelief(morro, {...pointer(), style});
+  assert.equal(r.status, 'ready');
+  assert.equal(r.archive.look, NEARSHORE_STYLE_DIGESTS.baked);
+  const key = lookDepthKey(r.archive.look, 'dark', NEARSHORE_LOOKS);
+  assert.equal(key.status, 'chips');
+  assert.deepEqual(key.chips.map(c => c.feet), [0, 10, 20, 30, 45, 60, 80, 100, 130, 160, 200, 250, 300, 300]);
 });

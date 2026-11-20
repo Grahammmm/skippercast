@@ -97,6 +97,10 @@
       "sha256": "2ede561460cc8c2870d77b2b111bb61de76ac6ce74642c00890ef9b41a4af4a1"
     },
     {
+      "path": "schemas/sc-render-v1.schema.json",
+      "sha256": "bd4ed13a31eaaf63204eea795c924b37be64b2c98edaab2e6905c019fe8d1f2f"
+    },
+    {
       "path": "schemas/shore-habitat.schema.json",
       "sha256": "1bc0bc2de34fd8ac163be8a578ffe6c3a0ee998394b01d65e2bde3db535367b7"
     },

@@ -33,6 +33,22 @@ def _sources(*ids, native=2):
                 'reviewed_at': '2026-10-01'} for i in ids}
 
 
+@pytest.mark.parametrize('ident, publication_allowed, reason', [
+    ('usace-ncmp-ca-8482', False, 'publication_allowed is false'),
+    ('noaa-morro-bay-topobathy-2022-9630', False, 'publication_allowed is false'),
+    ('noaa-bluetopo', None, 'not an approved bathymetry source'),
+])
+def test_standalone_public_refusal_preserves_morro_legacy_reasons(ident, publication_allowed, reason):
+    # The display exception must not leak into the standalone builder's default path.
+    pytest.importorskip('rasterio')
+    from skippercast.platform.contracts import OWNER_DISPLAY_BASIS
+
+    sources = _sources(ident)
+    sources[ident].update(review_status='candidate', publication_allowed=publication_allowed)
+    sources[ident]['rights']['owner_public_display'] = {'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}
+    assert _load_builder().public_refusal(ident, {'source_bindings': {'bathymetry': []}}, sources) == reason
+
+
 def _run_builder(monkeypatch, grids, sources, *extra, captured=None):
     pytest.importorskip('rasterio')
     bs = _load_builder()

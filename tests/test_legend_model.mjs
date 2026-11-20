@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
-import {NOT_FOR_NAVIGATION_ID, contourCopy, depthChips, shallowBand, surveyDetailChips} from '../web/map/legend-model.ts';
+import {LOOK_UNAVAILABLE_ID, NOT_FOR_NAVIGATION_ID, SHALLOW_BAND_FT, contourCopy, lookDepthKey, nearshoreRows, surveyDetailChips} from '../web/map/legend-model.ts';
+import {NEARSHORE_LOOKS, NEARSHORE_STYLE_DIGESTS} from '../web/map/nearshore-style.gen.ts';
 
 const bold = chips => chips.filter(c => c.bold).map(c => c.id);
 
@@ -111,19 +112,44 @@ test('no source name in any returned id', () => {
   for (const id of ids) assert.doesNotMatch(id, sources, id);
 });
 
-// Contract: 11 ramp-B chips, 0 ... 300+ ft as numbers, tokens not colours; light adds the ring (§ 10.2).
-// Bug: a hand-typed hex in the module (check_tokens lint) or a 10-chip ramp missing "300+".
-test('depth chips: 11 in order with numeric feet, token names, light ring, resolved only from a palette', () => {
-  const dark = depthChips('dark'), light = depthChips('light');
-  assert.deepEqual(dark.map(c => c.feet), [0, 10, 20, 33, 50, 66, 100, 150, 200, 300, 300]);
-  assert.deepEqual(dark.map(c => c.orMore), [...Array(10).fill(false), true]);
-  assert.deepEqual(dark.map(c => c.token), Array.from({length: 11}, (_, i) => `depthB${i}`));
-  assert.ok(dark.every(c => c.ring === false && c.color === undefined));
-  assert.ok(light.every(c => c.ring === true));
-  assert.deepEqual(light.map(c => c.token), dark.map(c => c.token), 'ramp B is identical in both themes');
-  assert.equal(depthChips('dark', {depthB3: 'x'})[3].color, 'x');
-  assert.deepEqual(shallowBand('light'), {token: 'depthB0', fromFeet: 0, toFeet: 66, ring: true});
-  assert.equal(shallowBand('dark').ring, false);
+// MSK-2 contract (amendment rev 2 A1/A3): depth chips follow the pointer's look key through the generated LOOKS table.
+// Believable bugs: chips from the default style instead of the region's tiles, another look's chips shown for an
+// unknown or malformed look, a rollback that does not switch back, or one region's look leaking into another's.
+const LOOKS = {
+  [NEARSHORE_STYLE_DIGESTS.baked]: NEARSHORE_LOOKS[NEARSHORE_STYLE_DIGESTS.baked],
+  ['9'.repeat(64)]: {legacy: false, versions: ['nearshore-v1.1.0'], chips: [{depth_ft: 0, cssVar: '--skn-look-999999999999-depth-0'}], plus300: '--skn-look-999999999999-depth-1'},
+  'deep-fixed-v1': NEARSHORE_LOOKS['deep-fixed-v1'],
+};
+test('depth chips by look: legacy ramp B, the kit ramp, two regions side by side, rollback, unknown fails closed', () => {
+  const vars = key => key.status === 'chips' ? key.chips.map(c => `${c.cssVar}${c.orMore ? '+' : ''}`) : key.rowId;
+  const legacy = lookDepthKey('deep-fixed-v1', 'dark', LOOKS);
+  assert.deepEqual(legacy.chips.map(c => c.feet), [0, 10, 20, 33, 50, 66, 100, 150, 200, 300, 300]);
+  assert.deepEqual(vars(legacy), [...Array.from({length: 10}, (_, i) => `--depth-b-${i}`), '--depth-b-10+']);
+  assert.deepEqual(legacy.band, {cssVar: '--depth-b-0', fromFeet: 0, toFeet: SHALLOW_BAND_FT, ring: false});
+  const kit = lookDepthKey(NEARSHORE_STYLE_DIGESTS.baked, 'light', LOOKS);
+  assert.deepEqual(kit.chips.map(c => c.feet), [0, 10, 20, 30, 45, 60, 80, 100, 130, 160, 200, 250, 300, 300]);
+  assert.equal(vars(kit).at(-1), '--skn-depth-ns-13+');
+  assert.ok(kit.chips.every(c => c.ring && /^--skn-depth-ns-\d+$/.test(c.cssVar)));
+  // Two regions on one map, each with its own look; region A then rolls back to its previous look.
+  const region = {a: '9'.repeat(64), b: NEARSHORE_STYLE_DIGESTS.baked};
+  assert.deepEqual(vars(lookDepthKey(region.a, 'dark', LOOKS)), ['--skn-look-999999999999-depth-0', '--skn-look-999999999999-depth-1+']);
+  assert.deepEqual(vars(lookDepthKey(region.b, 'dark', LOOKS)), vars(kit));
+  region.a = 'deep-fixed-v1';
+  assert.deepEqual(vars(lookDepthKey(region.a, 'dark', LOOKS)), vars(legacy));
+  assert.deepEqual(vars(lookDepthKey(region.b, 'dark', LOOKS)), vars(kit), 'the other region keeps its chips');
+  for (const unknown of [null, 'a'.repeat(64), 'toString', '']) {
+    assert.deepEqual(lookDepthKey(unknown, 'dark', LOOKS), {status: 'unavailable', rowId: LOOK_UNAVAILABLE_ID}, String(unknown));
+  }
+});
+
+// MSK-2 contract: each nearshore row shows only when the region's data flags the feature. Bug: a row shown with no flag.
+test('nearshore rows: none without flags, each with its own flag and values', () => {
+  assert.deepEqual(nearshoreRows({}), []);
+  assert.deepEqual(nearshoreRows({pilesSurveyed: false, hardEdge: {cell_m: 0, year: 2019}, resolution_m: NaN}), []);
+  const rows = nearshoreRows({pilesSurveyed: true, pilesFromRelief: true, hardEdge: {cell_m: 2, year: 2019}, resolution_m: 4});
+  assert.deepEqual(rows.map(r => r.id), ['legend.relief.pileSurveyed', 'legend.relief.pileRelief', 'legend.relief.hardEdge', 'legend.relief.resolution']);
+  assert.deepEqual(rows.map(r => r.vars ?? null), [null, null, {cell: 2, year: 2019}, {cell: 4}]);
+  assert.deepEqual(rows.map(r => r.cssVar ?? null), ['--skn-hab-pile', '--skn-hab-pile', '--skn-hab-hard-edge', null]);
 });
 
 // Contract: web/ holds no colour literals (scripts/check_tokens.mjs). Bug: a ramp hex pasted into the model.

@@ -10,12 +10,14 @@ const {outputFiles: [out]} = await build({stdin: {resolveDir: root.pathname, loa
     export {h} from 'preact';
     export {render} from 'preact-render-to-string';
     export {DepthContoursRow, Legend} from './web/app/Legend.tsx';
-    export {reliefDrawn, reliefSurveyView} from './web/app/MapStage.tsx';
+    export {reliefDrawn, reliefFeatures, reliefLook, reliefSurveyView} from './web/app/MapStage.tsx';
+    export {reliefLook as pointerLook} from './web/map/relief-data.ts';
+    export {NEARSHORE_STYLE_DIGESTS} from './web/map/nearshore-style.gen.ts';
     export {createDepthContours, contourState, depthContoursURL} from './web/map/depth-contours.ts';
     export {camera} from './web/map/stage.ts';
     export {publishedChartFiles} from './web/chart-files.ts';
-    export {language, t} from './web/i18n.ts';
-    export {configureStore, syncFromURL} from './web/state.ts';`},
+    export {language, prepareCatalogue, t} from './web/i18n.ts';
+    export {configureStore, region, syncFromURL} from './web/state.ts';`},
   bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
 const m = await import(`data:text/javascript;base64,${Buffer.from(out.contents).toString('base64')}`);
 
@@ -74,6 +76,7 @@ test('the Chart legend keys only the verified classes in view', () => {
   m.configureStore({v2: true, storage: null});
   m.syncFromURL('https://s.test/map?region=morro-bay&presentation=chart');
   m.reliefDrawn.value = true;
+  m.reliefLook.value = 'deep-fixed-v1';
   const render = () => m.render(m.h(m.Legend));
   const bold = html => [...html.matchAll(/data-survey-chip="([^"]+)"[^>]*><span[^>]*><\/span><strong>/g)].map(match => match[1]);
   try {
@@ -95,6 +98,94 @@ test('the Chart legend keys only the verified classes in view', () => {
     }
   } finally {
     m.reliefDrawn.value = false;
+    m.reliefLook.value = null;
     m.reliefSurveyView.value = null;
+    m.language.value = 'en';
+  }
+});
+
+const morro = 'morro-bay', cambria = 'cambria-san-simeon';
+const kitStyle = {baked: m.NEARSHORE_STYLE_DIGESTS.baked, contours: null, habitat: null, built_with: 'nearshore-v1.0.0'};
+const legendHTML = () => m.render(m.h(m.Legend));
+const depthChips = html => [...html.matchAll(/data-depth-chip="([^"]+)"[^>]*><span[^>]*><\/span>(\d+\+?)<\/li>/g)];
+const chartRegion = id => m.syncFromURL(`https://s.test/map?region=${id}&presentation=chart`);
+
+function drawnRelief(t) {
+  m.configureStore({v2: true, storage: null});
+  chartRegion(morro);
+  m.reliefDrawn.value = true;
+  t.after(() => {
+    m.reliefDrawn.value = false;
+    m.reliefLook.value = null;
+    m.reliefFeatures.value = {};
+    m.language.value = 'en';
+  });
+}
+
+// A3: only the active region's deployed pointer keys its chips. A global default or cached
+// previous-region look would show the same ramp in both regions, or survive a file restore.
+test('MSK-2: rendered ramp follows the region pointer and only the restored region switches back', t => {
+  drawnRelief(t);
+  const prior = {region: morro};
+  const files = new Map([[morro, {region: morro, style: kitStyle, previous: prior}], [cambria, {region: cambria}]]);
+  const chipsFor = (id, prefix, count) => {
+    chartRegion(id);
+    // Supply the same look key the loader passes to the reliefDrawn/reliefLook signals.
+    m.reliefLook.value = m.pointerLook(files.get(m.region.value));
+    const html = legendHTML(), chips = depthChips(html);
+    assert.doesNotMatch(html, /data-depth-key="unavailable"/);
+    assert.equal(chips.length, count, id);
+    assert.ok(chips.every(([, cssVar]) => cssVar.startsWith(prefix)), id);
+    return chips.map(([, , depth]) => depth);
+  };
+  assert.deepEqual(chipsFor(morro, '--skn-depth-ns-', 14), ['0', '10', '20', '30', '45', '60', '80', '100', '130', '160', '200', '250', '300', '300+']);
+  const unchanged = chipsFor(cambria, '--depth-b-', 11);
+  files.set(morro, prior);
+  assert.deepEqual(chipsFor(morro, '--depth-b-', 11), unchanged);
+  assert.deepEqual(chipsFor(cambria, '--depth-b-', 11), unchanged);
+});
+
+// A3: a valid unknown digest and a malformed member both hide the colour key, not the relief.
+// Falling back to legacy, suppressing the whole row, or shipping English-only copy breaks this.
+test('MSK-2: unknown or invalid look keeps the relief row but renders only the localized unavailable key', async t => {
+  drawnRelief(t);
+  await m.prepareCatalogue('es');
+  const {contours: _contours, ...missingContours} = kitStyle;
+  for (const style of [{...kitStyle, baked: 'e'.repeat(64)}, missingContours, {...kitStyle, built_with: {relief: kitStyle.built_with}}]) {
+    m.reliefLook.value = m.pointerLook({style});
+    for (const [lang, message] of [
+      ['en', 'Depth colour key unavailable for this map version'],
+      ['es', 'Clave de colores de profundidad no disponible para esta versión del mapa'],
+    ]) {
+      m.language.value = lang;
+      const html = legendHTML();
+      assert.match(html, /class="app-legend-relief"/);
+      assert.deepEqual([...html.matchAll(/data-depth-key="unavailable">([^<]+)</g)].map(([, text]) => text), [message]);
+      assert.doesNotMatch(html, /data-depth-chip|app-relief-depths|app-relief-depth-swatch/);
+    }
+  }
+});
+
+// A3: feature rows are independent evidence claims. Rendering every row (or merging both pile
+// flags) would claim evidence the region does not have; hard-coded text could drop {cell}/{year}.
+test('MSK-2: the legend renders each nearshore row only for its own data flag', async t => {
+  drawnRelief(t);
+  await m.prepareCatalogue('es');
+  m.reliefLook.value = m.pointerLook({style: kitStyle});
+  const rows = html => [...html.matchAll(/data-nearshore-row="legend\.relief\.([^"]+)"[^>]*>(?:<span[^>]*><\/span>)?([^<]+)</g)]
+    .map(([, id, text]) => [id, text]);
+  for (const [flags, id, en, es] of [
+    [{pilesSurveyed: true}, 'pileSurveyed', 'Rock pile (surveyed rock)', 'Pila de roca (roca del levantamiento)'],
+    [{pilesFromRelief: true}, 'pileRelief', 'Rock pile (from relief, no substrate survey)', 'Pila de roca (del relieve, sin levantamiento del sustrato)'],
+    [{hardEdge: {cell_m: 5, year: 2024}}, 'hardEdge', 'Hard-bottom edge: USGS seafloor character, 5 m, 2024', 'Borde de fondo duro: carácter del fondo marino del USGS, 5 m, 2024'],
+    [{resolution_m: 2}, 'resolution', 'Survey resolution 2 m: finer detail not available here', 'Resolución del levantamiento 2 m: aquí no hay más detalle'],
+  ]) {
+    for (const [lang, text] of [['en', en], ['es', es]]) {
+      m.language.value = lang;
+      m.reliefFeatures.value = flags;
+      assert.deepEqual(rows(legendHTML()), [[id, text]]);
+      m.reliefFeatures.value = {};
+      assert.doesNotMatch(legendHTML(), /data-nearshore-row=/);
+    }
   }
 });

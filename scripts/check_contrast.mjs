@@ -634,7 +634,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // MB-14 only adds the 3D sky, horizon and fog tokens in both themes; no existing token, chrome text, panel or legend-glass paint changes.
   // MB-11 adds Ramp B and native legend paint roles only.
   // MSK-1: only unused --skn-* declarations were added; existing surface paint is unchanged.
-  "tokensCss": "cfb8d4f43efb5f85157946d82146d6d43e37a0fc67773e6b160fdc674c21b5be",
+  // MSKL-1: only the additive --skl-* block was inserted; removing it recovers every previous CSS byte. Surface paint is unchanged.
+  "tokensCss": "ea900e4864cf82b5dcac7876ec9c0d8a31dd3ede3f24eae8ab5718b75045cbd0",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
@@ -678,7 +679,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // MAIN-RED-5: pointer-event routing only; no paint, backing, opacity or text role changes.
   // MAIN-RED-7: one landscape-phone (max-height: 500px) sheet-footer link spacing rule (margin, side padding, min-width); no colour, opacity, backing or text role changed. Rebound from the final bytes.
   // MB-11 changes the native legend glass and keys; both native text roles below use its new backing.
-  "appCss": "0b82fdd43853e76e54c14dc8df48094cdd012598a61157086e12cd64387ab297",
+  "appCss": "6cfd414b3a2e127db5e2545a424428bd9ee67b79e14553462f2e9f47bf43235f",
+  // SCA-479: app.css drops only the earlier of two byte-identical phone account-trigger blocks (five lines, after the skip-link rules); the cited legend lines and every contrast role are unchanged. Rebound from the final bytes.
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved.
@@ -708,7 +710,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1407-15: planning-route row uses existing text/muted glass roles; no paint math, thresholds or backing changed.
   // MAP-SOURCES-PAGE-1: source and credit lines leave the Legend (the Sources page names them); no backing, opacity, token or threshold changed.
   // MB-11 adds the relief ramp, survey key and warning; no text is drawn over a swatch.
-  "legendTsx": "b770216253091828b2f4debb665d40968a078ba8b05e60448b99d37ec51c8718"
+  // MSK-2: the relief depth chips follow the pointer's look (same swatch and app-legend-note roles, one new note row);
+  // no backing, opacity, token or threshold changed.
+  "legendTsx": "e1cf4370d4ef8cd3dd09bdb1db90a1d0aca043df7d70aef9888fcd8f0bd3f29b"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

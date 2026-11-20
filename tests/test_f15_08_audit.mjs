@@ -1,6 +1,6 @@
 // SCA-584 / F15-08: a delayed filter request must not leave stale events drawn
 // or pickable, or leave Loading attached to a restored, completed result.
-// `node tests/test_f15_08_audit.mjs --baseline` also replays the race against the real controller.
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {signal} from '@preact/signals';
@@ -54,7 +54,7 @@ async function open(t) {
   const observe = () => ({drawn: [...shown], pickA: pick(A), pickB: pick(B), status: activityStatus.peek()});
   await aDrawn.promise;
   await flush();
-  return {observe, bRequested, finishB: () => lateB.resolve(features(B))};
+  return {observe, bRequested, finishB: () => lateB.resolve(features(B)), failB: () => lateB.reject(new Error('offline fixture'))};
 }
 
 const aMark = `fleet:event:${A}`;
@@ -90,21 +90,30 @@ test('F15-08: settled A passes; the race oracle distinguishes a clean return fro
   assert.deepEqual(gaps({...valid, late: {...a, drawn: [B]}}, a), ['late B reply: wrong draw or pick generation']);
 });
 
-if (process.argv.includes('--baseline')) {
-  test('F15-08 read-only baseline: A → delayed B → A → late B', {timeout: 5000}, async t => {
-    const {observe, bRequested, finishB} = await open(t);
-    const a = observe();
-    checkA(a);
-    activityFilters.value = {kind: B};
-    const bSignal = await bRequested.promise;
-    const pending = observe();
-    activityFilters.value = {kind: A};
-    assert.equal(bSignal.aborted, true, 'returning to A cancels the synthetic B request');
-    const restored = observe();
-    finishB();
-    await flush();
-    const late = observe();
-    const differences = gaps({pending, restored, late}, a);
-    t.diagnostic(JSON.stringify({accepted: a, pending, restored, late, gaps: differences}));
-  });
-}
+test('F15-08: A → delayed B → A → late B keeps drawing, picks and status on the active query', {timeout: 5000}, async t => {
+  const {observe, bRequested, finishB} = await open(t);
+  const a = observe();
+  checkA(a);
+  activityFilters.value = {kind: B};
+  const bSignal = await bRequested.promise;
+  const pending = observe();
+  activityFilters.value = {kind: A};
+  assert.equal(bSignal.aborted, true, 'returning to A cancels the synthetic B request');
+  const restored = observe();
+  finishB();
+  await flush();
+  assert.deepEqual(gaps({pending, restored, late: observe()}, a), []);
+});
+
+test('F15-08: a failed replacement is not a successful empty result or an access denial', {timeout: 5000}, async t => {
+  const {observe, bRequested, failB} = await open(t);
+  const a = observe();
+  checkA(a);
+  activityFilters.value = {kind: B};
+  await bRequested.promise;
+  failB();
+  await flush();
+  assert.deepEqual(observe(), {drawn: [], pickA: null, pickB: null,
+    status: 'Fleet activity could not load. The map and other layers remain available.'});
+  assert.equal(activityAccess.peek(), true);
+});

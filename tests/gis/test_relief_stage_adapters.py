@@ -10,7 +10,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from skippercast.relief import envelope, mosaic, package, receipts
+from skippercast import style
+from skippercast.relief import envelope, mosaic, package, receipts, render_config, tiles
 from tests._support import FIXTURES, ROOT
 
 pytestmark = pytest.mark.gis
@@ -29,7 +30,8 @@ def pmtiles_metadata(path):
         return json.loads(gzip.decompress(stream.read(length)))
 
 
-def test_public_stage_chain(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize('look', ['deep-fixed-v1', 'nearshore-v1.0.0'], ids=['legacy', 'a-b-c-d'])
+def test_public_stage_chain(tmp_path, monkeypatch, capsys, look):
     # Existing builder tests qualify the individual GIS transforms. This exercises their
     # real handoffs: wrong receipt dependencies, builder inputs or stage targets break the chain.
     np = pytest.importorskip('numpy')
@@ -40,6 +42,17 @@ def test_public_stage_chain(tmp_path, monkeypatch, capsys):
     tiny = runpy.run_path(str(FIXTURES / 'relief/tiny/tiny_region.py'))
     main = runpy.run_path(str(ROOT / 'scripts/relief/region.py'))['main']
     region = receipts.Region(tmp_path / 'out', 'tiny')
+    recipe_root = tmp_path / 'recipes'
+    styles = recipe_root / 'style'
+    shutil.copytree(ROOT / 'style', styles)
+    monkeypatch.setattr(render_config, 'repo_root', lambda: recipe_root)
+
+    index = mosaic.read_json(styles / 'index.json')
+
+    def choose(version):
+        write_json(styles / 'index.json', dict(index, default=version))
+
+    choose(look)
     grid = tiny['write_grids'](region.dir / 'raw')['projected_1m.tif']
     with rio.open(grid) as ds:
         w, s, e, n = transform_bounds(ds.crs, 'EPSG:4326', *ds.bounds)
@@ -124,7 +137,23 @@ def test_public_stage_chain(tmp_path, monkeypatch, capsys):
 
     tile_paths = recorded_outputs('tiles')
     metadata = pmtiles_metadata(tile_paths['relief.pmtiles'])
-    assert metadata['ramp'] == 'deep-fixed-v1'
+    if look == 'deep-fixed-v1':
+        assert metadata['ramp'] == 'deep-fixed-v1'
+        assert stage_receipt('tiles')['params'] == {'ramp': 'deep-fixed-v1', 'variant': 'medium'}
+        # Compare with the pre-kit entry point on the exact same mosaic and clip.
+        direct = tmp_path / 'relief.pmtiles'
+        mosaic.run_tool(tiles.SCRIPT, '--source', region.dir / 'mosaic/public/elevation.tif',
+                        '--output', direct, '--coverage-json', tmp_path / 'direct.json', '--label', region.id,
+                        '--variant', 'medium', '--native-manifest', region.dir / 'select/native.json',
+                        '--clip-bounds', *bounds)
+        assert direct.read_bytes() == tile_paths['relief.pmtiles'].read_bytes()
+        assert (tmp_path / 'direct.json').read_bytes() == tile_paths['coverage.json'].read_bytes()
+    else:
+        baked = style.load(look, root=styles).digest('baked')
+        assert stage_receipt('tiles')['params'] == {'engine': 'nearshore', 'baked': baked}
+        assert {r['role'] for r in stage_receipt('tiles')['inputs']} == {'region', 'elevation', 'native', 'grid:tiny-grid'}
+        assert stage_receipt('tiles')['metrics']['style'] == dict(built_with=look, baked=baked,
+                                                                  sha256=index['versions'][look]['sha256'])
     assert metadata['maxzoom'] <= 15 and metadata['maxzoom'] >= 14
     clip = stage_receipt('tiles')['metrics']['clip_bounds']
     help_text = subprocess.check_output([sys.executable, str(ROOT / 'scripts/build_bathy_tiles.py'), '--help'],
@@ -207,6 +236,72 @@ def test_public_stage_chain(tmp_path, monkeypatch, capsys):
     step('envelope', '--generation', gen)
     assert json.loads((region.dir / f'review/{gen}/envelope.json').read_bytes())['layers'] == \
         json.loads(release.read_bytes())['layers']
+
+    if look != 'deep-fixed-v1':
+        initial = stage_receipt('tiles')
+        archive_sha = receipts.sha256_file(tile_paths['relief.pmtiles'])
+        release_bytes = release.read_bytes()
+        pinned = {name: region.receipt_path(name, scope).read_bytes() for name, scope in
+                  [('select', None), ('mosaic', 'public'), ('package', None), ('qa', None), ('envelope', None)]}
+
+        def version(version, change):
+            tokens = mosaic.read_json(styles / f'{look}.json')
+            if change == 'paint':
+                tokens['rock_piles']['outline_opacity'] *= 0.9
+            if change == 'baked':
+                tokens['depth_ramp']['stops_ft'][3][1] = '#ff44aa'
+            if change != 'id':
+                tokens['version'] = version
+            path = styles / f'{version}.json'
+            write_json(path, tokens)
+            leaves = style._leaf_groups(tokens, mosaic.read_json(styles / 'groups.json'))
+            index['versions'][version] = dict(index['versions'][look], file=path.name,
+                                               sha256=receipts.sha256_file(path),
+                                               digests=style._group_digests(tokens, leaves))
+            choose(version)
+
+        for bumped, change in [('nearshore-v1.0.1', 'paint'), ('nearshore-v1.0.2', 'id')]:
+            version(bumped, change)
+            run('tiles', 'DONE')
+            assert 'DONE' in step('package', '--manifest', manifest, *producers, '--upstream', 'inventory')
+            assert 'DONE' in step('envelope', '--generation', gen)
+            assert receipts.check(region, 'qa').done
+            assert stage_receipt('tiles') == initial
+            assert release.read_bytes() == release_bytes
+            assert json.loads(release_bytes)['style']['built_with'] == look
+            for name, scope in [('package', None), ('qa', None), ('envelope', None)]:
+                assert region.receipt_path(name, scope).read_bytes() == pinned[name]
+
+        version('nearshore-v1.1.0', 'baked')
+        run('tiles')
+        newer = stage_receipt('tiles')
+        assert newer['generation'] != initial['generation']
+        assert receipts.sha256_file(tile_paths['relief.pmtiles']) != archive_sha
+        step('digests')
+        step('inventory')
+        step('package', '--manifest', manifest, *producers, '--upstream', 'inventory')
+        verdict = receipts.check(region, 'package')
+        assert verdict.done and verdict.receipt is not None
+        bumped_gen = verdict.receipt['generation']
+        bumped_style = mosaic.read_json(region.dir / f'release/{bumped_gen}/release.json')['style']
+        assert bumped_style == dict(baked=index['versions']['nearshore-v1.1.0']['digests']['baked'],
+                                    built_with='nearshore-v1.1.0', contours=None, habitat=None)
+
+        choose(look)
+        # A previous fixed target was replaced, so rollback must render again, not claim DONE.
+        run('tiles')
+        assert stage_receipt('tiles')['generation'] == initial['generation']
+        assert receipts.sha256_file(tile_paths['relief.pmtiles']) == archive_sha
+        assert region.receipt_path('select').read_bytes() == pinned['select']
+        assert region.receipt_path('mosaic', 'public').read_bytes() == pinned['mosaic']
+
+        # Verify raw tokens before a cache decision, even with the right B indexed.
+        original = styles / f'{look}.json'
+        contents = original.read_bytes()
+        original.write_bytes(contents + b' ')
+        with pytest.raises(ValueError, match='sha256 mismatch'):
+            run('tiles', 'DONE')
+        original.write_bytes(contents)
 
     # A new archive makes every downstream receipt stale; nothing reuses the old inventory.
     select('second revision')

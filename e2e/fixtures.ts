@@ -140,12 +140,17 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
     await context.addInitScript(() => { try { if (!sessionStorage.getItem('e2e-flyover-fresh')) sessionStorage.setItem('skippercast-flyover-v1', '1'); } catch { /* storage blocked */ } });
     await use(context);
   },
-  pageErrors: async ({page}, use) => {
+  pageErrors: [async ({page}, use) => {
     const errors: string[] = [];
-    page.on('pageerror', error => errors.push(String(error)));
-    await use(errors);
+    const record = (error: Error) => { errors.push(String(error)); };
+    page.on('pageerror', record);
+    try {
+      await use(errors);
+    } finally {
+      page.off('pageerror', record);
+    }
     expect(errors, 'uncaught page errors').toEqual([]);
-  },
+  }, {auto: true}],
   v2: async ({page}, use, info) => {
     const url: V2['url'] = (name, params = {}) => {
       const search = new URLSearchParams({...params, ui: 'v2'});

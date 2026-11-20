@@ -46,7 +46,7 @@ from tempfile import TemporaryDirectory
 import math
 import re
 
-from .contracts import atomic_json, read_json
+from .contracts import atomic_json, owner_display_cleared, read_json
 from .shoreline import simplify
 from ..util.units import FT_PER_M
 
@@ -256,6 +256,13 @@ def _public_display_allowed(source):
     return source.get('publication_allowed') is not False and display not in ('private', 'excluded')
 
 
+def _require_not_held(collection, region):
+    features = collection.get('features') or []
+    parts = [collection, collection.get('provenance') or {}, *features, *(f.get('properties') or {} for f in features)]
+    if any(isinstance(part, dict) and 'publication_held' in part for part in parts):
+        raise _ContoursHeld(f"Depth contours for {region['id']} are held and cannot be published")
+
+
 def check_contours(collection, region, sources):
     """Raise ValueError unless `collection` is an in-region contour set from approved, bound survey grids.
 
@@ -265,14 +272,36 @@ def check_contours(collection, region, sources):
     A held collection (a `publication_held` key anywhere: see check_held_contours) is never publishable.
     Explicit catalog denials also block publication; legacy sources keep their reviewed policy.
     """
-    features = collection.get('features') or []
-    parts = [collection, collection.get('provenance') or {}, *features, *(f.get('properties') or {} for f in features)]
-    if any(isinstance(part, dict) and 'publication_held' in part for part in parts):
-        raise _ContoursHeld(f"Depth contours for {region['id']} are held and cannot be published")
+    _require_not_held(collection, region)
     _check(collection, region, sources, {'approved'})
     for entry in collection['provenance'].get('sources', []):
         ident = str(entry.get('source_id'))
         if not _public_display_allowed(sources[ident]):
+            raise ValueError(f"Depth contour source {ident} is not cleared for public display")
+
+
+def omitted_selected_sources(selected, sources, listed):
+    """Admitted selector families that did not contribute, in source ID order."""
+    return [{'source_id': ident, 'review_status': sources[ident]['review_status']}
+            for ident in sorted(set(selected).difference(listed))]
+
+
+def check_selected_contours(collection, region, sources, selected):
+    """Check R5b contours against the admitted source IDs from the attested selection."""
+    _require_not_held(collection, region)
+
+    def selected_bathymetry(ident, source, bound, allowed):
+        return (ident in bound and 'bathymetry' in source.get('needs', ())
+                and (source.get('review_status') in allowed or owner_display_cleared(source.get('rights') or {})))
+
+    _check(collection, region, sources, {'approved'}, binding=selected_bathymetry, selected=set(selected))
+    for entry in collection['provenance'].get('sources', []):
+        ident = str(entry.get('source_id'))
+        source = sources[ident]
+        rights = source.get('rights') or {}
+        if rights.get('public_display') != 'allowed' or (
+            source.get('publication_allowed') is False and not owner_display_cleared(rights)
+        ):
             raise ValueError(f"Depth contour source {ident} is not cleared for public display")
 
 
@@ -296,8 +325,8 @@ def check_held_contours(collection, region, sources):
         raise ValueError(f"Depth contours for {region['id']} do not state their publication hold and held sources")
 
 
-def _check(collection, region, sources, allowed):
-    """check_contours' shape checks, with `allowed` the review statuses a listed source may have."""
+def _check(collection, region, sources, allowed, *, binding=_bound_bathymetry, selected=None):
+    """Shared shape checks; by default use the region's static bathymetry bindings."""
     provenance = collection.get('provenance') or {}
     if collection.get('type') != 'FeatureCollection' or provenance.get('region_id') != region['id']:
         raise ValueError(f"Depth contours for {region['id']} are not its FeatureCollection")
@@ -310,11 +339,11 @@ def _check(collection, region, sources, allowed):
         raise ValueError(f"Depth contours for {region['id']} have incomplete provenance")
     if provenance.get('shelf_limit_ft') != (V2_SHELF_LIMIT_FT if v2 else SHELF_LIMIT_FT) or provenance.get('units') != 'ft':
         raise ValueError(f"Depth contours for {region['id']} do not state feet and the shelf limit")
-    bound = set(region.get('source_bindings', {}).get('bathymetry', []))
+    bound = set(region.get('source_bindings', {}).get('bathymetry', [])) if selected is None else selected
     listed = {str(s.get('source_id')): s for s in provenance.get('sources', [])}
     for ident, entry in listed.items():
         reviewed = sources.get(ident) or {}
-        if not _bound_bathymetry(ident, reviewed, bound, allowed):
+        if not binding(ident, reviewed, bound, allowed):
             raise ValueError(f"Depth contour source {ident} is not an approved bathymetry binding of {region['id']}")
         if not SHA256.fullmatch(str(entry.get('sha256'))) or not _survey_date(entry.get('survey_date')) \
                 or not entry.get('vertical_datum'):
@@ -323,8 +352,13 @@ def _check(collection, region, sources, allowed):
         if not isinstance(entry.get('ec_version', ''), str) or not isinstance(counts, dict) \
                 or not set(counts) <= {*ec.PROVENANCE_CLASSES, 'unresolved'} or not all(_count(n, 0) for n in counts.values()):
             raise ValueError(f"Depth contour source {ident} misstates its error-correction version or class counts")
-    if 'sources_omitted' in provenance and provenance['sources_omitted'] != omitted_sources(region, sources, listed):
-        raise ValueError(f"Depth contours for {region['id']} misstate the omitted bound surveys")
+    if 'sources_omitted' in provenance:
+        if selected is None:
+            omitted = omitted_sources(region, sources, listed)
+        else:
+            omitted = omitted_selected_sources(selected, sources, listed)
+        if provenance['sources_omitted'] != omitted:
+            raise ValueError(f"Depth contours for {region['id']} misstate the omitted bound surveys")
     west, south, east, north = region['bounds']
     for feature in collection['features']:
         p, geometry = feature.get('properties') or {}, feature.get('geometry') or {}

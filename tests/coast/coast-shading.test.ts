@@ -2,7 +2,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {depthWindow,contourInterval,sunDirection,shadingReadout,reliefChip,sourceContourFloor,MIN_WINDOW_M,SOURCE_CONTOUR_FLOOR_M} from '../../packages/coast/src/coast3d/shading.ts';
+import {coastLook,KIT_RAMP_CAPACITY,depthWindow,contourInterval,sunDirection,shadingReadout,reliefChip,sourceContourFloor,MIN_WINDOW_M,SOURCE_CONTOUR_FLOOR_M} from '../../packages/coast/src/coast3d/shading.ts';
+import * as T from 'three';
+import {CoastViewer} from '../../packages/coast/src/coast3d/viewer.ts';
+import {resolveRelief} from '../../web/map/relief-data.ts';
 import {coastPoint} from '../../packages/coast/src/coast3d/grid.ts';
 
 const near=(a:number,b:number,eps=1e-9)=>assert.ok(Math.abs(a-b)<=eps,`${a} ≉ ${b}`);
@@ -61,4 +64,48 @@ test('readout names the ramp in view and the contour spacing; the chip discloses
  assert.equal(shadingReadout({min:18.6,max:43.3},false,null),'Ramp 61–142 ft in view · contours off');
  assert.equal(reliefChip(5),'Seabed ×5 · land true scale');
  assert.equal(reliefChip(1),'Seabed true scale · land true scale');
+});
+
+
+// Use the actual viewer's shader uniforms: a missing or rescaled stop, stale
+// contour ink or wrong default would not be caught by the pointer reader alone.
+test('regional look binds the kit stops, ink, no-data and fixed default to the viewer',()=>{
+ const read=(name:string)=>JSON.parse(readFileSync(new URL(`../fixtures/relief/pointer-style/${name}.json`,import.meta.url),'utf8'));
+ const key=(name:string)=>{
+  const p=read(name),r=resolveRelief(p.region,p);assert.equal(r.status,'ready');return r.archive.look;
+ };
+ const look=coastLook(key('v1'))!;
+ const table=read('looks').coast;
+ const other=coastLook(key('v1-no-contours'),table)!;
+ const rolling=coastLook(key('v1_1-prev-v1'),table)!;
+ assert.notEqual(other.depthStopsFt[0]?.[1],rolling.depthStopsFt[0]?.[1]);
+ assert.equal(coastLook(key('v1'),table),other,'rollback reads the v1 file again; the other view remains v1');
+ const input={checked:false,onchange(){viewer.fixedRamp.value=Number(this.checked);viewer.updateShading();}};
+ let shading:any;
+ const viewer=Object.assign(Object.create(CoastViewer.prototype),{
+  alive:true,options:{onShading:(s:unknown)=>{shading=s;}},
+  root:{querySelector:(s:string)=>s==='[id="fixed-ramp"]'?input:null},
+  kitCount:{value:0},kitStops:{value:Array.from({length:KIT_RAMP_CAPACITY},()=>new T.Vector4())},contourInk:{value:new T.Color()},
+  fixedRamp:{value:0},contours:{value:0},contourMinor:{value:0},contourIndex:{value:0},relief:{value:2},
+  manifest:{waterReferenceM:0,bounds:[0,0,4096,4096]},controls:{target:{x:0,z:0}},loaded:new Map(),span:()=>1000,rampWindow:{min:18.6,max:43.3},
+ });
+ assert.equal(viewer.setReliefLook(key('v1')),'known');
+ assert.equal(shading.fixedRamp,true);
+ assert.equal(shading.readout,'Fixed ramp 0–900 ft · contours off');
+ assert.equal(shading.noData,look.noData);
+ const shader={uniforms:{},vertexShader:'',fragmentShader:''};
+ viewer.material(null,0,false).onBeforeCompile(shader);
+ const u=shader.uniforms as Record<string,{value:any}>;
+ for(const ft of [0,100,300]){
+  const stop=u.kitStops!.value.find((v:T.Vector4)=>Math.abs(v.w-ft*.3048)<1e-6);
+  const hex=stop.toArray().slice(0,3).map((c:number)=>Math.round(c*255).toString(16).padStart(2,'0')).join('');
+  assert.equal(hex,look.depthStopsFt.find(s=>s[0]===ft)?.[1].slice(1).toLowerCase());
+ }
+ assert.equal(u.contourColor!.value.getHexString(),look.contour.slice(1).toLowerCase());
+ viewer.setFixedRamp(false);assert.match(shading.readout,/Ramp 61–142 ft in view/);
+ assert.equal(viewer.setReliefLook(key('v1_1-prev-v1')),'unknown');
+ viewer.setFixedRamp(true);assert.equal(shading.fixedRamp,false);assert.equal(shading.unmatched,true);assert.equal(u.kitCount!.value,0);
+ assert.equal(viewer.setReliefLook(null),'unknown');
+ assert.equal(viewer.setReliefLook(key('legacy')),'legacy');
+ viewer.setFixedRamp(true);assert.match(shading.readout,/0–5,900 ft/);assert.equal(shading.unmatched,undefined);
 });

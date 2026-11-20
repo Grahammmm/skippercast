@@ -37,6 +37,7 @@ import {createPreviewLayers, previewOn} from '../map/preview-layers.ts';
 import type {Engine} from '../map/engine.ts';
 import type {SurveyDetailView} from '../map/bottom-relief.ts';
 import {BOTTOM_RELIEF, reliefWanted} from '../map/layers.ts';
+import {lookDepthKey, type NearshoreFlags} from '../map/legend-model.ts';
 import {createStations} from '../map/stations.ts';
 import {dailyFeed, verdictEpoch} from '../brief/Brief.tsx';
 import {mapFirstIdle} from '../map-ready.ts';
@@ -68,6 +69,11 @@ phoneQuery?.addEventListener('change', event => { phone.value = event.matches; }
 /** True from the relief's first draw until it is retired; the honesty line shows only while something is drawn. */
 export const reliefDrawn = signal(false);
 export const reliefSurveyView = signal<SurveyDetailView | null>(null);
+/** MSK-2: the drawn relief's look key (web/map/relief-data.ts `reliefLook`; null = invalid), which the legend's depth chips follow. */
+export const reliefLook = signal<string | null>(null);
+/** MSK-2: which nearshore legend rows the region's data supports (legend-model.ts `nearshoreRows`). Empty until the pointer
+ * (MSK-4) and habitat vector (MSK-6) producers publish the flags, so no row shows today. */
+export const reliefFeatures = signal<NearshoreFlags>({});
 const clearUnavailable = (layer: string) => { unavailable.value = unavailable.peek().filter(l => l !== layer); };
 const basemapAvailable = computed(() => !unavailable.value.includes('basemap'));
 
@@ -85,7 +91,11 @@ function watchBottomRelief(engine: ReadonlySignal<Engine | null>) {
         fieldOn: () => layers.value.includes('water-temp') || layers.value.includes('chlorophyll') ||
           previewOn.value.some(layer => layer === 'sst' || layer === 'chlorophyll'),
         surveyView: view => { reliefSurveyView.value = view; },
-        ready: () => { reliefDrawn.value = true; },
+        ready: look => {
+          // MSK-2: an unknown look is said once, here; the legend then shows no depth colour key for it.
+          if (lookDepthKey(look, 'dark').status !== 'chips') console.warn('relief-look-without-legend-colours', look);
+          reliefLook.value = look; reliefDrawn.value = true;
+        },
         // No `ready` pointer is normal (most regions have none yet): nothing was promised, so nothing is said.
         // Only a relief that was drawn and then failed its checks is reported.
         unavailable: error => { const was = reliefDrawn.peek(); reliefDrawn.value = false; if (was) markUnavailable(BOTTOM_RELIEF, error); }});

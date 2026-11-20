@@ -8,6 +8,7 @@
 // controls (MGL-15), carried as their CSS text for MapLibre's `to-number`; the
 // modules that draw with them validate the text (mapControl in style.ts).
 import {basemapRoles} from './style.ts';
+import {SKL_PALETTE_TOKENS} from './layers-style.gen.ts';
 
 /** Palette keys and the custom property each one reads (without the leading `--`). */
 export const PALETTE_TOKENS = {
@@ -30,7 +31,28 @@ export const PALETTE_TOKENS = {
   mapSurveyTint1: 'map-survey-tint-1', mapSurveyTint2: 'map-survey-tint-2', mapSurveyTint5: 'map-survey-tint-5',
   habRock: 'hab-rock', habMixed: 'hab-mixed', habSoft: 'hab-soft', habKelp: 'hab-kelp', markRing: 'mark-ring',
   mapLabelOpacity: 'map-label-opacity', mapRoadOpacity: 'map-road-opacity', mapHabitatOpacity: 'map-habitat-opacity', mapContourWidth: 'map-contour-width',
+  // MSK-2: G's nearshore style kit colours (web/tokens.css generated `--skn-*` block, scripts/style/gen_style.py). They sit in
+  // :root only, so both themes read the same values: the kit look is theme-independent (MAP-DESIGN-LOCK § 10.1, G D3).
+  sknDepth0: 'skn-depth-ns-0', sknDepth1: 'skn-depth-ns-1', sknDepth2: 'skn-depth-ns-2', sknDepth3: 'skn-depth-ns-3', sknDepth4: 'skn-depth-ns-4',
+  sknDepth5: 'skn-depth-ns-5', sknDepth6: 'skn-depth-ns-6', sknDepth7: 'skn-depth-ns-7', sknDepth8: 'skn-depth-ns-8', sknDepth9: 'skn-depth-ns-9',
+  sknDepth10: 'skn-depth-ns-10', sknDepth11: 'skn-depth-ns-11', sknDepth12: 'skn-depth-ns-12', sknDepth13: 'skn-depth-ns-13', sknDepth14: 'skn-depth-ns-14',
+  sknContourMinor: 'skn-map-contour-ns-minor', sknContourIndex: 'skn-map-contour-ns-index', sknLabelInk: 'skn-map-label-ink', sknLabelHalo: 'skn-map-label-halo',
+  sknPile: 'skn-hab-pile', sknPileEdge: 'skn-hab-pile-edge', sknPileLabel: 'skn-hab-pile-label', sknHardEdge: 'skn-hab-hard-edge',
+  sknPierFill: 'skn-map-pier-fill', sknPierCasing: 'skn-map-pier-casing', sknCastArc: 'skn-map-cast-arc', sknCastArcHalo: 'skn-map-cast-arc-halo',
+  sknCastArcLabel: 'skn-map-cast-arc-label',
+  ...SKL_PALETTE_TOKENS,
 } as const;
+
+const BY_TOKEN: ReadonlyMap<string, PaletteKey> = new Map(Object.entries(PALETTE_TOKENS).map(([key, token]) => [token, key as PaletteKey]));
+/**
+ * The palette value for a generated `--skn-*` variable name, as web/map/nearshore-style.gen.ts names its colours, so map code
+ * follows the generated module rather than a key written by hand. Throws for a variable this bridge does not carry.
+ */
+export function sknColor(p: Palette, cssVar: string): string {
+  const key = cssVar.startsWith('--skn-') ? BY_TOKEN.get(cssVar.slice(2)) : undefined;
+  if (!key) throw new Error(`Map palette: ${cssVar} is not bridged in PALETTE_TOKENS.`);
+  return p[key];
+}
 
 export type PaletteKey = keyof typeof PALETTE_TOKENS;
 export type Palette = Readonly<Record<PaletteKey, string>>;

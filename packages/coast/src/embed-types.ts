@@ -37,7 +37,7 @@ export type CoastSourceCoverage={sources:readonly Readonly<CoastTerrainSource>[]
  * contour spacing in metres; and `readout`, the native panel's line verbatim.
  * None of it changes a measured value or what inspection returns.
  */
-export type CoastShading={readout:string;rampMinM:number|null;rampMaxM:number|null;contourMinorM:number;contourIndexM:number;fixedRamp:boolean;relief:number};
+export type CoastShading={readout:string;unmatched?:boolean;noData?:string;rampMinM:number|null;rampMaxM:number|null;contourMinorM:number;contourIndexM:number;fixedRamp:boolean;relief:number};
 /** An admitted habitat selection in WGS84 degrees, with its public id. */
 export type CoastSelection={latitude:number;longitude:number;region?:string;id?:string};
 /** One ranked reef as its native rail button reads; `id` is the habitat the button selects. */
@@ -165,6 +165,8 @@ export interface CoastHandle{
  setPhotoMix(mix:number):void;
  /** True restores v1's fixed depth colours; false (default) spans the ramp across the depths in view. */
  setFixedRamp(fixed:boolean):void;
+ /** Apply a current regional look, never a previous pointer. Undefined restores legacy. */
+ setReliefLook(key:string|null|undefined):'legacy'|'known'|'unknown';
  /** Colours the terrain by the source behind each sample (lidar, survey, chart estimate, model). */
  setSourceCoverage(visible:boolean):void;
  /** Reef areas, outlines and species pins. */

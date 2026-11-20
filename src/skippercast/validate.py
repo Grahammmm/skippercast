@@ -58,6 +58,7 @@ KINDS = {
     "forecast-tile": "forecast-tile.schema.json",
     "fleet-region": "fleet-region.schema.json",
     "fleet-profile": "fleet-profile.schema.json",
+    "sc-render-v1": "sc-render-v1.schema.json",
 
     'coast-recipe-v1': 'coast-recipe-v1.schema.json',
     'coastal-discovery-lead-v1': 'coastal-discovery-lead-v1.schema.json',

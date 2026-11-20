@@ -1,0 +1,303 @@
+{
+ "$schema_note": "Stacking rules for the final layer set (v1.0.0). Read with layer-tokens.json. 'base:' refs point into the nearshore base tokens.",
+ "version": "1.0.0",
+ "z_order": [
+  {
+   "z": 0,
+   "id": "base-relief",
+   "note": "nearshore house base (depth ramp × shade, bottom tint, piles) — never hidden; desaturated while a colour field is on"
+  },
+  {
+   "z": 1,
+   "id": "color-field",
+   "members": [
+    "sst-fill",
+    "chlorophyll",
+    "kd490",
+    "salinity",
+    "subsurface-temp",
+    "currents.fill",
+    "wind.fill",
+    "waves-swell.fill",
+    "visibility-fog"
+   ],
+   "cap": 1
+  },
+  {
+   "z": 2,
+   "id": "veils",
+   "members": [
+    "clouds",
+    "sea-ice"
+   ],
+   "cap": 1
+  },
+  {
+   "z": 3,
+   "id": "radar",
+   "members": [
+    "precip-radar"
+   ],
+   "cap": 1
+  },
+  {
+   "z": 4,
+   "id": "depth-contours",
+   "note": "house contour ink, unchanged"
+  },
+  {
+   "z": 5,
+   "id": "polygons",
+   "members": [
+    "marine-zones-mpas",
+    "kelp-habitat",
+    "ais-fleet",
+    "upwelling"
+   ]
+  },
+  {
+   "z": 6,
+   "id": "isolines",
+   "members": [
+    "sst-breaks",
+    "sst-fill auto isotherms",
+    "ssh",
+    "pressure",
+    "subsurface-temp.isotherms"
+   ],
+   "cap": 2,
+   "second_set": "dashed"
+  },
+  {
+   "z": 7,
+   "id": "particles",
+   "members": [
+    "currents.streamlines",
+    "wind.particles"
+   ],
+   "cap": 1
+  },
+  {
+   "z": 8,
+   "id": "arrows-barbs",
+   "members": [
+    "wind.barbs",
+    "waves-swell.arrows"
+   ],
+   "cap": 1
+  },
+  {
+   "z": 9,
+   "id": "routes",
+   "members": [
+    "routes-tracks"
+   ]
+  },
+  {
+   "z": 10,
+   "id": "points",
+   "members": [
+    "stations",
+    "tides",
+    "places",
+    "spots-marks"
+   ]
+  },
+  {
+   "z": 11,
+   "id": "labels",
+   "note": "place, contour, pile labels with the house halo"
+  }
+ ],
+ "opacity_by_zoom": {
+  "color_field": "base:overlays.field_opacity_by_zoom",
+  "cloud_veil": [
+   [
+    6,
+    0.92
+   ],
+   [
+    10,
+    0.92
+   ],
+   [
+    13,
+    0.45
+   ]
+  ],
+  "radar": [
+   [
+    6,
+    0.85
+   ],
+   [
+    12,
+    0.75
+   ],
+   [
+    15,
+    0.6
+   ]
+  ],
+  "habitat_fill": [
+   [
+    8,
+    0.35
+   ],
+   [
+    14,
+    0.25
+   ]
+  ],
+  "particles": [
+   [
+    6,
+    0.9
+   ],
+   [
+    14,
+    0.8
+   ]
+  ]
+ },
+ "caps": {
+  "color_field": 1,
+  "veil": 1,
+  "isolines": 2,
+  "particles": 1,
+  "arrows_barbs": 1
+ },
+ "veil_cap_with_field_or_radar": 0.55,
+ "base_desaturation_when_field_on": "base:overlays.base_desaturation_when_field_on",
+ "isolines_from_zoom": "base:overlays.isolines_from_zoom",
+ "blend_modes": {
+  "all": "normal (source-over). Never multiply or screen: multiply muddies the depth ramp, screen washes out light land.",
+  "hillshade": "baked into the base raster"
+ },
+ "precedence": [
+  {
+   "id": "P1-fill",
+   "rule": "One colour field. The most recently switched-on fill layer owns the colour-field slot. A layer that loses it keeps only its non-fill representation (currents → streamlines, wind → particles or barbs, waves → arrows); a layer with no other representation (SST, chlorophyll, Kd490, salinity, subsurface, visibility) is switched off and its row says which layer replaced it."
+  },
+  {
+   "id": "P2-particles",
+   "rule": "One particle layer. Currents streamlines own the particle slot whenever currents are on; wind particles draw only when currents are off. When currents are on, wind draws as barbs (layers.wind.barbs) in the arrow/barb slot."
+  },
+  {
+   "id": "P3-arrows",
+   "rule": "One arrow/barb layer. Wind barbs take precedence over wave direction arrows; while wind barbs show, waves keep only their fill (if they own the fill slot)."
+  },
+  {
+   "id": "P4-veils",
+   "rule": "One veil. Cloud veil and sea-ice veil never together (sea ice is not local; it never auto-enables). The cloud veil caps at veil_cap_with_field_or_radar while a colour field or radar is on."
+  },
+  {
+   "id": "P5-isolines",
+   "rule": "At most two isoline sets; the second is dashed. With SST fill on, its auto isotherms (from isolines_from_zoom) count as one set."
+  },
+  {
+   "id": "P6-clutter",
+   "rule": "While any isoline, particle or arrow/barb layer is on, SST band edges are hidden; while a colour field is on, unranked atlas dots are hidden and kelp drops to layers.kelp-habitat.kelp.opacity_with_color_field."
+  }
+ ],
+ "presets": {
+  "STACK-A": {
+   "name": "Offshore bite (SST + currents + wind)",
+   "view": "REG",
+   "zoom": 9,
+   "layers": [
+    {
+     "layer": "sst-fill",
+     "as": [
+      "fill"
+     ]
+    },
+    {
+     "layer": "currents",
+     "as": [
+      "streamlines"
+     ],
+     "why": "P1: SST owns the fill slot"
+    },
+    {
+     "layer": "wind",
+     "as": [
+      "barbs"
+     ],
+     "why": "P1 + P2: SST owns the fill, currents own the particle slot"
+    }
+   ],
+   "legend": "SST °F · white lines = current · barbs = wind kt"
+  },
+  "NEAR-D": {
+   "name": "Nearshore z13 full stack",
+   "view": "MB",
+   "zoom": 13,
+   "layers": [
+    {
+     "layer": "sst-fill",
+     "as": [
+      "fill",
+      "auto isotherms"
+     ]
+    },
+    {
+     "layer": "kelp-habitat",
+     "as": [
+      "kelp"
+     ],
+     "why": "P6: kelp at opacity_with_color_field; shore lines off in this preset"
+    },
+    {
+     "layer": "spots-marks",
+     "as": [
+      "badges"
+     ],
+     "why": "P6: unranked dots hidden under a fill"
+    }
+   ],
+   "legend": "z13: fill + isotherms + kelp + ranked spots"
+  }
+ },
+ "stacking_check": {
+  "date": "2026-11-19 PST",
+  "picks_checked": [
+   "CUR-C",
+   "WIND-A"
+  ],
+  "what_they_are": {
+   "CUR-C": "speed colour FILL (cmocean speed, 0–1.2 kt) + white STREAMLINES (particle-class flow lines)",
+   "WIND-A": "Windy-style colour FILL over land + white PARTICLES"
+  },
+  "STACK-A_as_drafted_with_new_picks": {
+   "color_fields": 3,
+   "particles": 2,
+   "arrows_barbs": 0,
+   "violations": [
+    "colour-field cap 1 (SST-B + CUR-C fill + WIND-A fill)",
+    "particle cap 1 (CUR-C streamlines + WIND-A particles)"
+   ]
+  },
+  "resolution": "No cap or opacity changed. Two precedence rules made explicit (P1, P2): SST keeps the fill; currents drop their speed fill and keep white streamlines (the particle slot); wind drops fill and particles and draws barbs (the arrow/barb slot). This is the least change: STACK-A's approved image already showed wind as barbs, so only the current lines change look (CUR-B ink streaks → CUR-C white streamlines).",
+  "STACK-A_final": {
+   "color_fields": 1,
+   "particles": 1,
+   "arrows_barbs": 1,
+   "isolines": 0,
+   "pass": true
+  },
+  "NEAR-D_final": {
+   "color_fields": 1,
+   "particles": 0,
+   "arrows_barbs": 0,
+   "isolines": 1,
+   "pass": true,
+   "note": "no currents or wind in NEAR-D, so CUR-C/WIND-A do not affect it"
+  },
+  "other_fixes": [
+   "P3: the draft let wave arrows and wind barbs show together (2 arrow/barb layers); wind barbs now win.",
+   "P6/kelp: KELP-D's approved solid canopy (0.65, 0.55 under a fill as in the approved NEAR-D) is kept as a named exception to the old '≤0.35 habitat fill' rule, which now applies to zones and AIS only.",
+   "Cloud veil: CLOUD-A's approved 0.92 max alpha is kept to z10, fading to 0.45 at z13 (draft curve 0.9/0.7/0.45 contradicted the approved look)."
+  ]
+ }
+}
