@@ -4,6 +4,7 @@ import {layers, region} from '../state.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {chlorophyllFresh, regionalChlorophyll, type ChlorophyllObservation, type RegionalChlorophyll} from './habitat-feed.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {MPA_FILL} from './mpa.ts';
 import {fieldOpacity} from './nearshore-paint.ts';
 import type {ExpressionSpecification} from 'maplibre-gl';
@@ -13,6 +14,8 @@ import {readPalette, type Palette} from './palette.ts';
 import {sp, type StatusCopy} from './status-copy.ts';
 
 const ID = 'chlorophyll', HOUR = 3_600_000;
+/** § 9: water temperature and Temp contrast insert under this, so the field order does not depend on which drew first. */
+export const CHLOROPHYLL_LAYER = ID;
 export const CHLOROPHYLL_SCALE = [0.01, 0.1, 1, 10, 100] as const;
 const BASIS = layerEntry(ID).basis;
 export interface ChlorophyllStatus {readonly drawn: ChlorophyllObservation | null; readonly basis: string; readonly note: string; readonly copy?: StatusCopy}
@@ -81,7 +84,8 @@ export function createChlorophyll(o: {engine: ReadonlySignal<Engine | null>; fet
       setRailNote(ID, s.note, s.copy?.note);
       if (e) {
         const cells = s.drawn ? cellsOf(s.drawn) : null;   // one geometry build per observation: source creation and update share it
-        e.setOverlay(ID, s.drawn && cells ? chlorophyllOverlay(s.drawn, palette(), cells) : null, [SWELL_LAYER, MPA_FILL]);
+        // § 9 order: under swell, else wind, else depth contours, else protected areas.
+        e.setOverlay(ID, s.drawn && cells ? chlorophyllOverlay(s.drawn, palette(), cells) : null, [SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
         if (cells) e.setData(ID, cells);
       }
     }),

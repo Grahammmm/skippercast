@@ -53,6 +53,7 @@ import {shownPresentation, terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
 import {surfaceField, temperatureRange, type SurfaceField} from './surface-field.js';
 import {SWELL_LAYER} from './swell.ts';
+import {CHLOROPHYLL_LAYER} from './chlorophyll.ts';
 import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'water-temp' as const;
@@ -305,14 +306,14 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       if (!e) return;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      // § 9 order: under Temp contrast, else swell, wind, depth contours, or protected areas.
+      // § 9 order: under Temp contrast, else chlorophyll, swell, wind, depth contours, or protected areas.
       const overlay = waterTempOverlay(p);
       // The texture is pixels in an image source, not a paint: if a theme ever changes the ramp, a live switch repaints it from the same field
       // (setImage sends no request and setData is not used). Today's --sst-* tokens are identical in both themes, so none is repainted.
       let paintedRamp = ramps(p).sst.join();
       const texture = (ramp: string[]): void => { paintedRamp = ramp.join(); e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramp, v => v[0]!)); };
       e.setOverlay(REGISTRY_ID, {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).sst; if (ramp.join() !== paintedRamp) texture(ramp); return overlay.themePaint!(pal); }},
-        [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
+        [CONTRAST_LAYER, CHLOROPHYLL_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
       texture(ramps(p).sst);
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
       painted = a.sst;

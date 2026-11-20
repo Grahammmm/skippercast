@@ -425,15 +425,25 @@ test('MSK-2: Chart inserts real fields and contours at their current MapLibre an
   };
   order('water-temp', 'chlorophyll', 'swell', DEPTH_BOTTOM, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL, MPA_FILL);
 
-  // The kit slot is last, but the existing Chart appends overlays after the static basemap place symbols.
-  order('boundaries', 'labels-places', DEPTH_LABEL, MPA_FILL);
-  // Without Swell, chlorophyll currently falls back to MPA_FILL rather than DEPTH_BOTTOM.
+  // Accepted exception (t_f84a4380): the kit's place-label slot is not honoured on the live Chart. Place labels stay in
+  // the basemap under every app overlay (§ 9), because the ENC chart base is an opaque raster above the basemap.
+  order('boundaries', 'labels-places', ENC_LAYER, DEPTH_LABEL, MPA_FILL);
+  // Without Swell, chlorophyll falls back to DEPTH_BOTTOM and stays under the contours.
   setParams({layers: 'water-temp,chlorophyll'});
   // Draw chlorophyll anew so the engine has to choose the fallback rather than retain its layer.
   controllers.pop().destroy();
   controllers.push(createChlorophyll({...opts, fetchFn: async url => url.endsWith('/habitat-dynamics.json') ? Response.json(manifest) : new Response(tile)}));
-  for (const end = Date.now() + 2000; !ids().includes('chlorophyll') && Date.now() < end;) await tick();
-  order('water-temp', DEPTH_BOTTOM, DEPTH_LABEL, 'chlorophyll', MPA_FILL);
+  for (const end = Date.now() + 2000; (!ids().includes('chlorophyll') || ids().includes('swell')) && Date.now() < end;) await tick();
+  assert.ok(!ids().includes('swell'), 'Swell is absent so chlorophyll must use its fallback');
+  order('water-temp', 'chlorophyll', DEPTH_BOTTOM, DEPTH_LABEL, MPA_FILL);
+  // Water temperature drawn after chlorophyll (Swell present) still goes under it: the field order does not depend on which drew first.
+  setParams({layers: 'swell,chlorophyll'});
+  for (const end = Date.now() + 2000; (ids().includes('water-temp') || !ids().includes('swell')) && Date.now() < end;) await tick();
+  assert.ok(!ids().includes('water-temp'), 'Water temp is removed before it is redrawn');
+  order('chlorophyll', 'swell', DEPTH_BOTTOM);
+  setParams({layers: 'water-temp,swell,chlorophyll'});
+  for (const end = Date.now() + 2000; !ids().includes('water-temp') && Date.now() < end;) await tick();
+  order('water-temp', 'chlorophyll', 'swell', DEPTH_BOTTOM, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL, MPA_FILL);
 });
 
 const doc = () => ({hidden: false, addEventListener() {}, removeEventListener() {}});
