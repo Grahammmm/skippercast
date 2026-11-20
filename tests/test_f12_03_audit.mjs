@@ -50,7 +50,7 @@ test('a due rule shows its stored restrictions and source before an unchanged co
   const {sql, db} = advisorDatabase();
   t.after(() => sql.close());
   const now = Date.parse('2026-06-01T18:00:00Z');
-  const initial = {
+  const insert = {
     id: 'a'.repeat(32), jurisdiction: 'california-central', region: '*', species_key: 'other', species_label: 'Synthetic fish',
     size_min_in: 12, size_max_in: 22, bag_limit: 2, bag_notes: 'Synthetic bag note',
     season_open: '05-01', season_close: '07-15', depth_limit_ft: 0,
@@ -59,8 +59,9 @@ test('a due rule shows its stored restrictions and source before an unchanged co
     status: 'review', reviewed_at: '2026-03-01T18:00:00.000Z', review_due: '2026-05-30',
     updated_by: 'synthetic-import', updated_at: '2026-03-01T18:00:00.000Z',
   };
-  const keys = Object.keys(initial);
-  sql.prepare(`INSERT INTO advisor_rules (${keys.join(',')}) VALUES (${keys.map(() => '?').join(',')})`).run(...Object.values(initial));
+  const keys = Object.keys(insert);
+  sql.prepare(`INSERT INTO advisor_rules (${keys.join(',')}) VALUES (${keys.map(() => '?').join(',')})`).run(...Object.values(insert));
+  const initial = {...insert, import_origin: null};
   const stored = () => ({...sql.prepare('SELECT * FROM advisor_rules WHERE id=?').get(initial.id)});
   const posts = [];
   const root = new Element('div');

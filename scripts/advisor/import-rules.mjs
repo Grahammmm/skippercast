@@ -12,11 +12,12 @@
 // Every row starts as status 'review' (02: nothing is quotable as current until
 // an admin marks it 'active'), reviewed_at = now, review_due = now + 90 days
 // (or the season end, when that is sooner and still ahead). Ids are
-// deterministic, so running it twice changes nothing; a row whose imported
-// content changed goes back to 'review' (a retired row stays retired).
+// deterministic, so running it twice changes nothing. Only this feed's
+// non-retired rows can be updated; changed content sends them back to 'review'.
 //
 //   node scripts/advisor/import-rules.mjs            print the SQL
 //   node scripts/advisor/import-rules.mjs --apply    run it on the remote D1 (wrangler)
+// Add --complete=<jurisdiction> only for a verified complete snapshot of that jurisdiction.
 import {createHash} from 'node:crypto';
 import {readFileSync, readdirSync, writeFileSync, mkdtempSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -30,6 +31,10 @@ const json = path => JSON.parse(readFileSync(join(ROOT, path), 'utf8'));
 const DAY = 86400000;
 export const REVIEW_DAYS = 90;
 export const UPDATED_BY = 'import-rules';
+// Stable feed identity, independent of the last editor and the cited rule URL.
+const IMPORT_ORIGIN = 'published-regulations';
+// job_state key of the public pages' cache version (PAGES_VERSION_KEY in server/advisor/intake/reports.ts).
+const PAGES_VERSION_KEY = 'advisor.pages.version';
 
 const CATALOG = json('catalog/species.json').species;
 const EXTRA = json('catalog/advisor/species-extra.json').species;
@@ -166,26 +171,43 @@ export function importRows(now = Date.now(), files = regulationFiles()) {
 
 export const COLUMNS = ['id', 'region', 'jurisdiction', 'species_key', 'species_label', 'size_min_in', 'size_max_in', 'bag_limit', 'bag_notes',
   'season_open', 'season_close', 'depth_limit_ft', 'area_notes', 'gear_notes', 'source_name', 'source_url', 'reviewed_at', 'review_due',
-  'status', 'updated_by', 'updated_at'];
+  'status', 'updated_by', 'updated_at', 'import_origin'];
 // The imported content: a change in any of these sends the row back to review.
 const CONTENT = ['species_label', 'size_min_in', 'size_max_in', 'bag_limit', 'bag_notes', 'season_open', 'season_close', 'depth_limit_ft',
   'area_notes', 'gear_notes', 'source_name', 'source_url'];
 
 const literal = v => v === null || v === undefined ? 'NULL' : typeof v === 'number' ? (Number.isFinite(v) ? String(v) : 'NULL') : `'${String(v).replace(/'/g, "''")}'`;
 
-/** One idempotent statement per row: insert, or update only when the imported content changed. */
-export function rulesSql(rows) {
+/** Seed by default. A snapshot is a no-op unless complete and nonempty in the named jurisdiction. */
+export function rulesSql(rows, {state = 'seed', jurisdiction} = {}) {
+  if (state !== 'seed' && state !== 'complete') return '';
+  if (state === 'complete') rows = rows.filter(r => r.jurisdiction === jurisdiction && r.region === '*');
+  if (!rows.length) return '';
   const set = [...CONTENT.map(c => `${c}=excluded.${c}`), 'reviewed_at=excluded.reviewed_at', 'review_due=excluded.review_due',
-    "status=CASE WHEN advisor_rules.status='retired' THEN 'retired' ELSE 'review' END", 'updated_by=excluded.updated_by', 'updated_at=excluded.updated_at'];
+    "status='review'", 'updated_by=excluded.updated_by', 'updated_at=excluded.updated_at'];
   const changed = CONTENT.map(c => `advisor_rules.${c} IS NOT excluded.${c}`).join(' OR ');
-  return rows.map(r => `INSERT INTO advisor_rules(${COLUMNS.join(',')}) VALUES(${COLUMNS.map(c => literal(r[c])).join(',')}) ON CONFLICT(id) DO UPDATE SET ${set.join(',')} WHERE ${changed};`).join('\n') + '\n';
+  // The species pages cache on advisor.pages.version (server/advisor/intake/reports.ts pagesVersionWrite): bump it right after any
+  // statement that actually wrote a row (changes() > 0; a no-op rerun leaves it alone), so a cached page cannot keep an old rule as current.
+  const stamp = literal(new Date(rows[0].updated_at).toISOString());
+  const bump = `INSERT INTO job_state(key,value,updated_at) SELECT ${literal(PAGES_VERSION_KEY)},'1',${stamp} WHERE changes() > 0 ON CONFLICT(key) DO UPDATE SET value=CAST(CAST(value AS INTEGER)+1 AS TEXT),updated_at=excluded.updated_at;`;
+  const sql = rows.flatMap(r => [`INSERT INTO advisor_rules(${COLUMNS.join(',')}) VALUES(${COLUMNS.map(c => literal(c === 'import_origin' ? IMPORT_ORIGIN : r[c])).join(',')}) ON CONFLICT(id) DO UPDATE SET ${set.join(',')} WHERE advisor_rules.import_origin=excluded.import_origin AND advisor_rules.status<>'retired' AND (${changed});`, bump]);
+  if (state === 'complete') {
+    sql.push(`UPDATE advisor_rules SET status='review' WHERE status='active' AND import_origin=${literal(IMPORT_ORIGIN)} AND jurisdiction=${literal(jurisdiction)} AND region='*' AND id NOT IN (${rows.map(r => literal(r.id)).join(',')});`, bump);
+  }
+  return sql.join('\n') + '\n';
 }
 
 export const wranglerArgs = file => ['--yes', 'wrangler', 'd1', 'execute', DATABASE, '--remote', '--file', file];
 
 export function main(argv, {run = spawnSync, log = console.log, now = Date.now()} = {}) {
-  for (const a of argv) if (a !== '--apply') throw Error(`unknown option ${a}\nusage: node scripts/advisor/import-rules.mjs [--apply]`);
-  const sql = rulesSql(importRows(now));
+  let jurisdiction;
+  for (const a of argv) {
+    if (a === '--apply') continue;
+    if (jurisdiction === undefined && /^--complete=[\w-]+$/.test(a)) jurisdiction = a.slice('--complete='.length);
+    else throw Error(`unknown option ${a}\nusage: node scripts/advisor/import-rules.mjs [--apply] [--complete=<jurisdiction>]`);
+  }
+  const sql = rulesSql(importRows(now), jurisdiction === undefined ? undefined : {state: 'complete', jurisdiction});
+  if (!sql) return 0;
   if (!argv.includes('--apply')) { log(sql.trimEnd()); return 0; }
   const dir = mkdtempSync(join(tmpdir(), 'skippercast-rules-')), file = join(dir, 'advisor-rules.sql');
   try {
