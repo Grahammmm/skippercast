@@ -462,7 +462,8 @@ test('ft-v2 selects published depths and labels, replaces coarse runs at z14, an
   const tap = (source, depth) => layer.pick.mark(DEPTH_HIT, visible().find(f => f.properties.source_id === source && f.properties.depth_ft === depth)?.properties);
   for (const [zoom, native, coarse, labels, sample, interval] of [
     [8, z8, z8, [300], 60, 60], [11, z11, z11, z11, 60, 30], [13, z13, z13, z11, 100, 10],
-    [14, z13, z13, z11, 100, 10], [15, z15, z13, z15, 15, 5], [8, z8, z8, [300], 300, 60],
+    [14, z13, z13, z11, 100, 10], [15, z15, z13, z15, 15, 5],
+    [18, z15, z13, z15, 15, 5], [8, z8, z8, [300], 300, 60],
   ]) {
     await move(zoom);
     assert.deepEqual(depths('native'), native, `≤2 m lines at z${zoom}`);
@@ -485,8 +486,6 @@ test('ft-v2 selects published depths and labels, replaces coarse runs at z14, an
   const before = calls.length;
   await move(8.9);
   assert.equal(calls.length, before, 'no source update within a zoom tier');
-  await move(18);
-  assert.deepEqual(visible(), [], 'no ft-v2 contours at z18');
   assert.deepEqual(asked, [depthContoursOverviewURL('morro-bay'), depthContoursURL('morro-bay')]);
 });
 

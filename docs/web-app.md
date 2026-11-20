@@ -46,9 +46,9 @@ Opening a link shows its `port` when that port is listed in its `region` (`linke
 | `packages/coast/` | The terrain renderer (2D and 3D), coast report logic, history and catch views; also shared types and limits |
 | `dist/sw.js`, `offline-pack.js`, `offline-core.js`, `coastal-offline-core.js` | Service worker and the offline trip pack (below) |
 | `dist/*.js` (feed, region, protected-area, GPX and other modules) | Plain-JavaScript modules that `web/` imports or the pages load; the new code is TypeScript in `web/` |
-| `dist/data/`, `dist/downloads/`, `dist/tiles/`, `dist/basemap/` | Reviewed public atlas and exports (including 132 single-target GPX files), PMTiles, self-hosted glyphs |
+| `dist/data/`, `dist/downloads/`, `dist/tiles/`, `dist/basemap/` | Reviewed public atlas data, license and spot notes, PMTiles, and self-hosted glyphs. The 136 legacy GPX links now open the screened trip planner at `/map#export` without prefilling a target. |
 | `dist/vendor/` | Licence files for MapLibre, PMTiles, SunCalc and three, plus the passkey browser library; no Leaflet. Hashes: `scripts/web-vendor-sha256.json` |
-| `research/scripts/export_web_targets.mjs` | Generates the direct single-target GPX files in `dist/downloads/targets/` |
+| `research/scripts/export_web_targets.mjs` | Writes historical single-target GPX files to the local research directory `var/research/legacy-target-gpx/`, outside the public build |
 
 ## What the app does
 
