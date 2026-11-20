@@ -626,11 +626,15 @@ test('the map reads every warmed file at startup, the static ones from the brows
 test('the landing paints within the LCP budget on the throttled mobile profile, with the night map loading after it', async ({page, pageErrors, v2}, info) => {
   test.skip(info.project.name !== 'phone', 'measured once, at phone size');
   await nightFixtures(page);
-  const lcp = await v2.lcp('landing');
-  console.log(`v2 landing LCP ${Math.round(lcp)} ms (budget ${LCP_BUDGET_MS}, design § 13)`);
-  expect(lcp, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
-  expect(lcp).toBeLessThanOrEqual(LCP_BUDGET_MS);
-  await expect(page.locator('.landing-night')).toHaveAttribute('data-state', 'ready');   // the map drew in the same load
+  const paint = await v2.lcpSettled('landing', {}, {ready: [
+    '.landing-readout:not([aria-busy="true"])', '.landing .port-input-list [data-port]', '.landing-night[data-state="ready"]',
+  ]});
+  const receipt = `v2 landing LCP ${paint.settled ? `${Math.round(paint.ms)} ms` : 'INCONCLUSIVE (paint did not settle)'}`
+    + ` (budget ${LCP_BUDGET_MS}, design § 13); candidates ${JSON.stringify(paint.candidates)}`;
+  console.log(receipt);
+  expect(paint.settled, receipt).toBe(true);
+  expect(paint.ms, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
+  expect(paint.ms, receipt).toBeLessThanOrEqual(LCP_BUDGET_MS);
   expect(pageErrors).toEqual([]);
 });
 
@@ -879,28 +883,43 @@ const COLD_PHONES = [{width: 390, height: 844}, {width: 360, height: 640}] as co
 /** The cold-load window, from navigation start. Every qualifying shift in it counts, not only the largest session window. */
 const SAMPLE_MS = 5000;
 const CLS_BUDGET = 0.1;
-type ShiftStore = {observer: PerformanceObserver | null; entries: {value: number; hadRecentInput: boolean}[]};
+type ShiftEntry = PerformanceEntry & {value: number; hadRecentInput: boolean};
+type ColdReadiness = {readingsMs: number | null; portsMs: number | null};
+type ShiftStore = {observer: PerformanceObserver | null; entries: ShiftEntry[]; readiness: ColdReadiness};
 /** Install a buffered layout-shift observer before navigation; the sampling itself clicks, scrolls and focuses nothing. */
-const watchShifts = (page: Page) => page.addInitScript(() => {
-  const store: ShiftStore = {observer: null, entries: []};
+const watchShifts = (page: Page, trackReadiness = false) => page.addInitScript(({sampleMs, trackReadiness}) => {
+  const store: ShiftStore = {observer: null, entries: [], readiness: {readingsMs: null, portsMs: null}};
   (window as unknown as {__shifts: ShiftStore}).__shifts = store;
   try {
-    const observer = new PerformanceObserver(list => { for (const e of list.getEntries()) { const s = e as PerformanceEntry & {value: number; hadRecentInput: boolean}; store.entries.push({value: s.value, hadRecentInput: s.hadRecentInput}); } });
+    const observer = new PerformanceObserver(list => { store.entries.push(...list.getEntries() as ShiftEntry[]); });
     observer.observe({type: 'layout-shift', buffered: true});
     store.observer = observer;
   } catch { /* unsupported: shiftSums reports it */ }
-});
+  if (!trackReadiness) return;
+  const sample = () => {
+    const readings = document.querySelectorAll('.landing-tiles li[data-reading]').length === 4;
+    const port = document.querySelector('.landing .port-input-list [data-port]');
+    const ports = port && port.checkVisibility({visibilityProperty: true}) && port.getClientRects().length > 0;
+    const now = performance.now();
+    if (now >= sampleMs) return; // never backfill a mount that missed the navigation-relative window
+    store.readiness.readingsMs = readings ? store.readiness.readingsMs ?? now : null;
+    store.readiness.portsMs = ports ? store.readiness.portsMs ?? now : null;
+    requestAnimationFrame(sample);
+  };
+  requestAnimationFrame(sample);
+}, {sampleMs: SAMPLE_MS, trackReadiness});
 /** Wait out the window, drain the observer, and sum the entries: those without recent input (the budget) and all of them (no input is ever sent here). */
-async function shiftSums(page: Page): Promise<{counted: number; all: number; entries: number}> {
+async function shiftSums(page: Page) {
   await page.waitForFunction(ms => performance.now() >= ms, SAMPLE_MS);
-  const sums = await page.evaluate(() => {
+  const sums = await page.evaluate(sampleMs => {
     const store = (window as unknown as {__shifts?: ShiftStore}).__shifts;
     if (!store?.observer) return null;
-    for (const e of store.observer.takeRecords()) { const s = e as PerformanceEntry & {value: number; hadRecentInput: boolean}; store.entries.push({value: s.value, hadRecentInput: s.hadRecentInput}); }
+    store.entries.push(...store.observer.takeRecords() as ShiftEntry[]);
     store.observer.disconnect();
-    const sum = (list: ShiftStore['entries']) => list.reduce((total, e) => total + e.value, 0);
-    return {counted: sum(store.entries.filter(e => !e.hadRecentInput)), all: sum(store.entries), entries: store.entries.length};
-  });
+    const inWindow = store.entries.filter(e => e.startTime < sampleMs);
+    const sum = (list: ShiftEntry[]) => list.reduce((total, e) => total + e.value, 0);
+    return {counted: sum(inWindow.filter(e => !e.hadRecentInput)), all: sum(inWindow), entries: inWindow.length, readiness: store.readiness};
+  }, SAMPLE_MS);
   expect(sums, 'the layout-shift observer is supported and was installed before navigation').not.toBeNull();
   return sums!;
 }
@@ -928,13 +947,13 @@ for (const {width, height} of COLD_PHONES) {
     test.setTimeout(60_000);
     await page.setViewportSize({width, height});
     await landingFeeds(page);
-    await watchShifts(page);
-    await page.goto('/?ui=v2');   // no saved home, no click, no scroll, no focus
+    await watchShifts(page, true);
+    await page.goto('/?ui=v2', {waitUntil: 'commit'});   // no saved home, no click, no scroll, no focus
     const sums = await shiftSums(page);
-    // The synthetic feeds answered inside the window: a hung feed would otherwise pass on an unchanged page.
-    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
-    await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();
-    console.log(`SC1922-05 ${width}x${height}: ${sums.entries} layout-shift entries, qualifying sum ${sums.counted.toFixed(4)}, all ${sums.all.toFixed(4)}`);
+    console.log(`SC1922-05 ${width}x${height}: ${sums.entries} layout-shift entries, qualifying sum ${sums.counted.toFixed(4)}, all ${sums.all.toFixed(4)}; readiness ${JSON.stringify(sums.readiness)}`);
+    // Eventual readiness after disconnect cannot qualify a quiet but unfinished cold load.
+    expect(sums.readiness.readingsMs, 'all four readings observed within the cold window').not.toBeNull();
+    expect(sums.readiness.portsMs, 'featured ports visible within the cold window').not.toBeNull();
     expect(sums.counted, 'layout shift without recent input').toBeLessThan(CLS_BUDGET);
     expect(sums.all, 'headless Chromium may mark early entries as input-driven although none was sent; none may hide a shift').toBeLessThan(CLS_BUDGET);
     expect(pageErrors).toEqual([]);
