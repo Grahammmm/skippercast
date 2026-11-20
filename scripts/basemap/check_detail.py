@@ -1,4 +1,4 @@
-"""Check planned basemap detail boxes offline; this does not inspect or publish tiles.
+"""Check planned basemap overview and detail boxes offline; this does not inspect or publish tiles.
 
     python3 scripts/basemap/check_detail.py             # current extract settings
     python3 scripts/basemap/check_detail.py --dir DIR   # saved plan.json + detail.geojson
@@ -14,12 +14,25 @@ from scripts.basemap import regions
 
 
 def check_detail(planned, detail, root=regions.ROOT):
-    """Require every current active/preview box and the exact zoom 11–14 split."""
+    """Require every current active/preview box, overview coverage, and the exact zoom split."""
     expected = regions.region_boxes(root)
     if planned.get('detail') != {'minzoom': 11, 'maxzoom': 14}:
         raise ValueError('Detail extraction must cover zooms 11–14')
-    if planned.get('overview', {}).get('maxzoom') != 10:
+    overview = planned.get('overview', {})
+    if overview.get('maxzoom') != 10:
         raise ValueError('Overview must end at zoom 10')
+    bbox = overview.get('bbox')
+    if (not isinstance(bbox, list) or len(bbox) != 4
+            or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in bbox)):
+        raise ValueError('plan.json: overview.bbox must be an array of four numbers')
+    try:
+        west, south, east, north = regions.check_bbox(bbox)
+    except (ValueError, OverflowError) as error:
+        raise ValueError('plan.json: overview.bbox must have finite, ordered coordinates within bounds') from error
+    for box in expected:
+        w, s, e, n = box['bbox']
+        if not (west <= w and south <= s and east >= e and north >= n):
+            raise ValueError(f"plan.json: overview.bbox does not contain region {box['id']}")
     boxes = planned.get('regions', [])
     ids = [box['id'] for box in boxes]
     if len(set(ids)) != len(ids):
@@ -91,7 +104,8 @@ def main(argv=None):
                 raise ValueError(problem)
         else:
             boxes = regions.region_boxes()
-            planned = {'overview': {'maxzoom': regions.OVERVIEW_MAXZOOM},
+            planned = {'overview': {'bbox': regions.overview_box(boxes),
+                                    'maxzoom': regions.OVERVIEW_MAXZOOM},
                        'detail': {'minzoom': regions.OVERVIEW_MAXZOOM + 1,
                                   'maxzoom': regions.DETAIL_MAXZOOM}, 'regions': boxes}
             detail = regions.detail_region(boxes)
