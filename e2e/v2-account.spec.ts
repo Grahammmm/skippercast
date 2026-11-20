@@ -230,7 +230,10 @@ test('the account menu reuses its settled session after a layout remount', async
     };
   });
   const reads = () => page.evaluate(() => (window as unknown as {sessionReads: number}).sessionReads);
-  await v2.open('app', AREA);
+  // MB-13 (D5): a fresh profile opens with the Charter fleet entry on, and that entry's own admin check (dist/fleet-activity.js
+  // fleetAccess, contract in tests/test_fleet_layers_v2.mjs) reads /api/session too. This test counts the account menu's reads,
+  // so it opens with the fleet entry off; the account contract (one read, reused after a remount) is unchanged.
+  await v2.open('app', {...AREA, layers: 'seafloor'});
   const desktop = page.locator('.app-masthead .app-account-trigger');
   await expect(desktop).toHaveText('Skipper');
   expect(await reads(), 'initial mount reads the session').toBe(1);

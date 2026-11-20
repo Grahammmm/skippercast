@@ -237,7 +237,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-03: the Currents note resolves the chosen frame note or reason in the page's language (same note element and text role). No CSS, token or catch markup change.
   // MAPLIVE-1: LayerRail.tsx only appends <PreviewRailItems />, which renders nothing without an owner/admin session and adds no catch markup; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched.
   // SC1922-07: LayerRail.tsx sets disabled and a catalogue note on its existing rail buttons while the Chart cannot start (a state the contrast pages never reach). No CSS, token or catch markup change. Rebind only LayerRail.tsx.
-  "web/app/LayerRail.tsx": "ff4d6306b012540b3839b5222ead7fd064f5a160f4e8ea7cf715f42fc202cefb",
+  // MB-13 (layer menu, D5 defaults, Map theme row): LayerRail.tsx regroups the rail rows (Depth shading, Depth lines, Seafloor type, 3D view,
+  // Spots, a Conditions group, More conditions), adds the menu's own list rules from web/map/layers.ts, a title and the Map theme row in the footer,
+  // gives its checkboxes a 24 px minimum target and disables Depth shading with the other rows when the map cannot start. BODY09 mounts Reports, not the rail; no CSS rule, token or catch markup changes, and
+  // contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
+  "web/app/LayerRail.tsx": "7adae23d96917443991663a4d4e57dd48f83482a1713c7ce352da6b4b7d522f8",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),

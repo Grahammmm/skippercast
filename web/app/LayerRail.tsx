@@ -73,11 +73,14 @@ export function CurrentSource() {
   );
 }
 
+/** WCAG 2.5.8: a rail checkbox is a 24 px target (the 16 px box is drawn inside it, as FleetAdmin's checkboxes do). */
+const CHECK_TARGET = {minWidth: '24px', minHeight: '24px'};
+
 /** The Charter fleet entry's option (FE-21): v1's commercial AIS layer, off by default. */
 function AisOption() {
   return (
     <label class="app-rail-option">
-      <input type="checkbox" checked={aisOn.value} onChange={event => { aisOn.value = (event.currentTarget as HTMLInputElement).checked; }} />
+      <input type="checkbox" style={CHECK_TARGET} checked={aisOn.value} onChange={event => { aisOn.value = (event.currentTarget as HTMLInputElement).checked; }} />
       {layerCopy('commercial-ais', language.value).label}
     </label>
   );
@@ -96,7 +99,7 @@ function FleetOptions() {
       {ais ? <AisOption /> : null}
       {admin ? ACTIVITY.map(name => (
         <label key={name} class="app-rail-option">
-          <input type="checkbox" checked={on.includes(name)} onChange={event => toggleActivity(name, (event.currentTarget as HTMLInputElement).checked)} />
+          <input type="checkbox" style={CHECK_TARGET} checked={on.includes(name)} onChange={event => toggleActivity(name, (event.currentTarget as HTMLInputElement).checked)} />
           {t('rail.admin', lang, {label: layerCopy(ACTIVITY_ENTRY[name], lang).label})}
         </label>
       )) : null}
@@ -108,7 +111,7 @@ function FleetOptions() {
 function Option({label, checked, disabled, onChange}: {label: string; checked: boolean; disabled?: boolean; onChange: (on: boolean) => void}) {
   return (
     <label class="app-rail-option">
-      <input type="checkbox" checked={checked} disabled={disabled} onChange={event => onChange((event.currentTarget as HTMLInputElement).checked)} />
+      <input type="checkbox" style={CHECK_TARGET} checked={checked} disabled={disabled} onChange={event => onChange((event.currentTarget as HTMLInputElement).checked)} />
       {label}
     </label>
   );
@@ -313,19 +316,19 @@ export function LayerRail() {
     <Rail class="app-rail" label={t('rail.aria', lang)} header={<><h2 class="ui-eyebrow app-rail-title">{t('rail.title', lang)}</h2><LookFor /><Presets /></>} footer={<><BaseChoice /><ThemeChoice inMenu /></>}>
       {[
         <RailItem key="depth" id="depth-shading" label={t('rail.depth', lang)} icon="layers" on basis={t('layer.relief.shading', lang)} basisLabel={basisLabel(t('rail.depth', lang))}
-          disabled={false} note={t('rail.depth.note', lang)} onToggle={() => {}} />,
+          disabled={failed} note={failed ? failedReason : t('rail.depth.note', lang)} onToggle={() => {}} />,
         <RailItem key="lines" id="depth-lines" label={t('rail.lines', lang)} icon="chart" on={lines} basis={t('layer.depth-contours.v2.basis', lang)} basisLabel={basisLabel(t('rail.lines', lang))}
           disabled={!drawsLines || failed} note={!drawsLines ? chartOnly(lang) : failed ? failedReason : undefined}
           onToggle={(_, next) => setParams({layers: layersParam(withDepthLines(layers.value, next))})} />,
         entry('seafloor'),
         <View3dItem key="view3d" basisLabel={basisLabel(t('rail.view3d', lang))} />,
         entry('fleet'),
-        <li key="conditions" class="ui-rail-group" role="presentation">
+        <li key="conditions" class="ui-rail-group">
           <h3 class="ui-eyebrow">{t('rail.conditions', lang)}</h3>
           <p class="app-rail-hint">{t('rail.conditions.note', lang)}</p>
         </li>,
         ...['swell', 'currents', 'water-temp', 'chlorophyll', 'stations'].map(entry),
-        <li key="more" class="ui-rail-group" role="presentation"><h3 class="ui-eyebrow">{t('rail.moreConditions', lang)}</h3></li>,
+        <li key="more" class="ui-rail-group"><h3 class="ui-eyebrow">{t('rail.moreConditions', lang)}</h3></li>,
         ...['sst-contrast', 'sst-fronts', 'clouds'].map(entry),
         <PreviewRailItems key="previews" disabledReason={failed ? failedReason : undefined} />,
       ]}
