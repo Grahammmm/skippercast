@@ -90,7 +90,8 @@ test('ft-v2 returns the v2 ids and none of the v1 basis, legend or planner ids',
   for (const key of ['basis', 'plannerText']) assert.notEqual(v2[key], v1[key]);
   for (const i of [0, 1]) assert.notEqual(v2.legend[i], v1.legend[i]);
   assert.equal(v2.label, v1.label, 'the row keeps one name');
-  assert.throws(() => contourCopy('ft-v3'), RangeError, 'an unknown set never shows possibly-wrong copy');
+  assert.deepEqual(contourCopy('ft-v3'), {...v2, set: 'ft-v3'});
+  assert.throws(() => contourCopy('ft-v4'), RangeError, 'an unknown set never shows possibly-wrong copy');
 });
 
 // Contract: NOT FOR NAVIGATION is always present. Bug: the v2 branch builds a fresh object and drops it.

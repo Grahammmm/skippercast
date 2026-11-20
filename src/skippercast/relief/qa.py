@@ -26,7 +26,7 @@ import struct
 import warnings
 
 from skippercast.paths import repo_root
-from skippercast.platform.depth_contours import FT_V2, V2_MINZOOM, V2_NATIVE_ZOOM
+from skippercast.platform.depth_contours import FT_V2, FT_V3, V2_MINZOOM, V2_NATIVE_ZOOM, v3_rule, v3_view
 from skippercast.relief import package, receipts
 from skippercast.seafloor.rough_first import read_tiles
 
@@ -64,15 +64,23 @@ def _contour_counts(root, region):
     doc = _json(package.artifact_path(root, CONTOURS))
     provenance = doc.get('provenance', {})
     metric = 'contour_count_by_interval_ft'
+    contour_set = provenance.get('set')
     if (doc.get('type') != 'FeatureCollection' or provenance.get('region_id') != region
-            or provenance.get('set') != FT_V2 or provenance.get('units') != 'ft'
+            or contour_set not in (FT_V2, FT_V3) or provenance.get('units') != 'ft'
             or provenance.get('publication_held') or not isinstance(doc.get('features'), list)):
-        raise ValueError(f'{metric}: expected public regional ft-v2 contours')
+        raise ValueError(f'{metric}: expected public regional ft-v2 or ft-v3 contours')
+    view = v3_view(provenance.get('contours')) if contour_set == FT_V3 else None
     intervals = {8: '60', 11: '30', 13: '10', 15: '5'}
     counts = Counter()
     for feature in doc['features']:
         props = feature['properties']
         if props.get('kind') in ('survey-edge', 'unresolved-area'):
+            continue
+        if view is not None:
+            tier = v3_rule(props, view) if props.get('kind') == 'contour' else None
+            if tier is None:
+                raise ValueError(f'{metric}: invalid ft-v3 tier or depth')
+            counts[str(tier['minor_ft'])] += 1
             continue
         depth = props.get('depth_ft')
         start = V2_MINZOOM.get(depth) if type(depth) is int else None

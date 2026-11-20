@@ -190,6 +190,20 @@ def look_table(index, tokens_by_version):
     return web, colours, coast
 
 
+def contour_table(index, tokens_by_version):
+    """Data-validation rules by contours digest, independent of the baked look and paint."""
+    keys = ("name", "min_zoom", "minor_ft", "index_ft", "index_every_ft", "max_cell_m")
+    return {
+        entry["digests"]["contours"]: {
+            "pier": tokens_by_version[version]["pier_view"]["contours_tier"],
+            "tiers": [{k: row[k] for k in keys if k in row}
+                      for row in sorted(tokens_by_version[version]["contours"]["tiers"], key=lambda r: r["min_zoom"])],
+        }
+        for version, entry in index["versions"].items()
+        if not entry.get("legacy") and entry.get("status") in LOOK_STATUSES
+    }
+
+
 def pointer_look(item):
     """The look key a pointer (or its `previous` lineage entry) was baked with; ValueError if its style is invalid."""
     style = item.get("style")
@@ -205,7 +219,7 @@ def pointer_look(item):
     return style["baked"]
 
 
-def check_pointers(root, web_looks):
+def check_pointers(root, web_looks, contour_tiers):
     """A version cannot leave index.json while a pointer, or the lineage it can roll back to, names its look."""
     for path in sorted((root / "catalog/relief").glob("*.json")):
         if path.name.endswith(".schema.json"):
@@ -221,6 +235,10 @@ def check_pointers(root, web_looks):
                 raise ValueError(f"{path.relative_to(root)}: {label} {exc}") from None
             if key not in web_looks:
                 raise ValueError(f"{path.relative_to(root)}: {label} look {key} is missing from LOOKS "
+                                 "(keep its version active or rolling in style/index.json)")
+            digest = (item.get("style") or {}).get("contours")
+            if digest is not None and digest not in contour_tiers:
+                raise ValueError(f"{path.relative_to(root)}: {label} contours {digest} is missing from CONTOUR_TIERS "
                                  "(keep its version active or rolling in style/index.json)")
 
 
@@ -249,8 +267,10 @@ def generate(root, check):
             entry["digests"] = digests
 
     looks = look_table(index, tokens_by_version)
-    check_pointers(root, looks[0])
+    contour_tiers = contour_table(index, tokens_by_version)
+    check_pointers(root, looks[0], contour_tiers)
     css, ts, coast = projections(tokens_by_version[default], default, index["versions"][default]["digests"], looks)
+    ts += f"export const CONTOUR_TIERS = {pretty(contour_tiers)} as const;\n"
     css_path = root / "web/tokens.css"
     coast_path = root / "packages/coast/src/palette.ts"
     css_source = without_block(css_path.read_bytes().decode(), r"  /\* skn:begin ", r"  /\* skn:end \*/")

@@ -23,8 +23,9 @@ platform (PYTHONPATH=src python -m skippercast.platform.build), which checks it
 and publishes dist/regions/<id>/depth-contours*.geojson. The method is
 described in src/skippercast/platform/depth_contours.py.
 
---set v2 opts into the zoom-tagged feet contours (300 ft shelf); v1 is
-the unchanged default. Use --output or --held-output for private trials.
+--set v2 opts into zoom-tagged feet contours (300 ft shelf); v1 is the
+unchanged default. --set v3 uses the region's kit tiers on native measured
+support and requires --output or --held-output outside the work tree.
 """
 import argparse
 from contextlib import ExitStack, contextmanager
@@ -40,7 +41,7 @@ import rasterio
 from rasterio import features as rio_features
 from rasterio.transform import Affine
 from rasterio.warp import transform_bounds
-from rasterio.windows import Window
+from rasterio.windows import Window, from_bounds
 from pyproj import CRS, Transformer
 from shapely import line_merge, unary_union
 from shapely.geometry import LineString, shape
@@ -475,6 +476,115 @@ def line_parts(geometry):
             yield from line_parts(part)
 
 
+def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=False, provenance=None):
+    """Trace on one native lattice, with no mosaic/resampling fallback."""
+    from scipy.ndimage import gaussian_filter, minimum_filter
+    from shapely import transform as transform_geometry
+    from shapely.geometry import box
+
+    crs = horizontal_crs(grid)
+    cell = grid.res[0]
+    if (not crs.is_projected or any(a.unit_name != 'metre' for a in crs.axis_info[:2])
+            or (grid.transform.b, grid.transform.d, grid.transform.a, grid.transform.e) != (0, 0, cell, -cell)
+            or grid.scales[0] != 1 or grid.offsets[0] != 0):
+        raise ValueError('ft-v3 requires a north-up native metre lattice and unscaled elevations')
+    # Do not draw from an upsampled grid, even at a coarser tier. Unknown native resolution is not evidence.
+    if type(native_cell) not in (int, float) or not 0 < native_cell <= cell + 1e-9:
+        return
+    tiers = list(dc.v3_tiers(view, cell, certified=certified and support is not None))
+    if not tiers:
+        return
+    clip = from_bounds(*transform_bounds('EPSG:4326', crs, *region['bounds'], densify_pts=21), transform=grid.transform)
+    x, y = max(0, int(np.floor(clip.col_off))), max(0, int(np.floor(clip.row_off)))
+    w = min(grid.width, int(np.ceil(clip.col_off + clip.width))) - x
+    h = min(grid.height, int(np.ceil(clip.row_off + clip.height))) - y
+    if w < 2 or h < 2:
+        return
+    if w * h > preflight.MAX_PIXELS:
+        raise ValueError(f'ft-v3 native window exceeds {preflight.MAX_PIXELS} pixels; use a smaller region window')
+    window = Window(x, y, w, h)
+    tf = grid.window_transform(window)
+    values = grid.read(1, window=window, masked=True).astype('float64').filled(np.nan)
+    valid = np.isfinite(values) & (values < 0) & (values >= -3000)
+    if provenance is not None:
+        valid &= provenance.read(1, window=window, masked=True).filled(PAD) == ec.CODES['measured']
+    if support is not None:
+        if (support.count != 1 or support.dtypes[0] != 'uint8' or support.shape != grid.shape
+                or support.crs != grid.crs or support.transform != grid.transform):
+            raise ValueError('support raster must be single-band uint8 aligned with the native grid')
+        valid &= support.read(1, window=window, masked=True).filled(0) == MEASURED_SUPPORT
+    depth = -values * dc.FEET_PER_M
+    squares = valid[:-1, :-1] & valid[1:, :-1] & valid[:-1, 1:] & valid[1:, 1:]
+    if not squares.any():
+        return
+    footprint = polygons(squares, tf @ Affine.translation(0.5, 0.5))
+    lonlat = Transformer.from_crs(crs, 'EPSG:4326', always_xy=True)
+    clip_ll = box(*region['bounds'])
+    for tier, stop in tiers:
+        sigma = tier['sigma_m'] / cell
+        radius = round(4 * sigma)
+        interior = minimum_filter(valid, size=2 * radius + 1, mode='constant', cval=False)
+        smooth = gaussian_filter(np.where(valid, depth, 0), sigma, radius=radius)
+        rows = np.where(valid, np.where(interior, smooth, depth), None).tolist()
+        levels = dc.v3_levels(tier)
+        for level, lines in dc.trace(rows, levels).items():
+            coords = []
+            for line in lines:
+                original = LineString([tf @ (c + 0.5, r + 0.5) for c, r in line])
+                short = original.simplify(min(cell, CONTOUR_TOLERANCE_M))
+                safe = short if footprint.covers(short) else original
+                ll = transform_geometry(safe, lonlat.transform, interleaved=False)
+                for piece in line_parts(ll.intersection(clip_ll)):
+                    points = dedupe([list(pt) for pt in piece.coords])
+                    if len(points) >= 2:
+                        coords.append(points)
+            if coords:
+                yield {'type': 'Feature', 'id': f"{common['source_id']}-{level}ft-{tier['name']}",
+                       'geometry': {'type': 'MultiLineString', 'coordinates': coords},
+                       'properties': {**common, 'kind': 'contour', 'estimated': True, 'native_cell_m': cell,
+                                      'depth_ft': level, 'tier': tier['name'], 'index': levels[level],
+                                      'minzoom': tier['min_zoom'], **({'maxzoom': stop} if stop is not None else {})}}
+
+
+def v3_collection(region, view, features, sources, omitted):
+    return {'type': 'FeatureCollection', 'schema_version': dc.SCHEMA_VERSION, 'features': features,
+            'provenance': {'region_id': region['id'], 'bounds': region['bounds'], 'units': 'ft', 'set': dc.FT_V3,
+                           'contours': view.digest('contours'), 'shelf_limit_ft': dc.V2_SHELF_LIMIT_FT,
+                           'features': len(features), 'sources': sources, 'sources_omitted': omitted,
+                           'method': 'Marching squares on Gaussian-smoothed native water cells; no resampling.',
+                           'limitations': 'Estimated display contours. Not for navigation. No datum conversion.'}}
+
+
+def v3_cli(region, sources, order, opened, identity, hashes, supports, provs, held):
+    from skippercast.relief.render_config import resolve_style
+
+    _, style = resolve_style(region['id'])
+    if style is None:
+        raise SystemExit('--set v3 needs a kit render style')
+    view = style.view('contours')
+    features, listed = [], []
+    with ExitStack() as stack:
+        for ident, grid in zip(order, opened):
+            source, known = sources[ident], identity[ident]
+            common = {'source_id': ident, 'survey_date': known['survey_date'], 'vertical_datum': known['vertical_datum']}
+            measured = stack.enter_context(open_geotiff(supports[ident], normalized=True)) if ident in supports else None
+            ec_grid = stack.enter_context(rasterio.open(provs[ident])) if ident in provs else None
+            lines = list(v3_grid(grid, region, view, common, known['native_cell_m'], support=measured,
+                                 certified=measured is not None, provenance=ec_grid))
+            if lines:
+                listed.append({**common, 'name': known['name'], 'url': source['documentation_url'],
+                               'attribution': source['rights']['attribution'], 'sha256': hashes[ident],
+                               'native_cell_m': grid.res[0]})
+                features.extend(lines)
+    doc = v3_collection(region, view, features, listed, dc.omitted_sources(region, sources, (s['source_id'] for s in listed)))
+    if held:
+        doc['provenance'].update(publication_held=True, held_sources=dc.held_sources(doc, sources))
+        dc.check_held_contours(doc, region, sources, view=view)
+    else:
+        dc.check_contours(doc, region, sources)
+    return doc
+
+
 def v2_contour_runs(depth, block, native, transformer, square):
     """Yield depth, zoom range, EC class and lines; native replaces coarse only on its supported footprint."""
     native_depth, native_transform, support = native if native is not None else (None, None, None)
@@ -529,7 +639,8 @@ def v1_contour_runs(own, x0, y0, transformer, square):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--region', required=True)
-    p.add_argument('--set', choices=('v1', 'v2'), default='v1', help='Feet contour set (default: v1).')
+    p.add_argument('--set', choices=('v1', 'v2', 'v3'), default='v1', help='Feet contour set (default: v1).')
+    p.add_argument('--clip', nargs=4, type=float, metavar=('W', 'S', 'E', 'N'), help='Bound a held ft-v3 run to a smaller lon/lat window.')
     p.add_argument('--grid', action='append', required=True, metavar='SOURCE_ID=PATH')
     p.add_argument('--normalized-sidecar', action='append', default=[], metavar='SOURCE_ID=PATH',
                    help='The R2 sidecar.json for a --grid normalised GeoTIFF.')
@@ -558,6 +669,12 @@ def main():
     if output and (output == repo or repo in output.parents):
         raise SystemExit(f'Output must be outside the work tree: {output}')
     region = load_region(args.region)
+    if args.clip is not None:
+        w, s, e, n = region['bounds']
+        a, b, c, d = args.clip
+        if args.set != 'v3' or not held or not (w <= a < c <= e and s <= b < d <= n):
+            p.error('--clip requires --set v3, --held-output and a window inside the region')
+        region = {**region, 'bounds': args.clip}
     _, sources = load_catalogs()
     bound = region['source_bindings']['bathymetry']
     grids, surveys, provs, sidecars, supports = {}, {}, {}, {}, {}
@@ -634,6 +751,17 @@ def main():
     with ExitStack() as stack:
         opened = [stack.enter_context(open_geotiff(grids[ident], normalized=True) if ident in sidecars
                                       else open_grid(ident, grids[ident], surveys.get(ident))) for ident in order]
+        if args.set == 'v3':
+            if not (held or output):
+                p.error('--set v3 requires an explicit output outside the work tree')
+            for ident, grid in zip(order, opened):
+                if adapters[ident] == 'bag':
+                    identity[ident]['native_cell_m'] = grid.res[0]
+                elif ident in sidecars and ident not in supports:
+                    p.error(f'{ident}: ft-v3 normalized input needs --normalized-support')
+            doc = v3_cli(region, sources, order, opened, identity, hashes, supports, provs, held)
+            print(atomic_json(held or output, doc))
+            return
         crs = horizontal(opened)
         # Reads are clipped to the region (plus one block): a coast-wide BAG is never read whole.
         west, south, east, north = transform_bounds('EPSG:4326', crs, *region['bounds'], densify_pts=21)

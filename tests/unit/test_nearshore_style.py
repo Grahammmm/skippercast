@@ -232,6 +232,12 @@ def test_check_refuses_a_pointer_whose_look_left_the_index(tmp_path, where):
     style_member["baked"] = DEFAULT_BAKED
     (relief / "fixture.json").write_text(json.dumps(pointer), encoding="utf-8")
     assert check(tmp_path).returncode == 0, check(tmp_path).stderr
+    # A still-retained baked look must not hide the loss of a separately named contour group.
+    style_member["contours"] = "f" * 64
+    (relief / "fixture.json").write_text(json.dumps(pointer), encoding="utf-8")
+    result = check(tmp_path)
+    assert result.returncode == 1
+    assert f"{where} contours {'f' * 64} is missing from CONTOUR_TIERS" in result.stderr
 
 
 @pytest.mark.parametrize(("drift", "diagnostic"), [

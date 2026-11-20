@@ -37,7 +37,7 @@
 import type {NearshoreStyle} from './nearshore-paint.ts';
 import {NEARSHORE_LOOKS, NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 
-export type ContourSet = 'v1' | 'ft-v2';
+export type ContourSet = 'v1' | 'ft-v2' | 'ft-v3';
 export type LegendTheme = 'dark' | 'light';
 
 /** The always-present footer id (today's `legend.notForNav`). */
@@ -181,9 +181,9 @@ const V2 = {
 
 /** An absent `set` is a v1 file. Any other unknown value throws rather than show copy that may be wrong. */
 export function contourCopy(set: ContourSet | undefined): ContourCopy {
-  if (set !== undefined && set !== 'v1' && set !== 'ft-v2') throw new RangeError(`Unknown contour set: ${String(set)}`);
-  const ids = set === 'ft-v2' ? V2 : V1;
-  return {set: set === 'ft-v2' ? 'ft-v2' : 'v1', label: ids.label, summary: ids.summary, basis: ids.basis,
+  if (set !== undefined && set !== 'v1' && set !== 'ft-v2' && set !== 'ft-v3') throw new RangeError(`Unknown contour set: ${String(set)}`);
+  const ids = set === 'ft-v2' || set === 'ft-v3' ? V2 : V1;
+  return {set: set ?? 'v1', label: ids.label, summary: ids.summary, basis: ids.basis,
     legend: [ids.legend[0], ids.legend[1]], plannerLabel: ids.plannerLabel, plannerText: ids.plannerText,
     notForNavigation: NOT_FOR_NAVIGATION_ID};
 }

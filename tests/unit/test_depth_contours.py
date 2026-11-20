@@ -489,7 +489,7 @@ def test_publish_v2_preserves_the_zoom_contract_and_leaves_native_detail_out_of_
 
 
 @pytest.mark.parametrize('edit,message', [
-    (lambda c: c['provenance'].update(set='ft-v3'), 'unknown contour set'),
+    (lambda c: c['provenance'].update(set='ft-v4'), 'unknown contour set'),
     (lambda c: c['provenance']['intervals'].pop(), 'incomplete provenance'),
     (lambda c: c['features'][0]['properties'].update(depth_ft=330), 'invalid ft-v2'),
     (lambda c: c['features'][0]['properties'].update(maxzoom=15), 'invalid ft-v2'),
