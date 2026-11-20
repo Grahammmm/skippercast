@@ -63,9 +63,18 @@ for (const [label, state, payload] of [
     assert.equal(read(ids.missing).updated_by, 'fixture-custodian');
     assert.equal(read(ids.missing).import_origin, origin);
     const before = snapshot();
+    // Contract: an import that changes a rule's state invalidates the cached species pages (advisor.pages.version);
+    // one that changes nothing does not. Bug caught: the absent-rule UPDATE leaving a cached page quoting it as current.
+    const pages = () => Number(sql.prepare("SELECT value FROM job_state WHERE key='advisor.pages.version'").get()?.value ?? 0);
+    const version = pages();
 
     sql.exec(rulesSql(payload, {state, jurisdiction}));
     const after = snapshot();
+    const demoted = after.some((row, i) => row.status === 'review' && before[i].status === 'active');
+    assert.equal(pages() > version, demoted, 'pages version moves exactly when an active rule went to review');
+    const settled = pages();
+    sql.exec(rulesSql(payload, {state, jurisdiction}));
+    assert.equal(pages(), settled, 'rerunning the same import changes nothing, so the version stays');
     const expected = before.map(row => {
       if (row.id === ids.missing && label === 'complete') return {...row, status: 'review'};
       if (row.id === ids.changed && (label === 'complete' || state === 'seed')) {
