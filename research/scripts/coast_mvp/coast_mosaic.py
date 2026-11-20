@@ -376,6 +376,23 @@ def feather_raster(depth_path, codes_path, target_path, *, feather_m=FEATHER_M, 
     return pairs, changed, largest
 
 
+def _touched_blocks(path, west, south, east, north) -> int:
+    """Count 256-cell blocks touched by the source bounds on the 10 m grid."""
+    block_m = 256 * 10
+    cols = math.ceil((east - west) / block_m)
+    rows = math.ceil((north - south) / block_m)
+    with rasterio.open(path) as grid:
+        x0, y0, x1, y1 = transform_bounds(grid.crs, 'EPSG:3310', *grid.bounds, densify_pts=21)
+    x0, y0 = max(x0, west), max(y0, south)
+    x1, y1 = min(x1, east), min(y1, north)
+    if x0 >= x1 or y0 >= y1:
+        return 0
+    # Round outward from the grid origin so partial edge blocks are charged.
+    touched_cols = math.ceil((x1 - west) / block_m) - math.floor((x0 - west) / block_m)
+    touched_rows = math.ceil((north - y0) / block_m) - math.floor((north - y1) / block_m)
+    return min(cols, touched_cols) * min(rows, touched_rows)
+
+
 def estimate_bytes(sources, west, south, east, north, cells):
     """Estimate scratch bytes from source headers and the snapped 10 m grid."""
     block_m = 256 * 10
@@ -385,17 +402,24 @@ def estimate_bytes(sources, west, south, east, north, cells):
     # in each full-extent warped TIFF, even if the source misses the grid.
     estimated = 40 * cells + 4096 * cols * rows * len(sources)
     for source in sources:
-        with rasterio.open(source['path']) as grid:
-            x0, y0, x1, y1 = transform_bounds(grid.crs, 'EPSG:3310', *grid.bounds, densify_pts=21)
-        x0, y0 = max(x0, west), max(y0, south)
-        x1, y1 = min(x1, east), min(y1, north)
-        if x0 >= x1 or y0 >= y1:
-            continue
-        # Round outward from the grid origin so partial edge blocks are charged.
-        touched_cols = math.ceil((x1 - west) / block_m) - math.floor((x0 - west) / block_m)
-        touched_rows = math.ceil((north - y0) / block_m) - math.floor((north - y1) / block_m)
-        estimated += 4 * 256**2 * min(cols, touched_cols) * min(rows, touched_rows)
+        estimated += 4 * 256**2 * _touched_blocks(source['path'], west, south, east, north)
     return estimated
+
+
+def support_estimate_bytes(sources, west, south, east, north, cells) -> int:
+    """Estimate bytes for the three grid-wide class rasters and source warps."""
+    supported = [source for source in sources if source.get('support_path') is not None]
+    if not supported:
+        return 0
+    block_m = 256 * 10
+    cols = math.ceil((east - west) / block_m)
+    rows = math.ceil((north - south) / block_m)
+    # Each Byte warp has full-extent tile overhead, but its footprint is
+    # bounded by the source elevation grid to which the support is aligned.
+    return 3 * cells + sum(
+        4096 * cols * rows + 256**2 * _touched_blocks(source['path'], west, south, east, north)
+        for source in supported
+    )
 
 
 def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_000_000, feather_m=FEATHER_M):
@@ -428,8 +452,7 @@ def mosaic(region_file, sources_file, output, *, reserve_gib=250, max_cells=250_
     sources = load_sources(sources_file)
     estimated_bytes = estimate_bytes(sources, west, south, east, north, cells)
     support_sources = sum(row.get('support_path') is not None for row in sources)
-    if support_sources:
-        estimated_bytes += cells * (3 + support_sources)
+    estimated_bytes += support_estimate_bytes(sources, west, south, east, north, cells)
     if shutil.disk_usage(ancestor).free - estimated_bytes < reserve_gib * 1024**3:
         raise ValueError('Free-space reserve would be crossed')
     output.mkdir(parents=True)
