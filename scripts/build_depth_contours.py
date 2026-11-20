@@ -47,6 +47,7 @@ from shapely.geometry import LineString, shape
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from skippercast.platform.contracts import REPO, atomic_json, load_catalogs, load_region  # noqa: E402
+from skippercast.platform.contracts import owner_display_cleared  # noqa: E402
 from skippercast.platform import depth_contours as dc  # noqa: E402
 from skippercast.platform import seafloor_ec as ec  # noqa: E402
 
@@ -82,16 +83,18 @@ def sha256(path):
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 
-def public_refusal(ident, region, sources, *, explicit=True):
+def public_refusal(ident, region, sources, *, explicit=True, selected=False):
     source = sources.get(ident) or {}
-    display = (source.get('rights') or {}).get('public_display')
-    if (explicit and display != 'allowed') or display in ('private', 'excluded'):
+    rights = source.get('rights') or {}
+    display = rights.get('public_display')
+    if ((explicit or selected) and display != 'allowed') or display in ('private', 'excluded'):
         return 'not cleared for public display'
-    if source.get('publication_allowed') is False:
+    owner_cleared = selected and owner_display_cleared(rights)
+    if not owner_cleared and source.get('publication_allowed') is False:
         return 'publication_allowed is false'
-    if source.get('review_status') != 'approved' or 'bathymetry' not in source.get('needs', ()):
+    if (not owner_cleared and source.get('review_status') != 'approved') or 'bathymetry' not in source.get('needs', ()):
         return 'not an approved bathymetry source'
-    if ident not in region['source_bindings']['bathymetry']:
+    if not selected and ident not in region['source_bindings']['bathymetry']:
         return 'not a static region bathymetry binding'
     return None
 
