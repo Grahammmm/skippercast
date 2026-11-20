@@ -11,7 +11,7 @@
 // No position, track or vessel identifier is added here; the file is drawn as published.
 //
 // Erasable syntax only: tests/test_fleet_public_layers.mjs imports it by type stripping.
-import {computed, effect, signal} from '@preact/signals';
+import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {layers, region} from '../state.ts';
 import type {StringId} from '../i18n.ts';
@@ -21,7 +21,7 @@ import type {ChartMark} from './coastline.ts';
 import type {Engine, Overlay} from './engine.ts';
 import type {MarkScreen} from './habitat.ts';
 import {layerEntry} from './layers.ts';
-import {markData, markScreen} from './marks.ts';
+import {markData, markMetadataFailed, markScreen, screenedAvailability, type OverlayAvailability} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {paintEdits} from './theme-restyle.ts';
@@ -110,27 +110,48 @@ export function aisMark(p: AisProps): ChartMark {
   };
 }
 
+/** A published cell is usable only when every field the screen, the heat and the picker card read is present and well-typed;
+ * anything less is a failed asset, not a ready one that throws when the cell is selected (`hours(undefined)`). */
+const text = (v: unknown): boolean => typeof v === 'string';
+const count = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
+export const cellOk = (f: AisFeature | null | undefined): boolean => {
+  const p: Partial<Record<keyof AisProps, unknown>> | undefined = f?.properties;
+  return f?.type === 'Feature' && !!f.geometry && !!p && typeof p.id === 'string'
+    && count(p.latitude) && count(p.longitude) && count(p.days_with_apparent_fishing) && count(p.apparent_fishing_hours)
+    && Array.isArray(p.active_dates_utc) && p.active_dates_utc.every(text)
+    && [p.label, p.gear_label, p.resolution_note, p.fishing_location_confidence, p.vessel_count_note].every(text);
+};
+
 /** The Fleet entry's option (v1's "Show commercial AIS areas"): off by default. */
 export const aisOn = signal(false);
 export interface AisState {readonly offered: boolean; readonly drawn: number; readonly note: string; readonly copy?: StatusCopy}
 export const aisState = signal<AisState>({offered: false, drawn: 0, note: ''});
+const aisCheck = signal<OverlayAvailability | null>(null);
+export const aisAvailability: ReadonlySignal<OverlayAvailability | null> = aisCheck;
 
 /** Draws the cells while the Fleet entry and its option are on; created with the Chart (web/map/chart.ts `layers`). */
 export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette()}: FleetLayerOptions) {
-  const load = assetLoader<AisCollection>(fetchFn, page, d => (d as AisCollection | null)?.type === 'FeatureCollection' && Array.isArray((d as AisCollection).features));
-  const loaded = signal<{path: string; data: AisCollection | null} | null>(null);
+  const load = assetLoader<AisCollection>(fetchFn, page, d => (d as AisCollection | null)?.type === 'FeatureCollection' && Array.isArray((d as AisCollection).features)
+    && (d as AisCollection).features.every(cellOk));
+  const loaded = signal<{binding: NonNullable<typeof markData.value>; data: AisCollection | null} | null>(null);
   const on = computed(() => layers.value.includes('fleet') && aisOn.value);
-  const path = computed(() => { const m = markData.value; return m && m.region.id === region.value ? m.region.assets?.commercial_ais ?? '' : null; });
-  const cells = computed(() => { const l = loaded.value; return l && l.path === path.value && l.data ? shownCells(l.data, markScreen.value) : []; });
+  const binding = computed(() => { const m = markData.value; return m?.region.id === region.value ? m : null; });
+  const path = computed(() => binding.value ? binding.value.region.assets?.commercial_ais ?? '' : null);
+  const evidence = computed(() => { const l = loaded.value; return l?.binding === binding.value ? l : null; });
+  const cells = computed(() => { const l = evidence.value; return l?.data ? shownCells(l.data, markScreen.value) : []; });
   let drawn = false, drawnOn: Engine | null = null, drawnMaximum = 1;
   const disposers = [
     effect(() => {
-      const p = path.value;
-      if (!on.value || !p || loaded.peek()?.path === p && loaded.peek()?.data) return;
-      void load(p).then(data => { if (path.peek() === p) loaded.value = {path: p, data}; });
+      const p = path.value, b = binding.value;
+      if (!on.value || !p || !b || evidence.peek()?.data) return;
+      let current = true;
+      void load(p).then(data => { if (current) loaded.value = {binding: b, data}; });
+      return () => { current = false; };
     }),
     effect(() => {
-      const p = path.value, l = loaded.value, list = cells.value, ready = !!l && l.path === p;
+      const p = path.value, l = evidence.value, list = cells.value, ready = !!l;
+      aisCheck.value = p === null ? (markMetadataFailed.value ? 'failed' : null) : !p ? 'no-product'
+        : !l ? null : !l.data ? 'failed' : screenedAvailability(l.data.features.length, list.length, markScreen.value);
       const key: keyof typeof AIS_NOTES | 'screen' | 'summary' | '' = !on.value ? '' : p === null || !ready && !!p ? 'loading' : !p ? 'none' : !l!.data ? 'failed'
         : markScreen.value.status !== 'ready' ? 'screen' : 'summary';
       const note = key === '' ? '' : key === 'screen' ? markScreen.value.note : key === 'summary' ? aisSummary(list.length) : AIS_NOTES[key];
@@ -153,7 +174,7 @@ export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), pa
     }),
   ];
   return {
-    destroy() { for (const dispose of disposers) dispose(); aisState.value = {offered: false, drawn: 0, note: ''}; },
+    destroy() { for (const dispose of disposers) dispose(); aisCheck.value = null; aisState.value = {offered: false, drawn: 0, note: ''}; },
     pick: {layers: [AIS_HEAT] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
       const f = cells.peek().find(x => x.properties.id === properties?.id);
       return f ? aisMark(f.properties) : null;
