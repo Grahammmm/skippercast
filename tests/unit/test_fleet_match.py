@@ -518,22 +518,27 @@ class ScheduleTests(unittest.TestCase):
         boat = full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)
         watched = {"mmsi": str(CANDIDATE), "vessel_id": SEA, "status": "watched", "match_method": "schedule-correlation",
                    "confidence": 0.85}
+        schedule_days = {f"{CANDIDATE}|{SEA}|port-a": TWO_WEEKS[-1]}
         # Evidence aged below min_days (2 matched days) while a rival reports on 2 of them: no longer qualifies, yet demoted.
         aged = {CANDIDATE: set(TWO_WEEKS[3:])}
         reports = {SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[3:])}
-        rival = self.decide([boat], at_sea=aged, reports=reports, vessels=vessels, prior={CANDIDATE: watched})
+        rival = self.decide([boat], at_sea=aged, reports=reports, vessels=vessels, prior={CANDIDATE: watched},
+                            schedule_days=schedule_days)
         self.assertEqual(self.rows(rival)[CANDIDATE]["status"], "candidate")
-        alone = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS)}, vessels=vessels, prior={CANDIDATE: watched})
+        alone = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS)}, vessels=vessels, prior={CANDIDATE: watched},
+                            schedule_days=schedule_days)
         self.assertEqual(self.rows(alone)[CANDIDATE]["status"], "watched", "thin but recent evidence, no rival: stays")
         # No matched day in the last lapse_days (30): the row lapses. NOW is 2026-10-05.
         old = ["2026-08-20", "2026-08-25"]
-        lapsed = self.decide([boat], at_sea={CANDIDATE: set(old)}, reports={SEA: set(old)}, prior={CANDIDATE: watched})
+        lapsed = self.decide([boat], at_sea={CANDIDATE: set(old)}, reports={SEA: set(old)}, prior={CANDIDATE: watched},
+                             schedule_days=schedule_days)
         self.assertEqual(self.rows(lapsed)[CANDIDATE]["status"], "candidate")
         # A same-port vessel that reports only on other days is no rival, even to a thin row.
         stranger = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[:3])},
-                               vessels=vessels, prior={CANDIDATE: watched})
+                               vessels=vessels, prior={CANDIDATE: watched}, schedule_days=schedule_days)
         self.assertEqual((self.rows(stranger)[CANDIDATE]["status"], stranger.reviews), ("watched", []))
-        none = self.decide([boat], at_sea={CANDIDATE: set()}, reports={SEA: set(TWO_WEEKS)}, prior={CANDIDATE: watched})
+        none = self.decide([boat], at_sea={CANDIDATE: set()}, reports={SEA: set(TWO_WEEKS)}, prior={CANDIDATE: watched},
+                           schedule_days=schedule_days)
         self.assertEqual(self.rows(none)[CANDIDATE]["status"], "candidate")
 
     def test_the_registry_mmsi_is_never_overwritten(self):

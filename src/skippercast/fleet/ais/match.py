@@ -291,6 +291,10 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
     def port_covered(v: _Vessel) -> bool:
         return v.port_id is not None and (not isinstance(reports, ReportDays) or v.port_id in reports.covered_ports)
 
+    # The Worker watch row has no port; the saved verification key records the full binding.
+    def has_schedule_binding(v: _Vessel, mmsi: int) -> bool:
+        return v.schedule_key(mmsi) in schedule_days
+
     def outage_day(v: _Vessel, mmsi: int, before: Mapping) -> str | None:
         verified = schedule_days.get(v.schedule_key(mmsi), "")
         if (lapse_day <= verified <= today and gate_problem(before) is None
@@ -451,7 +455,7 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
         sched_blockers = [b for b in blockers if b not in UNKNOWN_BLOCKERS]
         if sched is not None and home_days == 0:
             sched_blockers.append("never-in-home-port")
-        held = sticky and by_schedule
+        held = sticky and by_schedule and has_schedule_binding(v, mmsi)
         verified = latest_verified(v, mmsi, sched.matched, held) if sched else None
         if held and sched is None:
             verified = outage_day(v, mmsi, before)   # keep the old date; an outage never advances it
@@ -487,7 +491,7 @@ def decide(region, vessels: Iterable[Mapping], reviews: Iterable[Mapping], stati
             v = by_id.get(before.get("vessel_id"))
             verified = None
             if (mmsi not in statics and not held and v and v.port_id and v.mmsi is None
-                    and (v.id, mmsi) not in rejected and gate_problem(before) is None):
+                    and has_schedule_binding(v, mmsi) and (v.id, mmsi) not in rejected and gate_problem(before) is None):
                 if at_sea is not None and report_days is not None and port_covered(v):
                     sched = correlate(v.id, at_sea.get(mmsi, ()), report_days, port_of, rule,
                                       (in_port or {}).get(mmsi, ()))

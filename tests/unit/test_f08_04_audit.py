@@ -1,4 +1,5 @@
 """F08-04: offline schedule-watch lifecycle at the real match hook."""
+from contextlib import closing
 from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 import json
@@ -45,7 +46,7 @@ def match_run(tmp_path, monkeypatch):
         region, vessels, fetch=fetch, root=tmp_path))
     no_history = SimpleNamespace(read_statics=lambda *args: (), read_positions=lambda *args, **kwargs: ())
 
-    def run(day, *, matches=(), home=True, forget_statics=False):
+    def run(day, *, matches=(), home=True, forget_statics=False, candidate_port=PORT_A):
         # Reopen the same private database on every run, as the scheduled job does.
         now = round(datetime(day.year, day.month, day.day, 19, tzinfo=timezone.utc).timestamp() * 1000)
         state = process.State(tmp_path / "state.sqlite")
@@ -58,7 +59,7 @@ def match_run(tmp_path, monkeypatch):
                 mstate.add([static(m, now - process.HOUR, name) for m, name in (
                     (CANDIDATE, "Sea Example"), (OTHER, "Twin Example"), (HELD_MMSI, "Held Example"),
                 )], (), region.ports, match.ZoneInfo(region.timezone))
-            for mmsi, port in ((CANDIDATE, PORT_A), (OTHER, PORT_B)):
+            for mmsi, port in ((CANDIDATE, candidate_port), (OTHER, PORT_B)):
                 state.db.executemany("INSERT OR IGNORE INTO match_away VALUES(?,?)",
                                      [(mmsi, d.isoformat()) for d in matches])
                 if home:
@@ -137,6 +138,45 @@ def test_outage_grace_does_not_transfer_to_a_changed_home_port(match_run):
     worker.vessels[0]["port_id"] = PORT_B.id
     feeds.clear()
     assert run(EVIDENCE_DAY + timedelta(days=1)) == set()
+
+
+@pytest.mark.parametrize("forget_statics", [False, True])
+def test_one_matching_day_at_a_new_home_port_cannot_renew_the_old_binding(match_run, forget_statics, tmp_path):
+    run, feeds, worker = match_run
+    feeds["feed-a"] = report("Sea Example", PORT_A, MATCHED)
+    assert run(EVIDENCE_DAY, matches=MATCHED) == {CANDIDATE}
+    worker.vessels[0]["port_id"] = PORT_B.id
+    latest = EVIDENCE_DAY + timedelta(days=1)
+    feeds["feed-b"] = report("Sea Example", PORT_B, [latest])
+    # One matching day renews an unchanged binding, but cannot establish one at a new port.
+    assert run(latest, matches=[latest], candidate_port=PORT_B, forget_statics=forget_statics) == set()
+    assert worker.watch[str(CANDIDATE)]["status"] == "candidate"
+    with closing(process.State(tmp_path / "state.sqlite")) as state:
+        assert state.get("match_schedule_days") == {}
+    feeds.clear()
+    assert run(latest + timedelta(days=1), home=False) == set()  # no new grace clock
+    feeds["feed-b"] = report("Sea Example", PORT_B, (*MATCHED[:-1], latest))
+    assert run(latest + timedelta(days=2), matches=[latest], candidate_port=PORT_B) == {CANDIDATE}
+
+
+@pytest.mark.parametrize("watched", [False, True])
+def test_empty_home_feed_cannot_borrow_report_days_from_another_feed(match_run, watched, tmp_path):
+    run, feeds, worker = match_run
+    if watched:
+        feeds["feed-a"] = report("Sea Example", PORT_A, MATCHED)
+        assert run(EVIDENCE_DAY, matches=MATCHED) == {CANDIDATE}
+    latest = EVIDENCE_DAY + timedelta(days=1)
+    # Even enough days to promote cannot help if the covering feed returned none.
+    foreign = report("Sea Example", PORT_A, (*MATCHED[:-1], latest))
+    feeds["feed-a"] = {"reports": []}
+    feeds["feed-b"] = foreign
+    assert run(latest, matches=(*MATCHED, latest)) == set()
+    assert worker.watch[str(CANDIDATE)]["status"] == "candidate"
+    with closing(process.State(tmp_path / "state.sqlite")) as state:
+        assert state.get("match_schedule_days") == {}
+    # The same rows from the right feed do qualify.
+    feeds["feed-a"], feeds["feed-b"] = foreign, {"reports": []}
+    assert run(latest, matches=(*MATCHED, latest)) == {CANDIDATE}
 
 
 def test_only_a_verified_matching_day_extends_the_grace_clock(match_run):

@@ -197,7 +197,7 @@ def load_report_days(region, vessels: Iterable[Mapping], *, fetch: Callable[[str
                      root: Path | None = None) -> ReportDays | None:
     """Report days and per-home-port coverage, or None when no feed could be read."""
     ports = _feed_ports(region, root)
-    rows: list[Mapping] = []
+    feeds: list[tuple[list[Mapping], set[str]]] = []
     covered: set[str] = set()
     for url, home_ports in sorted(ports.items()):
         try:
@@ -206,11 +206,21 @@ def load_report_days(region, vessels: Iterable[Mapping], *, fetch: Callable[[str
             log.warning("schedule: feed %s unavailable: %s", url, error)
             continue
         if isinstance(doc, Mapping) and isinstance(doc.get("reports"), list):
-            rows.extend(r for r in doc["reports"] if isinstance(r, Mapping))
+            rows = [r for r in doc["reports"] if isinstance(r, Mapping)]
+            if rows:
+                feeds.append((rows, home_ports))
             covered.update(home_ports)
     if not covered:
         return None
-    return ReportDays(report_days(rows, vessels, landing_ports(root)), frozenset(covered))
+    days: dict[str, set[str]] = {}
+    if feeds:
+        landing = landing_ports(root)
+        fleet = list(vessels)  # keep name ambiguity checks region-wide, including with iterator input
+        for rows, home_ports in feeds:
+            scoped = {label: port for label, port in landing.items() if port in home_ports}
+            for vessel_id, matched in report_days(rows, fleet, scoped).items():
+                days.setdefault(vessel_id, set()).update(matched)
+    return ReportDays(days, frozenset(covered))
 
 
 # ---------------------------------------------------------------- precision on a history window
