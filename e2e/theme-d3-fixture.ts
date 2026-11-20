@@ -85,7 +85,9 @@ function forecast(region: string | null) {
 const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 const genericRegion = (id: string) => ({schema_version: 1, id, name: `Synthetic ${id}`, status: 'active', timezone: 'America/Los_Angeles', jurisdiction_id: 'california-fixture',
   bounds: [-121, 35.2, -120.7, 35.6], map: {center: [at[1], at[0]], zoom: 12},
-  chart_files: ['shoreline.geojson', 'depth-contours.geojson'], basemap: {default: 'night'}});
+  stations: {tide: '9412110'},
+  chart_files: ['shoreline.geojson', 'depth-contours.geojson', 'depth-contours-overview.geojson'],
+  basemap: {default: 'night'}});
 
 export async function bindThemeFixture(context: BrowserContext, origin: string, starting: Theme, stale = false) {
   const requests: string[] = [], seen: string[] = [];
@@ -106,10 +108,9 @@ export async function bindThemeFixture(context: BrowserContext, origin: string, 
     const req = route.request(), url = new URL(req.url()), path = url.pathname;
     seen.push(path);
     // Count attempted I/O, including fixture hits, off-origin attempts and partial-content transport.
-    if (req.headers().range || /\.pmtiles$|\.geojson$|^\/(?:feeds|api|coast-data|regions)\//i.test(path) || req.resourceType() === 'image') requests.push(path);
+    if (req.headers().range || !/^(?:\/map$|\/(?:assets|fonts|glyphs)\/)/.test(path) || req.resourceType() === 'image') requests.push(path);
     if (url.origin !== origin) {
       if (req.resourceType() === 'image' || url.hostname === 'nowcoast.noaa.gov' || url.searchParams.get('request') === 'GetMap') {
-        if (req.resourceType() !== 'image') requests.push(path);
         return route.fulfill({body: pixel, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}});
       }
       return route.abort('blockedbyclient');
@@ -160,10 +161,10 @@ export async function bindThemeFixture(context: BrowserContext, origin: string, 
       return route.fulfill({json: genericRegion(region)});
     }
     if (path.endsWith('/shoreline.geojson') || path.endsWith('/shoreline-overview.geojson')) return route.fulfill({json: line});
-    const contourRegion = /^\/regions\/([^/]+)\/depth-contours\.geojson$/.exec(path)?.[1];
+    const contourRegion = /^\/regions\/([^/]+)\/depth-contours(?:-overview)?\.geojson$/.exec(path)?.[1];
     if (contourRegion) {
       const source = {source_id: 'synthetic', name: 'Synthetic contour fixture', survey_date: '2030-01-01', vertical_datum: 'synthetic'};
-      return route.fulfill({json: {...line, provenance: {region_id: contourRegion, units: 'ft', interval_ft: 25, review_expires: '2030-06-01', sources: [source], sources_omitted: []},
+      return route.fulfill({json: {...line, provenance: {region_id: contourRegion, units: 'ft', interval_ft: 30, review_expires: '2030-06-01', sources: [source], sources_omitted: []},
         features: [{...line.features[0], properties: {...source, kind: 'contour', depth_ft: 150}}, {...line.features[0], properties: {...source, kind: 'survey-edge'}}]}});
     }
     if (path === '/api/forecast') return route.fulfill({json: forecast(url.searchParams.get('region'))});
