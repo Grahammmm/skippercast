@@ -46,7 +46,7 @@ const COLOR=/^(?:#[0-9a-f]{3}|#[0-9a-f]{6}|(?:rgb|hsl)a?\([^()]*\))$/i;
 const STEPS=4;
 
 type XZ=[number,number];
-type Part={object:T.Mesh|T.LineSegments|T.Points;xz:Float32Array;feature:Uint32Array;lift:number;step:number};
+type Part={object:T.Mesh|T.LineSegments|T.Points;xz:Float32Array;feature:Uint32Array;lift:number;step:number;/** The palette role the part's material colour was resolved from, so a theme change can resolve it again. */role:CoastOverlayColor};
 type Entry={id:string;kind:CoastOverlayKind;ids:(string|number)[];order:number;seq:number;parts:Part[];spacing:{cell:number;step:number}};
 /** Per-overlay caps; tests lower them, the viewer uses the defaults. */
 export type OverlayLimits={triangles?:number;segments?:number};
@@ -167,6 +167,21 @@ export class CoastOverlays{
   this.drapeEntry(entry);this.restack();
   return {...entry.spacing,coarsened:entry.spacing.cell>DRAPE_M||entry.spacing.step>DRAPE_M};
  }
+ /**
+  * Paint only (a theme change): resolves every draped part's colour again from its role in `palette`, which later overlays then use too.
+  * Geometry, draw order, drape and picking are untouched. An unusable role colour throws and changes nothing.
+  */
+ setPalette(palette:CoastOverlayPalette):void{
+  if(this.disposed)return;
+  const next=new Map<Part,T.Color>();
+  for(const entry of this.entries.values())for(const part of entry.parts){
+   const value=palette?.[part.role];
+   if(typeof value!=='string'||!COLOR.test(value.trim()))throw new TypeError(`setTheme: the overlay palette's ${part.role} must be a hex, RGB or HSL colour`);
+   next.set(part,new T.Color(value.trim()));
+  }
+  this.palette=palette;
+  for(const [part,color] of next)(part.object.material as T.Material&{color:T.Color}).color.copy(color);
+ }
  /** Removes the overlay and frees its geometry and materials; false when the id is unknown. */
  remove(id:string):boolean{const entry=this.entries.get(id);if(!entry)return false;this.release(entry);this.entries.delete(id);return true;}
  /** Re-drapes every overlay, after the terrain loads, its relief changes or a level of detail streams in. */
@@ -251,18 +266,18 @@ export class CoastOverlays{
   const lines:number[]=[],lineFeature:number[]=[];
   for(const {xz,closed,fi} of paths){const line=densify(xz,closed,step!);for(let i=0;i<(closed?line.length:line.length-1);i++){const a=line[i]!,b=line[(i+1)%line.length]!;lines.push(a[0],a[1],b[0],b[1]);lineFeature.push(fi,fi);}}
   const parts:Part[]=[],common={transparent:true,depthWrite:false,toneMapped:false};
-  const add=(object:T.Mesh|T.LineSegments|T.Points,xz:number[],feature:number[],lift:number,step:number)=>{
+  const add=(object:T.Mesh|T.LineSegments|T.Points,xz:number[],feature:number[],lift:number,step:number,role:CoastOverlayColor)=>{
    if(!xz.length){object.geometry.dispose();(object.material as T.Material).dispose();return;}
    object.geometry.setAttribute('position',new T.BufferAttribute(new Float32Array(xz.length/2*3),3));object.name=`overlay:${id}`;
-   parts.push({object,xz:Float32Array.from(xz),feature:Uint32Array.from(feature),lift,step});
+   parts.push({object,xz:Float32Array.from(xz),feature:Uint32Array.from(feature),lift,step,role});
   };
   if(kind==='fill'){
-   add(new T.Mesh(new T.BufferGeometry(),overlayMaterial(new T.MeshBasicMaterial({...common,color:main,opacity,side:T.DoubleSide}))),fill,fillFeature,OVERLAY_LIFT.fill,0);
-   if(outline)add(new T.LineSegments(new T.BufferGeometry(),overlayMaterial(new T.LineBasicMaterial({...common,color:outline,opacity:outlineOpacity}))),lines,lineFeature,OVERLAY_LIFT.line,1);
-  }else if(kind==='line')add(new T.LineSegments(new T.BufferGeometry(),overlayMaterial(new T.LineBasicMaterial({...common,color:main,opacity}))),lines,lineFeature,OVERLAY_LIFT.line,1);
+   add(new T.Mesh(new T.BufferGeometry(),overlayMaterial(new T.MeshBasicMaterial({...common,color:main,opacity,side:T.DoubleSide}))),fill,fillFeature,OVERLAY_LIFT.fill,0,style.color);
+   if(outline)add(new T.LineSegments(new T.BufferGeometry(),overlayMaterial(new T.LineBasicMaterial({...common,color:outline,opacity:outlineOpacity}))),lines,lineFeature,OVERLAY_LIFT.line,1,style.outline!);
+  }else if(kind==='line')add(new T.LineSegments(new T.BufferGeometry(),overlayMaterial(new T.LineBasicMaterial({...common,color:main,opacity}))),lines,lineFeature,OVERLAY_LIFT.line,1,style.color);
   else{
-   if(outline)add(new T.Points(new T.BufferGeometry(),overlayMaterial(new T.PointsMaterial({...common,color:outline,opacity:outlineOpacity,size:size+3,sizeAttenuation:false}),true)),[...points],[...pointFeature],OVERLAY_LIFT.point,2);
-   add(new T.Points(new T.BufferGeometry(),overlayMaterial(new T.PointsMaterial({...common,color:main,opacity,size,sizeAttenuation:false}),true)),points,pointFeature,OVERLAY_LIFT.point,3);
+   if(outline)add(new T.Points(new T.BufferGeometry(),overlayMaterial(new T.PointsMaterial({...common,color:outline,opacity:outlineOpacity,size:size+3,sizeAttenuation:false}),true)),[...points],[...pointFeature],OVERLAY_LIFT.point,2,style.outline!);
+   add(new T.Points(new T.BufferGeometry(),overlayMaterial(new T.PointsMaterial({...common,color:main,opacity,size,sizeAttenuation:false}),true)),points,pointFeature,OVERLAY_LIFT.point,3,style.color);
   }
   return {id,kind,ids,order,seq:0,parts,spacing:{cell:cut!.cell,step:step!}};
  }
