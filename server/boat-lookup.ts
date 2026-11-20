@@ -80,7 +80,7 @@ export function parseResponse(data: ExternalJSON): LookupResult {
     if (Array.isArray(b.citations)) for (const c of b.citations) addRow(c);
     if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) for (const r of b.content) addRow(r);
   }
-  const estimated: string[] = Array.isArray(raw.estimated) ? raw.estimated.filter((k: unknown): k is string => typeof k === 'string' && k in boat).slice(0, 12) : [];
+  const estimated: string[] = Array.isArray(raw.estimated) ? raw.estimated.filter((k: unknown): k is string => typeof k === 'string' && Object.hasOwn(boat, k)).slice(0, 12) : [];
   return {boat, confidence: ['high', 'medium', 'low'].includes(raw.confidence) ? raw.confidence : 'low',
     estimated, notes: typeof raw.notes === 'string' ? raw.notes.slice(0, 300) : '', sources};
 }

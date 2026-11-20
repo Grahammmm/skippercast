@@ -49,6 +49,7 @@ const FLEET_PAGES: Record<FleetView | FleetDetail, {label: string; render: (arg:
 };
 const fleetPage = (view: RouteView) => (Object.hasOwn(FLEET_PAGES, view) ? FLEET_PAGES[view as FleetView | FleetDetail] : undefined);
 const labelOf = (view: AdminView | FleetView): string => fleetPage(view)?.label ?? COPY.views[view as AdminView];
+const denied = (e: unknown): boolean => e instanceof ApiError && (e.status === 401 || e.status === 403);
 
 export const HEALTH_EVERY_MS = 60000;
 export function App() {
@@ -57,28 +58,35 @@ export function App() {
   const [healthFailed, setHealthFailed] = useState(false);
   const [advisor, setAdvisor] = useState<boolean | null>(null);   // null until the first Health answer
   const [fleet, setFleet] = useState<boolean | null>(null);       // null until the fleet API answers
-  const [signedOut, setSignedOut] = useState(false);   // 401; both APIs answering 404 (no admin view at all) reads the same way
+  const [signedOut, setSignedOut] = useState(false);
 
   async function refresh(): Promise<void> {
     try { setHealth(await getHealth()); setHealthFailed(false); setAdvisor(true); }
     catch (e) {
       setHealthFailed(true);
-      if (e instanceof ApiError && e.status === 401) setSignedOut(true);
-      // The advisor's admin API answers 404 while the advisor is off; anything else leaves its views up.
-      setAdvisor(!(e instanceof ApiError && e.status === 404));
+      if (denied(e)) setSignedOut(true);
+      // A transient refresh failure can leave an already confirmed view up, but never opens one.
+      setAdvisor(was => e instanceof ApiError && e.status === 404 ? false : was ?? false);
     }
   }
   useEffect(() => {
     const onHash = (): void => setRoute(routeOf(location.hash));
     addEventListener('hashchange', onHash);
     void refresh();
-    getFleetEnabled().then(setFleet, () => setFleet(false));
+    getFleetEnabled().then(setFleet, e => {
+      if (denied(e)) setSignedOut(true);
+      setFleet(false);
+    });
     const timer = setInterval(() => void refresh(), HEALTH_EVERY_MS);
     return () => { removeEventListener('hashchange', onHash); clearInterval(timer); };
   }, []);
 
-  const flags: AdminFlags | null = advisor === null || fleet === null ? null : {advisor, fleet};
-  const shown = flags ? shownRoute(route, flags) : null;
+  const flags: AdminFlags = {advisor: advisor === true, fleet: fleet === true};
+  // Wait for the requested feature, not the unrelated one. A disabled route can fall back
+  // to a confirmed feature, but a pending route must not mount its data-fetching view.
+  const requested = fleetPage(route.view) ? fleet : advisor;
+  const shown = signedOut || requested === null ? null : shownRoute(route, flags);
+  const noAccess = signedOut || (!advisor && !fleet && advisor !== null && fleet !== null);
   const view = shown?.view ?? route.view, nav = navOf(view);
   useEffect(() => { document.title = `${view === 'contact' ? COPY.contactHeading : labelOf(nav)} · ${COPY.pageTitle}`; }, [view, nav]);
   const page = shown ? fleetPage(shown.view) : undefined;
@@ -89,13 +97,13 @@ export function App() {
         <p class="admin-brand"><a href="/">⌁ {COPY.brand}</a></p>
         <nav aria-label={COPY.navLabel}>
           <ul>
-            {(flags ? visibleViews(flags) : []).map(v => <li key={v}><a href={`#${v}`} aria-current={v === nav ? 'page' : undefined}>{labelOf(v)}</a></li>)}
+            {(signedOut ? [] : visibleViews(flags)).map(v => <li key={v}><a href={`#${v}`} aria-current={v === nav ? 'page' : undefined}>{labelOf(v)}</a></li>)}
           </ul>
         </nav>
       </header>
-      {health?.relay?.state === 'down' ? <p class="admin-banner" role="alert">{COPY.relayDown(when(health.relay.last_ok_at) || COPY.relayNever)}</p> : null}
+      {!signedOut && advisor && health?.relay?.state === 'down' ? <p class="admin-banner" role="alert">{COPY.relayDown(when(health.relay.last_ok_at) || COPY.relayNever)}</p> : null}
       <main class="admin-main">
-        {signedOut || (flags && !shown) ? <p class="admin-error" role="alert">{COPY.signedOut}</p>
+        {noAccess ? <p class="admin-error" role="alert">{COPY.signedOut}</p>
           : !shown ? <p>{COPY.loading}</p>
           : page ? page.render(shown.arg)
           : shown.view === 'queue' ? <Queue />

@@ -85,6 +85,71 @@ class PruneTests(unittest.TestCase):
         self.assertEqual(self.names('alpha-bay'),{tile(1),tile(2),'user-notes.json',tile(5)})
         self.assertEqual(self.names('beta-bay'),{tile(11),tile(12)})
 
+    def link_region(self,dest):
+        """Move published beta-bay to `dest` and leave a link to dest in its place."""
+        region=self.published/'regions/beta-bay'
+        if dest.exists() or dest.is_symlink():raise AssertionError('destination must not exist')
+        region.rename(dest);region.symlink_to(dest,target_is_directory=True)
+
+    def link_regions(self,dest,dangling=False):
+        regions=self.published/'regions';regions.rename(self.root/'moved')
+        if not dangling:(self.root/'moved').rename(dest)
+        regions.symlink_to(dest,target_is_directory=True)
+
+    def files(self,base):return sorted(str(p.relative_to(base)) for p in base.rglob('*') if p.is_file())
+
+    def refused_link(self,message,*dirs):
+        before=[self.files(d) for d in dirs]
+        with self.assertRaises(ValueError) as caught:module.prune(self.published,self.incoming)
+        self.assertEqual(str(caught.exception),message)
+        self.assertEqual([self.files(d) for d in dirs],before)
+
+    def test_linked_region_ancestor_refuses_before_any_delete(self):
+        dest=self.root/'outside';self.link_region(dest)
+        self.refused_link('Habitat region folder is a link: beta-bay',dest,self.published/'regions/alpha-bay')
+        self.assertEqual(self.names('alpha-bay'),{tile(0),tile(1),tile(2)})
+        self.assertEqual({p.name for p in (dest/'habitat-tiles').iterdir()},{tile(10),tile(11),tile(12)})
+
+    def test_linked_regions_ancestor_refuses_before_any_delete(self):
+        dest=self.root/'outside';self.link_regions(dest)
+        self.refused_link('Habitat regions folder is a link',dest)
+        self.assertEqual(len(self.files(dest)),8)
+
+    def test_dangling_published_ancestor_links_are_refused(self):
+        with self.subTest('regions'):
+            self.link_regions(self.root/'missing',dangling=True)
+            self.refused_link('Habitat regions folder is a link')
+        self.setUp()
+        with self.subTest('beta-bay'):
+            self.link_region(self.root/'moved-away');(self.root/'moved-away').rename(self.root/'gone')
+            self.refused_link('Habitat region folder is a link: beta-bay',self.published/'regions/alpha-bay')
+            self.assertEqual(self.names('alpha-bay'),{tile(0),tile(1),tile(2)})
+
+    def test_in_root_region_symlink_is_refused(self):
+        dest=self.published/'other-place';self.link_region(dest)
+        self.refused_link('Habitat region folder is a link: beta-bay',dest,self.published/'regions/alpha-bay')
+        self.assertEqual({p.name for p in (dest/'habitat-tiles').iterdir()},{tile(10),tile(11),tile(12)})
+
+    def test_cli_linked_ancestor_refusal(self):
+        for label in ('regions','beta-bay'):
+            with self.subTest(label):
+                self.setUp();dest=self.root/'outside';argv=[str(self.published),str(self.incoming)]
+                if label=='regions':self.link_regions(dest);message='Habitat regions folder is a link'
+                else:self.link_region(dest);message='Habitat region folder is a link: beta-bay'
+                before=self.files(dest)
+                out,err=io.StringIO(),io.StringIO()
+                with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):code=module.main(argv)
+                self.assertEqual((code,out.getvalue(),err.getvalue()),(1,'',f'prune_habitat_tiles: {message}\n'))
+                self.assertEqual(self.files(dest),before)
+
+    def test_missing_nonlink_published_folders_remain_harmless(self):
+        regions=self.published/'regions';regions.rename(self.root/'moved')
+        self.assertEqual(module.prune(self.published,self.incoming),0)
+        self.assertFalse(regions.exists())
+        regions.mkdir()
+        self.assertEqual(module.prune(self.published,self.incoming),0)
+        self.assertEqual(list(regions.iterdir()),[])
+
     def test_cli_refusal_and_success(self):
         argv=[str(self.published),str(self.incoming)]
         self.write(self.incoming/'regions/beta-bay/habitat-dynamics.json','[')

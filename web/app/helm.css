@@ -1,7 +1,11 @@
 html.helm, html.helm body { font-size: var(--text-18); }
 html.helm button, html.helm select, html.helm input, html.helm [role="switch"] { min-width: 48px; min-height: 48px; }
 html.helm .app-presentation .ui-chip { min-width: 48px; min-height: 48px; }
-html.helm .app-rail .ui-rail-note, html.helm .app-legend-detail { display: none; }
+html.helm .app-rail .ui-rail-note { display: none; }
+/* SCA-021: Large controls keeps the seafloor key (its colour-by control, grade-or-fit title, tone labels and survey line) readable: the swatch is only explained by its words, so the detail stays and wraps rather than hides. */
+html.helm .app-legend-detail { display: flex; min-width: 0; overflow-wrap: anywhere; }
+html.helm .app-legend-detail .app-legend-title { color: var(--text); font-size: var(--text-13); }
+html.helm .app-legend-detail ul > li { flex-wrap: wrap; min-width: 0; }
 html.helm .app-rail [aria-label="Layer presets"] { display: flex; flex-wrap: wrap; }
 /* UXFIX-11: Large controls keep the sheet's day chips at 48 px (the chip rule there pins the 44 px token and would otherwise win), in a row that still fits them. */
 html.helm .app-sheet-hour > .ui-segmented { max-height: 56px; }

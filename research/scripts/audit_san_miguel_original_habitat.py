@@ -118,6 +118,18 @@ def review(manifest, usgs_cache, bag_cache):
             ]}
 
 
+def read_verification_receipt(parser, output, verify):
+    if verify is None:
+        return {}
+    try:
+        aliased = output.samefile(verify)
+    except FileNotFoundError:
+        aliased = False
+    if aliased:
+        parser.error('--verify and --output must refer to separate files')
+    return json.loads(verify.read_text())
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--manifest', type=Path, default=Path('catalog/usgs-ofr0385-san-miguel.json'))
@@ -126,12 +138,12 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--verify', type=Path)
     args = parser.parse_args()
+    expected = read_verification_receipt(parser, args.output, args.verify)
     manifest = json.loads(args.manifest.read_text())
     result = review(manifest, args.usgs_cache, args.bag_cache)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + '\n')
     if args.verify:
-        expected = json.loads(args.verify.read_text())
         if {k: v for k, v in expected.items() if k != 'reviewed_at'} != {
                 k: v for k, v in result.items() if k != 'reviewed_at'}:
             raise SystemExit('Original San Miguel source review changed')

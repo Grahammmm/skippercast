@@ -48,29 +48,38 @@ def _require_count(max_new):
         raise ValueError('max_new must be an integer between 0 and the number of catalog reaches')
 
 
-def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=False):
+def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=False, scope_config=None):
     _require_count(max_new)
     root = Path(root)
-    ledger = read_json(root/'dist/data/seafloor-ledger.json')
+    context = None
+    if scope_config is not None:
+        from .scope_paths import resolve_scope
+        if not resolve_scope(root, scope_config=scope_config)[1].is_central_default:
+            from .scoped_processing import load_context
+            context = load_context(root, scope_config)
+    ledger = context['ledger'] if context else read_json(root/'dist/data/seafloor-ledger.json')
     if not 0 <= max_new <= len(ledger['reaches']):
         raise ValueError('max_new must be between 0 and the number of catalog reaches')
     regions = {r['region'] for r in ledger['reaches']}
     if region and region not in regions and region != ledger['scope']:
         raise ValueError('Unknown seafloor region')
     manifest, source_scope = scoped_manifest(root, load_manifest(root))
-    if physical_only and progress is None:
+    if context:
+        from .scoped_processing import private_progress as scoped_progress
+        progress = scoped_progress(context, manifest) if physical_only else {}
+    elif physical_only and progress is None:
         progress = private_progress(root, ledger, manifest)
-    reference = root/'var/seafloor/reference/cells.json'
-    if not reference.exists() or sha256(reference) != ledger['reference_cells_sha256']:
+    reference = context['paths'].cells_path if context else root/'var/seafloor/reference/cells.json'
+    if not context and (not reference.exists() or sha256(reference) != ledger['reference_cells_sha256']):
         raise ValueError('Restore the verified reference first: python -m skippercast.seafloor restore-reference --fetch')
     project = Transformer.from_crs(4326, 3310, always_xy=True).transform
     sources = [(r['id'], transform(project, box(*r['adapter_review']['requested_bounds_wgs84'])))
                for r in manifest['surveys'] if physical_source(r, physical_only=physical_only)]
     cells = {}
-    for c in read_json(reference)['cells']:
+    for c in (context['cells'] if context else read_json(reference)['cells']):
         cells.setdefault(c['reach'], []).append(c)
     rows = []
-    reviewed = set(read_json(root/'catalog/seafloor-screen.json')['reviewed_reaches'])
+    reviewed = set() if context else set(read_json(root/'catalog/seafloor-screen.json')['reviewed_reaches'])
     for r in ledger['reaches']:
         if region and region != ledger['scope'] and r['region'] != region:
             continue
@@ -81,13 +90,15 @@ def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=Fals
         estimate = sum(c['band_area_m2'] for c in reach_cells if envelope.intersects(cell_geometry(c)))/1e6
         private_complete = r['id'] in (progress or {})
         processed = r['status'] != 'unassessed' or private_complete
+        held = bool(context) and not physical_only and not processed
         rows.append({'reach': r['id'], 'region': r['region'], 'processed': processed,
             'pending_ledger_merge': private_complete and r['status'] == 'unassessed',
-            'action': 'refresh' if processed else 'compute' if matching else 'qualify-source',
+            'action': 'refresh' if processed else 'held' if held else 'compute' if matching else 'qualify-source',
             'survey_ids': [i for i, _ in matching], 'reviewed_window_band_estimate_km2': round(estimate, 6),
             'tier1_km2': r['tier1_km2'], 'tier2_km2': r['tier2_km2'],
             'screen_reviewed': r['id'] in reviewed,
-            'next_step': 'Run measured habitat; screen at publication' if matching else
+            'next_step': 'Held: noncentral scopes run only private physical-only batches' if held else
+                         'Run measured habitat; screen at publication' if matching else
                          'Inspect original source, review metadata/rights, promote manifest row'})
     new = sorted([r for r in rows if r['action'] == 'compute'],
                  key=lambda r: (-r['reviewed_window_band_estimate_km2'], r['reach']))[:max_new]
@@ -101,6 +112,7 @@ def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=Fals
                                                 [r['reach'] for r in rows])
     return {'version': 1, 'scope': region or ledger['scope'], 'physical_only': physical_only,
         **({'source_scope': source_scope} if source_scope is not None else {}),
+        **({'scope_id': context['identity']['scope_id'], 'private_held': True} if context else {}),
         'survey_status_counts': dict(Counter(r['status'] for r in manifest['surveys'])),
         'totals': ledger['totals'], 'reaches': rows,
         'selected': [{'reach': r['reach'], 'region': r['region']} for r in selected],

@@ -13,6 +13,156 @@ import type {Page} from '@playwright/test';
 import {test, expect} from './fixtures.ts';
 
 const AREA = {region: 'morro-bay'};
+
+// Synthetic private rows; every comfort read/write is intercepted, never a live account.
+const report = (id: string, rating = 2) => ({id, region: 'another-region', observed_at: '2026-11-05T00:30:00Z', rating, context: '{"phase":"fishing"}'});
+async function comfortSheet(page: Page, v2: {open: (view: 'app', area: typeof AREA) => Promise<unknown>}, isMobile: boolean) {
+  await page.route('**/api/session', r => r.fulfill({json: {signedIn: true, user: {display_name: 'Skipper'}, publicKey: null}}));
+  await page.route('**/api/trips', r => r.fulfill({json: {trips: [{id: 'past', date: '2026-11-04', point: 'central', species: 'reef', start_hour: 7, end_hour: 13}], events: []}}));
+  await page.route('**/api/catch-log**', r => r.fulfill({json: {entries: []}, headers: {'X-SC-Catch-Log-Has-More': 'false'}}));
+  await v2.open('app', AREA);
+  await (await accountButton(page, isMobile)).click();
+  await page.getByRole('button', {name: 'Saved-trip alerts'}).click();
+  await page.getByText('How did your boat feel today?').click();
+  return page.locator('#comfort-history');
+}
+
+test.describe('individual comfort reports', () => {
+  test.use({timezoneId: 'UTC'}); // browser day differs from the opened Pacific region
+
+  test('history counts the capped read, shows five and uses region dates, with id-less rows read-only', async ({page, v2, isMobile}) => {
+    let rows: Record<string, unknown>[] = [];
+    await page.route('**/api/comfort', r => r.fulfill({json: {feedback: rows}}));
+    const history = await comfortSheet(page, v2, isMobile);
+    for (const n of [0, 1, 5, 99, 100]) {
+      rows = Array.from({length: n}, (_, i) => report('r' + i));
+      if (n !== 0) {
+        await page.keyboard.press('Escape');
+        await (await accountButton(page, isMobile)).click();
+        await page.getByRole('button', {name: 'Saved-trip alerts'}).click();
+        await page.getByText('How did your boat feel today?').click();
+      }
+      await expect(history).toContainText(n === 100 ? 'Latest 100 private reports; older reports may exist.' : `${n} private report${n === 1 ? '' : 's'}.`);
+      await expect(history.getByRole('button')).toHaveCount(Math.min(n, 5));
+      await expect(history.getByText('Showing the latest 5 reports.')).toHaveCount(n > 5 ? 1 : 0);
+      if (n) await expect(history.getByRole('button').first()).toHaveAccessibleName('Remove comfort report from Nov 4, 2026, 2/10');
+    }
+    rows = [{...report(''), id: undefined}];
+    await page.keyboard.press('Escape');
+    await (await accountButton(page, isMobile)).click();
+    await page.getByRole('button', {name: 'Saved-trip alerts'}).click();
+    await page.getByText('How did your boat feel today?').click();
+    await expect(history).toContainText('1 private report.');
+    await expect(history.getByRole('button')).toHaveCount(0);
+  });
+
+  test('Remove keeps failures, serializes mutations, reports a failed refresh honestly and updates recaps', async ({page, v2, isMobile}) => {
+    let rows = [report('opaque/id%'), report('keep', 8)], failRead = false;
+    let held: import('@playwright/test').Route | undefined;
+    const writes: string[] = [];
+    await page.route('**/api/comfort', r => r.fulfill(failRead ? {status: 503, json: {error: 'offline read'}} : {json: {feedback: rows}}));
+    await page.route('**/api/comfort/*', r => { writes.push(r.request().url()); expect(r.request().method()).toBe('DELETE'); expect(r.request().postData()).toBeNull(); held = r; });
+    const history = await comfortSheet(page, v2, isMobile), button = history.getByRole('button').first();
+    const url = page.url();
+    const exposed: string[] = [];
+    page.on('request', request => {
+      const u = new URL(request.url());
+      if (!u.pathname.startsWith('/api/comfort')) exposed.push(u.search + (request.postData() ?? ''));
+    });
+    await button.focus(); await page.keyboard.press('Enter');
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0]).toContain('/api/comfort/opaque%2Fid%25');
+    await expect(button).toHaveText('Removing…');
+    await expect(button).toBeDisabled(); await expect(history.getByRole('button').last()).toBeDisabled();
+    await expect(page.getByRole('button', {name: 'Save private feedback'})).toBeDisabled();
+    await button.dispatchEvent('click');
+    await page.locator('#comfort-form').dispatchEvent('submit');
+    expect(writes).toHaveLength(1);
+    await held!.fulfill({status: 503, json: {error: 'offline delete'}});
+    await expect(page.locator('#comfort-status')).toHaveText('offline delete');
+    await expect(button).toBeEnabled(); await expect(button).toBeFocused();
+    await expect(history.getByRole('button')).toHaveCount(2);
+    await expect(page.locator('#alert-status')).toHaveText('');
+    await button.click(); await expect.poll(() => writes.length).toBe(2);
+    rows = rows.slice(1); failRead = true;
+    await held!.fulfill({json: {deleted: true}});
+    await expect(history).toContainText('1 private report.');
+    await expect(history.getByRole('button')).toHaveCount(1);
+    await expect(history.getByRole('button')).toBeFocused();
+    await expect(page.locator('#comfort-status')).toHaveText('Report removed. Could not refresh the list; try again when online.');
+    await expect(page.locator('#comfort-status')).toHaveAttribute('role', 'status');
+    await page.locator('#saved-trips article summary').click();
+    await expect(page.locator('#saved-trips')).toContainText('8/10');
+    await expect(page.locator('#saved-trips')).not.toContainText('2/10');
+    await expect(page.locator('#saved-trips [data-comfort-id]')).toHaveCount(0);
+    expect(page.url()).toBe(url);
+    expect(exposed.join('\n')).not.toMatch(/opaque|observed_at|"rating"|"context"/);
+  });
+
+  test('keyboard removal focuses next, previous, then the summary; successful reads backfill', async ({page, v2, isMobile}) => {
+    let rows = [report('a'), report('b'), report('c')];
+    await page.route('**/api/comfort', r => r.fulfill({json: {feedback: rows}}));
+    await page.route('**/api/comfort/*', r => { const id = new URL(r.request().url()).pathname.split('/').at(-1); rows = rows.filter(f => f.id !== id); return r.fulfill({json: {deleted: true}}); });
+    const history = await comfortSheet(page, v2, isMobile);
+    for (const [id, next] of [['a', 'b'], ['c', 'b'], ['b', null]]) {
+      await history.locator(`[data-comfort-id="${id}"]`).focus(); await page.keyboard.press('Space');
+      await expect(history.locator(`[data-comfort-id="${id}"]`)).toHaveCount(0);
+      await expect(next ? history.locator(`[data-comfort-id="${next}"]`) : history.locator('p[tabindex="-1"]')).toBeFocused();
+      await expect(page.locator('#comfort-status')).toHaveText('Report removed.');
+    }
+    await expect(history).toContainText('0 private reports.');
+  });
+
+  test('a stale opening GET cannot resurrect removal; 404 refresh is not success; close stops the write continuation', async ({page, v2, isMobile}) => {
+    let reads = 0, stale: import('@playwright/test').Route | undefined, held: import('@playwright/test').Route | undefined;
+    let rows = [report('a')], failRead = false, missing = false;
+    await page.route('**/api/comfort', r => {
+      if (r.request().method() === 'POST') return r.fulfill({status: 201, json: {saved: true}});
+      reads++;
+      if (reads === 1) { stale = r; return; }
+      return r.fulfill(failRead ? {status: 503, json: {error: 'offline'}} : {json: {feedback: rows}});
+    });
+    await page.route('**/api/comfort/*', r => {
+      if (missing) return r.fulfill({status: 404, json: {error: 'Not found'}});
+      held = r;
+    });
+    const history = await comfortSheet(page, v2, isMobile);
+    await expect.poll(() => stale).toBeDefined();
+    await page.getByRole('button', {name: 'Save private feedback'}).click();
+    await expect(history.getByRole('button')).toHaveCount(1);
+    await history.getByRole('button').click(); await expect.poll(() => held).toBeDefined();
+    rows = [];
+    await held!.fulfill({json: {deleted: true}});
+    await expect(history).toContainText('0 private reports.');
+    await stale!.fulfill({json: {feedback: [report('a')]}});
+    await expect(history.getByRole('button')).toHaveCount(0);
+    rows = [report('missing')];
+    await page.getByRole('button', {name: 'Save private feedback'}).click();
+    await expect(history.getByRole('button')).toHaveCount(1);
+    missing = true; failRead = true;
+    await history.getByRole('button').click();
+    await expect(page.locator('#comfort-status')).toHaveText('This report is no longer available. Refresh your reports and try again.');
+    await expect(history.getByRole('button')).toBeEnabled();
+    await expect(history.getByRole('button')).toHaveCount(1);
+    failRead = false; rows = [];
+    await history.getByRole('button').click();
+    await expect(history).toContainText('0 private reports.');
+    await expect(page.locator('#comfort-status')).toHaveText('This report is no longer available. Refresh your reports and try again.');
+    rows = [report('closing')];
+    await page.getByRole('button', {name: 'Save private feedback'}).click();
+    await expect(history.getByRole('button')).toBeEnabled();
+    missing = false; held = undefined;
+    await history.getByRole('button').click(); await expect.poll(() => held).toBeDefined();
+    await page.keyboard.press('Escape');
+    // Native dialog close is queued: wait for its onClose to unmount the sheet
+    // before resolving the pending write, rather than racing that event.
+    await page.locator('#trip-alerts').waitFor({state: 'detached'});
+    const before = reads;
+    await held!.fulfill({json: {deleted: true}});
+    await page.getByRole('dialog', {name: 'Trip alerts'}).waitFor({state: 'hidden'});
+    expect(reads).toBe(before);
+  });
+});
 const b64url = (b: Buffer) => b.toString('base64url');
 
 test.beforeEach(async ({page}) => {
@@ -63,6 +213,34 @@ async function passkeyFixture(page: Page): Promise<string> {
     privateKey: privateKey.export({type: 'pkcs8', format: 'der'}).toString('base64'), userHandle: randomBytes(16).toString('base64'), signCount: 0}});
   return b64url(id);
 }
+
+test('the account menu reuses its settled session after a layout remount', async ({page, v2}) => {
+  await page.setViewportSize({width: 1280, height: 800});
+  await page.clock.install();
+  await page.addInitScript(() => {
+    // Count at fetch invocation, not at route delivery: after the effects run,
+    // a redundant request cannot still be in flight to the Playwright process.
+    const probe = Object.assign(window, {sessionReads: 0});
+    const fetchOriginal = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = new URL(input instanceof Request ? input.url : input, location.href);
+      if (url.origin !== location.origin || url.pathname !== '/api/session') return fetchOriginal(input, init);
+      probe.sessionReads += 1;
+      return Response.json({signIn: '/#account', signedIn: true, user: {display_name: 'Skipper'}});
+    };
+  });
+  const reads = () => page.evaluate(() => (window as unknown as {sessionReads: number}).sessionReads);
+  await v2.open('app', AREA);
+  const desktop = page.locator('.app-masthead .app-account-trigger');
+  await expect(desktop).toHaveText('Skipper');
+  expect(await reads(), 'initial mount reads the session').toBe(1);
+
+  await page.setViewportSize({width: 390, height: 844});
+  await expect(desktop).toHaveCount(0);
+  await expect(page.locator('.app-account-top-trigger')).toHaveAccessibleName('Skipper');
+  await page.clock.runFor(200); // drain mount effects, including the after-paint fallback
+  expect(await reads(), 'settled remount does not read the session again').toBe(1);
+});
 
 test('signing in from the account menu completes the passkey flow and keeps the place', async ({page, pageErrors, v2, isMobile}) => {
   const state = await stubAuth(page, await passkeyFixture(page));
@@ -186,7 +364,7 @@ test('signed in, saved-trip alerts save, list, delete and acknowledge through th
   await page.route('**/api/events/ack', route => { acked = route.request().postDataJSON(); return route.fulfill({json: {ok: true}}); });
   await page.route('**/api/comfort', route => {
     if (route.request().method() === 'POST') { comfort.push(route.request().postDataJSON() as Record<string, unknown>); return route.fulfill({status: 201, json: {ok: true}}); }
-    return route.fulfill({json: {feedback: comfort.map(c => ({observed_at: '2026-10-11T20:00:00Z', rating: c.rating, context: JSON.stringify({phase: c.phase})}))}});
+    return route.fulfill({json: {feedback: comfort.map((c, i) => ({id: `report-${i}`, observed_at: '2026-10-11T20:00:00Z', rating: c.rating, context: JSON.stringify({phase: c.phase})}))}});
   });
   await v2.open('app', {...AREA, target: 'halibut'});
   await (await accountButton(page, isMobile)).click();
@@ -218,7 +396,7 @@ test('signed in, saved-trip alerts save, list, delete and acknowledge through th
   await dialog.getByText('How did your boat feel today?').click();
   await dialog.getByLabel('Comfort · 1 rough to 10 excellent').fill('6');
   await dialog.getByRole('button', {name: 'Save private feedback'}).click();
-  await expect(dialog.locator('#comfort-history')).toContainText('1 private reports');
+  await expect(dialog.locator('#comfort-history')).toContainText('1 private report.');
   expect(comfort).toEqual([{region: 'morro-bay', rating: 6, phase: 'outbound', wind: null, sea: null, period: null, heading: null, point: null}]);
   await dialog.getByText('Privacy & account data').click();
   await dialog.getByRole('button', {name: 'Delete my account and records'}).click();
@@ -231,16 +409,119 @@ test('signed in, saved-trip alerts save, list, delete and acknowledge through th
   expect(pageErrors).toEqual([]);
 });
 
+const exportFile = 'SkipperCast-private-records.json';
+const privateFixture = {catch_log: [{id: 'synthetic-catch'}], spots: [{id: 'synthetic-spot'}]};
+type PrivacyProbe = {release?: () => void; jsonFiles: number};
+
+for (const obsolete of ['close and reopen', 'confirmed deletion', 'confirmed deletion remount'] as const) {
+  test(`private JSON export: ${obsolete} cancels the old download; a fresh retry works`, async ({page, v2, isMobile}) => {
+    // Hold the first body at the application boundary even if fetch was aborted
+    // after the bytes arrived. This exercises the final check before file creation.
+    await page.addInitScript(() => {
+      const probe: PrivacyProbe = {jsonFiles: 0};
+      Object.assign(window, {privacyProbe: probe});
+      const fetchOriginal = window.fetch.bind(window);
+      let first = true;
+      window.fetch = async (input, init) => {
+        const r = await fetchOriginal(input, init);
+        if (input === '/api/privacy' && init?.method !== 'DELETE' && first) {
+          first = false;
+          const json = r.json.bind(r);
+          r.json = async () => {
+            const body = await json();
+            await new Promise<void>(resolve => { probe.release = resolve; });
+            return body;
+          };
+        }
+        return r;
+      };
+      const create = URL.createObjectURL.bind(URL);
+      URL.createObjectURL = blob => {
+        if (blob instanceof Blob && blob.type === 'application/json') probe.jsonFiles++;
+        return create(blob);
+      };
+    });
+    await v2.feed('**/api/session', {signedIn: true, user: {display_name: 'Skipper'}, publicKey: null});
+    await v2.feed('**/api/trips', {trips: [], events: []});
+    await v2.feed('**/api/comfort', {feedback: []});
+    await v2.feed('**/api/catch-log**', {entries: []});
+    let reads = 0;
+    let deletion: import('@playwright/test').Route | undefined;
+    await page.route('**/api/privacy', route => {
+      if (route.request().method() === 'DELETE') { deletion = route; return; }
+      return ++reads === 2 ? route.fulfill({status: 503, json: {error: 'Synthetic export failure'}})
+        : route.fulfill({json: reads === 1 ? {catch_log: [], spots: []} : privateFixture});
+    });
+    const dialog = page.getByRole('dialog', {name: 'Trip alerts'});
+    const status = dialog.locator('#alert-status');
+    const download = dialog.getByRole('button', {name: 'Export my records'});
+    const open = async () => {
+      await (await accountButton(page, isMobile)).click();
+      await page.getByRole('button', {name: 'Saved-trip alerts'}).click();
+      await dialog.getByText('Privacy & account data').click();
+    };
+    await v2.open('app', AREA);
+    await open();
+    await download.click();
+    await page.waitForFunction(() => !!(window as unknown as {privacyProbe: PrivacyProbe}).privacyProbe.release);
+    if (obsolete === 'close and reopen') {
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#trip-alerts')).toHaveCount(0);
+      await open();
+    } else {
+      await dialog.getByRole('button', {name: 'Delete my account and records'}).click();
+      await dialog.getByRole('button', {name: 'Yes, delete everything'}).click();
+      await expect.poll(() => deletion).toBeDefined();
+      if (obsolete === 'confirmed deletion remount') {
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#trip-alerts')).toHaveCount(0);
+        await open();
+        await expect(download, 'deletion stays locked across sheet remount').toBeDisabled();
+        await expect(dialog.getByRole('button', {name: 'Delete my account and records'})).toBeDisabled();
+        await download.dispatchEvent('click');
+        expect(reads, 'a synthetic click cannot start an export during deletion').toBe(1);
+      }
+    }
+    const files = await page.evaluate(async () => {
+      const probe = (window as unknown as {privacyProbe: PrivacyProbe}).privacyProbe;
+      probe.release!();
+      // Drain the released JSON continuation before reading the synchronous file count.
+      await new Promise(resolve => setTimeout(resolve, 0));
+      return probe.jsonFiles;
+    });
+    expect(files, 'obsolete export must not create a JSON file').toBe(0);
+    if (deletion) {
+      await expect(download).toBeDisabled();
+      await deletion.fulfill({status: 503, json: {error: 'Synthetic deletion failure'}});
+      if (obsolete !== 'confirmed deletion remount') await expect(status).toHaveText('Synthetic deletion failure');
+      await expect(download).toBeEnabled();
+    }
+    await download.click();
+    await expect(status).toHaveText('Synthetic export failure');
+    await expect(download).toBeEnabled();
+    const file = page.waitForEvent('download');
+    await download.click();
+    const saved = await file;
+    expect(saved.suggestedFilename()).toBe(exportFile);
+    let json = '';
+    for await (const chunk of (await saved.createReadStream()).setEncoding('utf8')) json += chunk;
+    expect(JSON.parse(json)).toEqual(privateFixture);
+    expect(await page.evaluate(() => (window as unknown as {privacyProbe: PrivacyProbe}).privacyProbe.jsonFiles)).toBe(1);
+    expect(reads).toBe(3);
+  });
+}
+
 // SC0452-01: the passkey library (vendor/simplewebauthn-browser-14.0.0) is requested when a ceremony starts, not with the map page.
 const UMD = '/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js';
 const UNAVAILABLE = 'Passkeys are unavailable right now. Try again when you are online.';
 
 /** Counts the requests for the library and for the options calls that must not happen without it. */
 function watchPasskeyRequests(page: Page) {
-  const seen = {library: 0, loginOptions: 0, addOptions: 0};
+  const seen = {library: 0, registerOptions: 0, loginOptions: 0, addOptions: 0};
   page.on('request', request => {
     const path = new URL(request.url()).pathname;
     if (path === UMD) seen.library += 1;
+    if (path === '/api/auth/register/options') seen.registerOptions += 1;
     if (path === '/api/auth/login/options') seen.loginOptions += 1;
     if (path === '/api/auth/passkeys/options') seen.addOptions += 1;
   });
@@ -283,6 +564,7 @@ test('the signed-out dialog loads the library for its sign-in and Sign in comple
 test('a library that will not load says passkeys are unavailable, makes no auth request, and the next try loads it', async ({page, v2}) => {
   const state = await stubAuth(page, await passkeyFixture(page));
   const seen = watchPasskeyRequests(page);
+  await page.route('**/api/auth/register/options', route => route.fulfill({status: 204}));
   await page.route('**/vendor/simplewebauthn-browser-14.0.0/**', route => route.abort('failed'));   // offline
   await v2.open('app', AREA);
   await page.evaluate(() => { location.hash = '#account'; });
@@ -300,6 +582,7 @@ test('a library that will not load says passkeys are unavailable, makes no auth 
   await page.locator('#account-create').click();
   await expect(page.locator('#account-status')).toHaveText(UNAVAILABLE);
   expect(await page.evaluate(() => typeof (globalThis as {SimpleWebAuthnBrowser?: unknown}).SimpleWebAuthnBrowser), 'the tampered script never ran').toBe('undefined');
+  expect(seen.registerOptions, 'Create sends no registration options request after integrity failure').toBe(0);
   expect(seen.loginOptions).toBe(0);
 
   await page.unroute('**/vendor/simplewebauthn-browser-14.0.0/**');   // back online
@@ -307,6 +590,11 @@ test('a library that will not load says passkeys are unavailable, makes no auth 
   await page.locator('#account-signin').click();
   await reloaded;
   expect(state.verified, 'the retry loaded the real library and signed in').toBe(1);
+
+  // Prove that the zero above is not a blind spot: this POST is fulfilled by the local route.
+  const status = await page.evaluate(async () => (await fetch('/api/auth/register/options', {method: 'POST'})).status);
+  expect(status).toBe(204);
+  expect(seen.registerOptions, 'the observer counts the synthetic registration POST').toBe(1);
 });
 
 test('Add a passkey loads the library when tapped; a failed load says so and a retry adds the passkey', async ({page, pageErrors, v2}) => {

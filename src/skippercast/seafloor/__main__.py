@@ -14,6 +14,7 @@ def main():
     planning.add_argument('--max-new', type=int, default=3)
     planning.add_argument('--json', action='store_true')
     planning.add_argument('--physical-only', action='store_true', help='Include reviewed private sources; never grants publication')
+    planning.add_argument('--scope-config', type=Path, help='Explicit scope config; noncentral plans are private and held unless --physical-only')
     review = commands.add_parser('review-source', help='Checkpoint a bounded completed discovery test; never qualifies a survey')
     review.add_argument('--source', required=True)
     review.add_argument('--reaches', nargs='+', required=True)
@@ -59,7 +60,7 @@ def main():
     process.add_argument('--physical-only', action='store_true', help='Cache measured habitat before legal review; never publish')
     process.add_argument('--force', action='store_true')
     process.add_argument('--fetch', action='store_true', help='Fetch missing reviewed originals; pinned hashes still required')
-    process.add_argument('--scope-config', type=Path, help='Explicit scope config; non-central processing fails closed pending scoped source and screen contracts')
+    process.add_argument('--scope-config', type=Path, help='Explicit scope config; noncentral runs need --physical-only, stay private and held, and never publish')
     for command in ('reaches', 'ledger'):
         sub = commands.add_parser(command)
         sub.add_argument('--region')
@@ -87,7 +88,8 @@ def main():
             return
         if args.command == 'plan':
             from .rollout import plan, report
-            result = plan(region=args.region, max_new=args.max_new, physical_only=args.physical_only)
+            result = plan(root=REPO, region=args.region, max_new=args.max_new,
+                          physical_only=args.physical_only, scope_config=args.scope_config)
             print(json.dumps(result, indent=2) if args.json else report(result))
             return
         if args.command == 'publish':
@@ -121,14 +123,9 @@ def main():
             print(f'Restored verified reference cells: {restore_reference(fetch=args.fetch)}')
             return
         if args.command == 'run':
-            if args.scope_config:
-                from .scope_paths import resolve_scope
-                _, paths = resolve_scope(REPO, scope_config=args.scope_config)
-                if not paths.is_central_default:
-                    raise ValueError('Non-central processing is disabled until scoped source, physical and screen contracts are reviewed')
             from .run import run
-            receipt, reused = run(args.reach, force=args.force, fetch=args.fetch,
-                                  physical_only=args.physical_only)
+            receipt, reused = run(args.reach, root=REPO, force=args.force, fetch=args.fetch,
+                                  physical_only=args.physical_only, scope_config=args.scope_config)
             print(json.dumps({'unchanged': reused, **receipt['ledger_summary']}, indent=2))
             return
         if args.command == 'promote-survey':

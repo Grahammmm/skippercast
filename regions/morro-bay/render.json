@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "morro-bay",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "cayucos-reef-z15", "center": [-120.948, 35.423], "size_m": 1200, "zoom": 15},
+    {"id": "estero-z13", "center": [-120.991, 35.447], "size_m": 4000, "zoom": 13}
+  ],
+  "piers": [{"id": "cayucos", "name": "Cayucos Pier", "osm_way": 10571040}]
+}

@@ -60,6 +60,80 @@ const trip = () => ({region: 'morro-bay', point: 'north', species: 'reef', date:
 const withinOneMinute = async () => { const left = 60000 - (Date.now() % 60000); if (left < 5000) await new Promise(r => setTimeout(r, left + 50)); };
 const count = (sql, table) => sql.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n;
 
+test('comfort_delete_is_owner_scoped_and_unknown_is_indistinguishable', async () => {
+  const {sql, adapter} = database(), a = client(adapter), b = client(adapter);
+  const aid = (await register(a, new SoftwareAuthenticator())).result.data.user.id;
+  const bid = (await register(b, new SoftwareAuthenticator())).result.data.user.id;
+  const seed = sql.prepare('INSERT INTO comfort_feedback(id,owner,region,observed_at,rating,context) VALUES(?,?,?,?,?,?)');
+  for (const [id, owner] of [['own', aid], ['keep', aid], ['foreign', bid]]) seed.run(id, owner, 'morro-bay', '2026-11-01T12:00:00Z', 2, '{}');
+  const remaining = JSON.stringify(sql.prepare("SELECT * FROM comfort_feedback WHERE id!='own' ORDER BY id").all());
+  const del = (id, extra = {}) => a.call('/api/comfort/' + encodeURIComponent(id), {method: 'DELETE', headers: {'X-Request-Id': 'comfort-test'}, ...extra});
+  const own = await del('own', {body: {owner: bid}});
+  assert.equal(own.status, 200); assert.equal(own.data.deleted, true);
+  const unknown = await del('missing');
+  assert.equal(unknown.status, 404);
+  for (const id of ['foreign', 'own', "x' OR 1=1 --", 'encoded/opaque%id']) {
+    const r = await del(id);
+    assert.equal(r.status, unknown.status);
+    assert.equal(JSON.stringify(r.data), JSON.stringify(unknown.data));
+    assert.equal(JSON.stringify([...r.headers]), JSON.stringify([...unknown.headers]));
+  }
+  assert.equal(JSON.stringify(sql.prepare('SELECT * FROM comfort_feedback ORDER BY id').all()), remaining);
+  assert.equal((await a.call('/api/comfort')).data.feedback.map(f => f.id).join(), 'keep');
+  const exported = (await a.call('/api/privacy')).data;
+  assert.ok(!JSON.stringify(exported).includes('"id":"own"'));
+  sql.close();
+});
+
+test('comfort_get_stays_latest_100_after_removal', async () => {
+  const {sql, adapter} = database(), a = client(adapter);
+  const owner = (await register(a, new SoftwareAuthenticator())).result.data.user.id;
+  const seed = sql.prepare('INSERT INTO comfort_feedback(id,owner,region,observed_at,rating,context) VALUES(?,?,?,?,?,?)');
+  for (let i = 0; i < 140; i++) seed.run('r' + i, owner, 'morro-bay', new Date(Date.UTC(2026, 9, 1) + i * 60000).toISOString(), 2, '{}');
+  seed.run('other', 'another-owner', 'morro-bay', '2026-12-01T00:00:00Z', 9, '{}');
+  const before = (await a.call('/api/comfort')).data.feedback;
+  assert.equal(before.length, 100); assert.equal(before[0].id, 'r139'); assert.equal(before.at(-1).id, 'r40');
+  assert.equal((await a.call('/api/comfort/r139', {method: 'DELETE'})).status, 200);
+  const after = (await a.call('/api/comfort')).data.feedback;
+  assert.equal(after.length, 100); assert.equal(after[0].id, 'r138'); assert.equal(after.at(-1).id, 'r39');
+  assert.equal(count(sql, 'comfort_feedback'), 140);
+  assert.equal(sql.prepare("SELECT rating FROM comfort_feedback WHERE id='other'").get().rating, 9);
+  sql.close();
+});
+
+test('comfort_delete_respects_session_origin_budget_and_storage', async () => {
+  const {sql, adapter} = database(), a = client(adapter);
+  const owner = (await register(a, new SoftwareAuthenticator())).result.data.user.id;
+  sql.prepare('INSERT INTO comfort_feedback VALUES(?,?,?,?,?,?)').run('keep', owner, 'morro-bay', '2026-11-01T00:00:00Z', 2, '{}');
+  const path = '/api/comfort/keep', mutation = {method: 'DELETE'};
+  assert.equal((await client(adapter).call(path, mutation)).status, 401);
+  for (const origin of ['', 'https://evil.example']) assert.equal((await a.call(path, {...mutation, origin})).status, 400);
+  const expired = client(adapter); expired.jar.cookie = 'expired-token'; seedSession(sql, owner, expired.jar.cookie, {expires: now() - 1});
+  assert.equal((await expired.call(path, mutation)).status, 401);
+  a.env.FEED_LIMITER = {limit: async () => ({success: false})};
+  assert.equal((await a.call(path, mutation)).status, 429); delete a.env.FEED_LIMITER;
+  const oldDB = a.env.DB;
+  a.env.DB = {prepare(query) { if (query.startsWith('DELETE FROM comfort_feedback')) throw Error('private-row-canary'); return adapter.prepare(query); }};
+  const failed = await a.call(path, mutation);
+  assert.equal(failed.status, 503); assert.doesNotMatch(JSON.stringify(failed.data), /private-row-canary|keep/);
+  a.env.DB = oldDB;
+  await withinOneMinute();
+  sql.prepare('DELETE FROM request_limits').run();
+  for (let i = 0; i < 30; i++) assert.equal((await a.call('/api/comfort/absent', mutation)).status, 404);
+  assert.equal((await a.call(path, mutation)).status, 429);
+  assert.equal(count(sql, 'comfort_feedback'), 1);
+  sql.close();
+});
+
+test('privacy_documents_per_report_retention_without_extension', () => {
+  const html = readFileSync(new URL('../dist/privacy.html', import.meta.url), 'utf8');
+  const row = html.match(/<th scope="row">Comfort ratings<\/th>[\s\S]*?<\/tr>/)?.[0];
+  assert.ok(row.includes('Deleted 365 days after the rating, when you remove the report, or when you delete your account records.'));
+  const doc = readFileSync(new URL('../docs/engineering/api-reference.md', import.meta.url), 'utf8');
+  assert.equal((doc.match(/`DELETE \/api\/comfort\/:id`/g) ?? []).length, 1);
+  assert.match(doc, /latest 100.*no total.*no cursor/);
+});
+
 test('register → session → private trip → sign out → 401 → sign in again', async () => {
   const {sql, adapter} = database(), c = client(adapter), auth = new SoftwareAuthenticator();
   assert.deepEqual((await c.call('/api/session')).data, {signedIn: false, publicKey: null, signIn: '/#account', user: null, is_admin: false, advisor: false});

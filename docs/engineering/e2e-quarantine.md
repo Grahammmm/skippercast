@@ -1,9 +1,12 @@
 # Bounded browser-test quarantine (SC-CI-3)
 
 A quarantine **retries, never skips**. Ordinary Playwright tests have zero
-retries. Only the admitted Swell-field case in `v2-map.spec.ts` has an effective
-`@flaky` tag and two retries. Every assertion, viewport and shard is retained;
-a failure on all three attempts still fails CI.
+retries. The registry `e2e/flaky.tsv` is currently empty (header only): no test
+is quarantined. A listed row gives its case an effective `@flaky` tag and two
+retries. Every assertion, viewport and shard is retained; a failure on all
+three attempts still fails CI.
+
+2026-11-16: Swell row retired after 20 of 20 first-attempt passes (10 per project).
 
 ## Admission and clock
 

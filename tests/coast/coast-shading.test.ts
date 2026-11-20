@@ -38,7 +38,7 @@ test('contour spacing never goes finer than the finest grid spacing allows',()=>
  near(contourInterval(10,2).minor,10*.3048);// 2 m display mesh: 3 m floor, 10 ft
  near(contourInterval(4,0).minor,10*.3048);// a very narrow window still gets the finest step offered, 10 ft
  near(contourInterval(10,30).minor,250*.3048);// 30 m model grid: 45 m floor
- near(contourInterval(10,1000).minor,500*.3048,1e-9);// coarser than every step: the coarsest
+ near(contourInterval(10,1000).minor,Math.ceil(1500/.3048)*.3048,1e-9);// coarser than every step: floor rounded up to a whole foot
  near(contourInterval(NaN,NaN).minor,10*.3048);
 });
 test('sun direction is a unit vector in the coastPoint frame (x east, y up, z south)',()=>{

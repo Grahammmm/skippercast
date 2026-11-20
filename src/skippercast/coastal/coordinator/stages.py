@@ -40,6 +40,16 @@ def verify_ref(root, ref):
     return path
 
 
+def _finite(value):
+    """True only for real int/float values (not bool) that convert to a finite float."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
 def readiness(stage, evidence, *, now, duration_s, code_sha, deps_sha, synthetic=False):
     """Freshness, readiness dimensions, holds and implementation identity are separate gates.
 
@@ -66,7 +76,8 @@ def readiness(stage, evidence, *, now, duration_s, code_sha, deps_sha, synthetic
     if evidence.get("code_sha") != code_sha or evidence.get("deps_sha") != deps_sha:
         holds.append("implementation_stale")
     expires = evidence.get("valid_until_epoch")
-    if not isinstance(expires, (int, float)) or not math.isfinite(expires) or expires <= now + duration_s:
+    if not (_finite(expires) and _finite(now) and _finite(duration_s) and duration_s > 0
+            and _finite(now + duration_s) and expires > now + duration_s):
         holds.append("evidence_expired")
     if evidence.get("dimensions", {}).get(DIMENSION[stage]) != "ready":
         holds.append("dimension_not_ready")

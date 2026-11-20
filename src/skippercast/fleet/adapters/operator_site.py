@@ -8,7 +8,8 @@ likely they hold contact or booking details (contact, book, about, rates...).
 
 From each page it extracts, as ``page`` facts whose ``source_url`` is that page:
 
-- ``phone_business`` (NANP, E.164) from ``tel:`` links and the page text;
+- ``phone_business`` (NANP, E.164) from locally labelled business or booking
+  contacts in ``tel:`` links and page text;
 - ``email_business`` from ``mailto:`` links and the page text. A webmail address
   (``profile.WEBMAIL_DOMAINS``) is kept, because the operator published it as
   the business contact, but at low confidence and flagged for review;
@@ -64,6 +65,14 @@ SKIP_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".z
 LINK_WORDS = (("contact", 5), ("book", 4), ("reserv", 4), ("about", 3), ("charter", 2), ("trip", 2), ("rate", 2),
               ("price", 2), ("fleet", 2), ("boat", 2), ("schedule", 2))
 PHONE = re.compile(r"(?<![\d+])(?:\+?1[\s.\-]?)?\(?([2-9]\d{2})\)?[\s.\-]?([2-9]\d{2})[\s.\-]?(\d{4})(?!\d)")
+BUSINESS_LABEL = re.compile(r"\b(?:office|bookings?|reservations?|business\s+(?:phone|line|contact))\b", re.I)
+EXCLUDED_LABEL = re.compile(
+    r"\b(?:personal|private|emergency|third[\s\-\u2010-\u2014]+party|coast guard|"
+    r"(?:not\s+(?:for\s+)?|no\s+|non[\s\-\u2010-\u2014]*)(?:bookings?|reservations?))\b", re.I,
+)
+# Keep number labels local: neither the page title nor a neighbouring entry is evidence.
+CONTACT_BREAKS = frozenset("address article aside blockquote br dd div dl dt footer h1 h2 h3 h4 h5 h6 "
+                           "head header hr li main nav ol p section table title tr ul".split())
 EMAIL_TEXT = re.compile(r"(?<![\w.%+-])[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}\b")
 NOT_EMAIL_TLDS = {"png", "jpg", "jpeg", "gif", "webp", "svg", "css", "js"}
 HIDDEN_TAGS = ("script", "style", "noscript", "template")
@@ -120,15 +129,21 @@ class _Page(HTMLParser):
         self.embeds: list[str] = []              # script and iframe src
         self.og_image: str | None = None
         self.text: list[str] = []
+        self.phone_blocks: list[tuple[list[str], set[str]]] = [([], set())]
         self._hidden = 0
         self._anchor: list[str] | None = None
         self._href = ""
+
+    def _contact_break(self, tag: str) -> None:
+        if tag in CONTACT_BREAKS and self._anchor is None and any(self.phone_blocks[-1]):
+            self.phone_blocks.append(([], set()))
 
     def handle_starttag(self, tag, attrs):
         if self._hidden:  # inside a suppressed container nothing contributes attributes; only nesting is tracked
             if tag in HIDDEN_TAGS:
                 self._hidden += 1
             return
+        self._contact_break(tag)
         attr = {k.lower(): (v or "") for k, v in attrs}
         if tag in HIDDEN_TAGS:
             # a script that starts in visible content still reports its booking src before its body is suppressed
@@ -139,6 +154,11 @@ class _Page(HTMLParser):
             self.embeds.append(attr["src"])
         elif tag == "a" and attr.get("href"):
             self._anchor, self._href = [], attr["href"]
+            href = self._href.strip()
+            if href.lower().startswith("tel:") and (phone := phone_e164(href[4:])):
+                parts, links = self.phone_blocks[-1]
+                links.add(phone)
+                parts.extend(filter(None, (attr.get("aria-label"), attr.get("title"))))
         elif tag == "meta" and attr.get("property", attr.get("name", "")).lower() == "og:image" and attr.get("content"):
             self.og_image = self.og_image or attr["content"]
 
@@ -150,11 +170,14 @@ class _Page(HTMLParser):
         elif tag == "a" and self._anchor is not None:
             self.links.append((self._href, " ".join("".join(self._anchor).split())))
             self._anchor = None
+        self._contact_break(tag)
 
     def handle_data(self, data):
         if self._hidden:
             return
         self.text.append(data)
+        if data.strip():
+            self.phone_blocks[-1][0].append(data)
         if self._anchor is not None:
             self._anchor.append(data)
 
@@ -163,6 +186,7 @@ class _Page(HTMLParser):
 class _Found:
     """Facts found on one site, keyed by (field, value) so a value seen on several pages is kept once."""
     best: dict[tuple[str, str], tuple[float, int, str, Any, tuple[str, ...]]] = field(default_factory=dict)
+    excluded_phones: set[str] = field(default_factory=set)
     order: int = 0
 
     def add(self, field_: str, value: Any, page: str, confidence: float, flags: tuple[str, ...] = ()) -> None:
@@ -236,8 +260,10 @@ class OperatorSite:
         out, phones = [], 0
         for (field_, _value), (confidence, _order, page, value, flags) in sorted(found.best.items(), key=lambda kv: kv[1][1]):
             if field_ == "phone_business":
+                if value in found.excluded_phones:
+                    continue
                 phones += 1
-                if phones > MAX_PHONES:  # a business line or two; a page of numbers is a directory, not contacts
+                if phones > MAX_PHONES:  # cap eligible contacts, not raw candidates
                     continue
             out.append((field_, value, page, confidence, flags))
         return out
@@ -267,10 +293,8 @@ class OperatorSite:
         for href, _label in parsed.links:
             lowered = href.strip().lower()
             if lowered.startswith("tel:"):
-                phone = phone_e164(href.strip()[4:])
-                if phone:
-                    found.add("phone_business", phone, page, 0.8)
-            elif lowered.startswith("mailto:"):
+                continue  # phone links and text both need the same local evidence
+            if lowered.startswith("mailto:"):
                 self._email(href.strip()[7:], page, found, 0.8)
             else:
                 url = _resolve(page, href.strip())
@@ -284,8 +308,14 @@ class OperatorSite:
             if platform:
                 found.add("booking_platform", platform, page, 0.7)
         text = " ".join(" ".join(parsed.text).split())
-        for match in PHONE.finditer(text):
-            found.add("phone_business", f"+1{match.group(1)}{match.group(2)}{match.group(3)}", page, 0.7)
+        for parts, links in parsed.phone_blocks:
+            label = " ".join(parts)
+            phones = links | {"+1" + "".join(match.groups()) for match in PHONE.finditer(label)}
+            if EXCLUDED_LABEL.search(label):
+                found.excluded_phones.update(phones)
+            elif len(phones) == 1 and BUSINESS_LABEL.search(label):
+                phone, = phones
+                found.add("phone_business", phone, page, 0.8 if phone in links else 0.7)
         for match in EMAIL_TEXT.finditer(text):
             self._email(match.group(0), page, found, 0.7)
         if parsed.og_image:

@@ -190,5 +190,8 @@ def test_retained_central_reference_restore_rebuilds_the_processed_baseline(tmp_
     assert read_json(root/'dist/data/seafloor-ledger.json')['stage'] == 'M3-habitat-screen'
 
 
-def test_run_module_hash_preserves_retained_physical_cache_fingerprint():
-    assert sha256(Path(run.__file__)) == '5228a5150afd9bb298f35c5c29d5a2e39baa7bda18889e1a9875d90b091019d1'
+def test_run_module_hash_pins_the_mgl19_physical_cache_fingerprint():
+    # MGL-19: f04b2567a2beab10a7123469f80e1634ba5b088318da53e5386df267f8b2a6fc
+    # SCA-376 changes run.py again: retained central physical caches miss once and are
+    # recomputed under review later; old receipts are neither adopted nor migrated here.
+    assert sha256(Path(run.__file__)) == '33327a09b5dcd5828f937f3f9817f01d8f5048918a019b664711faffc1311700'

@@ -8,14 +8,16 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
+from math import ceil, floor
 from pathlib import Path
 
 import numpy as np
 from pyproj import CRS, Transformer
 import rasterio
 from rasterio.features import geometry_mask
-from rasterio.windows import from_bounds
-from shapely.geometry import box, shape
+from rasterio.windows import Window
+from shapely.affinity import affine_transform
+from shapely.geometry import Polygon, box, shape
 from shapely.ops import transform
 
 from skippercast.platform.bottom_targets import cells_qualified, terrain_metrics
@@ -80,20 +82,32 @@ def audit(root=REPO):
             footprint = transform(Transformer.from_crs('EPSG:4326', parts[0],
                                                         always_xy=True).transform,
                                   geographic_footprint)
-            windows = from_bounds(*footprint.bounds, transform=ds.transform)
-            window = windows.round_offsets().round_lengths()
-            depth = ds.read(1, window=window)
-            uncertainty = ds.read(2, window=window)
+            # Pixel edges define support, independently of which centers pass
+            # the cell screen. Use the affine quadrilateral, not its world bbox.
+            support = Polygon([ds.transform @ corner for corner in
+                               ((0, 0), (ds.width, 0), (ds.width, ds.height), (0, ds.height))])
+            fully_supported = support.covers(footprint)
+            # Bound the actual outline in pixel space, not its world bbox.
+            inverse = ~ds.transform
+            left, top, right, bottom = affine_transform(
+                footprint, (inverse.a, inverse.b, inverse.d, inverse.e, inverse.c, inverse.f)).bounds
+            col0, col1 = (min(ds.width, max(0, n)) for n in (floor(left), ceil(right)))
+            row0, row1 = (min(ds.height, max(0, n)) for n in (floor(top), ceil(bottom)))
+            window = Window(col0, row0, col1 - col0, row1 - row0)
             affine = ds.window_transform(window)
-            inside = geometry_mask([footprint], out_shape=depth.shape,
-                                   transform=affine, invert=True)
-            qualified = cells_qualified(depth, uncertainty, 2) & inside
+            depth = ds.read(1, window=window)
+            if depth.size:
+                inside = geometry_mask([footprint], out_shape=depth.shape,
+                                       transform=affine, invert=True)
+                qualified = cells_qualified(depth, ds.read(2, window=window), 2) & inside
+            else:
+                inside = qualified = np.zeros(depth.shape, dtype=bool)
             area_m2 = footprint.area
             if area_m2 < 2500:
                 status = 'held-small-display'
                 result = None
                 depth_stats = None
-            elif qualified.sum() < 20 or not qualified.all(where=inside):
+            elif not fully_supported or qualified.sum() < 20 or not qualified.all(where=inside):
                 # A displayed patch must remain wholly supported by qualified
                 # original measured cells; otherwise it stays a held research lead.
                 status = 'held-native-cell-gap'
@@ -101,8 +115,7 @@ def audit(root=REPO):
                 depth_stats = None
             else:
                 yy, xx = np.where(qualified)
-                east = affine.c + (xx + .5) * affine.a
-                north = affine.f + (yy + .5) * affine.e
+                east, north = affine @ (xx + .5, yy + .5)
                 result = terrain_metrics(east, north, depth[qualified],
                                          np.full(len(east), 2.0),
                                          hard_area_m2=area_m2)

@@ -26,6 +26,7 @@ export const entryCopy = (lang: Language = 'en') => ({
   seas: t('boatEntry.seas', lang),
   limitsHint: t('boatEntry.limitsHint', lang),
   failed: t('boatEntry.failed', lang),
+  unreadable: t('boatEntry.unreadable', lang),
 }) as const;
 
 /** The three optional fields, by input name, in the order both screens show them, labelled in `lang`. */
@@ -44,6 +45,7 @@ export type FirstUseResult = {boat: boolean; notices: string[]};
 type Boat = Record<string, unknown> & {loa_ft: number | null; name: string};
 const normalize = normalizeBoat as (input: Record<string, unknown>) => Boat;
 const blank = (value: unknown): boolean => value === undefined || value === null || String(value).trim() === '';
+const UNREADABLE = 'unreadable saved boat';
 const autoName = (name: unknown): boolean => typeof name === 'string' && /^\d+(\.\d+)? ft boat$/.test(name);
 
 export function browserStorage(): StoreStorage | null {
@@ -59,10 +61,16 @@ function saveLength(value: string, storage: StoreStorage | null): boolean {
   let saved: {boat: Record<string, unknown>} | null = null;
   // A failed read must not look like an empty store: let it throw, so the saved boat is never overwritten.
   const raw = storage.getItem(BOAT_KEY);
-  try {
-    const stored = JSON.parse(raw || 'null');
-    if (stored && stored.schema_version === 1 && stored.boat && typeof stored.boat === 'object') saved = stored;
-  } catch { saved = null; }
+  // Only a genuinely empty key (absent or '') gets defaults. Any other value that is not a readable v1 boat (malformed
+  // or whitespace-only JSON, a newer schema, a boat that is not a plain record) is left byte for byte as it is: throw
+  // UNREADABLE, so the caller says the saved boat was kept and why (F13-07).
+  if (raw !== null && raw !== '') {
+    let stored: {schema_version?: unknown; boat?: unknown} | null;
+    try { stored = JSON.parse(raw); } catch { throw new Error(UNREADABLE); }
+    const record = (v: unknown): boolean => v !== null && typeof v === 'object' && !Array.isArray(v);
+    if (!record(stored) || stored!.schema_version !== 1 || !record(stored!.boat)) throw new Error(UNREADABLE);
+    saved = stored as {boat: Record<string, unknown>};
+  }
   const next = saved
     ? {...saved, boat: {...saved.boat, loa_ft: loa, ...(autoName(saved.boat.name) ? {name} : {})}}
     : {schema_version: 1, boat: normalize({name, loa_ft: loa}), query: '', preset: null, saved_at: new Date().toISOString(), lookup: null};
@@ -80,9 +88,9 @@ export const boatSaved = signal(0);
  */
 export function saveFirstUse(entry: FirstUseEntry, storage: StoreStorage | null = browserStorage(), lang: Language = 'en'): FirstUseResult {
   const notices: string[] = [];
-  let boat = false, failed = false;
+  let boat = false, failed = false, unreadable = false;
   if (!blank(entry.lengthFt)) {
-    try { boat = saveLength(String(entry.lengthFt), storage); } catch { failed = true; }
+    try { boat = saveLength(String(entry.lengthFt), storage); } catch (error) { if (error instanceof Error && error.message === UNREADABLE) unreadable = true; else failed = true; }
     if (boat) boatSaved.value++;
   }
   if (!blank(entry.wind) || !blank(entry.seas)) {
@@ -100,52 +108,9 @@ export function saveFirstUse(entry: FirstUseEntry, storage: StoreStorage | null 
       }
     } catch { failed = true; }
   }
+  if (unreadable) notices.push(t('boatEntry.unreadable', lang));
   if (failed) notices.push(t('boatEntry.failed', lang));
   return {boat, notices};
 }
 
-// The landing navigates as soon as a profile is chosen, so a Boat choice there
-// asks for the boat on the map it opens, by the map's FirstRun: the landing
-// marks it in session storage, or — when storage is refused — as
-// ?boat-entry=ask, which the map reads once and drops from the address. The
-// save's notices are then said on the map, where the boat is saved.
-export const ASK_KEY = 'skippercast-first-use-boat';
-export const ASK_PARAM = 'boat-entry';
-export type AskStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-
-export function browserSession(): AskStorage | null {
-  try { return typeof sessionStorage === 'undefined' ? null : sessionStorage; } catch { return null; }
-}
-
-/** `url` asking the page it opens for the boat. Never throws. */
-export function carryAsk(url: string, session: AskStorage | null = browserSession()): string {
-  try {
-    if (!session) throw new Error('no session storage');
-    session.setItem(ASK_KEY, 'ask');
-    return url;
-  } catch {
-    const next = new URL(url);
-    next.searchParams.set(ASK_PARAM, 'ask');
-    return next.href;
-  }
-}
-
-/** Whether `href` was opened asking for the boat, read once (the stored mark is removed). Never throws. */
-export function takeAsk(href: string, session: AskStorage | null = browserSession()): boolean {
-  let ask = false;
-  try {
-    // Admit the carried ask before the best-effort cleanup, so a failed removal cannot revoke it.
-    if (session?.getItem(ASK_KEY)) { ask = true; session.removeItem(ASK_KEY); }
-  } catch { /* nothing carried, or the mark could not be removed */ }
-  try {
-    if (new URL(href).searchParams.get(ASK_PARAM) === 'ask') ask = true;
-  } catch { /* not a URL */ }
-  return ask;
-}
-
-/** `href` without the carried ask, so a reload or a shared link does not repeat it. */
-export function withoutAsk(href: string): string {
-  const url = new URL(href);
-  url.searchParams.delete(ASK_PARAM);
-  return url.href;
-}
+export {ASK_KEY, ASK_PARAM, browserSession, carryAsk, takeAsk, withoutAsk, type AskStorage} from './boat-ask.ts';

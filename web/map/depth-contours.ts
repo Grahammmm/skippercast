@@ -16,7 +16,7 @@
 // published file draws nothing (404).
 //
 // Erasable syntax only: tests/test_depth_contours.mjs imports this file by type stripping.
-import {effect, signal, type ReadonlySignal} from '@preact/signals';
+import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {StringId} from '../i18n.ts';
 import {cp, type CopyVar, type MarkCopyPart} from '../mark-copy.ts';
@@ -26,21 +26,25 @@ import type {ChartMark} from './coastline.ts';
 import {ZOOM_OFFSET, type Engine, type Overlay} from './engine.ts';
 import {DEPTH_CONTOURS_SOURCE, layerEntry} from './layers.ts';
 import {MPA_FILL} from './mpa.ts';
-import {readPalette, type Palette} from './palette.ts';
+import {kitZoom, type NearshoreStyle} from './nearshore-paint.ts';
+import {NEARSHORE_STYLE} from './nearshore-style.gen.ts';
+import {readPalette, sknColor, type Palette} from './palette.ts';
 import {camera} from './stage.ts';
-import {LABEL_FONT, mapControl} from './style.ts';
+import {LABEL_FONT, PLACE_LABELS, mapControl} from './style.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'depth-contours';
 /** EC6 (docs/seafloor-ec.md): where the survey could not be verified, a muted area under a dashed outline. */
 export const DEPTH_UNRESOLVED_FILL = 'depth-contours-unresolved-fill';
 export const DEPTH_UNRESOLVED_LINE = 'depth-contours-unresolved-line';
 export const DEPTH_EDGE = 'depth-contours-edge';
+/** The minor contours, then the index contours above them (kit `overlays.draw_order`: contours minor < contours index). */
 export const DEPTH_LINE = 'depth-contours-line';
+export const DEPTH_LINE_INDEX = 'depth-contours-line-index';
 /** A transparent wide line over every contour, edge and unresolved outline: the click target (the area's fill is one too). */
 export const DEPTH_HIT = 'depth-contours-hit';
-/** Labels on the index contours at every zoom, and on the others from DETAIL_ZOOM. */
+/** Labels on the index contours only, at every zoom (MSK-2, G's nearshore kit). */
 export const DEPTH_LABEL = 'depth-contours-label';
-export const DEPTH_LABEL_MINOR = 'depth-contours-label-minor';
 /** The overlay's bottom layer: the fields below it (water temperature, swell) draw under it (§ 9 order). */
 export const DEPTH_BOTTOM = DEPTH_UNRESOLVED_FILL;
 /** The MapLibre zoom the full contours load from (depth_contours.py OVERVIEW_MAX_ZOOM); `?view=` zooms are ZOOM_OFFSET more. */
@@ -48,6 +52,21 @@ export const DETAIL_ZOOM = 12;
 /** depth_contours.py INTERVAL_FT and INDEX_FT. */
 export const INTERVAL_FT = 30;
 export const INDEX_FT = 150;
+// MB-03's ft-v2 contract uses app zooms, not MapLibre zooms. At z14 native
+// lines replace the corresponding coarse runs; other coarse runs stay visible.
+const FT_V2 = 'ft-v2';
+const V2_INDEX = [60, 150, 300];
+const V2_NATIVE = 14, V2_FINE = 15, V2_NATIVE_CELL = 2, V2_LIMIT = 300;
+const V2_INTERVALS = [
+  {minzoom: 8, depths_ft: [60, 120, 180, 240, 300]},
+  {minzoom: 11, depths_ft: [30, 90, 150, 210, 270]},
+  {minzoom: 13, depths_ft: [10, 20, 40, 50, 70, 80, 100]},
+  {minzoom: V2_FINE, depths_ft: [5, 15, 25], native_max_cell_m: V2_NATIVE_CELL},
+];
+const V2_START = new Map(V2_INTERVALS.flatMap(row => row.depths_ft.map(depth => [depth, row.minzoom] as const)));
+// Above the last detail tier the camera only magnifies the same projection,
+// including the survey edges and unresolved areas.
+const V2_ZOOMS = [V2_FINE, V2_NATIVE, 13, 11, 8];
 const KINDS = ['contour', 'survey-edge', 'unresolved-area'];
 /** seafloor_ec.py PROVENANCE_CLASSES and UNRESOLVED_REASONS. */
 const PROVENANCE = ['measured', 'filled', 'verified'];
@@ -70,7 +89,7 @@ export interface ContourSource {
   readonly source_id: string; readonly name: string; readonly url: string; readonly attribution: string;
   readonly survey_date: string; readonly vertical_datum: string;
 }
-export interface ContourCollection {readonly type: 'FeatureCollection'; readonly features: readonly Json[]}
+export interface ContourCollection {readonly type: 'FeatureCollection'; readonly features: readonly Json[]; readonly set?: typeof FT_V2}
 /** A bound survey the file does not draw, with its catalog review_status (provenance `sources_omitted`). */
 export interface OmittedSource {readonly source_id: string; readonly review_status: string}
 /** drawn: checked and current; none: the region publishes none; withheld: past its age limit; failed: did not load or failed its check. */
@@ -84,6 +103,7 @@ export interface ContourAssessment {
 }
 export interface ContourState {
   readonly status: ContourStatus; readonly note: string; readonly sources: readonly ContourSource[]; readonly omitted: readonly OmittedSource[];
+  readonly set?: ContourCollection['set'];
 }
 
 export const NOTES = {
@@ -139,17 +159,23 @@ const area = (g: Json | null): boolean => {
 };
 
 /**
- * Check a published contour file for `id` at `today` (YYYY-MM-DD, UTC): its region, feet, the 30 ft interval, a
+ * Check a published contour file for `id` at `today` (YYYY-MM-DD, UTC): its region, feet, the interval contract, a
  * listed source with survey date and datum on every line, line geometry, and `review_expires`. Past that date
  * the contours are withheld; any other gap fails the whole file (nothing partial draws).
  */
 export function assessContours(data: unknown, id: string, today: string): ContourAssessment {
   const failed = FAILED;
   const d = obj(data), p = obj(d?.provenance), list = d?.features;
-  if (d?.type !== 'FeatureCollection' || !p || p.region_id !== id || p.units !== 'ft' || p.interval_ft !== INTERVAL_FT || !Array.isArray(list)) return failed;
+  if (d?.type !== 'FeatureCollection' || !p || p.region_id !== id || p.units !== 'ft' || !Array.isArray(list)) return failed;
+  const v2 = p.set === FT_V2;
+  if (v2 ? p.shelf_limit_ft !== V2_LIMIT || p.publication_held === true || p.interval_ft !== undefined
+    || !sameNumbers(p.index_depths_ft, V2_INDEX) || !v2IntervalsMatch(p.intervals)
+    : p.set !== undefined || p.interval_ft !== INTERVAL_FT) return failed;
   const expires = text(p.review_expires);
   if (!DAY.test(expires) || !realDay(expires)) return failed;
-  const sources = (Array.isArray(p.sources) ? p.sources : []).map(obj).filter((s): s is Json => !!s).map(s => ({
+  const entries = (Array.isArray(p.sources) ? p.sources : []).map(obj).filter((s): s is Json => !!s);
+  const nativeCells = new Map(entries.map(s => [text(s.source_id), s.native_cell_m]));
+  const sources = entries.map(s => ({
     source_id: text(s.source_id), name: text(s.name), url: text(s.url), attribution: text(s.attribution),
     survey_date: text(s.survey_date), vertical_datum: text(s.vertical_datum)}));
   if (!sources.length || sources.some(s => !s.source_id || !s.name || !s.survey_date || !s.vertical_datum)) return failed;
@@ -163,7 +189,8 @@ export function assessContours(data: unknown, id: string, today: string): Contou
     // The kind is matched exactly, as the layer filters match it: a padded kind would pass here and draw nowhere.
     if (!props || !s || !KINDS.includes(props.kind as string) || props.survey_date !== s.survey_date || props.vertical_datum !== s.vertical_datum) return false;
     const depth = props.depth_ft;
-    if (props.kind === 'contour' && !(Number.isInteger(depth) && (depth as number) > 0 && (depth as number) % INTERVAL_FT === 0)) return false;
+    if (v2 ? !validV2Feature(props, nativeCells.get(s.source_id))
+      : props.kind === 'contour' && !(Number.isInteger(depth) && (depth as number) > 0 && (depth as number) % INTERVAL_FT === 0)) return false;
     if (props.provenance !== undefined && !PROVENANCE.includes(props.provenance as string)) return false;
     // An unresolved area is a polygon with a known reason; only a conflict carries the shallower reading.
     if (props.kind !== 'unresolved-area') return line(obj(obj(f)?.geometry));
@@ -174,38 +201,76 @@ export function assessContours(data: unknown, id: string, today: string): Contou
   });
   if (!valid) return failed;
   if (today > expires) return {status: 'withheld', data: null, sources, expires, omitted};
-  return {status: 'drawn', data: {type: 'FeatureCollection', features: list as Json[]}, sources, expires, omitted};
+  return {status: 'drawn', data: {type: 'FeatureCollection', features: list as Json[], ...v2 ? {set: FT_V2} : {}}, sources, expires, omitted};
 }
 
-/** Unresolved areas (muted, dashed outline), survey edge (dashed), contours (index heavier, verified heavier still,
- * filled dashed), the click target, then the labels in feet. */
-export function contoursOverlay(p: Palette, data: ContourCollection): Overlay {
-  const contour = ['==', ['get', 'kind'], 'contour'], index = ['==', ['get', 'index'], true];
-  const unresolved = ['==', ['get', 'kind'], 'unresolved-area'];
-  const wk = mapControl(p.mapContourWidth, 'map-contour-width', 'positive');  // 1 = the weights below as drawn
-  const heavier = (w: unknown) => ['*', w, ['case', ['==', ['get', 'provenance'], 'verified'], 1.25 * wk, wk]];
-  const label = {'symbol-placement': 'line', 'text-field': ['concat', ['to-string', ['get', 'depth_ft']], ' ft'], 'text-font': [LABEL_FONT],
-    'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 14, 12], 'symbol-spacing': 320, 'text-max-angle': 30};
-  const labelPaint = {'text-color': p.mapContour, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.2};
+const sameNumbers = (got: unknown, want: readonly number[]): boolean =>
+  Array.isArray(got) && got.length === want.length && want.every((n, i) => got[i] === n);
+function v2IntervalsMatch(value: unknown): boolean {
+  return Array.isArray(value) && value.length === V2_INTERVALS.length && V2_INTERVALS.every((want, i) => {
+    const got = obj(value[i]);
+    return got?.minzoom === want.minzoom && sameNumbers(got.depths_ft, want.depths_ft) && got.native_max_cell_m === want.native_max_cell_m;
+  });
+}
+
+function validV2Feature(p: Json, cell: unknown): boolean {
+  if (p.kind !== 'contour') return p.minzoom === 8 && p.maxzoom === undefined && p.index === false;
+  const depth = p.depth_ft as number, start = V2_START.get(depth);
+  if (start === undefined || p.index !== V2_INDEX.includes(depth) || p.estimated !== true) return false;
+  const native = typeof cell === 'number' && cell > 0 && cell <= V2_NATIVE_CELL;
+  if (p.minzoom === Math.max(V2_NATIVE, start) && native) {
+    return p.maxzoom === undefined && (p.provenance === undefined || p.provenance === 'measured');
+  }
+  return start < V2_NATIVE && p.minzoom === start && (p.maxzoom === undefined || native && p.maxzoom === V2_NATIVE);
+}
+
+const visibleV2 = (p: Json, zoom: number): boolean =>
+  zoom >= (p.minzoom as number) && (p.maxzoom === undefined || zoom < (p.maxzoom as number));
+function contoursAt(data: ContourCollection, zoom: number): ContourCollection {
+  // One projection for paint, labels and picking. Only rerun at a zoom tier, not on every pan or fractional camera change.
+  return {...data, features: data.features.filter(f => visibleV2(f.properties as Json, zoom))}; // checked by assessContours
+}
+
+/** Unresolved areas (muted, dashed outline), survey edge (dashed), minor then index contours (verified heavier, filled dashed),
+ * the click target, then the index labels in feet. MSK-2: contour ink, widths, opacities and labels are G's nearshore kit
+ * (web/map/nearshore-style.gen.ts), the same in both themes; `style` is that module unless a test hands in an edited copy. */
+export function contoursOverlay(p: Palette, data: ContourCollection, style: NearshoreStyle = NEARSHORE_STYLE): Overlay {
   return {
     sources: {[DEPTH_CONTOURS_SOURCE]: {type: 'geojson', data, attribution: layerEntry(REGISTRY_ID).attribution} as MapLibre.SourceSpecification},
-    layers: [
-      {id: DEPTH_UNRESOLVED_FILL, type: 'fill', source: DEPTH_CONTOURS_SOURCE, filter: unresolved, paint: {'fill-color': p.mapLabel, 'fill-opacity': 0.18}},
-      {id: DEPTH_UNRESOLVED_LINE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: unresolved, layout: {'line-join': 'round'},
-        paint: {'line-color': p.mapLabel, 'line-width': 1, 'line-dasharray': [1, 2]}},
-      {id: DEPTH_EDGE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: ['==', ['get', 'kind'], 'survey-edge'], layout: {'line-join': 'round'},
-        paint: {'line-color': p.mapLabel, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.8, 14, 1.4], 'line-dasharray': [2, 2], 'line-opacity': 0.8}},
-      {id: DEPTH_LINE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: contour, layout: {'line-join': 'round', 'line-cap': 'round'},
-        paint: {'line-color': p.mapContour,
-          // A zoom curve must stay the outermost expression, so the verified factor multiplies each stop.
-          'line-width': ['interpolate', ['linear'], ['zoom'], 8, heavier(['case', index, 0.9, 0.4]), 14, heavier(['case', index, 1.6, 0.8])],
-          'line-dasharray': ['case', ['==', ['get', 'provenance'], 'filled'], ['literal', [4, 3]], ['literal', [1, 0]]],
-          'line-opacity': ['case', index, 0.85, 0.55]}},
-      {id: DEPTH_HIT, type: 'line', source: DEPTH_CONTOURS_SOURCE, paint: {'line-color': p.mapContour, 'line-width': 12, 'line-opacity': 0}},
-      {id: DEPTH_LABEL, type: 'symbol', source: DEPTH_CONTOURS_SOURCE, filter: ['all', contour, index], layout: label, paint: labelPaint},
-      {id: DEPTH_LABEL_MINOR, type: 'symbol', source: DEPTH_CONTOURS_SOURCE, minzoom: DETAIL_ZOOM, filter: ['all', contour, ['!', index]], layout: label, paint: labelPaint},
-    ] as MapLibre.LayerSpecification[],
+    layers: contourLayers(p, style),
+    themePaint: palette => paintEdits(contourLayers(palette, style)),
   };
+}
+
+function contourLayers(p: Palette, style: NearshoreStyle): MapLibre.LayerSpecification[] {
+  const contour = ['==', ['get', 'kind'], 'contour'], index = ['==', ['get', 'index'], true];
+  const unresolved = ['==', ['get', 'kind'], 'unresolved-area'];
+  const c = style.contours, type = style.typography;
+  const wk = mapControl(p.mapContourWidth, 'map-contour-width', 'positive');  // 1 = the kit's widths as drawn
+  // A zoom curve must stay the outermost expression, so the verified factor multiplies each stop.
+  const width = (pairs: readonly (readonly [number, number])[]) => {
+    const w = kitZoom(pairs), heavier = (v: unknown) => ['*', v, ['case', ['==', ['get', 'provenance'], 'verified'], 1.25 * wk, wk]];
+    return Array.isArray(w) ? [...w.slice(0, 3), ...w.slice(3).map((v, i) => i % 2 ? heavier(v) : v)] : heavier(w);
+  };
+  const dash = ['case', ['==', ['get', 'provenance'], 'filled'], ['literal', [4, 3]], ['literal', [1, 0]]];
+  const line = (id: string, filter: unknown[], color: string, tier: typeof c.minor | typeof c.index) => ({id, type: 'line', source: DEPTH_CONTOURS_SOURCE,
+    filter: ['all', contour, filter], layout: {'line-join': 'round', 'line-cap': 'round'},
+    paint: {'line-color': color, 'line-width': width(tier.width_px), 'line-dasharray': dash, 'line-opacity': kitZoom(tier.opacity)}});
+  return [
+    {id: DEPTH_UNRESOLVED_FILL, type: 'fill', source: DEPTH_CONTOURS_SOURCE, filter: unresolved, paint: {'fill-color': p.mapLabel, 'fill-opacity': 0.18}},
+    {id: DEPTH_UNRESOLVED_LINE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: unresolved, layout: {'line-join': 'round'},
+      paint: {'line-color': p.mapLabel, 'line-width': 1, 'line-dasharray': [1, 2]}},
+    {id: DEPTH_EDGE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: ['==', ['get', 'kind'], 'survey-edge'], layout: {'line-join': 'round'},
+      paint: {'line-color': p.mapLabel, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.8, 14, 1.4], 'line-dasharray': [2, 2], 'line-opacity': 0.8}},
+    line(DEPTH_LINE, ['!', index], sknColor(p, c.ink), c.minor),
+    line(DEPTH_LINE_INDEX, index, sknColor(p, c.index_ink), c.index),
+    {id: DEPTH_HIT, type: 'line', source: DEPTH_CONTOURS_SOURCE, paint: {'line-color': p.mapContour, 'line-width': 12, 'line-opacity': 0}},
+    // Labels on index lines only (kit `contours.tiers[].label`); DM Sans Medium stays the map font (kit conflict C13).
+    {id: DEPTH_LABEL, type: 'symbol', source: DEPTH_CONTOURS_SOURCE, filter: ['all', contour, index],
+      layout: {'symbol-placement': 'line', 'text-field': ['concat', ['to-string', ['get', 'depth_ft']], ' ft'], 'text-font': [LABEL_FONT],
+        'text-size': kitZoom(type.contour_label.size_px), 'symbol-spacing': c.label.symbol_spacing_px, 'text-max-angle': 30},
+      paint: {'text-color': sknColor(p, type.ink), 'text-halo-color': sknColor(p, type.halo), 'text-halo-width': type.contour_label.halo_px}},
+  ] as MapLibre.LayerSpecification[];
 }
 
 /** What a contour run's provenance adds to its card, and the card's reading for each unresolved reason (EC6). */
@@ -222,17 +287,20 @@ const UNRESOLVED_READING = new Map([
 
 /** The card for a clicked line, from its own properties and its listed survey: depth, interval, survey, date and datum,
  * then any bound survey the file does not draw (`omittedNote`). */
-export function contourMark(properties: Record<string, unknown> | null | undefined, sources: readonly ContourSource[], omitted: readonly OmittedSource[] = []): ChartMark | null {
+export function contourMark(properties: Record<string, unknown> | null | undefined, sources: readonly ContourSource[], omitted: readonly OmittedSource[] = [], v2Zoom?: number): ChartMark | null {
   const p = properties ?? {}, s = sources.find(x => x.source_id === p.source_id);
   if (!s || !KINDS.includes(p.kind as string)) return null;
-  const source = `${s.name} · ${s.attribution || 'survey grid'} · surveyed ${s.survey_date} · ${s.vertical_datum}`;
-  const basis = layerEntry(REGISTRY_ID).basis;
+  const v2 = v2Zoom !== undefined;
+  if (v2 && !visibleV2(p, v2Zoom)) return null;
+  const source = `Surveyed ${s.survey_date} · ${s.vertical_datum}`;
+  // The v1 basis describes 16 m blocks and the old 600 ft shelf limit; neither applies to v2.
+  const basis = v2 ? 'Not for navigation.' : layerEntry(REGISTRY_ID).basis;
   const terms = /^https:\/\//.test(s.url) ? [{href: s.url, label: 'Survey data release'}] : undefined;
   const note = omittedNote(omitted), more = note ? ` ${note}` : '';
   // The card's words as catalogue parts: the registry's own basis sentence, the code's wrappers; names, ids and dates stay as published.
   const moreCopy: MarkCopyPart[] = note ? [' ', ...omittedCopy(omitted)] : [];
-  const sourceCopy = [cp(cid('source'), {name: s.name, attribution: s.attribution || {id: cid('surveyGrid')}, date: s.survey_date, datum: s.vertical_datum})];
-  const common = {source: sourceCopy, basis: [cp('layer.depth-contours.basis')]};
+  const sourceCopy = [cp(cid('source'), {date: s.survey_date, datum: s.vertical_datum})];
+  const common = {source: sourceCopy, basis: [cp(v2 ? 'brief.skill.nav' : 'layer.depth-contours.basis')]};
   const copyTerms = terms ? {copyTerms: [[cp(cid('release'))]]} : {};
   if (p.kind === 'unresolved-area') {
     const hint = Number(p.shoal_hint_ft), reason = String(p.reason), reading = UNRESOLVED_READING.get(reason);
@@ -252,13 +320,24 @@ export function contourMark(properties: Record<string, unknown> | null | undefin
   };
   const depth = Number(p.depth_ft);
   if (!Number.isInteger(depth) || depth <= 0) return null;
+  const index = !v2 && depth % INDEX_FT === 0;
+  // In v2 the index depths are not equally spaced. State the active contour
+  // interval in the tapped depth band rather than implying an index interval.
+  const interval = v2 ? v2Zoom < 11 ? 60 : v2Zoom < 13 || depth > 100 ? 30
+    : v2Zoom >= V2_FINE && (p.minzoom as number) >= V2_NATIVE && depth <= 30 ? 5 : 10
+    : index ? INDEX_FT : INTERVAL_FT;
+  const name = index ? 'Index contour' : 'Depth contour';
+  const reading = v2 ? `Estimated: ${depth} ft below the survey's ${s.vertical_datum}; not a sounding or a chart depth.`
+    : `${depth} ft below the survey's ${s.vertical_datum}, traced from 16 m averaged blocks of the survey grid; not a sounding or a chart depth.`;
+  const readingCopy = v2 ? [`Estimado: ${depth} ft bajo el datum ${s.vertical_datum} del levantamiento; no es un sondeo ni una profundidad de carta.`]
+    : [cp(cid('reading.base'), {depth, datum: s.vertical_datum})];
   return {
     id: `depth-contours:${s.source_id}:${depth}`, name: `${depth} ft depth contour`,
-    kind: depth % INDEX_FT === 0 ? `Index contour · every ${INDEX_FT} ft` : `Depth contour · every ${INTERVAL_FT} ft`,
-    reading: `${depth} ft below the survey's ${s.vertical_datum}, traced from 16 m averaged blocks of the survey grid; not a sounding or a chart depth.${PROVENANCE_READING.get(p.provenance as string) ?? ''}${more}`,
+    kind: `${name} · every ${interval} ft`,
+    reading: `${reading}${PROVENANCE_READING.get(p.provenance as string) ?? ''}${more}`,
     source, basis, ...(terms ? {terms} : {}), ...copyTerms,
-    copy: {name: [cp(cid('name'), {depth})], kind: [depth % INDEX_FT === 0 ? cp(cid('index'), {n: INDEX_FT}) : cp(cid('minor'), {n: INTERVAL_FT})], ...common,
-      reading: [cp(cid('reading.base'), {depth, datum: s.vertical_datum}), ...p.provenance === 'filled' || p.provenance === 'verified' ? [cp(cid(`prov.${p.provenance}`))] : [], ...moreCopy]},
+    copy: {name: [cp(cid('name'), {depth})], kind: [cp(cid(index ? 'index' : 'minor'), {n: interval})], ...common,
+      reading: [...readingCopy, ...p.provenance === 'filled' || p.provenance === 'verified' ? [cp(cid(`prov.${p.provenance}`))] : [], ...moreCopy]},
   };
 }
 
@@ -279,7 +358,13 @@ type Loaded = {region: string; path: string; result: ContourAssessment | 'none';
 export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette(), now = () => Date.now(), host, diagnostics}: DepthContourOptions) {
   const loaded = signal<Loaded | null>(null);
   const counting = !!host && (diagnostics ?? new URL(page()).searchParams.get('diagnostics') === '1');
+
+  const tier = computed(() => {
+    const zoom = camera.value?.zoom ?? 0;
+    return V2_ZOOMS.find(z => z <= zoom) ?? 0;
+  });
   let asked = '', detailRegion: string | null = null, drawn = false, drawnOn: Engine | null = null, alive = true, stopIdle: (() => void) | null = null;
+  let lastSet: ContourCollection['set'];
   async function load(id: string, path: string): Promise<void> {
     let result: Loaded['result'], retryAt: number | undefined;
     try {
@@ -319,16 +404,23 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       if (!l || l.region !== id) return;
       const r = l.result;
       contourState.value = r === 'none' ? {status: 'none', note: NOTES.none, sources: [], omitted: []}
-        : {status: r.status, note: r.status === 'drawn' ? omittedNote(r.omitted) : NOTES[r.status], sources: r.sources, omitted: r.omitted};
+        : {status: r.status, note: r.status === 'drawn' ? omittedNote(r.omitted) : NOTES[r.status], sources: r.sources, omitted: r.omitted,
+          ...r.data?.set ? {set: r.data.set} : {}};
     }),
     effect(() => {
       const e = engine.value, l = loaded.value, id = region.value;
       if (!e) return;
       const data = l && l.region === id && l.result !== 'none' && l.result.status === 'drawn' ? l.result.data : null;
       if (!data) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
-      // § 9 draw order: above the water temperature and swell fields, under the protected areas.
-      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, contoursOverlay(palette(), data), MPA_FILL);
-      e.setData(DEPTH_CONTOURS_SOURCE, data as never);
+      const visible = data.set === FT_V2 ? contoursAt(data, tier.value) : data;
+      // § 9 draw order: above the water temperature, chlorophyll and swell fields, under the basemap's place labels (the kit's top slot) and the protected areas.
+      if (!drawn || e !== drawnOn || lastSet !== data.set) {
+        // A different set is a different file: install it afresh.
+        if (drawn && e === drawnOn) e.setOverlay(REGISTRY_ID, null);
+        e.setOverlay(REGISTRY_ID, contoursOverlay(palette(), visible), [PLACE_LABELS, MPA_FILL]);
+        lastSet = data.set;
+      }
+      e.setData(DEPTH_CONTOURS_SOURCE, visible as never);
       drawn = true; drawnOn = e;
     }),
     // Diagnostics only (the count is a rendered-feature query): what a click can pick, as MapLibre last drew it.
@@ -342,7 +434,8 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
     destroy() { alive = false; for (const dispose of disposers) dispose(); stopIdle?.(); if (host) delete host.dataset.contoursDrawn; contourState.value = IDLE; },
     pick: {layers: [DEPTH_HIT, DEPTH_UNRESOLVED_FILL] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
       const l = loaded.peek();
-      return l && l.result !== 'none' && l.result.status === 'drawn' ? contourMark(properties, l.result.sources, l.result.omitted) : null;
+      return l && l.region === region.peek() && l.result !== 'none' && l.result.status === 'drawn'
+        ? contourMark(properties, l.result.sources, l.result.omitted, l.result.data?.set === FT_V2 ? tier.peek() : undefined) : null;
     }},
   };
 }

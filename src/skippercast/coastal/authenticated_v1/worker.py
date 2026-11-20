@@ -217,7 +217,7 @@ def run(request_path,output_path):
             observation=produce_snapshot(view,root,source,output_dir=relative,
                 collector=captured.append,
                 review=packet.get('review') if phase=='qualify' else None,
-                mask_writer=mask_writer if manager else None,write_observation=manager is None,**args)
+                mask_writer=mask_writer if manager else None,write_observation=False,**args)
             if selected['name']:observation['execution_profile']=selected['name']
             if selected['name']=='coastal-contained-windows-v3':observation.update(window_side=selected['side'],window_count=selected['window_count'])
             if packet.get('support_policy') is not None:observation['support_policy']=packet['support_policy']
@@ -226,12 +226,9 @@ def run(request_path,output_path):
             observation['source_relative_path']=job['source_relative_path']
             observation['accepted']=False
             observation['commit_required']=True
+            # The canonical observation is written once, after diagnostics, in managed and unmanaged runs.
             observation_ref=None
-            if manager is None:
-                emit(out/'observation.json',observation)
-                observation_ref=ref(root,out/'observation.json','coastal-authenticated-observation-v1')
             refs.append(observation['valid_support'])
-            if observation_ref is not None:refs.append(observation_ref)
             result=dict(schema=RESULT,state='done' if not observation['machine_holds'] else 'held',rc=0 if not observation['machine_holds'] else 3,
                         accepted=False,qualification=False,holds=observation['machine_holds'],source=source,source_root=source_root,source_relative_path=job['source_relative_path'],
                         plan=plan_ref,observation=observation_ref,facts_digest=observation['facts_digest'],
@@ -260,11 +257,9 @@ def run(request_path,output_path):
             observation.update(policy_sha256=selected_sha,trial_policy_sha256=packet['trial_policy_sha256'],
                 diagnostics=result['diagnostics'],policy_ready=evaluation['paired_eligibility_quality_pass'],
                 policy_holds=evaluation['holds'])
-            previous_observation_ref=observation_ref
             emit(out/'observation.json',observation)
             observation_ref=ref(root,out/'observation.json','coastal-authenticated-observation-v1')
-            if previous_observation_ref is None:refs.append(observation_ref)
-            else:refs[refs.index(previous_observation_ref)]=observation_ref
+            refs.append(observation_ref)
             result['observation']=observation_ref
             if phase=='qualify':
                 if observation['facts_digest']!=packet['registered_observation']['facts_digest']:raise ValueError('fresh producer facts differ from reviewed observation')

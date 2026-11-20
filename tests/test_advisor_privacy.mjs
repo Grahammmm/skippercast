@@ -76,32 +76,52 @@ test('nothing under server/advisor/ calls console.* except log.ts', () => {
   assert.deepEqual(offenders, [], 'log through advisorLog() so numbers are redacted');
 });
 
-// Hardening (docs/legal/threat-model.md § 9.1, § 9.3): a secret in a path never reaches our logs.
-test('the shared error log redacts path secrets: the webhook token and old-form upload and export tokens', async () => {
-  const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
-  globalThis.REGIONS ??= {'morro-bay': read('../regions/morro-bay/region.json')};
-  globalThis.DEPLOYMENT ??= read('../deployments/production.json');
-  globalThis.SHELLS ??= {'/': '/index.0123456789.html'};
-  globalThis.BUILD_ID ??= 'build-test';
-  const {redactPath, onError} = await import('../server/middleware/error.ts');
+// Hardening (docs/legal/threat-model.md § 9.1, § 9.3): this covers webhook
+// tokens and old-form upload/export tokens at the real logging boundary.
+test('API errors log route classes, not request paths or details', async t => {
+  globalThis.REGIONS ??= {};
+  globalThis.DEPLOYMENT ??= {allowed_origins: []};
+  const {onError} = await import('../server/middleware/error.ts');
+  const {requestId} = await import('../server/middleware/request-id.ts');
+  const {ClientError, RateLimited} = await import('../server/errors.ts');
   const {Hono} = await import('hono');
-  const SECRET = 'WEBHOOK-TOKEN-a1b2c3d4e5';
-  for (const [path, out] of [
-    [`/api/advisor/inbound/bluebubbles/${SECRET}`, '/api/advisor/inbound/bluebubbles/[redacted]'],
-    [`/api/advisor/inbound/twilio/${SECRET}`, '/api/advisor/inbound/twilio/[redacted]'],
-    [`/api/advisor/inbound/twilio-status/${SECRET}`, '/api/advisor/inbound/twilio-status/[redacted]'],
-    [`/api/advisor/upload/${SECRET}`, '/api/advisor/upload/[redacted]'],
-    [`/api/advisor/export/${SECRET}`, '/api/advisor/export/[redacted]'],
-    ['/api/advisor/upload', '/api/advisor/upload'], ['/api/advisor/inbound/meta', '/api/advisor/inbound/meta'], ['/api/boat/lookup', '/api/boat/lookup'],
-  ]) assert.equal(redactPath(path), out, path);
   const app = new Hono();
-  app.post('/api/advisor/inbound/bluebubbles/:token', () => { throw Error('boom'); });
+  app.use('*', requestId);
   app.onError(onError);
-  const saved = console.error, lines = [];
-  console.error = (...args) => lines.push(JSON.stringify(args));
-  let response;
-  try { response = await app.fetch(new Request(`https://x/api/advisor/inbound/bluebubbles/${SECRET}`, {method: 'POST'})); } finally { console.error = saved; }
-  assert.equal(response.status, 503);
-  assert.ok(lines.length > 0 && lines.every(l => !l.includes(SECRET)), 'the token is not in the log line');
-  assert.ok(lines.some(l => l.includes('[redacted]')));
+  const detail = 'synthetic-exception-detail', unavailable = 'This service is temporarily unavailable. Your existing records are preserved.';
+  const dependency = [Error, detail, 503, 'dependency', unavailable];
+  const advisorRoutes = ['inbound/bluebubbles', 'inbound/twilio', 'inbound/twilio-status', 'upload', 'export']
+    .map(path => `/api/advisor/${path}/:token`);
+  const cases = [
+    ['/api/spots/:id', '/api/spots/:id', 'fixture-private-record', ...dependency],
+    ...advisorRoutes.map(route => [route, route, ' fixture-token ', ...dependency]),
+    ['/api/catch-log/:id', '/api/catch-log/:id', 'fixture-catch', ClientError, 'Invalid entry', 400, 'validation', 'Invalid entry'],
+    ['/api/boat/lookup', '/api/boat/lookup', '', RateLimited, detail, 429, 'rate', 'Please try again shortly'],
+    ['/api/*', 'unmatched', 'fixture-unknown-tail', ...dependency],
+  ];
+  const urlFor = (pattern, value) => `https://example.test${pattern.replace(/:id|:token|\*/, encodeURIComponent(value))}?q=fixture-private-query`;
+  app.get('/api/control/:id', c => c.json({ok: true}));
+  for (const [pattern, , , Failure, message] of cases) app.get(pattern, () => { throw new Failure(message); });
+
+  const saved = console.error, calls = [];
+  console.error = (...args) => calls.push(args);
+  try {
+    for (const [pattern, route, value, , , status, type, error] of cases) {
+      await t.test(pattern, async () => {
+        calls.length = 0;
+        const response = await app.request(urlFor(pattern, value));
+        const id = response.headers.get('X-Request-Id');
+        assert.match(id, /^[0-9a-f-]{36}$/);
+        assert.equal(response.status, status);
+        assert.deepEqual(await response.json(), {error, request_id: id});
+        // Exact fields: no path value, query, exception details or extra arguments.
+        assert.deepEqual(calls, [['SkipperCast request failed', {route, status, type, request_id: id}]]);
+      });
+    }
+    calls.length = 0;
+    const ok = await app.request(urlFor('/api/control/:id', 'fixture-private-record'));
+    assert.equal(ok.status, 200);
+    assert.deepEqual(await ok.json(), {ok: true});
+    assert.deepEqual(calls, [], 'a successful request does not log an error');
+  } finally { console.error = saved; }
 });

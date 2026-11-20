@@ -59,6 +59,20 @@ test('the page is small, static and links back to /map and /', () => {
   assert.doesNotMatch(PAGE, /<script|<form|<style|https?:\/\//i);
 });
 
+test('not_found_has_spanish_block', async () => {
+  const response = await call('/old/link', {headers: HTML});
+  assert.equal(response.status, 404); assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  const body = await response.text(), spanish = body.match(/<section lang="es"[^>]*>([\s\S]*?)<\/section>/)?.[1];
+  assert.ok(spanish, 'the served page has a Spanish section');
+  assert.match(spanish, /<h2\b[^>]*>Esta página no está aquí\.<\/h2>/);
+  assert.match(spanish, /El enlace puede ser antiguo o estar mal escrito\./);
+  assert.match(spanish, /<a href="\/map"[^>]*>Abrir el mapa<\/a>/);
+  assert.match(spanish, /<a href="\/"[^>]*>Inicio<\/a>/);
+  assert.ok(body.indexOf('<section lang="es"') > body.indexOf('>Home</a>'), 'Spanish follows English');
+  assert.match(body, /<title>Page not found · Página no encontrada · SkipperCast<\/title>/);
+  assert.doesNotMatch(body, /<script\b/i);
+});
+
 test('unknown_page_get_is_branded_but_still_404', async () => {
   for (const path of ['/nope', '/old/link', '/old/link.html', '/old.release.html', '/old.release.v2.html', '/old/link/', '/nope?x=1&y=<b>', '/apiary', '/Nope']) await assertBranded(await call(path, {headers: HTML}), path);
   const page = await (await call('/nope?q=zzzmarker', {headers: HTML})).text();
@@ -94,6 +108,43 @@ test('head_and_other_methods_do_not_synthesize', async () => {
   for (const method of ['POST', 'PUT', 'OPTIONS', 'DELETE']) {
     const r = await call('/nope', {method, headers: HTML});
     assert.equal(r.headers.get('Content-Type') === 'text/html; charset=utf-8' && r.headers.get('Vary') === 'Accept', false, method);
+  }
+});
+
+// An off-by-one, a filled gap, or forwarding the old query breaks this contract.
+test('only receipt-pinned GPX links redirect without old selection', async () => {
+  const links = ['complete', 'drift-lines', 'reef-outlines', 'waypoints'];
+  for (let i = 1; i <= 136; i++) {
+    if (![13, 14, 15, 16].includes(i)) links.push(`targets/SC26-${String(i).padStart(3, '0')}`);
+  }
+  assert.equal(links.length, 136);
+  const env = {ASSETS: {fetch: () => assert.fail('redirect must not look up the old asset')}};
+  for (const file of links) for (const method of ['GET', 'HEAD']) {
+    const path = `/downloads/${file}.gpx`;
+    const r = await call(`${path}?target=old&id=old&lat=1&lon=2#old`, {method, headers: HTML, env});
+    assert.equal(r.status, 302, path);
+    assert.equal(r.headers.get('Location'), '/map#export', path);
+    assert.equal(r.headers.get('Cache-Control'), 'no-store', path);
+    assert.equal(await r.text(), '', path);
+  }
+  for (const file of ['targets/SC26-000.gpx', 'targets/SC26-013.gpx', 'targets/SC26-014.gpx',
+    'targets/SC26-015.gpx', 'targets/SC26-016.gpx', 'targets/SC26-137.gpx', 'complete.GPX',
+    'other.gpx', 'complete.gpx/', '%63omplete.gpx', 'targets//SC26-001.gpx']) {
+    await assertUntouched(await call(`/downloads/${file}`, {headers: HTML}), file);
+  }
+  await assertUntouched(await call('/downloads/complete.gpx', {method: 'POST'}), 'POST');
+});
+
+// A prefix redirect would hide neighboring non-GPX assets.
+test('license and spot notes remain downloadable at their original paths', async () => {
+  const env = {ASSETS: {fetch(request) {
+    const file = new URL(`../dist${new URL(request.url).pathname}`, import.meta.url);
+    return new Response(readFileSync(file));
+  }}};
+  for (const name of ['LICENSE.txt', 'spot-notes.html']) {
+    const r = await call(`/downloads/${name}`, {headers: HTML, env});
+    assert.equal(r.status, 200, name);
+    assert.deepEqual(Buffer.from(await r.arrayBuffer()), readFileSync(new URL(`../dist/downloads/${name}`, import.meta.url)));
   }
 });
 

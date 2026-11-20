@@ -27,7 +27,7 @@ def kind_of(model):
 
 def public_url(model, params):
     """The equivalent public query, recorded as each source's provenance URL."""
-    return f"{API}/v1/{kind_of(model)}?{urlencode(params)}"
+    return f"{API}/v1/{kind_of(model)}?{urlencode({**params, 'models': model})}"
 
 
 def meta_url(model):

@@ -81,7 +81,7 @@ export const RETRY_AFTER_SECONDS = 60;
 /** True when the Rate Limiting binding says this key is over its limit. */
 export async function overLimit(limiter: RateLimit | undefined, key: string): Promise<boolean> {
   if (typeof limiter?.limit !== 'function') return false;
-  try { return !(await limiter.limit({key})).success; }
+  try { return (await limiter.limit({key}))?.success === false; }
   catch { return false; }
 }
 

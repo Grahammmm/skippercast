@@ -6,16 +6,21 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
+import {prepareCatalogue} from '../web/i18n.ts';
+import {resolveMarkCopy} from '../web/mark-copy.ts';
 import {
-  DEPTH_BOTTOM, DEPTH_EDGE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR, DEPTH_LINE, DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DETAIL_ZOOM, INDEX_FT, INTERVAL_FT, NOTES,
+  DEPTH_BOTTOM, DEPTH_EDGE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DETAIL_ZOOM, INDEX_FT, INTERVAL_FT, NOTES,
   assessContours, contourMark, contourState, contoursFor, contoursOverlay, createDepthContours, depthContoursOverviewURL, depthContoursURL, omittedNote,
 } from '../web/map/depth-contours.ts';
 import {ZOOM_OFFSET} from '../web/map/engine.ts';
 import {DEPTH_CONTOURS_SOURCE, layerEntry, sourceLayer} from '../web/map/layers.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
+import {PLACE_LABELS} from '../web/map/style.ts';
+import {NEARSHORE_STYLE} from '../web/map/nearshore-style.gen.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
+import {themes} from '../scripts/check_contrast.mjs';
 
 const ROOT = new URL('..', import.meta.url);
 const json = path => JSON.parse(readFileSync(new URL(path, ROOT), 'utf8'));
@@ -91,23 +96,22 @@ test('the overlay: a dashed survey edge, contours heavier at the index, a click 
   const o = contoursOverlay(sentinel, OVERVIEW);
   assert.deepEqual(Object.keys(o.sources), [DEPTH_CONTOURS_SOURCE]);
   assert.equal(sourceLayer(DEPTH_CONTOURS_SOURCE), 'depth-contours');
-  assert.deepEqual(o.layers.map(l => l.id), [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR]);
+  assert.deepEqual(o.layers.map(l => l.id), [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL]);
   const by = id => o.layers.find(l => l.id === id);
   assert.deepEqual(by(DEPTH_EDGE).filter, ['==', ['get', 'kind'], 'survey-edge']);
   assert.deepEqual(by(DEPTH_EDGE).paint['line-dasharray'], [2, 2]);
   assert.equal(by(DEPTH_EDGE).paint['line-color'], 'token(map-label)');
-  assert.equal(by(DEPTH_LINE).paint['line-color'], 'token(map-contour)');
-  assert.deepEqual(by(DEPTH_LINE).paint['line-opacity'], ['case', ['==', ['get', 'index'], true], 0.85, 0.55]);
+  assert.equal(by(DEPTH_LINE).paint['line-color'], 'token(skn-map-contour-ns-minor)');
+  assert.equal(by(DEPTH_LINE_INDEX).paint['line-color'], 'token(skn-map-contour-ns-index)');
   assert.equal(by(DEPTH_HIT).paint['line-opacity'], 0);
   assert.equal(by(DEPTH_HIT).filter, undefined, 'contours and edge are both selectable');
   assert.deepEqual(by(DEPTH_LABEL).layout['text-field'], ['concat', ['to-string', ['get', 'depth_ft']], ' ft']);
   assert.equal(by(DEPTH_LABEL).minzoom, undefined, 'index labels at every zoom');
-  assert.equal(by(DEPTH_LABEL_MINOR).minzoom, DETAIL_ZOOM);
   for (const l of o.layers) assert.equal(l.maxzoom, undefined, `${l.id} draws at every zoom`);
   assert.ok(o.layers.filter(l => l.type === 'line').every(l => l.minzoom === undefined), 'lines draw at every zoom');
 });
 
-test('the card names the depth, interval, survey, date and datum; the edge says no reviewed grid continues', () => {
+test('the card names the depth, interval, survey date and datum, and no source name (MAP-SOURCES-PAGE-1); the edge says no reviewed grid continues', () => {
   const sources = assessContours(FULL, 'morro-bay', TODAY).sources;
   const f150 = FULL.features.find(f => f.properties.kind === 'contour' && f.properties.depth_ft === 150);
   const m = contourMark(f150.properties, sources);
@@ -115,7 +119,8 @@ test('the card names the depth, interval, survey, date and datum; the edge says 
   assert.equal(m.kind, `Index contour · every ${INDEX_FT} ft`);
   assert.match(m.reading, /150 ft below the survey's unverified source datum/);
   assert.match(m.reading, /not a sounding or a chart depth/);
-  assert.match(m.source, /surveyed 2008 · unverified source datum$/);
+  assert.equal(m.source, 'Surveyed 2008 · unverified source datum', 'the date and datum stay; the survey name and credit are on the Sources page');
+  for (const s of sources) { assert.ok(!m.source.includes(s.name)); if (s.attribution) assert.ok(!m.source.includes(s.attribution)); }
   assert.equal(m.basis, layerEntry('depth-contours').basis);
   assert.ok(m.terms?.[0].href.startsWith('https://doi.org/'));
   const f60 = FULL.features.find(f => f.properties.kind === 'contour' && f.properties.depth_ft === 60);
@@ -144,7 +149,7 @@ test('the registry entry: always on, Chart only, every zoom; the basis says not 
   assert.match(e.basis, /withheld one year after their source review/, 'the age limit');
   assert.match(e.basis, /2 m grids, surveyed 2008/, 'the product, grid and age');
   assert.doesNotMatch(e.basis + e.legend.map(r => r.label).join(' '), /\b(fish|catch|hotspot|feeding|bite)/i);
-  assert.deepEqual(e.legend.map(r => r.swatch), ['mapContour', 'mapLabel']);
+  assert.deepEqual(e.legend.map(r => r.swatch), ['sknContourIndex', 'mapLabel'], 'the contour swatch is the kit ink the index lines draw');
   // The ENC chart base is left as it was: its own entry, source, zoom gate and basis.
   assert.equal(layerEntry('chart').gate, 'zoom ≥ 10');
 });
@@ -161,11 +166,12 @@ function setup(t, {files, today = Date.parse(`${TODAY}T18:00:00Z`)} = {}) {
     if (!(path in files)) return {ok: false, status: 404, json: async () => ({})};
     return {ok: true, status: 200, json: async () => clone(files[path])};
   };
+  let latest;
   const engine = signal({setOverlay: (layer, o, before) => calls.push(['overlay', layer, o && o.layers.map(l => l.id), before ?? null]),
-    setData: (id, data) => calls.push(['data', id, data.features.length])});
+    setData: (id, data) => { latest = data; calls.push(['data', id, data.features.length]); }});
   const layer = createDepthContours({engine, fetchFn, page: () => location.href, palette: () => sentinel, now: () => today});
   t.after(() => { layer.destroy(); camera.value = null; });
-  return {asked, calls, layer};
+  return {asked, calls, layer, visible: () => latest?.features ?? []};
 }
 const FILES = {[depthContoursOverviewURL('morro-bay')]: OVERVIEW, [depthContoursURL('morro-bay')]: FULL};
 
@@ -196,7 +202,7 @@ test('the Chart layer draws the overview under the protected areas, swaps in the
   await flush(); await flush();
   assert.deepEqual(asked, [depthContoursOverviewURL('morro-bay')]);
   const drawnAt = calls.findIndex(c => c[0] === 'overlay' && c[2]);
-  assert.deepEqual(calls[drawnAt], ['overlay', 'depth-contours', [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR], MPA_FILL]);
+  assert.deepEqual(calls[drawnAt], ['overlay', 'depth-contours', [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL], [PLACE_LABELS, MPA_FILL]]);
   assert.deepEqual(calls[drawnAt + 1], ['data', DEPTH_CONTOURS_SOURCE, OVERVIEW.features.length]);
   assert.equal(contourState.value.status, 'drawn');
   assert.equal(contourState.value.sources.length, 3);
@@ -369,9 +375,11 @@ test('EC6: the area draws muted and dashed at the bottom; filled runs dash and v
   assert.deepEqual(by(DEPTH_UNRESOLVED_LINE).paint, {'line-color': 'token(map-label)', 'line-width': 1, 'line-dasharray': [1, 2]});
   const line = by(DEPTH_LINE).paint, verified = ['case', ['==', ['get', 'provenance'], 'verified'], 1.25, 1], index = ['==', ['get', 'index'], true];
   assert.deepEqual(line['line-dasharray'], ['case', ['==', ['get', 'provenance'], 'filled'], ['literal', [4, 3]], ['literal', [1, 0]]]);
+  assert.deepEqual(by(DEPTH_LINE_INDEX).paint['line-dasharray'], line['line-dasharray']);
+  // The kit's minor widths (z11 0.30, z14 0.35, z16 0.40 px at web-map zooms) with the verified factor on each stop.
   assert.deepEqual(line['line-width'], ['interpolate', ['linear'], ['zoom'],
-    8, ['*', ['case', index, 0.9, 0.4], verified], 14, ['*', ['case', index, 1.6, 0.8], verified]]);
-  assert.deepEqual(by(DEPTH_LABEL).filter, ['all', ['==', ['get', 'kind'], 'contour'], index], 'labels still follow every contour');
+    10, ['*', 0.3, verified], 13, ['*', 0.35, verified], 15, ['*', 0.4, verified]]);
+  assert.deepEqual(by(DEPTH_LABEL).filter, ['all', ['==', ['get', 'kind'], 'contour'], index], 'labels on index lines only');
   const {layer} = setup(t, {files: {[depthContoursOverviewURL('morro-bay')]: EC()}});
   await flush(); await flush();
   assert.equal(contourState.value.status, 'drawn');
@@ -418,4 +426,124 @@ test('contour_invalid_expiry_never_exports: the trip export refuses the file, an
   assert.ok('collection' in await loadContourFile('morro-bay', exp, respond(FULL), page), 'last day exports');
   const next = new Date(Date.parse(`${exp}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
   assert.ok(typeof (await loadContourFile('morro-bay', next, respond(FULL), page)).refused === 'string', 'next day refused');
+});
+
+// Published MB-03 pair: one ≤2 m patch and a separate 5 m-only patch.
+const V2_TABLE = [
+  {minzoom: 8, depths_ft: [60, 120, 180, 240, 300]},
+  {minzoom: 11, depths_ft: [30, 90, 150, 210, 270]},
+  {minzoom: 13, depths_ft: [10, 20, 40, 50, 70, 80, 100]},
+  {minzoom: 15, depths_ft: [5, 15, 25], native_max_cell_m: 2},
+];
+const fixtureSource = (source_id, native_cell_m) => ({source_id, native_cell_m, name: `Fixture ${source_id}`, survey_date: '2025', vertical_datum: 'NAVD88'});
+function v2Fixture(overview = false) {
+  const sources = [fixtureSource('native', 2), fixtureSource('coarse', 5)];
+  const feature = (s, props) => ({type: 'Feature', geometry: {type: 'LineString', coordinates: [[-121, 35.3], [-120.95, 35.3]]},
+    properties: {source_id: s.source_id, survey_date: s.survey_date, vertical_datum: s.vertical_datum, ...props}});
+  const features = sources.flatMap(s => [feature(s, {kind: 'survey-edge', minzoom: 8, index: false}), ...V2_TABLE.flatMap(({minzoom, depths_ft}) =>
+    depths_ft.flatMap(depth_ft => {
+      const p = {kind: 'contour', depth_ft, minzoom, index: [60, 150, 300].includes(depth_ft), estimated: true};
+      const native = s.native_cell_m === 2;
+      if (overview && minzoom >= 13 || minzoom === 15 && !native) return [];
+      if (minzoom === 15) return [feature(s, p)];
+      return native ? [feature(s, {...p, maxzoom: 14}), ...overview ? [] : [feature(s, {...p, minzoom: 14})]] : [feature(s, p)];
+    }))]);
+  return {type: 'FeatureCollection', features, provenance: {set: 'ft-v2', region_id: 'morro-bay', units: 'ft', shelf_limit_ft: 300,
+    intervals: structuredClone(V2_TABLE), index_depths_ft: [60, 150, 300], sources, sources_omitted: [], review_expires: '2027-10-20'}};
+}
+
+test('ft-v2 selects published depths, replaces coarse runs at z14, and never exposes a hidden tap target', async t => {
+  await prepareCatalogue('es');
+  const full = v2Fixture(), overview = v2Fixture(true);
+  const {asked, calls, layer, visible} = setup(t, {files: {[depthContoursOverviewURL('morro-bay')]: overview, [depthContoursURL('morro-bay')]: full}});
+  const depths = source => visible().map(f => f.properties)
+    .filter(p => p.kind === 'contour' && p.source_id === source).map(p => p.depth_ft).sort((a, b) => a - b);
+  const move = async zoom => { camera.value = {...camera.value, zoom}; await flush(); };
+  const z8 = [60, 120, 180, 240, 300];
+  const z11 = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
+  const z13 = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 180, 210, 240, 270, 300];
+  const z15 = [5, 10, 15, 20, 25, ...z13.slice(2)];
+  const tap = (source, depth) => layer.pick.mark(DEPTH_HIT, visible().find(f => f.properties.source_id === source && f.properties.depth_ft === depth)?.properties);
+  for (const [zoom, native, coarse, sample, interval] of [
+    [8, z8, z8, 60, 60], [11, z11, z11, 60, 30], [13, z13, z13, 100, 10],
+    [14, z13, z13, 100, 10], [15, z15, z13, 15, 5],
+    [18, z15, z13, 15, 5], [8, z8, z8, 300, 60],
+  ]) {
+    await move(zoom);
+    assert.deepEqual(depths('native'), native, `≤2 m lines at z${zoom}`);
+    assert.deepEqual(depths('coarse'), coarse, `5 m-only lines at z${zoom}`);
+    assert.equal(visible().filter(f => f.properties.kind === 'survey-edge').length, 2);
+    const mark = tap('native', sample);
+    assert.match(mark.kind, new RegExp(`every ${interval} ft$`));
+    assert.match(resolveMarkCopy(mark, 'es').kind, new RegExp(`cada ${interval} ft$`));
+    assert.match(mark.reading, /Estimated: .* NAVD88; not a sounding or a chart depth/);
+    assert.equal(mark.basis, 'Not for navigation.');
+    if (zoom === 13) assert.match(tap('coarse', 120).kind, /every 30 ft$/);
+    if (zoom >= 14) assert.ok(visible().filter(f => f.properties.source_id === 'native' && f.properties.kind === 'contour')
+      .every(f => f.properties.minzoom >= 14 && f.properties.maxzoom === undefined));
+    if (zoom === 15) assert.match(tap('coarse', 20).kind, /every 10 ft$/);
+  }
+  const hidden = full.features.find(f => f.properties.depth_ft === 5);
+  assert.equal(layer.pick.mark(DEPTH_HIT, hidden.properties), null);
+  const before = calls.length;
+  await move(8.9);
+  assert.equal(calls.length, before, 'no source update within a zoom tier');
+  assert.deepEqual(asked, [depthContoursOverviewURL('morro-bay'), depthContoursURL('morro-bay')]);
+});
+
+test('ft-v2 refuses wrong region, units, expiry, unsupported detail, or wrong indices', () => {
+  const fixture = v2Fixture();
+  assert.equal(assessContours(fixture, 'morro-bay', '2027-10-20').status, 'drawn');
+  assert.equal(assessContours(fixture, 'morro-bay', '2027-10-21').status, 'withheld');
+  assert.equal(assessContours(fixture, 'another-region', TODAY).status, 'failed');
+  for (const [what, edit] of [
+    ['metres', f => { f.provenance.units = 'm'; }],
+    ['impossible date', f => { f.provenance.review_expires = '2026-11-31'; }],
+    ['held', f => { f.provenance.publication_held = true; }],
+    ['unknown set', f => { f.provenance.set = 'ft-v3'; f.provenance.interval_ft = 30; }],
+    ['ambiguous legacy interval', f => { f.provenance.interval_ft = 30; }],
+    ['wrong table', f => { f.provenance.intervals[3].minzoom = 14; }],
+    ['deeper than 300 ft', f => { f.features.find(x => x.properties.depth_ft === 300).properties.depth_ft = 330; }],
+    ['incorrect index', f => { f.features.find(x => x.properties.depth_ft === 60).properties.index = false; }],
+    ['untagged native line', f => { delete f.features.find(x => x.properties.depth_ft === 5).properties.minzoom; }],
+    ['too-early native line', f => { f.features.find(x => x.properties.depth_ft === 5).properties.minzoom = 14; }],
+    ['5 m native claim', f => { f.provenance.sources[0].native_cell_m = 5; }],
+  ]) {
+    const data = clone(fixture); edit(data);
+    assert.deepEqual(assessContours(data, 'morro-bay', TODAY), FAILED_SHAPE, what);
+  }
+});
+
+// MSK-2 contract: contour paint is G's nearshore kit, read through the generated module for both contour sets and both
+// themes. Believable bugs: a width or ink copied into depth-contours.ts (an edited token would never reach the map), the
+// kit's web-map zooms handed to MapLibre unshifted, labels left on minor lines, or a theme token leaking into the kit ink.
+test('MSK-2: contour ink, widths, opacities and index labels follow the generated nearshore style, the same in both themes', () => {
+  const {data} = assessContours(v2Fixture(), 'morro-bay', TODAY);
+  const layersOf = (p, style) => contoursOverlay(p, data, style).layers, by = (ls, id) => ls.find(l => l.id === id);
+  const zoom = (...stops) => ['interpolate', ['linear'], ['zoom'], ...stops];
+  const kit = layersOf(sentinel), index = by(kit, DEPTH_LINE_INDEX).paint, label = by(kit, DEPTH_LABEL);
+  assert.deepEqual(by(kit, DEPTH_LINE).paint['line-opacity'], zoom(10, 0.25, 14, 0.35));
+  assert.deepEqual(index['line-opacity'], zoom(7, 0.65, 15, 0.65));
+  assert.deepEqual(index['line-width'].slice(3).filter((_, i) => i % 2).map(w => w[1]), [0.6, 0.9, 0.9]);
+  assert.deepEqual(by(kit, DEPTH_LINE_INDEX).filter, ['all', ['==', ['get', 'kind'], 'contour'], ['==', ['get', 'index'], true]]);
+  assert.deepEqual(label.layout['text-size'], zoom(10, 10, 15, 12));
+  assert.equal(label.layout['symbol-spacing'], 320);
+  assert.deepEqual(label.layout['text-font'], ['dm-sans-medium'], 'DM Sans Medium stays the map font (C13)');
+  assert.deepEqual([label.paint['text-color'], label.paint['text-halo-color'], label.paint['text-halo-width']],
+    ['token(skn-map-label-ink)', 'token(skn-map-label-halo)', 3]);
+  assert.deepEqual(contoursOverlay(sentinel, OVERVIEW).layers, kit, 'a v1 file draws with the same kit paint');
+
+  const edited = structuredClone(NEARSHORE_STYLE);
+  edited.contours.minor.opacity = [[11, 0.5], [15, 0.9]];
+  edited.contours.ink = '--skn-map-label-halo';
+  edited.typography.contour_label.halo_px = 2;
+  const moved = layersOf(sentinel, edited);
+  assert.deepEqual(by(moved, DEPTH_LINE).paint['line-opacity'], zoom(10, 0.5, 14, 0.9));
+  assert.equal(by(moved, DEPTH_LINE).paint['line-color'], 'token(skn-map-label-halo)');
+  assert.equal(by(moved, DEPTH_LABEL).paint['text-halo-width'], 2);
+
+  const tokens = themes(readFileSync(new URL('web/tokens.css', ROOT), 'utf8'));
+  const [dark, light] = ['dark', 'light'].map(theme => layersOf(readPalette(name => tokens[theme][name] ?? '1')));
+  for (const id of [DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_LABEL]) assert.deepEqual(by(light, id).paint, by(dark, id).paint, `${id}: one kit look in both themes`);
+  assert.match(by(dark, DEPTH_LINE).paint['line-color'], /^#[0-9a-f]{6}$/i);
 });

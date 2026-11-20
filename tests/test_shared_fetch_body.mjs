@@ -90,7 +90,8 @@ test('a caller aborting while the body arrives rejects alone; the read completes
   finish();
   assert.deepEqual(await (await shared(FILE)).json(), {id: 'morro-bay'});
   assert.equal(calls.length, 1, 'no second request');
-  assert.equal(calls[0][1].signal, undefined, 'the shared request carries no caller signal');
+  assert.notEqual(calls[0][1].signal, ctl.signal, 'the shared request carries no caller signal');
+  assert.equal(calls[0][1].signal?.aborted, false);
 }));
 
 test('pass-through reads are never stored or body-checked', () => withPage(async () => {

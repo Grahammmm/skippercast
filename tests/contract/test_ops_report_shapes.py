@@ -9,7 +9,7 @@ from scripts import ops_report
 from tests.contract.test_ops_report_numbers import NORMAL, NORMAL_REPORT
 
 NOW = datetime(2026, 10, 5, 10, 0, tzinfo=timezone.utc)
-ENV = {'CF_ANALYTICS_TOKEN': 'token-value', 'CLOUDFLARE_ACCOUNT_ID': 'acct123'}
+ENV = {'ENABLE_ANALYTICS': 'true', 'CF_ANALYTICS_TOKEN': 'token-value', 'CLOUDFLARE_ACCOUNT_ID': 'acct123'}
 SENTINEL = 'SENTINEL-body-7f3a'
 HEARTBEAT = [{'region': 'CA', 'pushed_at': '2026-10-05 09:00:00', 'heartbeat_age_s': '1800',
               'last_message_age_s': 1790, 'messages_24h': '512000'}]
@@ -82,7 +82,7 @@ class SqlAnswerShapeTests(unittest.TestCase):
     def test_a_later_query_with_a_bad_shape_names_that_query(self):
         code, out, seen = run({'routes': rows_body(NORMAL['routes']), 'queue': json.dumps({'data': 'x'}).encode()})
         self.assertEqual(code, 1)
-        self.assertEqual(seen, ['routes', 'llm', 'queue'])
+        self.assertEqual(seen, ['routes', 'route_totals', 'llm', 'queue'])
         self.assertEqual(out, '::error title=Ops report::Analytics Engine SQL API unavailable for queue: '
                               'unexpected answer shape\n')
 

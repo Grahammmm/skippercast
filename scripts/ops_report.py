@@ -12,6 +12,12 @@ stored in the last 24 hours and whether a `fleet-ais-stale` issue is open (read
 from the GitHub API for $GITHUB_REPOSITORY). Prints a Markdown report and appends
 it to $GITHUB_STEP_SUMMARY when set.
 
+For a local-only R2 summary, pass --r2-meter UTC_DAY READS CEILING. Use today's
+UTC date and the count from the cost meter's D1 row (the optional owner check
+in docs/operations/cost-ceiling.md), plus the configured ceiling for that day.
+Use 'unknown' for missing values or 'off' for an explicitly disabled ceiling.
+This mode prints only to stdout; it doesn't query any service.
+
 Needs CF_ANALYTICS_TOKEN (an API token with Account · Account Analytics · Read)
 and CLOUDFLARE_ACCOUNT_ID. Without them it prints why and exits 0, so the
 scheduled workflow stays green until the owner opts in. A query the API
@@ -45,6 +51,9 @@ QUERIES = {
   quantileExactWeighted(0.95)(double2, _sample_interval) AS p95_ms
 FROM {DATASET} WHERE index1 = 'request' AND {WINDOW}
 GROUP BY route ORDER BY requests DESC LIMIT 40""",
+    'route_totals': f"""SELECT SUM(_sample_interval * double3) AS requests,
+  sumIf(_sample_interval * double3, double1 >= 500) AS s5xx
+FROM {DATASET} WHERE index1 = 'request' AND {WINDOW}""",
     'llm': f"""SELECT blob2 AS feature, blob4 AS model, blob3 AS outcome,
   SUM(_sample_interval) AS calls, SUM(_sample_interval * double1) AS input_tokens,
   SUM(_sample_interval * double2) AS output_tokens, SUM(_sample_interval * double3) AS web_searches
@@ -74,7 +83,7 @@ FROM {DATASET} WHERE index1 = 'fleet_ais' AND {WINDOW}
 ORDER BY timestamp DESC LIMIT 1""",
 }
 FLEET_LABEL = 'fleet-ais-stale'
-LINES = frozenset({'fleet_ais'})
+LINES = frozenset({'fleet_ais', 'route_totals'})
 
 # Funnel steps in the order a visit takes them (server/telemetry.ts FUNNEL_EVENTS).
 FUNNEL = ('port_selected', 'map_viewed', 'forecast_viewed', 'spot_saved', 'offline_saved', 'install')
@@ -211,7 +220,9 @@ def fleet_line(rows, issue, now):
         row = rows[0]
         try:
             pushed = datetime.fromisoformat(str(row.get('pushed_at')).replace(' ', 'T').replace('Z', '+00:00'))
-            since = max(0.0, (now - (pushed if pushed.tzinfo else pushed.replace(tzinfo=timezone.utc))).total_seconds())
+            since = (now - (pushed if pushed.tzinfo else pushed.replace(tzinfo=timezone.utc))).total_seconds()
+            if since < 0:  # a push dated after the report time is not evidence of a fresh heartbeat
+                since = None
         except ValueError:
             since = None
         beat, messages = number(row.get('heartbeat_age_s')), number(row.get('messages_24h'))
@@ -230,9 +241,32 @@ def fleet_line(rows, issue, now):
     return 'Fleet AIS: ' + '; '.join(parts) + '.'
 
 
+def r2_meter_line(now, snapshot=None):
+    day = now.astimezone(timezone.utc).date().isoformat()
+    reads = ceiling = None
+    disabled = False
+    if snapshot and snapshot[0] == day:
+        _, count, limit = snapshot
+        if re.fullmatch(r'[0-9]{1,19}', count):
+            reads = int(count)
+        if re.fullmatch(r'[1-9][0-9]{0,11}', limit):
+            ceiling = int(limit)
+        disabled = limit == 'off'
+    reads_text = 'batched reads unknown' if reads is None else f'{reads:,} batched reads'
+    ceiling_text = 'off' if disabled else 'unknown' if ceiling is None else f'{ceiling:,}'
+    headroom = 'headroom not applicable' if disabled else 'headroom unknown'
+    if reads is not None and ceiling is not None:
+        remaining = ceiling - reads
+        headroom = (f'{remaining:,} reads of recorded headroom' if remaining >= 0
+                    else f'headroom exhausted ({-remaining:,} over ceiling)')
+    return (f'R2 read meter ({day} UTC): {reads_text}; configured ceiling {ceiling_text}; {headroom}; '
+            'degraded duration unknown (the meter does not record transition times). '
+            'Batched counts may omit pending reads and are not billing totals.')
+
+
 def report(results, fleet_issue='', now=None):
     out = ['# SkipperCast operations report', '']
-    routes = results.get('routes') or []
+    routes = results.get('route_totals') or []
     total = sum(finite(r.get('requests')) or 0 for r in routes)
     errors = sum(finite(r.get('s5xx')) or 0 for r in routes)
     skipped = sum(r.get(c) is not None and finite(r.get(c)) is None for r in routes for c in ('requests', 's5xx'))
@@ -258,8 +292,18 @@ def report(results, fleet_issue='', now=None):
 
 def main(argv=None, environ=None, opener=urlopen, github_opener=urlopen, now=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.parse_args(argv)
+    parser.add_argument('--r2-meter', nargs=3, metavar=('UTC_DAY', 'READS', 'CEILING'),
+                        help='print only the local R2 summary from the documented D1 aggregate and configured ceiling; '
+                             'use unknown for missing values or off for an explicitly disabled ceiling')
+    args = parser.parse_args(argv)
+    now = now or datetime.now(timezone.utc)
+    if args.r2_meter:
+        print(r2_meter_line(now, args.r2_meter))
+        return 0
     environ = os.environ if environ is None else environ
+    if environ.get('ENABLE_ANALYTICS') != 'true':
+        print('Operations report skipped: ENABLE_ANALYTICS is not true (docs/cloudflare.md#observability).')
+        return 0
     token, account = environ.get('CF_ANALYTICS_TOKEN', '').strip(), environ.get('CLOUDFLARE_ACCOUNT_ID', '').strip()
     summary = environ.get('GITHUB_STEP_SUMMARY')
     if not token or not account:
@@ -268,7 +312,7 @@ def main(argv=None, environ=None, opener=urlopen, github_opener=urlopen, now=Non
         print(text, end='')
         if summary:
             with open(summary, 'a') as handle:
-                handle.write(text)
+                handle.write(text + '\n' + r2_meter_line(now) + '\n')
         return 0
     results = {}
     for key, sql in QUERIES.items():
@@ -292,7 +336,8 @@ def main(argv=None, environ=None, opener=urlopen, github_opener=urlopen, now=Non
     print(text)
     if summary:
         with open(summary, 'a') as handle:
-            handle.write(text + '\n')
+            # The scheduled report has no admitted input for the aggregate D1 count or the ceiling.
+            handle.write(text + '\n' + r2_meter_line(now) + '\n')
     return 0
 
 

@@ -47,7 +47,7 @@ export const LAYER_FRESHNESS: Readonly<Record<string, LayerFreshness>> = {
 /** "Updates: <cadence> · age limit <n>", or '' for an id without an entry. */
 export function cadenceLine(id: string, lang: Language = 'en'): string {
   const f = LAYER_FRESHNESS[id];
-  if (!f) return '';
+  if (!f || !Object.hasOwn(LAYER_FRESHNESS, id)) return '';
   const line = t('legend.fresh.line', lang, {cadence: t(f.cadence, lang)});
   if (f.forecastGate) return `${line}${t('legend.fresh.gate', lang, {run: String(f.forecastGate.runHours), retrieved: String(f.forecastGate.retrievedHours)})}`;
   if (f.staleGate) return `${line}${t('legend.fresh.stale', lang, {observation: String(f.staleGate.observationHours), prediction: String(f.staleGate.predictionHours)})}`;

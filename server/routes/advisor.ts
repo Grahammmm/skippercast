@@ -309,7 +309,8 @@ advisorPublic.post('/api/advisor/upload', async c => {
 
 const MEDIA_FILE = /^([\w-]{1,64})(\.story)?\.(jpg|png|mp4)$/;
 const EXT_MIME: Record<string, string> = {jpg: 'image/jpeg', png: 'image/png'};
-const MEDIA_HEADERS = {'Cache-Control': 'public, max-age=3600', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'};
+// Approval can be withdrawn, so every request must reach the current permission check.
+const MEDIA_HEADERS = {'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'};
 
 /**
  * One `Range: bytes=` header against an object of `size` bytes (a single range:
@@ -483,19 +484,20 @@ advisorPublic.post('/api/advisor/web/message', async c => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const outcome = await Promise.race([
     run.then(() => 'done' as const),
-    new Promise<'pending'>(resolve => { timer = setTimeout(() => resolve('pending'), webChat.timeoutMs); }),
+    new Promise<'pending'>(resolve => {
+      timer = setTimeout(() => { collector.close(); resolve('pending'); }, webChat.timeoutMs);
+    }),
   ]).finally(() => { if (timer !== undefined) clearTimeout(timer); });
+  const replies = collector.replies.map(r => ({id: r.id, text: r.text, links: [] as string[], media: r.mediaKeys.map(mediaUrl).filter((u): u is string => u !== null)}));
   if (outcome === 'pending') {
-    // Still running: let it finish (its replies are recorded, not delivered here) and tell the island to keep waiting.
-    collector.close();
+    // Return what the collector accepted before the deadline, without waiting for the rest.
     const ctx = waitUntil(c), rest = run.catch(error => advisorLog('error', 'advisor_web_turn_failed', {reason: String((error as Error)?.message).slice(0, 200)}));
     if (ctx) ctx.waitUntil(rest);
     advisorLog('warn', 'advisor_web_pending', {count: 1});
-    return withCookie(json({replies: [], pending: true}), cookie);
+    return withCookie(json({replies, pending: true}), cookie);
   }
   // TA-E1: `linked` is true once the session belongs to a phone contact (the web phone link merged it).
   const contact = await env.DB.prepare('SELECT language,phone_hash FROM advisor_contacts WHERE web_session=?').bind(await sha256(session)).first<{language: string; phone_hash: string | null}>();
-  const replies = collector.replies.map(r => ({id: r.id, text: r.text, links: [] as string[], media: r.mediaKeys.map(mediaUrl).filter((u): u is string => u !== null)}));
   return withCookie(json({replies, contact: {language: contact?.language ?? 'en', linked: Boolean(contact?.phone_hash)}}), cookie);
 });
 

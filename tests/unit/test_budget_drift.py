@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 import pytest
+import yaml
 
 from tests._support import ROOT
 
@@ -23,6 +24,96 @@ def load(name):
 
 cpb = load("check_perf_budget")
 bd = load("budget_drift")
+
+
+def test_bot_refreshes_every_six_hours_and_dispatches_only_for_changed_prs():
+    # A push trigger recreates the full-CI churn; a missing guard dispatches even for a no-op refresh.
+    workflow = yaml.load((ROOT / ".github/workflows/budget-drift.yml").read_text(), Loader=yaml.BaseLoader)
+    assert workflow["on"] == {"schedule": [{"cron": "17 */6 * * *"}], "workflow_dispatch": ""}
+    dispatches = [
+        (step.get("run"), step.get("if"))
+        for job in workflow["jobs"].values()
+        for step in job["steps"]
+        if "gh workflow run ci.yml" in step.get("run", "")
+    ]
+    assert dispatches == [(
+        'gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref bot/budget-drift',
+        "steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'",
+    )]
+
+
+@pytest.mark.parametrize("fault", [None, "moved-ref", "moved-pr", "stale-commits", "unsigned"])
+def test_bot_refresh_runs_required_signoff_on_exact_head(tmp_path, fault):
+    # The CI-only dispatch used to leave the required sign-off context missing.
+    # Replay the workflow's actual commands with only GitHub's transport stubbed.
+    workflows = ROOT / ".github/workflows"
+    load_workflow = lambda name: yaml.load((workflows / name).read_text(), Loader=yaml.BaseLoader)  # noqa: E731
+    steps = load_workflow("budget-drift.yml")["jobs"]["drift"]["steps"]
+    dispatch = next((step for step in steps if "gh workflow run dco.yml" in step.get("run", "")), None)
+    assert dispatch is not None, "Refreshed bot PR head has no dispatch for the required sign-off check"
+    assert dispatch["env"]["PR"] == "${{ steps.pr.outputs.pull-request-number }}"
+    assert dispatch["env"]["HEAD"] == "${{ steps.pr.outputs.pull-request-head-sha }}"
+    assert dispatch["if"] == "${{ !cancelled() && (steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated') }}"
+    dco = load_workflow("dco.yml")
+    inputs = dco["on"]["workflow_dispatch"]["inputs"]
+    assert {key for key, spec in inputs.items() if spec["required"] == "true"} == {"pr", "head"}
+    signoff = dco["jobs"]["sign-off"]
+    assert "if" not in signoff and signoff.get("name", "sign-off") == "sign-off"
+    resolve, verify = [step for step in signoff["steps"] if "'workflow_dispatch'" in step.get("if", "")]
+    assert resolve["id"] == "bot-pr" and resolve["if"] == "github.event_name == 'workflow_dispatch'"
+    assert verify["if"] == "github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'"
+    assert resolve["env"]["HEAD"] == "${{ inputs.head }}"
+    assert resolve["env"]["PR"] == "${{ inputs.pr }}"
+    assert [verify["env"][key].split(" || ")[0] for key in ("BASE", "COUNT", "HEAD", "PR")] == [
+        "${{ steps.bot-pr.outputs.base", "${{ steps.bot-pr.outputs.count", "${{ inputs.head", "${{ inputs.pr",
+    ]
+
+    repo, branch, head, base, old = "example/skippercast", "bot/budget-drift", "a" * 40, "b" * 40, "c" * 40
+    details = {"full_name": repo, "fork": False}
+    pr = {"state": "open", "head": {"ref": branch, "sha": old if fault == "moved-pr" else head, "repo": details},
+          "base": {"ref": "main", "sha": base, "repo": details}, "commits": 1}
+    proposal = next(step["with"] for step in steps if step.get("id") == "pr")
+    assert proposal["signoff"] == "true"
+    email = "41898282+github-actions[bot]@users.noreply.github.com"  # pinned action's default committer
+    author = proposal["author"]
+    message = "Refresh budget\n\n" if fault == "unsigned" else f"Refresh budget\n\nSigned-off-by: github-actions[bot] <{email}>"
+    commit = {"sha": old if fault == "stale-commits" else head, "author": {"login": "github-actions[bot]"},
+              "commit": {"author": {"name": "github-actions[bot]", "email": author.split("<")[1][:-1]}, "message": message}}
+    (tmp_path / "pr.json").write_text(json.dumps(pr))
+    (tmp_path / "pages.json").write_text(json.dumps([[commit]]))
+    gh = tmp_path / "gh"
+    gh.write_text(f'''#!/bin/bash
+case "$*" in
+  'workflow run dco.yml --repo {repo} --ref {branch} -f pr=7 -f head={head}') ;;
+  'api repos/{repo}/pulls/7') cat pr.json ;;
+  'api --paginate --slurp repos/{repo}/pulls/7/commits?per_page=100') cat pages.json ;;
+  'api -H Accept: application/vnd.github.raw+json repos/{repo}/contents/scripts/check_dco.py?ref={base}') cat "$CHECKER" ;;
+  *) exit 99 ;;
+esac
+''')
+    gh.chmod(0o755)
+    output = tmp_path / "outputs"
+    output.touch()
+    env = {"PATH": f"{tmp_path}:/usr/bin:/bin", "CHECKER": str(SCRIPTS / "check_dco.py"), "PR": "7", "HEAD": head,
+           "GITHUB_REPOSITORY": repo, "GITHUB_REF": f"refs/heads/{branch}", "GITHUB_OUTPUT": str(output),
+           "GITHUB_SHA": old if fault == "moved-ref" else head, "RUNNER_TEMP": str(tmp_path), "FORK": "false"}
+
+    def run(step):
+        script = tmp_path / "step.sh"
+        script.write_text(step["run"])
+        return subprocess.run(["bash", "-eo", "pipefail", str(script)], cwd=tmp_path, env=env, capture_output=True, text=True)
+
+    assert run(dispatch).returncode == 0
+    resolution = run(resolve)
+    if fault in {"moved-ref", "moved-pr"}:
+        assert resolution.returncode == (1 if fault == "moved-ref" else 4) and not output.read_text().strip()
+        return
+    assert resolution.returncode == 0, resolution.stderr
+    env.update({key.upper(): value for key, value in (line.split("=", 1) for line in output.read_text().splitlines())})
+    result = run(verify)
+    expected = {None: "DCO check passed for 1 commit(s).", "unsigned": "no matching", "stale-commits": "does not match the event head"}
+    assert result.returncode == (0 if fault is None else 1)
+    assert expected[fault] in result.stdout + result.stderr
 
 
 def test_warn_ratio_is_the_same_in_both_checkers():
@@ -139,7 +230,7 @@ def test_apply_raises_only_budgets_at_97_percent_and_is_then_quiet(repo_copy, tm
     perf_meas = {n: {"bytes": spec["max_bytes"] // 2, "files": []} for n, spec in perf["budgets"].items()}
     perf_meas["landing_js"]["bytes"] = perf["budgets"]["landing_js"]["max_bytes"] - 12
     monkeypatch.setattr(bd.cpb, "measure", lambda root, budget: perf_meas)
-    props = bd.propose(tmp_path, meas, "abc1234567 Some feature")
+    props = bd.propose(tmp_path, meas, "main abc1234567")  # scheduled runs have no push subject
     assert {p["key"] for p in props} == {"landing_js", "precache/pack_shell_raw_max", "bundles/app.html/css_gzip_max"}
     bd.apply_perf(props)
     bd.apply_startup(props)
@@ -147,7 +238,7 @@ def test_apply_raises_only_budgets_at_97_percent_and_is_then_quiet(repo_copy, tm
     new_perf = json.loads(bd.PERF_FILE.read_text())
     js = new_perf["budgets"]["landing_js"]
     assert js["max_bytes"] == bd.ceiling_for(perf_meas["landing_js"]["bytes"]) == js["history"][-1]["max_bytes"]
-    assert "abc1234567 Some feature" in js["history"][-1]["reason"] and len(js["history"]) == len(perf["budgets"]["landing_js"]["history"]) + 1
+    assert "main abc1234567" in js["history"][-1]["reason"] and len(js["history"]) == len(perf["budgets"]["landing_js"]["history"]) + 1
     assert new_perf["budgets"]["app_css"] == perf["budgets"]["app_css"]  # untouched groups are byte-identical
     assert cpb.validate_budget(new_perf) == []
 
@@ -158,7 +249,11 @@ def test_apply_raises_only_budgets_at_97_percent_and_is_then_quiet(repo_copy, tm
     assert new_startup["bundles"]["app.html"]["css_gzip_max"] == bd.ceiling_for(css_max + 7)
     assert new_startup["bundles"]["app.html"]["js_gzip_max"] == startup["bundles"]["app.html"]["js_gzip_max"]
     assert new_startup["bundles"]["landing.html"] == startup["bundles"]["landing.html"]
-    assert {e["budget"] for e in new_startup["drift_history"]} == {"precache/pack_shell_raw_max", "bundles/app.html/css_gzip_max"}
+    prior_history = startup.get("drift_history", [])
+    assert new_startup["drift_history"][:len(prior_history)] == prior_history
+    assert sorted(e["budget"] for e in new_startup["drift_history"][len(prior_history):]) == [
+        "bundles/app.html/css_gzip_max", "precache/pack_shell_raw_max",
+    ]
     # Everything else in the file, including the long comments and the one-line page budgets, is untouched.
     assert new_startup["morro-bay"] == startup["morro-bay"]
     assert new_startup["precache"]["comment"] == startup["precache"]["comment"]
@@ -317,3 +412,58 @@ def test_valid_measurement_still_proposes_and_raises(cli, capsys):
 def test_check_ignores_a_bad_measurements_path(tmp_path, capsys):
     assert bd.main(["--check", "--client-measurements", str(tmp_path / "nope.json")]) == 0
     assert "consistent" in capsys.readouterr().out
+
+
+# ---- non-object drift_history entries (RF1501-1)
+
+GOOD = {"budget": "precache/pack_shell_raw_max", "max_bytes": 0, "reason": "ok"}
+
+
+def set_history(entries):
+    startup = json.loads(bd.STARTUP_FILE.read_text())
+    startup["drift_history"] = [dict(e, max_bytes=_cur(startup)) if e is GOOD else e for e in entries]
+    bd.STARTUP_FILE.write_text(json.dumps(startup))
+
+
+def _cur(startup):
+    return startup["precache"]["pack_shell_raw_max"]
+
+
+@pytest.mark.parametrize("bad", [None, "", "x", [], [1], 7, True, False])
+def test_startup_history_nonobject_entries_report_problems(repo_copy, bad):
+    set_history([bad])
+    problems = bd.check_files()
+    assert problems and any("drift_history" in p for p in problems)
+
+
+@pytest.mark.parametrize("entries", [[GOOD, None], [None, GOOD], [GOOD, None, GOOD], [GOOD, "x", [], GOOD]])
+def test_startup_history_mixed_entries_do_not_hide_invalid_shape(repo_copy, entries):
+    set_history(entries)
+    problems = bd.check_files()
+    assert len([p for p in problems if "drift_history entry needs" in p]) == sum(e is not GOOD for e in entries)
+
+
+def test_startup_history_shape_error_cli_is_read_only(repo_copy, tmp_path, monkeypatch, capsys):
+    set_history([GOOD, None])
+    boom = lambda *a, **k: pytest.fail("must return before proposing or writing")  # noqa: E731
+    for fn in ("propose", "apply_perf", "apply_startup", "body_markdown"):
+        monkeypatch.setattr(bd, fn, boom)
+    existing, absent = tmp_path / "existing.md", tmp_path / "absent.md"
+    existing.write_bytes(b"keep")
+    before = (bd.PERF_FILE.read_bytes(), bd.STARTUP_FILE.read_bytes())
+    for extra in ([], ["--apply", "--body-out", str(existing)], ["--apply", "--body-out", str(absent)]):
+        assert bd.main(extra or ["--check"]) == 1
+        out = capsys.readouterr().out
+        assert "BUDGET FILE PROBLEM" in out and "drift_history" in out and "consistent" not in out
+    assert (bd.PERF_FILE.read_bytes(), bd.STARTUP_FILE.read_bytes()) == before
+    assert existing.read_bytes() == b"keep" and not absent.exists()
+
+
+def test_startup_history_valid_controls_preserved(repo_copy, capsys):
+    for entries in ([], [GOOD], [GOOD, GOOD]):
+        set_history(entries)
+        assert bd.check_files() == []
+        assert bd.main(["--check"]) == 0
+        assert "Budget files consistent." in capsys.readouterr().out
+    set_history([{"budget": "no/such", "max_bytes": 1, "reason": "r"}, {"budget": "precache/pack_shell_raw_max", "max_bytes": 1, "reason": ""}])
+    assert len(bd.check_files()) == 2

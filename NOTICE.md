@@ -34,7 +34,7 @@ Whether each source may be used in a paid product is tracked separately in the [
 
 ## Web map dependencies
 
-The app bundles MapLibre GL JS 6.16.0 and PMTiles 4.5.0, each under its BSD 3-Clause license, preserved in [MAPLIBRE-LICENSE.txt](dist/vendor/MAPLIBRE-LICENSE.txt) and [PMTILES-LICENSE.txt](dist/vendor/PMTILES-LICENSE.txt). Exact downloaded asset hashes are recorded in [the vendor manifest](scripts/web-vendor-sha256.json). The SkipperCast license does not replace their terms.
+The app bundles MapLibre GL JS 6.18.0 and PMTiles 4.5.0, each under its BSD 3-Clause license, preserved in [MAPLIBRE-LICENSE.txt](dist/vendor/MAPLIBRE-LICENSE.txt) and [PMTILES-LICENSE.txt](dist/vendor/PMTILES-LICENSE.txt). Exact downloaded asset hashes are recorded in [the vendor manifest](scripts/web-vendor-sha256.json). The SkipperCast license does not replace their terms.
 
 The seafloor base tiles built by `scripts/build_bathy_tiles.py` embed the cmocean `deep` colour table (cmocean 4.0.3, Copyright (c) 2015 Kristen M. Thyng, MIT License; Thyng et al. 2016, "True colors of oceanography", Oceanography 29(3)). The full licence text sits beside the table in that script.
 

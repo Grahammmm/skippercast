@@ -28,6 +28,7 @@
 .app-account[data-inline] .app-account-panel { position: static; width: auto; max-height: none; margin-top: var(--space-2); box-shadow: none; }
 .app-account-panel section { align-items: flex-start; }
 .app-account-presets { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); width: 100%; }
+.app-account-presets--wind { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .app-account-presets .ui-button { flex-direction: column; align-items: flex-start; height: auto; padding: var(--space-2); text-align: left; }
 .app-account-presets small { color: var(--muted); font-size: var(--text-11); }
 .app-account-links, .account-passkeys { margin: 0; padding: 0; list-style: none; }

@@ -95,7 +95,7 @@ export type CoastStatus = 'unbound' | 'idle' | 'loading' | 'ready' | 'error' | '
 type Statuses = Readonly<Record<CoastProduct, CoastStatus>>;
 type Cache = {readonly [P in CoastProduct]: CoastSnapshot<P> | null};
 /** Events that tick the clock; the default is `window` when there is one. */
-export type CoastDataOptions = {clockEvents?: EventTarget | null};
+export type CoastDataOptions = {clockEvents?: EventTarget | null; /** Sees every bridge response (headers included) before its body is read, so a caller can keep its provenance. */ onResponse?: (response: Response) => void};
 const CLOCK_EVENTS = ['focus', 'pageshow', 'visibilitychange'] as const;
 const ONLINE_EVENT = 'online';
 
@@ -130,7 +130,10 @@ export function admitSnapshot<P extends CoastProduct>(product: P, body: unknown,
   if (!validSnapshot(product, body)) return 'invalid';
   const generated = Date.parse(body.generatedAt);
   if (generated > now + CLOCK_SKEW_MS) return 'invalid';
-  const saved = savedAt !== null && Number.isFinite(Date.parse(savedAt)) ? savedAt : null;
+  // Absent marker: a network read. Present: it must be a real time no later than now (plus skew), or a report is refused.
+  const savedMs = savedAt === null ? null : Date.parse(savedAt);
+  if (product === 'report' && savedMs !== null && (!Number.isFinite(savedMs) || savedMs > now + CLOCK_SKEW_MS)) return 'invalid';
+  const saved = savedMs !== null && Number.isFinite(savedMs) && savedMs <= now + CLOCK_SKEW_MS ? savedAt : null;
   const expires = generated + snapshotLimit(product, saved);
   if (expires <= now) return 'expired';
   return {product, data: body, generatedAt: body.generatedAt, receivedAt: new Date(now).toISOString(), savedAt: saved, expiresAt: new Date(expires).toISOString()};
@@ -207,6 +210,7 @@ export function createCoastData(options: CoastDataOptions = {}): CoastData {
       try {
         const signal = AbortSignal.any([entry.controller.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
         const response = await coastFetch('/api/' + product, {signal});
+        options.onResponse?.(response);
         outcome = response.ok ? admitSnapshot(product, await response.json(), response.headers.get('X-SC-Offline'), Date.now()) : 'error';
       } catch { outcome = 'error'; }
       // A response for a superseded place (or a destroyed client) is discarded.

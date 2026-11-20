@@ -65,9 +65,15 @@ def load_reference(root, region):
     path = Path(root)/REFERENCE_FILE
     if not path.exists():
         return None
-    entry = read_json(path).get('regions', {}).get(region)
-    if entry is None:
+    document = read_json(path)
+    regions = document.get('regions', {}) if isinstance(document, dict) else None
+    if not isinstance(regions, dict):
+        raise ValueError(f'Invalid rough-first reference for {region}; publication not attempted')
+    if region not in regions:
         return None
+    entry = regions[region]
+    if not isinstance(entry, dict):
+        raise ValueError(f'Invalid rough-first reference for {region}; publication not attempted')
     sizes = entry.get('rough_zoom_bytes')
     opening = entry.get('opening_view')
     valid = (isinstance(sizes, dict) and sorted(sizes) == sorted(str(z) for z in ROUGH_ZOOMS)
@@ -123,6 +129,8 @@ def read_tiles(data):
     h = struct.unpack_from('<11Q', data, 8)
     if data[97] != 2:
         raise ValueError('expected gzip internal compression')
+    if h[6] + h[7] > len(data):
+        raise ValueError('declared tile data extends beyond archive')
     tiles = {}
 
     def walk(offset, length, depth=0):
@@ -144,6 +152,8 @@ def read_tiles(data):
             if not run:
                 walk(h[4] + off, size, depth + 1)
                 continue
+            if size <= 0 or off < 0 or off + size > h[7]:
+                raise ValueError('tile payload span outside declared tile data')
             for k in range(run):
                 tiles[_zxy(tid + k)] = data[h[6] + off:h[6] + off + size]
     walk(h[0], h[1])
@@ -184,9 +194,13 @@ def _fields(data):
             value, pos = _varint(data, pos)
         elif wire == 2:
             size, pos = _varint(data, pos)
+            if pos + size > len(data):
+                raise ValueError('truncated protobuf payload')
             value, pos = data[pos:pos + size], pos + size
         elif wire in (1, 5):
             size = 8 if wire == 1 else 4
+            if pos + size > len(data):
+                raise ValueError('truncated protobuf payload')
             value, pos = data[pos:pos + size], pos + size
         else:
             raise ValueError('unsupported protobuf wire type')

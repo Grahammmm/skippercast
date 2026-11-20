@@ -9,6 +9,12 @@ from shapely.ops import unary_union
 ROOT=Path(__file__).resolve().parents[1]
 class PlanInputError(Exception):pass
 def read(p):return json.loads(p.read_text())
+def polygon_parts(g):
+ """Keep only polygon area of a clipped result (drops boundary lines/points); None if none."""
+ if g.is_empty:return None
+ if g.geom_type in ('Polygon','MultiPolygon'):return g
+ parts=[x for x in (polygon_parts(c) for c in getattr(g,'geoms',())) if x is not None]
+ return unary_union(parts) if parts else None
 def plan(root=ROOT):
  """Compute every published region's output in memory; any input problem raises one PlanInputError, nothing written."""
  def rd(p):
@@ -40,7 +46,8 @@ def plan(root=ROOT):
      rejected.append({'id':p.get('id'),'reason':'Invalid source geometry; withheld pending repair and review'});continue
     # Intersection/difference only: do not expand habitat into unknown water.
     geom=geom.intersection(extent).difference(excluded)
-    if geom.is_empty or geom.geom_type not in ('Polygon','MultiPolygon'):continue
+    geom=polygon_parts(geom)
+    if geom is None:continue
     point=geom.representative_point()
     features.append({'type':'Feature','geometry':mapping(geom),'properties':{
      'id':p['id'],'name':p.get('name',p.get('label',p['id'])),'species':ids,'habitat_kind':kind,

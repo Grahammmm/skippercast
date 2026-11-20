@@ -15,7 +15,7 @@ import {
 import {PALETTE_TOKENS, coastPalette, readPalette} from '../web/map/palette.ts';
 import {GLYPH_VERSION, basemapStyle, mapControl} from '../web/map/style.ts';
 import {GEOLOGY_PICK, SURVEY_PICK, markStyle} from '../web/map/marks.ts';
-import {contoursOverlay, DEPTH_HIT, DEPTH_LABEL, DEPTH_LINE, DEPTH_EDGE} from '../web/map/depth-contours.ts';
+import {contoursOverlay, DEPTH_HIT, DEPTH_LABEL, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_EDGE} from '../web/map/depth-contours.ts';
 import {windOverlay} from '../web/map/wind.ts';
 import {stationOverlay} from '../web/map/stations.ts';
 import {rankedStyle} from '../web/map/ranked.ts';
@@ -51,7 +51,7 @@ function withTokens(css, theme, overrides) {
   return theme === 'dark' ? next + light : dark + next;
 }
 const oldPaletteCss = () => withTokens(withTokens(TOKENS, 'dark', OLD_CLASSES.dark), 'light', OLD_CLASSES.light);
-const alphas = {dark: ALPHA_Z13, light: ALPHA_Z13};
+const alphas = {dark: ALPHA_Z13, light: ALPHA_Z13 * 0.75};
 
 // ── independent math vectors ────────────────────────────────────────────────────────────────────────────────────
 
@@ -132,7 +132,7 @@ test('all_pairs_all_simulations_both_themes: every unordered pair, every simulat
   }
   for (const r of report.results) {
     assert.equal(r.threshold, HABITAT_MIN_DELTA_E[r.kind]);
-    assert.equal(r.alpha, r.kind === 'solid' ? 1 : ALPHA_Z13);
+    assert.equal(r.alpha, r.kind === 'solid' ? 1 : alphas[r.theme]);
     assert.ok(r.deltaE >= r.threshold, `${r.theme} ${r.simulation} ${r.pair} ${r.kind}: ${r.deltaE}`);
   }
   assert.deepEqual(HABITAT_MIN_DELTA_E, {solid: 12, fill: 6});
@@ -170,11 +170,16 @@ test('old_hard_mixed_regression: the pre-MGL-15 dark palette fails the gate wher
 
 // ── the alpha is the renderer's ─────────────────────────────────────────────────────────────────────────────────
 
+test('light theme reduces habitat opacity to the approved multiplier', () => {
+  assert.equal(paletteOf('light').mapHabitatOpacity, '0.75');
+  near(habitatFillAlpha(markStyle, readPalette, RAW.light, SURVEY_PICK), ALPHA_Z13 * 0.75, 1e-15, 'light survey fill');
+});
+
 test('renderer_alpha_not_rounded: the checker reads the real survey fill at zoom 13 and distinguishes 0.25', () => {
   for (const theme of ['dark', 'light']) {
     const layer = markStyle(paletteOf(theme)).habitat.find(l => l.id === SURVEY_PICK);
     const alpha = evaluateZoomRamp(layer.paint['fill-opacity'], 13);
-    near(alpha, ALPHA_Z13, 1e-15, 'renderer alpha at z13');
+    near(alpha, alphas[theme], 1e-15, 'renderer alpha at z13');
     assert.notEqual(alpha, 0.25);
     assert.equal(habitatFillAlpha(markStyle, readPalette, RAW[theme], SURVEY_PICK), alpha);
   }
@@ -263,7 +268,7 @@ test('checker_compatibility: --habitat-cvd passes on the final tokens and fails 
     assert.match(good.stdout, /Habitat CVD check passed: 96 rows/);
     assert.equal(good.stdout.split('\n').filter(l => l.startsWith('PASS ')).length, 96);
     assert.match(good.stdout, /PASS dark protanopia rock\/mixed solid alpha 1: dE2000 [\d.]+ \([\d.]+\) >= 12/);
-    assert.match(good.stdout, /PASS light deuteranopia soft\/kelp fill alpha 0\.24666666666666667: dE2000 [\d.]+ \([\d.]+\) >= 6/);
+    assert.match(good.stdout, /PASS light deuteranopia soft\/kelp fill alpha 0\.185: dE2000 [\d.]+ \([\d.]+\) >= 6/);
     const copy = cli('--habitat-cvd', put('final.css', TOKENS));
     assert.equal(copy.status, 0, copy.stderr);
     const old = cli('--habitat-cvd', put('old.css', oldPaletteCss()));
@@ -299,13 +304,14 @@ test('checker_compatibility: the default run still refuses the same transparent 
   } finally { rmSync(dir, {recursive: true, force: true}); }
   const t = themes(TOKENS);
   assert.equal(t.dark['map-water'], '#07131d');
-  assert.equal(t.light['hab-kelp'], '#207053');
+  assert.equal(t.light['hab-kelp'], '#297653');
 });
 
 // ── role split ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 const NUMERIC = /^map-.*-(?:opacity|width)$/;
-const MAP_ROLE = /^(?:map|hab|mark)-/;
+// MSK-2: the nearshore kit colours (`--skn-*`) are map-only roles too.
+const MAP_ROLE = /^(?:map|hab|mark|skn)-/;
 /** Map-only tokens read `map(--x)`, every chrome token `chrome(--x)`, and the numeric controls their neutral 1. */
 const roleSentinel = (extra = {}) => readPalette(name => extra[name] ?? (NUMERIC.test(name) ? '1' : `${MAP_ROLE.test(name) ? 'map' : 'chrome'}(--${name})`));
 const walk = layers => layers.flatMap(layer => Object.entries({...layer.paint, ...layer.layout}).filter(([k]) => k.endsWith('-color')).map(([k, v]) => [layer.id, k, v]));
@@ -340,10 +346,10 @@ test('roles_not_chrome: the day basemap, overlays and legend swatches draw from 
   assert.equal(m['marks-depth']['text-color'], 'map(--map-ink)'); assert.equal(m['marks-depth']['text-halo-color'], 'map(--map-ink-halo)');
   assert.equal(m['selection-ring']['circle-stroke-color'], 'map(--map-ink)');
   const contours = contoursOverlay(p, {type: 'FeatureCollection', features: []}).layers;
-  assert.equal(colourOf(contours, DEPTH_LINE, 'line-color'), 'map(--map-contour)');
+  assert.equal(colourOf(contours, DEPTH_LINE, 'line-color'), 'map(--skn-map-contour-ns-minor)');
   assert.equal(colourOf(contours, DEPTH_HIT, 'line-color'), 'map(--map-contour)');
   assert.equal(colourOf(contours, DEPTH_EDGE, 'line-color'), 'map(--map-label)');
-  assert.equal(colourOf(contours, DEPTH_LABEL, 'text-color'), 'map(--map-contour)'); assert.equal(colourOf(contours, DEPTH_LABEL, 'text-halo-color'), 'map(--map-ink-halo)');
+  assert.equal(colourOf(contours, DEPTH_LABEL, 'text-color'), 'map(--skn-map-label-ink)'); assert.equal(colourOf(contours, DEPTH_LABEL, 'text-halo-color'), 'map(--skn-map-label-halo)');
   const wind = Object.fromEntries(windOverlay(p).layers.map(l => [l.id, l.paint]));
   assert.equal(wind['wind-casing']['line-color'], 'map(--map-ink-halo)');
   assert.ok(Object.values(wind).filter(v => v['line-color'] === 'map(--map-ink)' || v['text-color'] === 'map(--map-ink)').length === 2);
@@ -386,7 +392,7 @@ test('legend_and_language_parity: each migrated swatch is the palette key its la
     const habitat = ['habRock', 'habMixed', 'habSoft', 'habKelp'];
     habitat.forEach((key, i) => { assert.equal(keyOf('habitat', lang, i), key, `${lang} habitat row ${i}`); assert.equal(kind[3 + 2 * i], p[key]); });
     assert.equal(keyOf('wind', lang, 0), 'mapInk'); assert.equal(p.mapInk, windOverlay(p).layers[1].paint['line-color']);
-    assert.equal(keyOf('depth-contours', lang, 0), 'mapContour'); assert.equal(p.mapContour, colourOf(contours, DEPTH_LINE, 'line-color'));
+    assert.equal(keyOf('depth-contours', lang, 0), 'sknContourIndex'); assert.equal(p.sknContourIndex, colourOf(contours, DEPTH_LINE_INDEX, 'line-color'));
     assert.equal(keyOf('depth-contours', lang, 1), 'mapLabel'); assert.equal(p.mapLabel, colourOf(contours, DEPTH_EDGE, 'line-color'));
     assert.equal(keyOf('marks', lang, 0), 'markRing'); assert.equal(p.markRing, marks.marks.find(l => l.id === 'marks-ring').paint['circle-stroke-color']);
     assert.equal(keyOf('marks', lang, 1), 'depth1', 'the density ramp swatch is unchanged');
@@ -443,7 +449,7 @@ test('numeric_controls_and_zero: multiplier 1 keeps the ramps, a large habitat m
   const width = palette => contoursOverlay(palette, {type: 'FeatureCollection', features: []}).layers.find(l => l.id === DEPTH_LINE).paint['line-width'];
   const base = width(roleSentinel());
   assert.equal(base[0], 'interpolate', 'the zoom curve stays outermost');
-  assert.ok(isDeepStrictEqual(base[4], ['*', ['case', ['==', ['get', 'index'], true], 0.9, 0.4], ['case', ['==', ['get', 'provenance'], 'verified'], 1.25, 1]]));
+  assert.ok(isDeepStrictEqual(base[4], ['*', 0.3, ['case', ['==', ['get', 'provenance'], 'verified'], 1.25, 1]]), 'the kit minor width at its first stop');
   const heavy = width(roleSentinel({'map-contour-width': '2'}));
   assert.equal(heavy[0], 'interpolate');
   assert.deepEqual(heavy[4][2], ['case', ['==', ['get', 'provenance'], 'verified'], 2.5, 2], 'the verified factor multiplies each stop');
@@ -455,40 +461,48 @@ test('today_except_classes: map-only defaults equal the chrome roles the map use
   const alias = {'map-water': 'bg', 'map-land': 'panel', 'map-park': 'panel-2', 'map-road': 'line', 'map-road-minor': 'panel-2', 'map-boundary': 'line', 'map-label': 'muted',
     'map-halo': 'bg', 'map-ink': 'text', 'map-ink-halo': 'bg', 'map-coast': 'muted', 'map-contour': 'depth-1', 'mark-ring': 'mint'};
   for (const theme of ['dark', 'light']) {
-    for (const [token, chrome] of Object.entries(alias)) assert.equal(RAW[theme][token], RAW[theme][chrome], `${theme} --${token} is --${chrome}`);
-    for (const token of ['map-label-opacity', 'map-road-opacity', 'map-habitat-opacity', 'map-contour-width']) assert.equal(RAW[theme][token], '1', `${theme} --${token}`);
+    // MB-05: the light map roles listed here were deliberately moved off the chrome roles (MAP-DESIGN-LOCK 10.2).
+    const lightMoved = new Set(['map-land', 'map-park', 'map-road', 'map-road-minor', 'map-boundary', 'map-label', 'map-coast']);
+    for (const [token, chrome] of Object.entries(alias)) if (theme === 'dark' || !lightMoved.has(token)) assert.equal(RAW[theme][token], RAW[theme][chrome], `${theme} --${token} is --${chrome}`);
+    for (const token of ['map-label-opacity', 'map-road-opacity', 'map-habitat-opacity', 'map-contour-width']) assert.equal(RAW[theme][token], theme === 'light' && token === 'map-habitat-opacity' ? '0.75' : '1', `${theme} --${token}`);
     for (const name of HABITAT_CLASSES) assert.notEqual(RAW[theme][`hab-${name}`], undefined);
   }
 });
 
+// MB-20: the light mpa and legend pins were re-taken after the light --mpa-fill/--mpa-line and --flow/--flow-fast moved (dark pins unchanged).
+// MB-16: the markStyle pins (both themes) were re-taken after Chart spots became a clustered source (radius, ring, badge and depth-label zoom); every other pin is unchanged.
+// MB-05: the light pins were re-taken after MAP-DESIGN-LOCK 10.2 moved the light land, park, road, boundary, label and coast tokens (dark pins unchanged).
 // sha256 of each module's JSON output under each theme's resolved tokens, taken from main 9312858 (before MGL-15; legend re-taken after SC1407-15 added the planning-route swatch), with the four
-// habitat tokens set back to their old class colours. A different hash means something other than the four classes moved.
+// habitat tokens set back to their old class colours and the habitat multiplier to 1. A different hash means another property moved.
 const PRE_MGL15 = {
   dark: {basemapDay: '4c3bc2f4888541e7279e39d822ed576c0b69703e0bfd9539c74b3da2df869ced', basemapNight: 'bcd35d05c97dac8ee923eeabc227cbf6f55466faedb2498c9a124245f8a648c0',
-    markStyle: 'ea4bf9a688dd566c5dd776e5ec731ed1433bec2a67c5efc987441dc5bca9e07b', contours: '00340163df880b797d9a2d7618277d8d46435e711ae3eeed649b149286a7896c',
+    markStyle: 'bebbb6b4d74a346577d7366cfdd2fc4a9d78187345ed18c23f57507129272dd5',
     wind: '0b39b8c9ca321f0b4edac7d2da696b68d87884ef90d1eafe3d875a8092b55d70', stations: '2ffaa0dd2f9eead93bf5d5ab0122048ae7c93e90f004e6a7d94f54d911a44ecf',
     ranked: '5f4127c8c0d72021a8285e8dba62acf1e60e1a21f044ff0fca925ff4f3d66c8c', coastline: 'ba45dddc66343939c5869bf19d43cf62f43797ad54e86f6899ada7bfc7d51d3a',
     mpa: 'ec0211f82aa47296adaedd43b08910d776b99bf7b0cdcda64f4c5f10febc9367', seafloor: 'dc2f2708205ac09f4b0f2e50c9f434d85fbab23f3827933af731607a5c1ecb7f',
-    coastPalette: '6dc9df3acfc5197dc77636fa4d3bb3b4dc4711155b9ded4a33e7ebb6e5ce3fab', legend: '8ba22780365f22f0cfcd38f121423c8a8f7d910c21b771cbb99a16679b8b3f6c'},
-  light: {basemapDay: 'd808bc498fdc45f2afb6a1e78fa9fe0a44a24bd41ebd933e9aaa93b9acf63ea6', basemapNight: 'e06ca75e8eee8e3d3cc39b35d0d6f3c78404603525d097cc19b68c351c8b8c95',
-    markStyle: '809d30a296625c020206b7c6d6dfdf5fceb15c878ece7c68e87622d385baab25', contours: '02807f64e2f88064e66e7ff212445e02c00ab4a51220ecac6ffcae312a6c8ce6',
-    wind: 'fcc72707149c69fd25582f517d81f968536cc73d011d46e8a7711170e698a475', stations: 'a8fbbc67164a536694a7c71b042a290847f5edcdb7caaf8f35801b5f58f00261',
-    ranked: '1d31b678781879b866ea49adafe7e877f5ff19219639ad66f1b1c6500e66b1c1', coastline: 'a0a3e42e80196c3f02c5f912c53b0e635ec2635b3d204b354ab52d63df702dad',
-    mpa: '28aac4da0865d837142fb538317a8d01da24ffa4566e8f2c01f917482f581b43', seafloor: 'e3b06a039c89eb28a9fc8f2fa1935b59c350940bcbc99c6d0c05fda3e0d786b4',
-    coastPalette: '94883d376f41ef9d69047d7a6820f0de872bec5fdf149ec1da59c9c587da0ea8', legend: '7ccd143ff8b59aa72011d96bdc8b3abce7cac6b8511199680d09ef7dbc8d1a40'},
+    coastPalette: '6dc9df3acfc5197dc77636fa4d3bb3b4dc4711155b9ded4a33e7ebb6e5ce3fab', legend: 'd5cd9ae3b064c601c2aa7cc2f9ffa4cf9b3ae8c6177d1f44d3b2b656d1741d28'},
+  light: {basemapDay: 'e2fddacc2a3344c7dd1e0e9a3402f0123c47c1660606263510b6a0fdfd7144f2', basemapNight: 'e06ca75e8eee8e3d3cc39b35d0d6f3c78404603525d097cc19b68c351c8b8c95',
+    markStyle: '0851253b566f2dd70c84fc653e0470f203b1c61de6309dd22a03650ba7f4b86b',
+    wind: 'fcc72707149c69fd25582f517d81f968536cc73d011d46e8a7711170e698a475', stations: 'e64d698c19c4989afb104f504e95c2df46a2b91c80bebbf7978a905613d3ca94',
+    ranked: '1d31b678781879b866ea49adafe7e877f5ff19219639ad66f1b1c6500e66b1c1', coastline: '359de78dddcdaff201f895087e33c9c8b99e2a5647df486268a0d8c56a248ed8',
+    mpa: '93650a0be578851dc524c877b3a3659403a4cea0daa1ca834d497311d1e3bd12', seafloor: 'ce5756009be496de0072e7b66c216db27aa05020049aaccfdbccb787a0c8df39',
+    coastPalette: '19dd9879dbee4907251ac533211ccd8fa8518195a58428cc48fc64570087bacb', legend: 'd50dd1ed4778fff4266d662ed8d4adeaa12a154d7efcee192ccfea54f4172e62'},
 };
+// MSK-2: `contours` left this pin (the kit paint replaced it) and `legend` was recomputed on the MSK-1 base without the contour row.
 test('today_except_classes: day and night basemap, every overlay and every legend swatch resolve exactly as before, apart from the four classes', () => {
-  const OPTIONS = {archive: 'https://example.test/tiles/basemap/ca-coast.pmtiles', assets: 'https://example.test/basemap/'}, empty = {type: 'FeatureCollection', features: []};
+  const OPTIONS = {archive: 'https://example.test/tiles/basemap/ca-coast.pmtiles', assets: 'https://example.test/basemap/'};
   const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
   // R4-SC-08 moved only the glyph URL under its content version; the pins predate it, so compare with the old URL.
   const basemap = (p, variant) => { const style = basemapStyle(p, {...OPTIONS, variant}); return {...style, glyphs: style.glyphs.replace(`/v/${GLYPH_VERSION}/`, '/')}; };
   for (const theme of ['dark', 'light']) {
-    const p = paletteOf(theme, OLD_CLASSES[theme]);
+    const p = paletteOf(theme, {...OLD_CLASSES[theme], 'map-habitat-opacity': '1'});
     const got = {
       basemapDay: digest(basemap(p, 'day')), basemapNight: digest(basemap(p, 'night')), markStyle: digest(markStyle(p)),
-      contours: digest(contoursOverlay(p, empty)), wind: digest(windOverlay(p)), stations: digest(stationOverlay(p)), ranked: digest(rankedStyle(p)), coastline: digest(coastlineLayers(p)),
+      wind: digest(windOverlay(p)), stations: digest(stationOverlay(p)), ranked: digest(rankedStyle(p)), coastline: digest(coastlineLayers(p)),
       mpa: digest(mpaLayers(p)), seafloor: digest(seafloorLayers(p)), coastPalette: digest(coastPalette(p)),
-      legend: digest(['en', 'es'].map(lang => LAYERS.map(e => [e.id, layerCopy(e.id, lang).legend.map(r => [r.label, r.swatch ? p[r.swatch] : null])]))),
+      // MSK-2 replaced the contour paint and its legend swatch with G's nearshore kit (tests/test_depth_contours.mjs owns
+      // that contract), so the contour row is left out here; every other layer's legend row is still held to its pin.
+      legend: digest(['en', 'es'].map(lang => LAYERS.filter(e => e.id !== 'depth-contours').map(e => [e.id, layerCopy(e.id, lang).legend.map(r => [r.label, r.swatch ? p[r.swatch] : null])]))),
     };
     for (const [name, hash] of Object.entries(PRE_MGL15[theme])) assert.equal(got[name], hash, `${theme} ${name} moved`);
   }

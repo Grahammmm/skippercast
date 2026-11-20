@@ -6,8 +6,9 @@
 // target, so the route is no open redirect. `t` picks which stored URL and `p`
 // only labels the placement in the count. Unknown slug, a vessel that is not
 // public (display.ts publicVesselSql: `status='active'`, `profile_status='listed'`,
-// no removal request), no URL for `t`, or a stored URL
-// that is not plain https → 404. UTM tags are appended, keeping every existing
+// no removal request), no URL for `t`, a stored URL that is not plain https, or one that no
+// current displayable fact (display.ts displayableLink: exact value, field, rights,
+// confidence, not AIS, not superseded) still supports → 404. UTM tags are appended, keeping every existing
 // parameter (and any utm_* already there) as stored.
 //
 // Each click adds one to the day's fleet_link_clicks row (vessel, target,
@@ -19,7 +20,7 @@ import type {Context} from 'hono';
 import {json} from '../http.ts';
 import {recordFleetClick} from '../analytics.ts';
 import {waitUntil} from '../routes/util.ts';
-import {publicVesselSql} from './display.ts';
+import {publicVesselSql, safeTarget, displayableLink, type FactRow} from './display.ts';
 import type {AppEnv, Env} from '../env.ts';
 
 export const TARGETS = ['booking', 'website'] as const;
@@ -28,19 +29,9 @@ export type Target = typeof TARGETS[number];
 export type Placement = typeof PLACEMENTS[number];
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
-const MAX_URL = 2048;
 const NOT_FOUND = (): Response => json({error: 'Not found'}, 404);
 
-/** The stored URL as a redirect target: https, a host, no credentials, bounded; else null. */
-export function safeTarget(stored: unknown): URL | null {
-  if (typeof stored !== 'string' || !stored || stored.length > MAX_URL) return null;
-  const candidate = stored.trim();
-  if (/[\u0000-\u001f\u007f]/.test(candidate)) return null;
-  let url: URL;
-  try { url = new URL(candidate); } catch { return null; }
-  if (url.protocol !== 'https:' || !url.hostname || url.username || url.password) return null;
-  return url;
-}
+export {safeTarget};
 
 /** `target` with the referral UTM tags appended; existing parameters (utm_* included) are kept as stored. */
 export function withUtm(target: URL, region: string, placement: Placement): string {
@@ -74,7 +65,13 @@ export async function fleetGo(c: Context<AppEnv>, now: () => Date = () => new Da
   const vessel = await env.DB.prepare(`SELECT id,region,website,booking_url FROM fleet_vessels
     WHERE slug=? AND ${publicVesselSql()}`).bind(slug).first<VesselLink>();
   if (!vessel) return NOT_FOUND();
-  const url = safeTarget(target === 'booking' ? vessel.booking_url : vessel.website);
+  // The profile's rule, applied again at click time: the stored URL must still be backed by a
+  // current, displayable fact for the same field carrying exactly that value. An old link whose
+  // fact was superseded or never qualified answers 404 and counts nothing.
+  const field = target === 'booking' ? 'booking_url' : 'website';
+  const {results: facts} = await env.DB.prepare(`SELECT id,field,value_json,source_url,method,confidence,rights,retrieved_at,superseded_at
+    FROM fleet_vessel_facts WHERE vessel_id=? AND field=? AND superseded_at IS NULL`).bind(vessel.id, field).all<FactRow>();
+  const url = displayableLink(target === 'booking' ? vessel.booking_url : vessel.website, field, facts);
   if (!url) return NOT_FOUND();
   // HEAD (link checkers, prefetch) answers the same redirect without counting.
   if (c.req.method !== 'HEAD') {

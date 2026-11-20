@@ -201,6 +201,7 @@ class Recorder:
 
     def __init__(self):
         self.collected, self.deselected, self.results, self.errors = [], 0, {}, []
+        self.passed_phases = {}
 
     def pytest_collection_finish(self, session):
         # After -k deselection: the items that will actually run.
@@ -214,14 +215,19 @@ class Recorder:
             self.errors.append(dict(nodeid=report.nodeid, longrepr=str(report.longrepr)[:4000]))
 
     def pytest_runtest_logreport(self, report):
-        entry = self.results.setdefault(report.nodeid, dict(outcome='passed'))
-        if report.when == 'call' and hasattr(report, 'wasxfail'):
+        entry = self.results.setdefault(report.nodeid, dict(outcome='incomplete'))
+        if hasattr(report, 'wasxfail'):
             entry['outcome'] = 'xfail'
         elif report.skipped:
             entry['outcome'] = 'skipped'
         elif report.failed:
             entry['outcome'] = 'failed' if report.when == 'call' else f'error-{report.when}'
             entry['longrepr'] = str(report.longrepr)[:4000]
+        elif report.passed:
+            phases = self.passed_phases.setdefault(report.nodeid, set())
+            phases.add(report.when)
+            if entry['outcome'] == 'incomplete' and {'setup', 'call', 'teardown'} <= phases:
+                entry['outcome'] = 'passed'
 
 
 def module_origins():
@@ -380,6 +386,8 @@ def main(argv=None):
                 failures.append(f'pytest exit {int(code)}')
             if len(recorder.collected) != EXPECTED[args.suite]:
                 failures.append(f'collected {len(recorder.collected)} != expected {EXPECTED[args.suite]}')
+            if set(recorder.results) != set(recorder.collected):
+                failures.append('reported node set differs from the collected nodes')
             if counts.get('passed', 0) != len(recorder.collected) or set(counts) - {'passed'}:
                 failures.append(f'non-passing outcomes: {counts}')
             if recorder.errors:

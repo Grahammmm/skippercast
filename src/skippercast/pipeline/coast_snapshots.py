@@ -28,7 +28,7 @@ import sys
 
 from ..platform.contracts import atomic_json
 from ..util.units import KT_PER_MS
-from .goes_frames import CAPABILITIES_URL, epoch, iso
+from .goes_frames import CAPABILITIES_URL, MAX_MS, MIN_MS, epoch, iso
 
 COUNTY, REGION = "slo", "morro-bay"
 OCEAN_FEED_URL = f"https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/{REGION}/intelligence.json"
@@ -75,6 +75,8 @@ def _frames(data, kind, fields, issued, now):
         at = frame.get("time") * 1000 if isinstance(frame, dict) and _number(frame.get("time")) else None
         cells = frame.get("cells") if isinstance(frame, dict) else None
         if at is None or at <= prior or not isinstance(cells, list) or len(cells) > 1500:
+            return None
+        if not MIN_MS <= at <= MAX_MS:  # not writable as a four-digit UTC timestamp (also refuses inf)
             return None
         prior = at
         if forecast:

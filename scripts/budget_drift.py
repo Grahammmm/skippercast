@@ -173,7 +173,7 @@ def check_files() -> list[str]:
         return problems + [f'{STARTUP_FILE.name}: needs a "drift_history" list (may be empty)']
     last: dict[str, dict] = {}
     for e in hist:
-        if not (isinstance(e.get("budget"), str) and isinstance(e.get("max_bytes"), int) and str(e.get("reason", "")).strip()):
+        if not (isinstance(e, dict) and isinstance(e.get("budget"), str) and isinstance(e.get("max_bytes"), int) and str(e.get("reason", "")).strip()):
             problems.append(f"drift_history entry needs budget, integer max_bytes and a reason: {e!r}")
             continue
         last[e["budget"]] = e

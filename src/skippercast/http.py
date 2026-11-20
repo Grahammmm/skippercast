@@ -289,7 +289,7 @@ def parse_retry_after(value: str | None, now: float | None = None) -> float | No
     if value is None:
         return None
     value = value.strip()
-    if value.isdigit():
+    if value and value.isascii() and value.isdigit():
         return float(value)
     try:
         moment = email.utils.parsedate_to_datetime(value)
@@ -403,6 +403,10 @@ class HTTPCache:
         return body if hashlib.sha256(body).hexdigest() == meta.get("sha256") else None
 
     def store(self, url: str, body: bytes, headers: Headers) -> None:
+        if no_store(headers):  # response forbids storage: drop any older entry too
+            with self._lock:
+                self.forget(url)
+            return
         etag, modified = headers.get("ETag"), headers.get("Last-Modified")
         if not etag and not modified:
             return
@@ -419,6 +423,12 @@ class HTTPCache:
     def forget(self, url: str) -> None:
         for path in self._paths(url):
             path.unlink(missing_ok=True)
+
+
+def no_store(headers: Headers) -> bool:
+    """True when Cache-Control carries the exact `no-store` directive name (case-insensitive)."""
+    return any(part.split("=", 1)[0].strip().lower() == "no-store"
+               for part in (headers.get("Cache-Control") or "").split(","))
 
 
 def cache_from_environment(environ: Mapping[str, str] | None = None) -> HTTPCache | None:
@@ -606,6 +616,11 @@ class Session:
         while True:
             chunk = response.read(CHUNK)
             if not chunk:
+                # A real HTTPResponse counts down its declared Content-Length; a positive
+                # remainder at EOF is a truncated transfer, not a complete body.
+                remaining = getattr(response, "length", None)
+                if isinstance(remaining, int) and remaining > 0:
+                    raise http.client.IncompleteRead(b"", remaining)
                 break
             size += len(chunk)
             if limit is not None and size > limit:
@@ -800,6 +815,8 @@ class Session:
                                           follow_redirects, allowlist, prefixes)
                     else:
                         hop.body, hop.size, from_cache = body, len(body), True
+                        if no_store(hop.headers):  # serve this request, keep nothing
+                            store.forget(url)
                 row.update(status=hop.status, elapsed_ms=int((self.clock() - attempt_started) * 1000))
                 receipt.status, receipt.final_url = hop.status, hop.final_url
                 accepted = from_cache or (hop.status in ok if ok is not None else 200 <= hop.status < 300)

@@ -1,12 +1,12 @@
 ---
 name: skippercast-region-process
-description: Use when taking a SkipperCast region from bathymetry bindings to a published depth-contour file. Orders the five stage skills, names the human gates and the ledger; a new region is a run, not code.
+description: Superseded for new regions by skippercast-relief-pipeline (contours are its stage R5b). Use only to reproduce the Morro golden case or to read old run folders.
 skill_version: 1.1
 ---
 
 # Region process
 
-Takes a region id through intake → correct → build → review → publish with the five stage skills and one ledger. A new region is a run, not code. Machine-valid output is review-required, not accepted. Open data PRs one at a time. Never judge reviewer independence from profile names.
+Historical lane. New contour builds run as stage R5b of skippercast-relief-pipeline; the ledger is replaced by OUT/<id>/stages/*.json. Kept: the golden case and the build/review scripts the pipeline calls. A new region is a run, not code. Machine-valid output is review-required, not accepted. Open data PRs one at a time. Never judge reviewer independence from profile names.
 
 ## Inputs
 
@@ -26,7 +26,7 @@ Takes a region id through intake → correct → build → review → publish wi
 6. Agent first review, by a family different from `BUILD.json` `run.author_family`, writes `<run>/REVIEW.md` per [`PROMPT.md`](../skippercast-region-review/PROMPT.md); then `python3 skills/skippercast-region-review/scripts/region_review.py --check <run>` ([`region_review.py`](../skippercast-region-review/scripts/region_review.py)).
 7. Publish: `python3 skills/skippercast-region-publish/scripts/region_publish.py <run> --repo <worktree>` ([`region_publish.py`](../skippercast-region-publish/scripts/region_publish.py)); exit 1 is held, and `PUBLISH.md` names the reason.
 8. The PR opener opens the data PR from `PUBLISH.md` and pastes the output of `python3 ~/agent-work/bin/mergegate.py Grahammmm/skippercast <n> <head>`.
-9. After merge: `python3 skills/skippercast-region-publish/scripts/region_publish.py --record-pr <run> --pr <n> --published-at YYYY-MM-DD` ([`region_publish.py`](../skippercast-region-publish/scripts/region_publish.py)).
+9. After merge AND a passing `scripts/relief/region.py live-check --region <id>`: record `--record-pr <run> --pr <n>` (sets `merged`); `published` requires the live-check receipt path (`--live-receipt <path> --published-at YYYY-MM-DD`) ([`region_publish.py`](../skippercast-region-publish/scripts/region_publish.py)).
 
 ## Outputs
 

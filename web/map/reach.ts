@@ -20,6 +20,7 @@ import type {Engine, Overlay} from './engine.ts';
 import {MARK_PICK, markData} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {LABEL_FONT} from './style.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'reach';
 export const REACH_SOURCE = 'reach';
@@ -42,18 +43,17 @@ export function reachFeatures(origin: Origin | null, nm: number | null): Collect
   ]};
 }
 
-/** A dashed --blue line and its label, haloed in the background colour. */
+const reachLayers = (p: Palette): MapLibre.LayerSpecification[] => [
+  {id: REACH_LINE, type: 'line', source: REACH_SOURCE, filter: ['==', ['get', 'kind'], 'ring'], layout: {'line-join': 'round'},
+    paint: {'line-color': p.blue, 'line-width': 1.5, 'line-opacity': 0.85, 'line-dasharray': [3, 3]}},
+  {id: REACH_LABEL, type: 'symbol', source: REACH_SOURCE, filter: ['==', ['get', 'kind'], 'label'],
+    layout: {'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 12, 'text-anchor': 'bottom', 'text-offset': [0, -0.4], 'text-allow-overlap': true},
+    paint: {'text-color': p.blue, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
+] as MapLibre.LayerSpecification[];
+
+/** A dashed --blue line and its label, haloed in the background colour. A theme switch edits their paints in place (same IDs, same data). */
 export function reachOverlay(p: Palette, data: Collection): Overlay {
-  return {
-    sources: {[REACH_SOURCE]: {type: 'geojson', data} as MapLibre.SourceSpecification},
-    layers: [
-      {id: REACH_LINE, type: 'line', source: REACH_SOURCE, filter: ['==', ['get', 'kind'], 'ring'], layout: {'line-join': 'round'},
-        paint: {'line-color': p.blue, 'line-width': 1.5, 'line-opacity': 0.85, 'line-dasharray': [3, 3]}},
-      {id: REACH_LABEL, type: 'symbol', source: REACH_SOURCE, filter: ['==', ['get', 'kind'], 'label'],
-        layout: {'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 12, 'text-anchor': 'bottom', 'text-offset': [0, -0.4], 'text-allow-overlap': true},
-        paint: {'text-color': p.blue, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
-    ] as MapLibre.LayerSpecification[],
-  };
+  return {sources: {[REACH_SOURCE]: {type: 'geojson', data} as MapLibre.SourceSpecification}, layers: reachLayers(p), themePaint: q => paintEdits(reachLayers(q))};
 }
 
 export interface ReachLayerOptions {engine: ReadonlySignal<Engine | null>; palette?: () => Palette; host?: HTMLElement}

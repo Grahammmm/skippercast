@@ -380,6 +380,8 @@ def write_new(path, data):
         view = memoryview(data)
         while view:
             written = os.write(fd, view)
+            if written <= 0:
+                raise OSError('report write made no progress')
             view = view[written:]
         os.fsync(fd)
     except BaseException:

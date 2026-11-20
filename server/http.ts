@@ -26,9 +26,9 @@ export function requireOrigin(request: Request, extraOrigins: Set<string>): void
   if (!origin || !(origins.has(origin) || extraOrigins.has(origin))) throw new ClientError('origin rejected');
 }
 
-/** D1-backed counter: more than `limit` calls a minute for this owner (or IP key) throws RateLimited. */
-export async function budget(env: Env, owner: string, limit = 30): Promise<void> {
-  const minute = Math.floor(Date.now() / 60000), id = await hash(owner + ':' + minute);
-  const row = await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id, minute * 60 + 120).first<{count: number}>();
+/** D1-backed counter: more than `limit` calls per fixed window for this owner throws RateLimited. Default: one minute. */
+export async function budget(env: Env, owner: string, limit = 30, windowSeconds = 60): Promise<void> {
+  const window = Math.floor(Date.now() / (windowSeconds * 1000)), id = await hash(owner + ':' + window);
+  const row = await db(env).prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1 RETURNING count').bind(id, window * windowSeconds + windowSeconds + 60).first<{count: number}>();
   if (row!.count > limit) throw new RateLimited('rate limited');
 }

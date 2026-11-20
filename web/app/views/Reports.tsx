@@ -15,7 +15,7 @@ import type {CatchState} from '../../../packages/coast/src/ui/catches.ts';
 import {coastReport} from '../../coast-data.ts';
 import {PROFILE_TABLE} from '../../profile.ts';
 import {profile, region, species} from '../../state.ts';
-import type {Charters, Evidence, ReportsData, Watch} from '../../reports.ts';
+import type {Charters, Evidence, EvidenceNotAvailable, ReportsData, Watch} from '../../reports.ts';
 import {regionInfo} from '../App.tsx';
 import {DEFAULT_ZONE} from '../../zone.ts';
 import {CoastMarkup, isSafeCatchState} from '../CoastMarkup.tsx';
@@ -70,9 +70,12 @@ export function CatchCards({state}: {state: CatchState | null}) {
   return <CoastMarkup renderer="catchSheet" args={lang === 'en' ? [state] : [state, catchCopy(lang)]} class="app-reports-catches" />;
 }
 
-export function EvidenceSection({evidence, timeZone = DEFAULT_ZONE}: {evidence: Evidence | null; timeZone?: string}) {
+export function EvidenceSection({evidence: found, timeZone = DEFAULT_ZONE}: {evidence: Evidence | EvidenceNotAvailable | null; timeZone?: string}) {
   const lang = language.value;
-  if (!evidence) return <p>{t('reports.evidence.unavailable', lang)}</p>;
+  if (!found) return <p>{t('reports.evidence.unavailable', lang)}</p>;
+  // Type-only import above: reports.ts and its v1 modules load with the view's dynamic import, not the entry.
+  if ('notAvailable' in found) return <p>{found.lastSourceDay ? t('reports.evidence.not_available_since', lang, {date: reportDay(found.lastSourceDay, lang, timeZone)}) : t('reports.evidence.not_available', lang)}</p>;
+  const evidence = found;
   const text = evidenceCopy(evidence, lang);
   return (
     <>

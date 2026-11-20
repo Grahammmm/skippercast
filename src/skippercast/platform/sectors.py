@@ -4,6 +4,25 @@ from pathlib import Path
 from .contracts import REPO, atomic_json, bbox, public_url, read_json
 
 
+def is_qualified_fishing_target(target, atlas):
+    """Count only affirmative fishing and chart-depth evidence, not map presence.
+
+    Match the research ledger's MLLW depth bands: above 200 ft requires a
+    reviewed deeper-depth receipt and a 300 ft atlas. Export remains a separate gate.
+    """
+    if (target.get('research_only') or target.get('fishing_target') is not True
+            or target.get('depth_qualified') is not True or target.get('vertical_datum') != 'MLLW'):
+        return False
+    depth = target.get('neighborhood_depth_ft')
+    if (not isinstance(depth, list) or len(depth) != 2
+            or not all(type(value) is int or (type(value) is float and math.isfinite(value)) for value in depth)
+            or not 0 < depth[0] <= depth[1] <= 300):
+        return False
+    review = target.get('depth_qualification')
+    return depth[1] <= 200 or (atlas.get('fishing_depth_limit_ft', 0) >= 300
+                              and isinstance(review, dict) and review.get('status') == 'reviewed')
+
+
 def _check_source(source):
     """Name a misshaped sector catalog before any atlas is read."""
     sectors, leads = source.get('sectors'), source.get('survey_discovery')
@@ -78,7 +97,7 @@ def compile_sectors(root=REPO):
             bounds = [coast['bounds'][0], south, coast['bounds'][2], north]
             bbox(bounds)
             overlapping = []
-            candidates = 0
+            candidates = qualified = 0
             for package_id in coast['packages']:
                 package = packages[package_id]
                 west, psouth, east, pnorth = package['fishing_bounds']
@@ -87,16 +106,19 @@ def compile_sectors(root=REPO):
                 overlapping.append(package_id)
                 region = read_json(root / 'regions' / package_id / 'region.json')
                 atlas = read_json(root / 'dist' / region['assets']['atlas'])
-                candidates += sum(
-                    bounds[0] <= p['longitude'] <= bounds[2]
-                    and (south <= p['latitude'] < north
-                         or (index == len(bands) - 1 and p['latitude'] == north
-                             and not owned_to_north(p, package_id, package)))
-                    for p in atlas['targets'])
+                for p in atlas['targets']:
+                    if (bounds[0] <= p['longitude'] <= bounds[2]
+                            and (south <= p['latitude'] < north
+                                 or (index == len(bands) - 1 and p['latitude'] == north
+                                     and not owned_to_north(p, package_id, package)))):
+                        candidates += 1
+                        qualified += is_qualified_fishing_target(p, atlas)
             result.append({**sector, 'bounds': bounds, 'status': 'discovery',
                            'rules_url': coast['rules_url'],
                            'partial_package_ids': overlapping,
                            'published_candidate_points': candidates,
+                           'published_research_candidates': candidates - qualified,
+                           'qualified_fishing_targets': qualified,
                            'note': 'Browse area only. Survey coverage, current fish presence and date-specific legal access have not been established by this sector.'})
     if len(result) != len(source['sectors']):
         raise ValueError('Sector references an unknown coast')

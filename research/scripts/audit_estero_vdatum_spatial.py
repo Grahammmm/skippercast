@@ -4,6 +4,9 @@
 This diagnoses geographic variation only. The source survey is NAD83(CORS96)
 at epoch 2010.1548, while the current API accepts NAD83(2011) for NAVD88;
 the bridge, source total uncertainty, and cellwise conversion remain open.
+The lattice uses the declared WGS84 block CRS. Its geographic coordinates
+are supplied nominally as NAD83(2011) to NOAA, without a realization/epoch
+correction or an explicit request epoch.
 """
 
 import argparse
@@ -21,6 +24,8 @@ from pyproj import Transformer
 
 API = "https://vdatum.noaa.gov/vdatumweb/api/convert"
 DOC = "https://vdatum.noaa.gov/docs/services.html"
+BLOCK_CRS = "EPSG:32610"
+API_HORIZONTAL_FRAME = "NAD83_2011"
 
 
 def extent(blocks):
@@ -53,7 +58,7 @@ def extent(blocks):
 def sample(x, y, to_geo):
     lon, lat = to_geo.transform(x, y)
     params = {"region": "westcoast", "s_x": f"{lon:.8f}", "s_y": f"{lat:.8f}",
-              "s_z": "0", "s_h_frame": "NAD83_2011", "s_v_frame": "NAVD88",
+              "s_z": "0", "s_h_frame": API_HORIZONTAL_FRAME, "s_v_frame": "NAVD88",
               "s_v_unit": "m", "t_h_frame": "IGS14", "t_v_frame": "MLLW", "t_v_unit": "m"}
     url = API + "?" + urlencode(params)
     with urlopen(Request(url, headers={"Accept": "application/json",
@@ -62,7 +67,7 @@ def sample(x, y, to_geo):
         if response.status != 200 or "json" not in response.headers.get("Content-Type", "").lower():
             raise ValueError("VDatum did not return HTTP 200 JSON")
         data = json.load(response)
-    if (data.get("errorCode") or data.get("s_h_frame") != "NAD83_2011"
+    if (data.get("errorCode") or data.get("s_h_frame") != API_HORIZONTAL_FRAME
             or data.get("s_v_frame") != "NAVD88" or data.get("t_v_frame") != "MLLW"
             or data.get("region") != "WESTCOAST"):
         raise ValueError("VDatum conversion failed or returned a different frame")
@@ -96,7 +101,7 @@ def summarize(blocks, samples, nx=7, ny=4):
         "service_documentation": DOC,
         "source_survey": "https://doi.org/10.3133/ofr20131225",
         "survey_horizontal_frame": "NAD83(CORS96), processing epoch 2010.1548",
-        "api_request_horizontal_frame": "NAD83_2011",
+        "api_request_horizontal_frame": API_HORIZONTAL_FRAME,
         "source_vertical_datum": "NAVD88 Geoid12",
         "target_vertical_datum": "MLLW",
         "sample_lattice": {"columns": nx, "rows": ny, "points": len(samples),
@@ -121,12 +126,15 @@ def main():
     parser.add_argument("--output", type=Path, default=Path("research/receipts/estero-2012-vdatum-spatial-diagnostic.json"))
     args = parser.parse_args()
     blocks = json.loads(args.blocks.read_text())
+    block_crs = blocks.get("crs")
+    if block_crs != BLOCK_CRS:
+        raise ValueError(f"Research blocks must declare CRS {BLOCK_CRS}")
     west, south, east, north = extent(blocks)
     nx, ny = 7, 4
     coordinates = [(west + (east - west) * col / (nx - 1),
                     south + (north - south) * row / (ny - 1))
                    for row in range(ny) for col in range(nx)]
-    to_geo = Transformer.from_crs("EPSG:26910", "EPSG:4326", always_xy=True)
+    to_geo = Transformer.from_crs(block_crs, "EPSG:4326", always_xy=True)
     with ThreadPoolExecutor(max_workers=4) as pool:
         samples = list(pool.map(lambda p: sample(p[0], p[1], to_geo), coordinates))
     report = summarize(blocks, samples, nx, ny)

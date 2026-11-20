@@ -205,3 +205,16 @@ test('charter source links retain matched public trips, safe URLs and escaped la
   assert.doesNotMatch(absentHTML, /<a|Source reports:/);
   assert.match(absentHTML, /5 reported trips · 5 boats · latest report Sep 16, 2026/);
 });
+
+test('SC-FEED-DEGRADE-1: a feed whose charter section is not available shows "Not available", never zero trips', async () => {
+  const {evidenceFrom, EvidenceSection, render, h} = await load();
+  const stale = evidenceFeed({reports: [], charter_reports: {status: 'not_available', reason: 'source_stale', last_source_day: '2026-11-12'}});
+  const e = evidenceFrom(stale, 'morro-bay', 'reef', NOW.getTime());
+  assert.deepEqual(e, {notAvailable: true, lastSourceDay: '2026-11-12'});
+  const html = render(h(EvidenceSection, {evidence: e}));
+  assert.match(html, /Not available\./);
+  assert.match(html, /not updated since/);
+  assert.doesNotMatch(html, /0 trips|Insufficient|No catch score is assumed/);
+  assert.match(render(h(EvidenceSection, {evidence: {notAvailable: true, lastSourceDay: null}})), /Not available\./);
+  assert.equal(evidenceFrom(evidenceFeed({charter_reports: undefined}), 'morro-bay', 'reef', NOW.getTime()).trips, 2, 'a fresh feed is unchanged');
+});

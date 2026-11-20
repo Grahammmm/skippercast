@@ -44,13 +44,18 @@ class SchemaFiles(unittest.TestCase):
         from jsonschema import Draft202012Validator
         files = sorted((ROOT / 'schemas').glob('*.schema.json'))
         self.assertGreaterEqual(len(files), 15)
+        # The only schema without an $id is the byte-pinned standalone render recipe, loaded by path.
+        standalone = {'sc-render-v1.schema.json'}
         for path in files:
             schema = load(path)
             Draft202012Validator.check_schema(schema)
             self.assertEqual(schema['$schema'], 'https://json-schema.org/draft/2020-12/schema', path.name)
+            if path.name in standalone:
+                self.assertNotIn('$id', schema)
+                continue
             self.assertEqual(schema['$id'], 'https://skippercast.com/schemas/' + path.name)
         kinds = {name for name in validate.KINDS.values()}
-        self.assertEqual(kinds | {'common.schema.json'}, {p.name for p in files})
+        self.assertEqual(kinds | {'common.schema.json'} | standalone, {p.name for p in files})
 
     def test_every_reference_resolves_locally(self):
         def refs(node):
@@ -186,6 +191,23 @@ class ContractsCatchDrift(unittest.TestCase):
         approved = {**source, 'review_status': 'approved', 'rights': {**source['rights'], 'license': 'unresolved'}}
         self.rejects('source', approved)
         self.rejects('source', {**source, 'review_status': 'maybe'})
+
+    def test_public_display_schema_rejects_unsafe_declarations(self):
+        source = load(ROOT / 'catalog/sources.json')['sources'][0]
+        source = {**source, 'rights': {k: v for k, v in source['rights'].items() if k != 'owner_public_display'}}
+        for display in (False, 'public', None):
+            self.rejects('source', {**source, 'rights': {**source['rights'], 'public_display': display}})
+        allowed = {**source, 'rights': {**source['rights'], 'public_display': 'allowed'}}
+        self.accepts('source', allowed)
+        self.rejects('source', {**allowed, 'review_status': 'candidate'})
+        decided = {'decision': 'allowed', 'basis': 'G decision 2026-11-18 (owner-accepted risk; revisit when paid)'}
+        owned = {**allowed, 'review_status': 'candidate', 'publication_allowed': False,
+                 'rights': {**allowed['rights'], 'owner_public_display': decided}}
+        self.accepts('source', owned)
+        self.rejects('source', {**owned, 'rights': {**owned['rights'], 'owner_public_display': {**decided, 'basis': 'unrecorded'}}})
+        self.rejects('source', {**allowed, 'publication_allowed': False})
+        self.rejects('source', {**owned, 'rights': {k: v for k, v in owned['rights'].items() if k != 'owner_public_display'}})
+        self.rejects('source', {**allowed, 'rights': {**allowed['rights'], 'attribution': ' '}})
 
     def test_region_contract(self):
         region = load(ROOT / 'regions/morro-bay/region.json')

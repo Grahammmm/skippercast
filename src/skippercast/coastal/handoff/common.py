@@ -253,9 +253,34 @@ def validate_native_source(root, artifact, *, netcdf=False):
         for name in ('elevation', 'uncertainty', 'metadata'):
             if name not in root_group or not isinstance(root_group[name], h5py.Dataset):
                 raise ValueError('BAG required local datasets missing')
-        if root_group['metadata'].size > 1_000_000:
-            raise ValueError('BAG metadata byte bound exceeded')
+        bag_metadata_nbytes(root_group['metadata'])
     return path
+
+
+MAX_BAG_METADATA_BYTES = 1_000_000
+
+
+def bag_metadata_nbytes(dataset):
+    """Return the decoded byte length of a BAG ``metadata`` dataset, bounded.
+
+    Only the BAG fixed-width one-byte character layout (1-D ``S1``, or the same
+    bytes stored as ``u1``) is supported. Variable-length strings and wider
+    fixed-width elements are refused, never truncated, so the cap below is a
+    real byte bound that holds before any bulk read.
+    """
+    dtype = dataset.dtype
+    if len(dataset.shape) != 1 or dtype.kind not in 'Su' or dtype.itemsize != 1:
+        raise ValueError('BAG metadata must be a one-dimensional fixed-width one-byte character dataset')
+    nbytes = int(dataset.size) * dtype.itemsize
+    if nbytes > MAX_BAG_METADATA_BYTES:
+        raise ValueError('BAG metadata byte bound exceeded')
+    return nbytes
+
+
+def read_bag_metadata_text(dataset):
+    """Bound by bytes, then read and decode embedded BAG XML (UTF-8, NUL-trimmed)."""
+    bag_metadata_nbytes(dataset)
+    return dataset[:].tobytes().decode('utf-8').rstrip('\0')
 
 
 def validate_derived_geotiff(root, artifact, *, contract=None, cap=MAX_SOURCE_BYTES):

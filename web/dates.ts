@@ -39,6 +39,8 @@ export function readableDate(iso: string, lang: Language | string, timeZone: str
     const zoned = Object.fromEntries(new Intl.DateTimeFormat('en-US', {timeZone, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric'})
       .formatToParts(utcNoon).map(x => [x.type, Number(x.value)])) as Record<string, number>;
     const noon = utcNoon - (Date.UTC(zoned.year!, zoned.month! - 1, zoned.day!, zoned.hour!, zoned.minute!) - utcNoon);
+    const back = Object.fromEntries(new Intl.DateTimeFormat('en-US', {timeZone, year: 'numeric', month: 'numeric', day: 'numeric'}).formatToParts(noon).map(x => [x.type, Number(x.value)])) as Record<string, number>;
+    if (back.year !== y || back.month !== mo || back.day !== d) return iso;   // a day the zone skipped (Apia 2011-12-30): keep the text, never print the neighbouring day
     const p = Object.fromEntries(format(localeOf(lang), timeZone).formatToParts(noon).map(x => [x.type, x.value.replace(/\.$/, '')]));
     return `${p.weekday} ${p.day} ${p.month}`;
   } catch { return iso; }   // an unknown time zone must not break the sheet

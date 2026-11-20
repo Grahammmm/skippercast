@@ -226,7 +226,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(re.findall(r'^  (\w+):', triggers, re.M), ['workflow_dispatch'])
         self.assertNotIn('pull_request', text)
         self.assertIn('\npermissions: {}\n', text)
-        self.assertIn("runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}", text)
+        self.assertIn('    runs-on: ubuntu-latest', text.splitlines())
         self.assertIn("if: github.ref == 'refs/heads/main'", text)
         for ref in re.findall(r'uses:\s*(\S+)', text):
             self.assertRegex(ref, r'@[0-9a-f]{40}$')

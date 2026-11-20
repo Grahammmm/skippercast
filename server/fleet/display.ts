@@ -8,8 +8,22 @@
 //     `noaa-planning-only`), its confidence is at least 0.6, it is current (not
 //     superseded) and it did not come from AIS (no AIS data on any public page);
 //   - a stored link is displayable only when it is a plain https URL (safeTarget) and a
-//     displayable fact for that field carries exactly that value.
-import {safeTarget} from './go.ts';
+//     displayable fact for that field carries exactly that value (displayableLink; /go/
+//     applies it too, so a link whose supporting fact was superseded stops redirecting).
+// safeTarget lives here, not in go.ts, so go.ts imports display.ts one way (no import cycle);
+// go.ts re-exports it for its other callers.
+const MAX_URL = 2048;
+
+/** The stored URL as a redirect target: https, a host, no credentials, bounded; else null. */
+export function safeTarget(stored: unknown): URL | null {
+  if (typeof stored !== 'string' || !stored || stored.length > MAX_URL) return null;
+  const candidate = stored.trim();
+  if (/[\u0000-\u001f\u007f]/.test(candidate)) return null;
+  let url: URL;
+  try { url = new URL(candidate); } catch { return null; }
+  if (url.protocol !== 'https:' || !url.hostname || url.username || url.password) return null;
+  return url;
+}
 
 /** Rights compatible with public display; `internal-only` and `noaa-planning-only` are not. */
 export const DISPLAY_RIGHTS: readonly string[] = Object.freeze(['public-domain', 'facts-only', 'public-record', 'api-terms']);
@@ -44,8 +58,7 @@ export function factValue(fact: Pick<FactRow, 'value_json'>): unknown {
 /**
  * The shared "displayable link" predicate: `stored` (a fleet_vessels column such as
  * website or booking_url) as a redirect target when it is plain https and a displayable
- * fact for `field` carries the same URL; else null. /go/ may adopt it (CF-34 checks
- * safeTarget only today).
+ * fact for `field` carries the same URL; else null. The profile page and /go/ both use it.
  */
 export function displayableLink(stored: unknown, field: string, facts: readonly FactRow[]): URL | null {
   const url = safeTarget(stored);

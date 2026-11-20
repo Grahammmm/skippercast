@@ -60,6 +60,126 @@ export async function readLogPage(cursor = null) {
   return {entries: data.entries, nextCursor: more === 'true' ? next : null, hasMore: more === 'true'};
 }
 
+// A deliberate CSV export is complete only at an explicit final page (at most 2,000 route rows).
+export const CSV_PAGE_CAP = 10;
+const csvFailure = () => Error();
+const csvTripsFailure = () => Object.assign(Error(), {csvTrips: true});
+function validateCsvEntry(row) {
+  if (!row || typeof row.id !== 'string' || !row.id ||
+    typeof row.started_at !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(row.started_at) ||
+    !Number.isFinite(Date.parse(row.started_at)) || new Date(row.started_at).toISOString() !== row.started_at ||
+    !['fish', 'blank', 'unknown'].includes(row.outcome) || !Number.isInteger(row.count) || row.count < 0 || row.count > 9999 ||
+    (row.outcome === 'fish' ? row.count < 1 : row.count !== 0)) throw csvFailure();
+  for (const [field, max] of [['species', 60], ['method', 40], ['note', 1000], ['trip_id', 64]]) {
+    const value = row[field];
+    if (value != null && (typeof value !== 'string' || [...value].length > max || (field === 'trip_id' && !value))) throw csvFailure();
+  }
+  const {lat, lon} = row;
+  if (lat == null && lon == null) return;
+  if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon) ||
+    !(lat > -90 && lat < 90 && lon > -180 && lon < 180)) throw csvFailure();
+}
+/** Fresh raw cursor walk, independent of the list UI; validate duplicates before first-seen deduplication. */
+export async function readCsvCatchLog(pageReader = readLogPage, isLive = () => true) {
+  const entries = [], ids = new Set(), cursors = new Set();
+  let cursor = null;
+  for (let page = 0; page < CSV_PAGE_CAP; page++) {
+    if (!isLive()) throw csvFailure();
+    const answer = await pageReader(cursor);
+    if (!isLive() || !Array.isArray(answer?.entries) || typeof answer.hasMore !== 'boolean' ||
+      (answer.hasMore ? typeof answer.nextCursor !== 'string' || !answer.nextCursor : answer.nextCursor != null)) throw csvFailure();
+    for (const row of answer.entries) {
+      validateCsvEntry(row);
+      if (!ids.has(row.id)) { ids.add(row.id); entries.push(row); }
+    }
+    if (!answer.hasMore) return entries;
+    if (cursors.has(answer.nextCursor)) throw csvFailure();
+    cursors.add(answer.nextCursor); cursor = answer.nextCursor;
+  }
+  throw csvFailure();
+}
+const CSV_HEADER = 'started_at,outcome,count,species,method,latitude,longitude,trip_date,note\r\n';
+const csvQuote = value => '"' + value.replaceAll('"', '""') + '"';
+const csvUserText = value => {
+  const text = value ?? '';
+  return csvQuote(/^[ \n]*[=+\-@\t\r]/.test(text) ? "'" + text : text);
+};
+/** RFC 4180 bytes: constrained text quoted, user text formula-guarded, numbers left numeric. */
+export function catchLogCsv(entries, trips) {
+  if (!Array.isArray(entries)) throw csvFailure();
+  if (!Array.isArray(trips)) throw csvTripsFailure();
+  const dates = new Map();
+  for (const trip of trips) {
+    if (!trip || typeof trip.id !== 'string' || !trip.id || dates.has(trip.id)) throw csvTripsFailure();
+    dates.set(trip.id, trip.date);
+  }
+  const seen = new Set(), lines = [];
+  for (const row of entries) {
+    validateCsvEntry(row);
+    let date = '';
+    if (row.trip_id && dates.has(row.trip_id)) {
+      date = dates.get(row.trip_id);
+      if (typeof date !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(date) ||
+        !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) throw csvTripsFailure();
+    }
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    lines.push([csvQuote(row.started_at), csvQuote(row.outcome), String(row.count), csvUserText(row.species), csvUserText(row.method),
+      row.lat == null ? '' : spotCoordinateText(row.lat), row.lon == null ? '' : spotCoordinateText(row.lon), csvQuote(date), csvUserText(row.note)].join(','));
+  }
+  return CSV_HEADER + lines.map(line => line + '\r\n').join('');
+}
+/**
+ * SCA-001: the one lifetime every account-panel file export (catch-log CSV, saved-spots GPX) answers to, owned by the
+ * render that drew its buttons. `alive()` says the dialog and render are still current. `begin()` starts an attempt and
+ * returns its own check: false once the dialog closes or repaints, or sign-out or a confirmed account deletion starts,
+ * and never true again for that attempt, even if the sign-out or deletion fails. New attempts wait for every exit to fail.
+ */
+function exportLifetime(alive) {
+  let generation = 0, leaving = 0;
+  return {
+    open: () => !leaving && alive(),
+    begin() { const attempt = generation; return () => attempt === generation && !leaving && alive(); },
+    leave() { leaving++; generation++; },
+    stay() { leaving--; }
+  };
+}
+
+/** Wire the real button once per render. No reads until clicked and no raw records retained after the attempt. */
+function wireCsvDownload($, t, downloads) {
+  const button = $('#log-download-csv'), status = $('#log-csv-status'), isLive = downloads.open;
+  let pending = false;
+  button.addEventListener('click', async () => {
+    if (pending || !isLive()) return;
+    const live = downloads.begin();
+    pending = true; button.disabled = true; status.textContent = t('account.log.csv.loading');
+    let url = null, anchor = null;
+    try {
+      let trips;
+      try {
+        trips = (await api('trips')).trips;
+        if (!Array.isArray(trips)) throw csvTripsFailure();
+      } catch { throw csvTripsFailure(); }
+      if (!live()) return;
+      const entries = await readCsvCatchLog(readLogPage, live);
+      const csv = catchLogCsv(entries, trips);
+      if (!live()) return;
+      url = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+      anchor = document.createElement('a'); anchor.href = url; anchor.download = 'SkipperCast-catch-log.csv';
+      document.body.append(anchor); anchor.click();
+      status.textContent = t('account.log.csv.done');
+    } catch (error) {
+      if (live()) status.textContent = t(error?.csvTrips ? 'account.log.csv.tripsFailed' : 'account.log.csv.incomplete');
+    } finally {
+      // Let the browser dispatch the download before releasing its URL, including construction/click failures.
+      if (anchor || url) setTimeout(() => { try { anchor?.remove(); } finally { if (url) URL.revokeObjectURL(url); } }, 0);
+      pending = false;
+      if (isLive()) button.disabled = false;
+    }
+  });
+  return {restore: () => { if (isLive() && !pending) button.disabled = false; }};
+}
+
 /**
  * The link for the server's `signIn` path. "/#account" becomes "#account" so
  * following it is an in-page hash change: a full load of "/" would drop the
@@ -399,6 +519,65 @@ export function logTripOptionsHTML(trips, region) {
 }
 const noTrip = t => `<option value="">${esc(t('account.log.noTrip'))}</option>`;
 
+/** Published names for this region's exact species IDs; suggestions only, never a free-text allowlist. */
+export function logSpeciesOptionsHTML(region) {
+  if (!Array.isArray(region?.species)) return '';
+  const targets = Array.isArray(region.target_options) ? region.target_options : [], seen = new Set(), options = [];
+  for (const id of region.species) {
+    if (typeof id !== 'string' || !id.trim() || seen.has(id)) continue;
+    seen.add(id);
+    const name = targets.find(item => item?.id === id && typeof item.name === 'string' && item.name.trim())?.name ?? id;
+    if (name.length <= 60) options.push(`<option value="${esc(name)}"></option>`);
+  }
+  return options.join('');
+}
+
+/** A choice never retains a private note or an owner field. One malformed row refuses the whole projection. */
+export function projectLogSpots(rows) {
+  if (!Array.isArray(rows)) return null;
+  const ids = new Set(), out = [];
+  for (const row of rows) {
+    if (!row || typeof row.id !== 'string' || !row.id || ids.has(row.id) ||
+      typeof row.lat !== 'number' || !Number.isFinite(row.lat) || !(row.lat > -90 && row.lat < 90) ||
+      typeof row.lon !== 'number' || !Number.isFinite(row.lon) || !(row.lon > -180 && row.lon < 180)) return null;
+    ids.add(row.id); out.push({id: row.id, name: row.name, lat: row.lat, lon: row.lon});
+  }
+  return out;
+}
+const spotName = (name, t) => String(name ?? '').replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || t('account.spots.unnamed');
+/** Escaped exact ids, cleaned display names, and nothing else from a spot. */
+export function logSpotOptionsHTML(rows, copy) {
+  const t = asCopy(copy);
+  return `<option value="">${esc(t('account.log.noSpot'))}</option>` + rows.map(row => `<option value="${esc(row.id)}">${esc(spotName(row.name, t))}</option>`).join('');
+}
+// Expand the shortest round-tripping number string when tiny values use exponential notation.
+const spotCoordinateText = value => String(value).replace(/^(-?)(\d)(?:\.(\d+))?e-(\d+)$/, (_, sign, digit, fraction = '', exponent) =>
+  `${sign}0.${'0'.repeat(Number(exponent) - 1)}${digit}${fraction}`);
+/** Ephemeral choice: redraw/restore never fills; a deliberate known selection fills only the coordinate boxes. */
+export function createLogSpotChoice({$, copy, invalidate}) {
+  const select = $('#log-spot'), wrapper = $('#log-spot-choice');
+  let rows = [];
+  const restore = id => { select.value = rows.some(row => row.id === id) ? id : ''; };
+  const update = source => {
+    const want = select.value; rows = projectLogSpots(source) ?? [];
+    select.innerHTML = logSpotOptionsHTML(rows, copy); wrapper.hidden = !rows.length; restore(want);
+  };
+  select.addEventListener('change', () => {
+    const row = rows.find(row => row.id === select.value);
+    if (!row) { select.value = ''; return; }
+    invalidate();
+    for (const f of ['lat', 'lon']) {
+      const box = $('#log-' + f), error = $('#log-' + f + '-error');
+      box.value = spotCoordinateText(row[f]); box.removeAttribute('aria-invalid');
+      error.textContent = ''; error.hidden = true;
+    }
+  });
+  for (const f of ['lat', 'lon']) $('#log-' + f).addEventListener('input', () => {
+    select.value = ''; $('#log-position-status').textContent = '';
+  });
+  return {update, restore, get selected() { return select.value; }};
+}
+
 const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'))}</h2>
     <p class="home-port-fine">${esc(t('account.log.fine'))}</p>
     <form id="log-form" autocomplete="off">
@@ -407,9 +586,10 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
       <label for="log-ended">${esc(t('account.log.ended'))}</label><input id="log-ended" type="datetime-local" step="any" />
       <label for="log-outcome">${esc(t('account.log.what'))}</label><select id="log-outcome"><option value="blank">${esc(t('account.outcome.blank'))}</option><option value="fish">${esc(t('account.outcome.fish'))}</option><option value="unknown">${esc(t('account.outcome.unknown'))}</option></select>
       <label for="log-count">${esc(t('account.log.count'))}</label><input id="log-count" type="number" min="1" max="9999" step="1" />
-      <label for="log-species">${esc(t('account.log.species'))}</label><input id="log-species" type="text" maxlength="60" />
+      <label for="log-species">${esc(t('account.log.species'))}</label><input id="log-species" type="text" maxlength="60" /><datalist id="log-species-suggestions"></datalist>
       <label for="log-method">${esc(t('account.log.method'))}</label><input id="log-method" type="text" maxlength="40" />
       <label for="log-trip">${esc(t('account.log.trip'))} <span class="account-hint">${esc(t('account.optional'))}</span></label><select id="log-trip">${noTrip(t)}</select>
+      <div id="log-spot-choice" hidden><label for="log-spot">${esc(t('account.log.atSpot'))} <span class="account-hint">${esc(t('account.optional'))}</span></label><select id="log-spot">${logSpotOptionsHTML([], t)}</select></div>
       ${positionFieldHTML('log', 'lat', esc(t('account.log.lat')), esc(t('account.optional.private')), chosenFormat(), t)}
       ${positionFieldHTML('log', 'lon', esc(t('account.log.lon')), esc(t('account.optional.private')), chosenFormat(), t)}
       ${positionControlsHTML('log', t)}
@@ -419,6 +599,9 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
     <div class="home-port-actions"><label for="log-filter-outcome">${esc(t('account.log.filter'))}</label><select id="log-filter-outcome"><option value="">${esc(t('account.any'))}</option><option value="fish">${esc(t('account.outcome.fish'))}</option><option value="blank">${esc(t('account.outcome.blank'))}</option><option value="unknown">${esc(t('account.outcome.unknown'))}</option></select>
       <label for="log-filter-species">${esc(t('account.log.filterSpecies'))}</label><select id="log-filter-species"><option value="">${esc(t('account.any'))}</option></select></div>
     <p class="account-hint" id="log-counts" role="status" hidden></p>
+    <div class="home-port-actions"><button type="button" id="log-download-csv" aria-describedby="log-csv-limit">${esc(t('account.log.csv.download'))}</button></div>
+    <p class="account-hint" id="log-csv-limit">${esc(t('account.log.csv.limit'))}</p>
+    <p class="account-hint" role="status" id="log-csv-status"></p>
     <ul class="account-passkeys" id="log-list"></ul>
     <p class="account-hint" id="log-status" role="status"></p>
     <div class="home-port-actions"><button type="button" id="log-retry" hidden>${esc(t('account.log.retry'))}</button><button type="button" id="log-older" hidden>${esc(t('account.log.older'))}</button></div>`;
@@ -426,7 +609,7 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
 /** One saved spot as list HTML. Name, note and verdict are escaped, so markup in them shows as plain text. */
 export function spotItemHTML(spot, verdict, format = chosenFormat(), copy) {
   const t = asCopy(copy);
-  const name = String(spot.name ?? '').replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || t('account.spots.unnamed');
+  const name = spotName(spot.name, t);
   return `<li data-spot-row="${esc(spot.id)}"><span>${esc(name)} · ${esc(formatCoordinates(spot.lat, spot.lon, format))}</span>${verdict?.text ? `<p class="account-hint">${esc(verdict.text)}</p>` : ''}${spot.note ? `<p class="account-hint">${esc(spot.note)}</p>` : ''}
     <button type="button" data-edit-spot="${esc(spot.id)}">${esc(t('account.spotEdit.edit'))}</button> <button type="button" data-remove-spot="${esc(spot.id)}">${esc(t('account.remove'))}</button></li>`;
 }
@@ -770,8 +953,17 @@ export async function openAccount(options = {}) {
     // SC1137-11: `editing` is {id, original, draft, pending} while the log form holds a correction (draft: the create form as it was).
     let editing = null, tripRegion = null, logPos = null;   // logPos: the position control, wired below
     const live = () => open === self && list.isConnected;
+    const downloads = exportLifetime(live), csvDownload = wireCsvDownload($, t, downloads);
+    // Metadata is independent of saved-trip requests; a late answer never replaces a typed field or another render.
+    void import('./region.js').then(m => m.getRegion()).then(region => {
+      if (!live()) return;
+      const options = logSpeciesOptionsHTML(region);
+      $('#log-species-suggestions').innerHTML = options;
+      if (options) $('#log-species').setAttribute('list', 'log-species-suggestions');
+    }).catch(() => {});   // No region metadata: the existing free-text box is unchanged.
     const FORM_FIELDS = ['started', 'ended', 'outcome', 'count', 'species', 'method', 'trip', 'lat', 'lon', 'note'];
-    const readForm = () => Object.fromEntries(FORM_FIELDS.map(n => [n, $('#log-' + n).value]));
+    const spotChoice = createLogSpotChoice({$, copy: t, invalidate: () => logPos.invalidate()});
+    const readForm = () => ({...Object.fromEntries(FORM_FIELDS.map(n => [n, $('#log-' + n).value])), spot: spotChoice.selected});
     const writeForm = values => { for (const n of FORM_FIELDS) $('#log-' + n).value = values[n] ?? ''; };
     const clearPositionErrors = () => { for (const f of ['lat', 'lon']) { const err = $(`#log-${f}-error`); err.textContent = ''; err.hidden = true; $('#log-' + f).removeAttribute('aria-invalid'); } };
     const drawLog = () => {
@@ -795,15 +987,15 @@ export async function openAccount(options = {}) {
       tripSelect.value = want;
     };
     const focusEdit = id => { [...list.querySelectorAll('[data-edit-log]')].find(b => b.dataset.editLog === id)?.focus(); };
-    const leaveEdit = (focusId) => {
+    const leaveEdit = (focusId, restoreChoice = true) => {
       const e = editing; editing = null; if (!e) return;
       logPos.invalidate();
-      renderTripOptions(e.draft.trip); writeForm(e.draft); clearPositionErrors();
+      renderTripOptions(e.draft.trip); writeForm(e.draft); spotChoice.restore(restoreChoice ? e.draft.spot : ''); clearPositionErrors();
       drawLog(); if (focusId) focusEdit(focusId);
     };
     const openEdit = id => {
       const row = entries?.find(r => r.id === id); if (!row || editing) return;
-      const draft = readForm(); logPos.invalidate();
+      const draft = readForm(); logPos.invalidate(); spotChoice.restore('');
       editing = {id, draft, pending: false, original: {...row}};
       renderTripOptions(row.trip_id || '');
       writeForm({started: localInputValue(row.started_at), ended: localInputValue(row.ended_at), outcome: row.outcome, count: row.outcome === 'fish' ? String(row.count) : '',
@@ -832,7 +1024,7 @@ export async function openAccount(options = {}) {
           // The stored row replaces this one where it stands, then the loaded rows are put back in the log's order; pages and cursor stay as they are.
           const i = entries.findIndex(r => r.id === saved.id); if (i >= 0) entries[i] = saved;
           sortLogEntries(entries);
-          logStatus.textContent = ''; leaveEdit(saved.id); status(t('account.log.updated'));
+          logStatus.textContent = ''; leaveEdit(saved.id, false); status(t('account.log.updated'));
         });
       } catch (error) { if (mine()) { e.pending = false; logStatus.textContent = error?.local ? error.message : passkeyMessage(error, t); drawLog(); } }
     };
@@ -900,7 +1092,7 @@ export async function openAccount(options = {}) {
       try {
         await submitPositionForm($, 'log', () => logBody({started: field('started'), ended: field('ended'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')}, t), async body => {
           await api('catch-log', {method: 'POST', body});
-          logPos.invalidate(); $('#log-form').reset(); await showLog(); status(t('account.log.saved'));
+          logPos.invalidate(); $('#log-form').reset(); spotChoice.restore(''); await showLog(); status(t('account.log.saved'));
         });
       } catch (error) { status(error?.local ? error.message : passkeyMessage(error, t)); }
     });
@@ -914,12 +1106,16 @@ export async function openAccount(options = {}) {
       const gen = ++loadGen; loading = true; editor = null; syncSpotPos();
       try {
         const rows = (await api('spots')).spots;
-        const verdicts = await spotVerdicts(rows, await spotScreen(), t);
-        if (gen !== loadGen || open !== self) return;   // a newer read or a confirmed edit has already answered
+        if (gen !== loadGen || !live()) return;
+        spotChoice.update(rows);   // private coordinates do not wait for the separate planning screen
+        let verdicts;
+        try { verdicts = await spotVerdicts(rows, await spotScreen(), t); }
+        catch { verdicts = rows.map(() => ({status: 'unavailable', text: t('account.spots.unchecked')})); }
+        if (gen !== loadGen || !live()) return;
         spotRows = rows; spotReadings = verdicts;
         spotList.innerHTML = spotRows.map((s, i) => spotItemHTML(s, verdicts[i], undefined, t)).join('');
-      } catch (error) { if (gen === loadGen) status(passkeyMessage(error, t)); }
-      finally { if (gen === loadGen) loading = false; }
+      } catch (error) { if (gen === loadGen && live()) { spotChoice.update(null); status(passkeyMessage(error, t)); } }
+      finally { if (gen === loadGen && live()) loading = false; }
     };
     // SC1137-09: edit a spot's name and note in its own row. One editor at a time; a draft is only the form's own fields.
     const rowOf = id => [...spotList.children].find(li => li.dataset.spotRow === id);
@@ -961,7 +1157,7 @@ export async function openAccount(options = {}) {
       const j = spotRows.findIndex(s => s.id === saved.id); if (j >= 0) spotRows[j] = saved;
       const reread = loading; loadGen++; loading = false;
       if (editor === e) { editor = null; syncSpotPos(); }
-      if (open === self && token) { redrawRow(saved.id, true); status(t('account.spotEdit.saved')); }
+      if (live() && token) { spotChoice.update(spotRows); redrawRow(saved.id, true); status(t('account.spotEdit.saved')); }
       spotsChanged();
       if (reread && open === self) showSpots();
     };
@@ -993,15 +1189,21 @@ export async function openAccount(options = {}) {
       } catch (error) { status(passkeyMessage(error, t)); }
     });
     $('#spot-export').addEventListener('click', async () => {
+      // SCA-001: the file is bound to this dialog and account: closing it or starting sign-out or deletion drops the attempt.
+      if (!downloads.open()) return;
+      const current = downloads.begin();
       try {
         const screen = await spotScreen();
+        if (!current()) return;
         if (screen && !screen.ready()) await screen.refresh();
+        if (!current()) return;
         const {getRegion} = await import('./region.js'), out = await exportSpots(spotRows, screen, getRegion(), new Date(), t);
+        if (!current()) return;
         const url = URL.createObjectURL(new Blob([out.gpx], {type: 'application/gpx+xml'})), a = document.createElement('a');
         a.href = url; a.download = 'SkipperCast-saved-spots.gpx'; a.click(); URL.revokeObjectURL(url);
         const one = out.exported === 1, vars = {exported: out.exported, withheld: out.withheld};
         status(out.withheld ? (one ? t('account.exp.doneHeld.one', vars) : t('account.exp.doneHeld.other', vars)) : (one ? t('account.exp.done.one', vars) : t('account.exp.done.other', vars)));
-      } catch (error) { status(error?.message || t('account.exp.build')); }
+      } catch (error) { if (current()) status(error?.message || t('account.exp.build')); }
     });
     showSpots();
     $('#account-add').addEventListener('click', async () => {
@@ -1019,11 +1221,13 @@ export async function openAccount(options = {}) {
       } catch (error) { if (open === self) status(passkeyMessage(error, t)); }
     });
     $('#account-signout').addEventListener('click', async () => {
-      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { status(passkeyMessage(error, t)); }
+      downloads.leave();
+      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { downloads.stay(); csvDownload.restore(); status(passkeyMessage(error, t)); }
     });
     $('#account-delete').addEventListener('click', async event => {
       if (!await confirmInPage(event.currentTarget, t('account.del.confirm'), t('account.del.yes'), t)) return;
-      try { await api('privacy', {method: 'DELETE', body: {}}); status(t('account.del.done')); finish(); } catch (error) { status(passkeyMessage(error, t)); }
+      downloads.leave();
+      try { await api('privacy', {method: 'DELETE', body: {}}); status(t('account.del.done')); finish(); } catch (error) { downloads.stay(); csvDownload.restore(); status(passkeyMessage(error, t)); }
     });
     for (const button of body.querySelectorAll('[data-remove-passkey]')) button.addEventListener('click', async () => {
       if (!await confirmInPage(button, t('account.pk.confirm'), t('account.pk.confirmYes'), t)) return;

@@ -129,7 +129,7 @@ const mercY = lat => Math.log(Math.tan(Math.PI / 4 + lat * DEG / 2));
 const unMercY = y => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) / DEG;
 
 /** RGBA pixels of the vorticity tint over the grid extent, rows spaced evenly in web-mercator y so the
- *  image drops onto a MapLibre image source. Transparent wherever any corner is missing. */
+ *  image drops onto a MapLibre image source. Transparent wherever any corner of the vector or of its derivative is missing. */
 export function tintPixels(g, width, {range = VORT_RANGE, alpha = TINT_ALPHA} = {}) {
   const zeta = vorticity(g);
   const west = g.lons[0], east = g.lons[g.cols - 1], south = g.lats[0], north = g.lats[g.rows - 1];
@@ -139,8 +139,10 @@ export function tintPixels(g, width, {range = VORT_RANGE, alpha = TINT_ALPHA} = 
   for (let py = 0; py < height; py++) {
     const lat = unMercY(y1 - (py + 0.5) / height * (y1 - y0));
     for (let px = 0; px < width; px++) {
-      const z = bilinear(g, zeta, west + (px + 0.5) / width * (east - west), lat);
-      if (z === null) continue;
+      const lon = west + (px + 0.5) / width * (east - west), z = bilinear(g, zeta, lon, lat);
+      // The derivative grid is only a subset of the footprint today (its stencil skips the centre cell), so also ask the
+      // native vector sampler: a pixel is tinted only where the radar itself has a vector (SCA-501).
+      if (z === null || velocityAt(g, lon, lat) === null) continue;
       const [r, gg, b] = balance((Math.max(-1, Math.min(1, z / range)) + 1) / 2), i = (py * width + px) * 4;
       data[i] = r; data[i + 1] = gg; data[i + 2] = b; data[i + 3] = Math.round(alpha * 255);
     }

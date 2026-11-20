@@ -366,10 +366,10 @@ export function createPlanner(deps: PlannerDeps) {
   }
   function preset(scope: Preset): void {
     if (scope === 'filtered' && !allowResearch.value) { scopeStatus.value = 'Enable Research-coordinate export to use filtered research references.'; return; }
-    revision++;
-    // The ranked plan is dropped in the page; storage keeps it until the next save, so a reload after "selection is retained" still restores it, as in v1.
-    batch(() => { filtersDirty.value = false; restorePending.value = false; unrank(); draft.value = {...draft.value, rankedPlan: null}; });
+    // No map width: nothing changes but the message, so the page keeps the ranked plan and both export blockers storage would restore.
     if (scope === 'map' && !map.getSize().x) { scopeStatus.value = 'Open the map to choose an area first. Your selection is retained.'; return; }
+    revision++;
+    batch(() => { filtersDirty.value = false; restorePending.value = false; unrank(); draft.value = {...draft.value, rankedPlan: null}; });
     const targets = presetTargets({scope, targets: tripAtlas.value.targets, visible: deps.getVisible(), allowResearch: allowResearch.value,
       contains: (t: Target) => map.getBounds().contains([t.latitude, t.longitude])});
     batch(() => {
@@ -891,7 +891,7 @@ export function createPlanner(deps: PlannerDeps) {
     setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     routing, routeStatus, exportRouteFile, deliverRoute, showRouteOnChart, checkRoutePreview,
-    /** For tests and a region change: stop drawing the ranked set. */
-    dispose: () => { disposed = true; dropRoute(false); stopRouteKey(); stopRouteWater(); pageEvents()?.removeEventListener('skippercast:boundaries', onBoundaries); floatGen++; floatPlan.value = emptyFloatPlan(); floatOpen.value = false; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
+    /** Stop subscriptions and invalidate in-flight ranking and restore. */
+    dispose: () => { disposed = true; revision++; dropRoute(false); stopRouteKey(); stopRouteWater(); pageEvents()?.removeEventListener('skippercast:boundaries', onBoundaries); floatGen++; floatPlan.value = emptyFloatPlan(); floatOpen.value = false; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
   };
 }

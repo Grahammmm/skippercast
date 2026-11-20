@@ -49,7 +49,7 @@ publicApi.get('/api/daily', c => dailyPart(c));
 // ~1.4 MB; the regulations badge needs its rule checks (~45 KB), and the MPA
 // screen needs one record only when the live boundary query fails.
 // The 'brief' part (SC2222-02) holds only what the brief (web/brief/model.ts) and the station pins
-// (web/map/station-model.ts) read: buoys, tides, advisories, chlorophyll, landing reports and names.
+// (web/map/station-model.ts) read: buoys, tides, advisories, chlorophyll, landing reports, names and outage status.
 export const DAILY_PARTS = ['regulations', 'mpa-boundaries', 'additional-closures', 'brief'] as const;
 type DailyPart = typeof DAILY_PARTS[number];
 const BRIEF_KINDS = new Set(['observation', 'prediction', 'advisory']), NOT_BRIEF = new Set(['mpa-boundaries', 'additional-closures', 'regulations']);
@@ -57,7 +57,8 @@ const briefSource = ([key, source]: [string, ExternalJSON]) => !NOT_BRIEF.has(ke
 
 /** The checks the app applies to the whole daily feed (dist/bite-evidence.js validFeed, dist/region.js acceptsFeed). */
 export function validDailyFeed(feed: ExternalJSON, regionId: string): boolean {
-  return (feed?.region_id === regionId || (!feed?.region_id && regionId === 'morro-bay')) &&
+  if (!feed || typeof feed !== 'object' || Array.isArray(feed)) return false;
+  return (feed.region_id === regionId || (!feed.region_id && regionId === 'morro-bay')) &&
     feed.schema_version === 1 && Number.isFinite(Date.parse(feed.generated_at)) &&
     !!feed.sources && typeof feed.sources === 'object' && !Array.isArray(feed.sources) && Array.isArray(feed.reports) &&
     !!feed.health && feed.catch_probability === null && feed.bite_score === null;
@@ -68,8 +69,15 @@ export function dailyPartOf(feed: ExternalJSON, part: DailyPart): ExternalJSON {
   const head = {schema_version: feed.schema_version, region_id: feed.region_id, generated_at: feed.generated_at,
     catch_probability: null, bite_score: null, part};
   if (part === 'regulations') return {...head, regulations: feed.regulations ?? null};
-  if (part === 'brief') return {...head, sources: Object.fromEntries(Object.entries(feed.sources as Record<string, ExternalJSON>).filter(briefSource)),
-    reports: feed.reports ?? [], ...('landing_names' in feed ? {landing_names: feed.landing_names} : {}), health: feed.health};
+  if (part === 'brief') {
+    const charter = feed.charter_reports;
+    const charter_reports = charter?.status === 'not_available' ? {
+      status: charter.status, last_source_day: typeof charter.last_source_day === 'string' ? charter.last_source_day : null,
+    } : undefined;
+    return {...head, sources: Object.fromEntries(Object.entries(feed.sources as Record<string, ExternalJSON>).filter(briefSource)),
+      reports: feed.reports ?? [], ...('landing_names' in feed ? {landing_names: feed.landing_names} : {}), health: feed.health,
+      ...(charter_reports ? {charter_reports} : {})};
+  }
   return {...head, sources: part in feed.sources ? {[part]: feed.sources[part]} : {}};
 }
 

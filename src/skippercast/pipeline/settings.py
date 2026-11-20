@@ -48,8 +48,11 @@ def settings(region_id="morro-bay", root=REPO):
 
 
 def previous_for_region(previous, region_id):
+    if previous is None: return {}
+    if not isinstance(previous,dict): raise ValueError("Prior feed envelope must be an object")
     if not previous: return {}
-    if previous.get("schema_version")!=1: raise ValueError("Unsupported prior feed")
+    version=previous.get("schema_version")
+    if type(version) is not int or version!=1: raise ValueError("Unsupported prior feed")
     # The only pre-region feed was Morro Bay. Never migrate it to another coast.
     if previous.get("region_id", "morro-bay")!=region_id:
         raise ValueError("Previous feed belongs to another region")

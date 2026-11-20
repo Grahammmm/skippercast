@@ -10,7 +10,7 @@
 // feed's boundary record) replaces the snapshot, and the daily feed's check of NOAA's
 // closure file renews the closures; habitat.ts decides what shows. Erasable syntax only.
 // Survey fill ramps from zoom 9, its outline starts at 11, and depth labels at 12.
-import {computed, effect, signal} from '@preact/signals';
+import {batch, computed, effect, signal} from '@preact/signals';
 import {feedURL} from '../../dist/feeds.js';
 import {dailyPartPath} from '../../dist/offline-core.js';
 import {createLiveMpaReader, readLiveMpa} from '../../dist/live-mpa.js';
@@ -20,6 +20,7 @@ import {hasCoastTerrain} from '../coast-context.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt} from '../profile.ts';
 import {grade, habitat, navigate, profile, region, selection, species, withParams} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
+import {ZOOM_OFFSET} from './engine.ts';
 import {
   CHECKING, EMPTY, acceptsFeed, assessScreen, atlasCard, closureCheckedAt, geologyCard, geologyFeatures, markFeatures, markShown, receiptCard, surveyCard,
   markAreas, surveyFeatures, terrainCard, terrainDetailCard, validDailyPart, withheld, withheldCard,
@@ -41,11 +42,27 @@ export const GEOLOGY_PICK = 'geology-fill';
 const MIN_ZOOM = 9;
 /** The `?view=` zoom below which the marks read as a density instead (#620). */
 export const DENSITY_BELOW_VIEW_ZOOM = MIN_ZOOM + 1;
+/** App z12 is the first unclustered zoom and the first individual depth labels. */
+const DETAIL_ZOOM = 12 - ZOOM_OFFSET;
 
 /** The region's published layers; null while they load. */
 export const markData = signal<MarkData | null>(null);
 /** The region's run-time mark screen (habitat.ts `assessScreen`): checking until its boundary checks have answered. */
 export const markScreen = signal<MarkScreen>(CHECKING);
+/** A settled overlay verdict. Null means it has not been checked for the active region. */
+export type OverlayAvailability = 'no-product' | 'empty' | 'failed' | 'held' | 'ready';
+const atlasRefusal = signal<'no-product' | 'failed' | 'held' | null>(null);
+const failedRegion = signal<string | null>(null);
+export const markMetadataFailed = computed(() => failedRegion.value !== null && failedRegion.value === region.value);
+
+/** A verified product with no items is empty even when the boundary check is pending. */
+export function screenedAvailability(total: number, admitted: number, screen: MarkScreen): OverlayAvailability | null {
+  if (!total) return 'empty';
+  if (screen.status === 'checking') return null;
+  if (screen.status === 'unavailable') return 'failed';
+  if (screen.status === 'stale') return 'held';
+  return admitted ? 'ready' : 'empty';
+}
 /** The `?habitat=` receipt the Chart restored without the terrain. */
 export const habitatReceipt = signal<HabitatReceipt | null>(null);
 /** Counts picks (never links), so the mark card takes focus only when someone chose a mark. */
@@ -66,6 +83,12 @@ const points = (at: readonly ({latitude: number; longitude: number} | null | und
   features: at.filter(p => !!p).map(p => ({type: 'Feature', geometry: {type: 'Point', coordinates: [p!.longitude, p!.latitude]}, properties: {}}))});
 
 const shownMarks = computed(() => markFeatures(markData.value?.atlas, target.value, profile.value, markScreen.value, grade.value));
+export const marksAvailability = computed<OverlayAvailability | null>(() => {
+  if (markMetadataFailed.value) return 'failed';
+  const data = markData.value;
+  if (!data || data.region.id !== region.value) return null;
+  return atlasRefusal.value ?? (data.atlas ? screenedAvailability(data.atlas.targets.length, shownMarks.value.features.length, markScreen.value) : null);
+});
 /**
  * The wide view's density (#620): the same screened, graded marks, weighted by grade and fit. Shore draws none:
  * its places are runs along the beach, not reefs.
@@ -155,13 +178,16 @@ export function densityLayer(p: Palette) {
 }
 
 /** The Chart's FE-18 sources and layers, coloured from the palette: habitat fills and geology go in § 9's habitat slot, the density, marks and the selection near the top. */
-export function markStyle(p: Palette) {
+export function markStyle(p: Palette, phone = typeof matchMedia === 'function' && matchMedia('(width < 900px)').matches) {
   const source = () => ({type: 'geojson', data: EMPTY});
   const kind = ['match', ['get', 'kind'], 'rock', p.habRock, 'mixed', p.habMixed, 'sediment', p.habSoft, 'kelp', p.habKelp, p.habMixed];
   // The habitat fill multiplier (1 = the ramp below as drawn), never past 0.6.
   const k = mapControl(p.mapHabitatOpacity, 'map-habitat-opacity', 'positive'), fill = (o: number) => Math.min(0.6, o * k);
   return {
-    sources: {[SURVEY_SOURCE]: source(), [GEOLOGY_SOURCE]: source(), [DENSITY_SOURCE]: source(), [MARKS_SOURCE]: source(), [SELECTION_SOURCE]: source()},
+    sources: {[SURVEY_SOURCE]: source(), [GEOLOGY_SOURCE]: source(), [DENSITY_SOURCE]: source(),
+      [MARKS_SOURCE]: {...source(), cluster: true, clusterMaxZoom: DETAIL_ZOOM - 1, clusterRadius: phone ? 50 : 42,
+        // Give a cluster the same badge field as a spot; its badge is the count, not species fit.
+        clusterProperties: {fit: ['+', 1]}}, [SELECTION_SOURCE]: source()},
     habitat: [
       {id: SURVEY_PICK, type: 'fill', source: SURVEY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, fill(0.12), 12, fill(0.22), 15, fill(0.3)]}},
       {id: 'survey-habitat-line', type: 'line', source: SURVEY_SOURCE, minzoom: 11,
@@ -171,14 +197,16 @@ export function markStyle(p: Palette) {
     ],
     marks: [
       densityLayer(p),
-      {id: MARK_PICK, type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM, paint: {'circle-radius': 22, 'circle-color': p.bg, 'circle-opacity': 0}},
+      {id: MARK_PICK, type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM, filter: ['!', ['has', 'point_count']],
+        paint: {'circle-radius': 22, 'circle-color': p.bg, 'circle-opacity': 0}},
       {id: 'marks-ring', type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM,
-        paint: {'circle-radius': 9, 'circle-color': p.mapInkHalo, 'circle-opacity': 0.75, 'circle-stroke-color': p.markRing, 'circle-stroke-width': 2}},
+        paint: {'circle-radius': ['case', ['has', 'point_count'], ['step', ['get', 'point_count'], 13, 10, 17, 30, 22], 7],
+          'circle-color': p.mapInkHalo, 'circle-opacity': 0.75, 'circle-stroke-color': p.markRing, 'circle-stroke-width': 2}},
       {id: 'marks-fit', type: 'symbol', source: MARKS_SOURCE, minzoom: MIN_ZOOM, filter: ['has', 'fit'],
         layout: {'text-field': ['get', 'fit'], 'text-font': [LABEL_FONT], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true},
         paint: {'text-color': p.mapInk}},
-      {id: 'marks-depth', type: 'symbol', source: MARKS_SOURCE, minzoom: 12, filter: ['has', 'depth'],
-        layout: {'text-field': ['get', 'depth'], 'text-font': [LABEL_FONT], 'text-size': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 12],
+      {id: 'marks-depth', type: 'symbol', source: MARKS_SOURCE, minzoom: DETAIL_ZOOM, filter: ['has', 'depth'],
+        layout: {'text-field': ['get', 'depth'], 'text-font': [LABEL_FONT], 'text-size': ['interpolate', ['linear'], ['zoom'], DETAIL_ZOOM, 10, 15, 12],
           'text-offset': [0, 1.6], 'text-anchor': 'top', 'text-optional': true},
         paint: {'text-color': p.mapInk, 'text-halo-color': p.mapInkHalo, 'text-halo-width': 1.2}},
       {id: 'selection-ring', type: 'circle', source: SELECTION_SOURCE, paint: {'circle-radius': 15, 'circle-opacity': 0, 'circle-stroke-color': p.mapInk, 'circle-stroke-width': 2.5}},
@@ -203,6 +231,22 @@ type LiveMpaRead = (url: string) => Promise<{readonly data: unknown; readonly ch
 
 const isCollection = (d: {type?: unknown; features?: unknown; region_id?: unknown} | null, region: string): boolean =>
   d?.type === 'FeatureCollection' && Array.isArray(d.features) && (d.region_id === undefined || d.region_id === region);
+const validAtlas = (d: Atlas | null): boolean => Array.isArray(d?.targets) && d.targets.every(t =>
+  typeof t?.id === 'string' && typeof t.label === 'string' && Number.isFinite(t.latitude) && Number.isFinite(t.longitude)
+  && (t.area_ids === undefined || (Array.isArray(t.area_ids) && t.area_ids.every(id => typeof id === 'string'))))
+  && (d.areas === undefined || (Array.isArray(d.areas) && d.areas.every(a => typeof a?.id === 'string' && !!a.geometry)));
+
+// Morro Bay is the only legacy atlas without region_id. Pin each reviewed artifact's own bytes;
+// the startup form's derived_from.sha256 describes the *full* atlas, not the copy being loaded.
+const morroAtlasDigests = new Map([
+  ['data/atlas.json', '57e35ad2430f6ca48a9d79e4da4fa2db8ce88ab93758e8565d3d2565ec7529dd'],
+  ['regions/morro-bay/atlas-marks.json', '6677776dec9044c55ae3bed983e4d66a246a5af362963083751d9a86cd8a9e2a'],
+]);
+
+async function matchesDigest(bytes: ArrayBuffer, expected: string): Promise<boolean> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return [...digest].map(b => b.toString(16).padStart(2, '0')).join('') === expected;
+}
 
 /** Loads each region's layers and restores a `?habitat=` on the Chart; created with the Chart (web/map/chart.ts). */
 export function createMarks(options: MarksOptions = {}): {destroy(): void} {
@@ -210,11 +254,12 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
   // The Chart passes the page's sharedFetch (chart.ts `shareStatic(sharedFetch)` is that same function): it meets the planner on the page's reader.
   const liveRead: LiveMpaRead = options.liveMpaRead ?? (!options.fetchFn || options.fetchFn === sharedFetch ? readLiveMpa : createLiveMpaReader({fetchFn, now}));
   let run = 0, controller: AbortController | undefined, expiry: ReturnType<typeof setTimeout> | undefined, recheck: ReturnType<typeof setTimeout> | undefined;
-  const json = async (path: string, init: RequestInit = {}): Promise<unknown> => {
+  const fetchAsset = async (path: string, init: RequestInit = {}): Promise<Response> => {
     const response = await fetchFn(new URL(path, page()).href, {...init, signal: AbortSignal.timeout(20000)});
     if (!response.ok) throw new Error(`${path}: ${response.status}`);
-    return response.json();
+    return response;
   };
+  const json = async (path: string, init?: RequestInit): Promise<unknown> => (await fetchAsset(path, init)).json();
   /** Show the screen as of now, and assess it again once its oldest check passes the age limit. */
   const setScreen = (inputs: ScreenInputs): void => {
     clearTimeout(recheck);
@@ -251,28 +296,45 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
       closures: c && {...c, checkedAt: closureCheckedAt(c, check)}});
   }
   async function read(id: string, current: number): Promise<void> {
-    const meta = await json(`regions/${encodeURIComponent(id)}/region.json`) as RegionData;
+    const meta = await json(`regions/${encodeURIComponent(id)}/region.json`) as RegionData | null;
+    if (current !== run) return;
+    if (meta?.id !== id) throw new Error(`region.json is not ${id}'s metadata`);
     void screen(id, meta, current).catch(() => { if (current === run) setScreen({areas: null, checkedAt: null, live: false}); });
-    const part = async <T>(key: string, layer: string, valid: (d: never) => boolean, light?: string): Promise<T | null> => {
+    const readAtlas = async (path: string): Promise<unknown> => {
+      const expected = id === 'morro-bay' ? morroAtlasDigests.get(path) : undefined;
+      const response = await fetchAsset(path);
+      const bytes = expected ? await response.arrayBuffer() : undefined;
+      const atlas = (bytes ? JSON.parse(new TextDecoder().decode(bytes)) : await response.json()) as {region_id?: unknown} | null;
+      if (atlas?.region_id === id || (atlas?.region_id === undefined && bytes && expected && await matchesDigest(bytes, expected))) return atlas;
+      throw new Error(`${path} is not ${id}'s atlas`);
+    };
+    const part = async <T>(key: string, layer: string, valid: (d: never) => boolean, light?: string, load = json): Promise<T | null> => {
       const path = meta.assets?.[key];
       if (!path) return null;
       // #617: the region's startup copy first (web/startup-forms.ts); the full file when the copy is missing or wrong.
-      if (light) try { const d = await json(light); if (valid(d as never)) return d as T; } catch { /* the full file below */ }
+      if (light) try { const d = await load(light); if (valid(d as never)) return d as T; } catch { /* the full file below */ }
       try {
-        const d = await json(path);
+        const d = await load(path);
         if (!valid(d as never)) throw new Error(`${path} is not ${id}'s ${key}`);
         return d as T;
       } catch (error) { if (current === run) onError(layer, error); return null; }
     };
     const [atlas, survey, geology] = await Promise.all([
-      part<Atlas>('atlas', 'marks', (d: Atlas | null) => Array.isArray(d?.targets), atlasMarksURL(id)),
+      part<Atlas>('atlas', 'marks', validAtlas, atlasMarksURL(id), readAtlas),
       part<Survey>('survey_habitat', 'habitat', (d: Survey | null) => isCollection(d, id)),
       part<Geology>('geology', 'habitat', (d: Geology | null) => isCollection(d, id)),
     ]);
     if (current !== run) return;
-    markData.value = {region: {...meta, id}, atlas, survey, geology};
-    // CI6-02: the target picker says "ranked by mapped habitat" only where places can be ranked.
-    regionAtlas.value = {region: id, marks: atlas?.targets?.length ?? 0};
+    const binding = meta.assets?.atlas;
+    // Only the existing reviewed Morro atlas is a public legacy marks product. Other atlases can
+    // contain habitat candidates, not a ranked publication. Ranked pins still use their own gate.
+    const held = !!atlas?.targets.length && !(id === 'morro-bay' && binding && morroAtlasDigests.has(binding));
+    batch(() => {
+      atlasRefusal.value = !binding ? 'no-product' : !atlas ? 'failed' : held ? 'held' : null;
+      markData.value = {region: meta, atlas: held ? null : atlas, survey, geology};
+      // CI6-02: the target picker says "ranked by mapped habitat" only where places can be ranked.
+      regionAtlas.value = atlas && !held ? {region: id, marks: atlas.targets.length} : null;
+    });
   }
   const disposers = [
     // A link naming both an atlas spot and a terrain habitat keeps the spot, which every presentation shows: one selection.
@@ -283,10 +345,15 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
     }),
     effect(() => {
       const id = region.value, current = ++run;
-      markData.value = null; markScreen.value = CHECKING; clearTimeout(recheck);
+      markData.value = null; atlasRefusal.value = null; failedRegion.value = null;
+      regionAtlas.value = null; markScreen.value = CHECKING; clearTimeout(recheck);
       // SC2007-01: a failed region.json read ends the check as unavailable (marks withheld), never "Checking…" for the visit.
       // SCB-11: the marks, their protected-area screen and the live boundary query wait for the first verdict (web/map-ready.ts).
-      if (id && mapMayLoad.value) read(id, current).catch(error => { if (current === run) { setScreen({areas: null, checkedAt: null, live: false}); onError('marks', error); } });
+      if (id && mapMayLoad.value) read(id, current).catch(error => {
+        if (current !== run) return;
+        batch(() => { failedRegion.value = id; setScreen({areas: null, checkedAt: null, live: false}); });
+        onError('marks', error);
+      });
     }),
     effect(() => {
       const id = habitat.value, r = region.value, s = coastSpecies(species.value, profile.value), depthLimitFt = terrainDepthLimitFt(profile.value);
@@ -312,7 +379,10 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
     destroy() {
       run++; controller?.abort(); clearTimeout(expiry); clearTimeout(recheck);
       for (const dispose of disposers) dispose();
-      markData.value = null; habitatReceipt.value = null; markScreen.value = CHECKING; setTerrainLayer('marks', null);
+      batch(() => {
+        markData.value = null; atlasRefusal.value = null; failedRegion.value = null; regionAtlas.value = null;
+        habitatReceipt.value = null; markScreen.value = CHECKING; setTerrainLayer('marks', null);
+      });
     },
   };
 }

@@ -146,9 +146,6 @@ KNOWN_BLOCKERS = {
         'regions/big-sur-coast/survey-habitat.geojson', 'regions/big-sur-coast/search-plans.json', 'regions/big-sur-coast/search-plan-index.json',
         'regions/south-big-sur-san-simeon/survey-habitat.geojson', 'regions/south-big-sur-san-simeon/search-plans.json', 'regions/south-big-sur-san-simeon/search-plan-index.json',
     }),
-    'landing-reports': (REGISTER_ROW + 'b5--landing-report-facts', '2026-09-28', {
-        'data/charter-grounds.json', 'data/daily-evidence.json',
-    }),
     'osm-tiles': (REGISTER_ROW + 'b6--openstreetmap-tile-service', '2026-09-28', {
         'runtime:dist/chart-map.js', 'runtime:server/security-headers.ts',
     }),

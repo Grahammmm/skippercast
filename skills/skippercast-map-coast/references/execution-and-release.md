@@ -91,7 +91,8 @@ when merged onto main. Local proof is not a production dispatch.
 
 1. Validate runtime/manifest, restore verified reference, plan the next batch.
 2. Attempt the legal refresh without stopping physical workers on failure.
-3. Run at most three workers concurrently. Each records a unique run/attempt
+3. (Habitat workflow only; bathymetry relief/contours/3D run in the local queue,
+   skippercast-relief-pipeline.) Run at most three workers concurrently. Each records a unique run/attempt
    receipt, caches successful physics and saves measured coverage checkpoints.
 4. Aggregate only that batch's receipts. A coverage-only reach shows measured
    cells with no old habitat; an interrupted reach blocks its regional bundle,

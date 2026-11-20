@@ -35,7 +35,9 @@ async function scheduled(controller: ScheduledController, env: Env, ctx: Executi
   ]).then(([dog, prune, trips, advisor]) => {
     recordCron(env, {cron: controller?.cron || '', watchdog: dog?.action ?? 'error', trips: trips?.action ?? 'error', prune, advisor, ms: Date.now() - started,
       owners: trips?.owners, feed_age_minutes: dog?.age_minutes});
-    if (!dog || !trips) throw Error('cron run failed');
+    if (!dog || prune === 'failed' || !trips || trips.action === 'enqueue-failed' || advisor === 'error') {
+      throw Error('cron run failed');
+    }
   });
   ctx.waitUntil(run.catch(() => {}));
   await run;   // a failed part fails the invocation, so Cloudflare's cron-failure alerts see it

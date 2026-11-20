@@ -1,7 +1,8 @@
 // Web Push subscriptions (allow-listed push services, five devices per person).
 import {Hono} from 'hono';
-import {validateSubscription} from '../trips.ts';
-import {json, body, db, hash} from '../http.ts';
+import {validateSubscription, pushConfigured, sendPush} from '../trips.ts';
+import type {SubscriptionRow} from '../types.ts';
+import {json, body, db, hash, budget} from '../http.ts';
 import {ClientError} from '../errors.ts';
 import type {AppEnv} from '../env.ts';
 
@@ -48,4 +49,23 @@ subscriptions.post('/api/subscription/status', async c => {
   if (typeof endpoint !== 'string' || !endpoint || endpoint.length > 2000) throw new ClientError('invalid endpoint');
   const row = await d.prepare('SELECT 1 AS held FROM subscriptions WHERE id=? AND owner=?').bind(await hash(endpoint), owner).first();
   return json({registered: row !== null});
+});
+
+// Three attempts per owner per UTC day, across all their devices. Tests never enter the alert ledger.
+subscriptions.post('/api/subscription/test', async c => {
+  const owner = c.var.owner, d = db(c.env), b = await body(c.req.raw);
+  if (Object.keys(b).some(k => k !== 'endpoint')) throw new ClientError('Only endpoint can be sent.');
+  const endpoint = b.endpoint;
+  if (typeof endpoint !== 'string' || !endpoint || endpoint.length > 2000) throw new ClientError('invalid endpoint');
+  await budget(c.env, 'push-test:' + owner, 3, 86400);
+  const row = await d.prepare('SELECT * FROM subscriptions WHERE id=? AND owner=?').bind(await hash(endpoint), owner).first<SubscriptionRow>();
+  if (!row) return json({error: 'Not found'}, 404);
+  if (!pushConfigured(c.env)) return json({error: 'Notifications are not configured on this site.'}, 503);
+  const {status} = await sendPush(c.env, row, {title: 'SkipperCast', body: 'SkipperCast test notification. Trip alerts will arrive like this.', eventId: 'test:' + crypto.randomUUID(), url: '/map#alerts'});
+  if (status === 'accepted') return json({sent: true});
+  if (status === 'expired') {
+    await d.prepare('DELETE FROM subscriptions WHERE id=? AND owner=?').bind(row.id, owner).run();
+    return json({error: 'This device is no longer subscribed. Press Enable to set it up again.'}, 410);
+  }
+  return json({error: 'The push service did not accept the test notification. Try again later.'}, 502);
 });

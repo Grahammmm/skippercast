@@ -240,20 +240,30 @@ def main(argv=None, run=default_run, loader=default_loader):
     parser.add_argument('run', nargs='?')
     parser.add_argument('--ledger', default='~/agent-work/skippercast/regions/LEDGER.csv')
     parser.add_argument('--python', default=sys.executable)
-    parser.add_argument('--record-pr', metavar='RUN', help='ledger only: set pr (and published when --published-at is given)')
-    for flag in ('--repo', '--pr', '--published-at'):
+    parser.add_argument('--record-pr', metavar='RUN', help='ledger only: set pr and state=merged; state=published needs --live-receipt')
+    for flag in ('--repo', '--pr', '--published-at', '--live-receipt'):
         parser.add_argument(flag)
     args = parser.parse_args(argv)
     try:
         if os.path.islink(os.path.expanduser(args.ledger)):  # the given path, before realpath; both publish and --record-pr
             raise ValueError('--ledger must be a regular file, not a link')
         if args.record_pr and (args.pr or '').isdigit() and re.fullmatch(r'(\d{4}-\d{2}-\d{2})?', args.published_at or ''):
-            rid = json.loads((Path(args.record_pr) / 'BUILD.json').read_text())['region_id']
-            update_ledger(Path(os.path.expanduser(args.ledger)), rid, {'pr': args.pr, **({'state': 'published', 'published_at': args.published_at} if args.published_at else {'state': 'reviewed'})})
+            build = json.loads((Path(args.record_pr) / 'BUILD.json').read_text())
+            rid, changes = build['region_id'], {'pr': args.pr, 'state': 'merged'}
+            if args.live_receipt:
+                live = json.loads(Path(os.path.expanduser(args.live_receipt)).read_text())
+                if not isinstance(live, dict) or live.get('status') != 'PASS' or not build.get('build_sha256') or live.get('build_sha256') != build['build_sha256']:
+                    raise ValueError('--live-receipt is not a PASS for this build sha256 (state stays unchanged)')
+                if not args.published_at:
+                    raise ValueError('--live-receipt needs --published-at YYYY-MM-DD')
+                changes |= {'state': 'published', 'published_at': args.published_at}
+            elif args.published_at:
+                raise ValueError('--published-at needs --live-receipt (merged is not published)')
+            update_ledger(Path(os.path.expanduser(args.ledger)), rid, changes)
             return 0
         if args.run and args.repo and not args.record_pr:
             return publish(args, run, loader)
-        raise ValueError('usage: <run> --repo <worktree>  |  --record-pr <run> --pr <number> [--published-at YYYY-MM-DD]')
+        raise ValueError('usage: <run> --repo <worktree>  |  --record-pr <run> --pr <number> [--live-receipt <live.json> --published-at YYYY-MM-DD]')
     except NotRestored:
         print('region_publish: REPO NOT RESTORED (inspect the work tree)', file=sys.stderr)
         return 2

@@ -319,8 +319,9 @@ dbTest('the queue shows a rule-change item with the changed page, its fingerprin
   await quiet(() => watchRuleSources(env, T0, {feeds: feedWith({'rules-central': 'a'.repeat(64)})}));
   const {body} = await call(worker, env, 'GET', '/api/admin/reviews?kind=rule');
   assert.equal(body.items.length, 1);
-  const s = body.items[0].detail.summary;
-  assert.equal(body.items[0].detail.rule, null);
+  const {body: {review}} = await call(worker, env, 'GET', `/api/admin/reviews/${body.items[0].id}`);
+  const s = review.detail.summary;
+  assert.equal(review.detail.rule, null);
   assert.deepEqual([s.jurisdiction, s.sources.map(x => [x.id, x.url]), s.rules.active], ['california-central', [['rules-central', CDFW]], 0]);
   assert.ok(s.rules.review > 0);
   assert.equal((await call(worker, env, 'POST', `/api/admin/reviews/${body.items[0].id}`, {decision: 'edit'})).status, 400, 'rules are edited in the Rules view');

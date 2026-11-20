@@ -23,7 +23,7 @@ import {resolvePort, landingNames, exactPort, fold} from './resolve.ts';
 import {regionConfig} from './regions.ts';
 import {dailyFeed, intelligenceFeed, feedReader} from './feeds.ts';
 import type {FeedReader} from './feeds.ts';
-import {reportEvidence, targetSpecies} from './confidence.ts';
+import {isFreshDailyFeed, reportEvidence, targetSpecies} from './confidence.ts';
 import type {Confidence, LandingReport} from './confidence.ts';
 import {advisoriesFrom, advisoryCheckTime, regionZones, windowConditions, windowEpochs, withForecastClock, WINDOW} from './conditions.ts';
 import {forecastClock} from './forecast-clock.ts';
@@ -66,9 +66,18 @@ export interface DailyInputs {
   /** Whether each regional feed loaded: a failed read must not replace a good stored answer with a poorer one (dailyAnswer). */
   feeds: {daily: boolean; intelligence: boolean};
   skipper_reports: DailySkipperReport[];
-  landing: {available: boolean; reports: {id: string; date: string; boat: string; catches: {label: string; count: number}[]}[]; activity: DailyLanding[]};
+  /** Shared landing snapshot: available means the feed loaded; stale snapshots cannot support the day's answer. */
+  landing: {available: boolean; stale?: true; reports: {id: string; date: string; boat: string; catches: {label: string; count: number}[]}[]; activity: DailyLanding[]};
   conditions: {available: boolean; advisories: string[]; day: Pick<DayConditions, 'wind_kt' | 'wind_from' | 'seas_ft' | 'sea_period_s' | 'comfort' | 'comfort_held'> | null};
   rules: DailyRule[];
+}
+
+const mixedDailyFeeds = ({feeds}: DailyInputs): boolean => feeds.daily !== feeds.intelligence;
+const staleLandingFeed = ({landing}: DailyInputs): boolean => landing.stale === true;
+
+/** A surviving feed is new evidence, not a reason to replay cached hazard prose. */
+export function canUseDailyCache(inputs: DailyInputs, storedHash: string, currentHash: string): boolean {
+  return !mixedDailyFeeds(inputs) && (storedHash === currentHash || !inputs.feeds.daily);
 }
 
 interface ReportRow {id: string; version: number; report_date: string; trip_type: string | null; anglers: number | null; counts_json: string; verified: number; boat_name: string}
@@ -119,7 +128,7 @@ export async function dailyInputs(env: Env, port: string, date: string, deps: Da
     const ev = targets.map(target => ({target, ...reportEvidence(portFeed, target, now, null, region.timezone)}));
     const seen = new Map<string, LandingReport>();
     for (const e of ev) for (const r of e.reports) if (r.id && !seen.has(r.id)) seen.set(r.id, r);
-    landing = {available: true,
+    landing = {available: true, ...(!isFreshDailyFeed(daily, now) ? {stale: true} : {}),
       reports: [...seen.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(a.id).localeCompare(String(b.id))).slice(0, 6)
         .map(r => ({id: String(r.id), date: String(r.date), boat: String(r.boat ?? ''), catches: (r.catches ?? []).filter(c => (c.count ?? 0) > 0).slice(0, 6)
           .map(c => ({label: String((c as {label?: string}).label ?? c.species ?? ''), count: c.count ?? 0}))})),
@@ -195,6 +204,8 @@ export const TARGET_WORDS: Readonly<Record<string, StringKey>> = {
 };
 export const targetWords = (target: string, language: Language): string => TARGET_WORDS[target] ? t(language, TARGET_WORDS[target]!) : target;
 const speciesWords = (a: DailyLanding, language: Language): string => targetWords(a.target, language);
+export const landingUnavailableText = (language: Language): string =>
+  `${t(language, 'daily_post_confidence_short', {label: language === 'es' ? 'No disponibles' : 'Not available'})}.`;
 
 /**
  * The answer composed from the facts without a model (06's fallbacks; also
@@ -207,9 +218,13 @@ const speciesWords = (a: DailyLanding, language: Language): string => targetWord
 export function composeDaily(inputs: DailyInputs, language: Language): string {
   const advisories = inputs.conditions.advisories.map(event => t(language, 'daily_advisory', {event: event.toUpperCase()}));
   const conditions = conditionsText({...inputs.conditions, advisories: []}, language);
-  const landing = inputs.landing.activity.filter(a => a.trips > 0);
-  if (!inputs.skipper_reports.length && !landing.length) return [...advisories, t(language, 'daily_nothing', {port: inputs.port_name}), conditions].join(' ');
-  const body: string[] = [];
+  const staleLanding = staleLandingFeed(inputs);
+  const landing = staleLanding ? [] : inputs.landing.activity.filter(a => a.trips > 0);
+  if (!inputs.skipper_reports.length && !landing.length) {
+    const evidence = staleLanding ? [t(language, 'daily_no_skipper'), landingUnavailableText(language)] : [t(language, 'daily_nothing', {port: inputs.port_name})];
+    return [...advisories, ...evidence, conditions].join(' ');
+  }
+  const body: string[] = staleLanding ? [landingUnavailableText(language)] : [];
   for (const r of inputs.skipper_reports.slice(0, 3)) {
     // Kept fish first; a trip that released everything still says what it caught.
     const kept = r.counts.filter(c => c.kept).slice(0, 4).map(c => `${c.kept} ${c.label}`);
@@ -220,7 +235,9 @@ export function composeDaily(inputs: DailyInputs, language: Language): string {
     body.push(t(language, 'daily_no_skipper'));
     for (const a of landing.slice(0, 2)) body.push(a.trips === 1 ? t(language, 'daily_landing_one', {species: speciesWords(a, language), label: a.confidence}) : t(language, 'daily_landing', {trips: a.trips, species: speciesWords(a, language), label: a.confidence}));
   }
-  return [`${inputs.port_name}, ${dateWords(inputs.date, language)}:`, ...advisories, ...body, conditions,
+  const heading = `${inputs.port_name}, ${dateWords(inputs.date, language)}:`;
+  const lead = mixedDailyFeeds(inputs) ? [...advisories, heading] : [heading, ...advisories];
+  return [...lead, ...body, conditions,
     t(language, 'daily_link', {target: `port:${inputs.port}`})].join(' ');
 }
 
@@ -310,13 +327,11 @@ export async function dailyAnswer(env: Env, port: string, date: string, language
   const inputs = await dailyInputs(env, port, date, deps, now);
   const hash = await hashInputs(inputs);
   const row = await db.prepare('SELECT text_en,text_es,inputs_hash,generated_at FROM advisor_daily_answers WHERE key=?').bind(key).first<{text_en: string; text_es: string; inputs_hash: string; generated_at: string}>();
-  if (row && row.inputs_hash === hash) return {port, date, text: language === 'es' ? row.text_es : row.text_en, text_en: row.text_en, text_es: row.text_es, inputs_hash: hash, generated_at: row.generated_at, source: 'cache'};
-  // A feed that failed to load changes the hash but is no new information: today's stored answer stands until the
-  // feeds are back (a published report deletes the row, intake/reports.ts, so a new report is never hidden by this).
-  if (row && (!inputs.feeds.daily || !inputs.feeds.intelligence)) return {port, date, text: language === 'es' ? row.text_es : row.text_en, text_en: row.text_en, text_es: row.text_es, inputs_hash: row.inputs_hash, generated_at: row.generated_at, source: 'cache'};
+  if (row && canUseDailyCache(inputs, row.inputs_hash, hash)) return {port, date, text: language === 'es' ? row.text_es : row.text_en, text_en: row.text_en, text_es: row.text_es, inputs_hash: row.inputs_hash, generated_at: row.generated_at, source: 'cache'};
 
   const link = `{{link:port:${port}}}`;
-  if (options.generate === false) {
+  // Compose from the surviving evidence, without sending retained catch facts to the model or storing a partial answer.
+  if (options.generate === false || mixedDailyFeeds(inputs) || staleLandingFeed(inputs)) {
     const en = capped(composeDaily(inputs, 'en'), settings.publicBase), es = capped(composeDaily(inputs, 'es'), settings.publicBase);
     return {port, date, text: language === 'es' ? es : en, text_en: en, text_es: es, inputs_hash: hash, generated_at: new Date(now).toISOString(), source: 'composed'};
   }

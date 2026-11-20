@@ -3,11 +3,76 @@
 // must keep working, so these pin the request bodies, the species choice and
 // the API helper the dialog sends. tests/test_boat.mjs covers the limits.
 import test from 'node:test';
+import './helpers/spanish-ready.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {mkdtemp, readFile, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
 
 const alerts = await import('../web/alerts.ts');
 const REGION = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/region.json', import.meta.url), 'utf8'));
+
+test('comfort_history_real_component_renders_window_and_binds_only_real_ids', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'comfort-render-'));
+  const oldFetch = globalThis.fetch;
+  try {
+    const out = join(dir, 'sheet.mjs');
+    await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+      export {SignedIn} from './web/app/TripAlerts.tsx';
+      export {h, options} from 'preact'; export {render} from 'preact-render-to-string';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
+    plugins: [{name: 'seed-feedback-state', setup(b) {
+      b.onLoad({filter: /\/TripAlerts\.tsx$/}, async ({path}) => ({loader: 'tsx', contents: (await readFile(path, 'utf8'))
+        .replace('useState<Feedback[] | null>(null)', 'useState<Feedback[] | null>(globalThis.__comfortRows)') + '\nexport {SignedIn};'}));
+    }}]});
+    const ui = await import(pathToFileURL(out).href), calls = [];
+    let buttons = [];
+    ui.options.vnode = v => { if (v.props?.['data-comfort-id']) buttons.push(v); };
+    globalThis.fetch = async (url, init) => { calls.push({url, ...init}); return Response.json({feedback: []}); };
+    for (const n of [0, 1, 5, 99, 100]) {
+      globalThis.__comfortRows = Array.from({length: n}, (_, i) => ({id: i ? `r${i}` : 'opaque/id%', observed_at: '2026-11-05T00:30:00Z', rating: 2, context: '{}'}));
+      buttons = [];
+      const html = ui.render(ui.h(ui.SignedIn, {session: {}, region: REGION, boat: {factors: {wind: 1, sea: 1}, saved: null}, target: null}));
+      assert.ok(html.includes(alerts.feedbackSummary(n)));
+      assert.equal((html.match(/data-comfort-id=/g) ?? []).length, Math.min(n, 5));
+      assert.equal(html.includes('Showing the latest 5 reports.'), n > 5);
+      assert.equal(calls.length, 0, 'render alone never sends a deletion');
+    }
+    // Both button invocations close over the stored id; synchronous guard refuses a double activation.
+    buttons[0].props.onClick(); buttons[0].props.onClick();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(calls.filter(c => c.method === 'DELETE').length, 1);
+    assert.equal(calls[0].url, '/api/comfort/opaque%2Fid%25');
+    assert.equal(calls[0].body, undefined);
+    globalThis.__comfortRows = [{observed_at: 'invalid', rating: 2, context: '{}'}];
+    const html = ui.render(ui.h(ui.SignedIn, {session: {}, region: REGION, boat: {factors: {wind: 1, sea: 1}, saved: null}, target: null}));
+    assert.ok(html.includes('Date unavailable'));
+    assert.ok(!html.includes('data-comfort-id='));
+  } finally { globalThis.fetch = oldFetch; delete globalThis.__comfortRows; await rm(dir, {recursive: true, force: true}); }
+});
+
+test('comfort_history_count_and_five_row_window: helper labels are grammatical and capped honestly', () => {
+  for (const n of [0, 1, 5, 99, 100, 140]) {
+    assert.equal(alerts.feedbackSummary(n), n >= 100 ? 'Latest 100 private reports; older reports may exist.' : `${n} private report${n === 1 ? '' : 's'}.`);
+  }
+  assert.equal(alerts.feedbackSummary(1, 'es'), '1 informe privado.');
+  assert.equal(alerts.feedbackSummary(100, 'es'), 'Los últimos 100 informes privados; puede haber informes anteriores.');
+});
+
+test('comfort_dates_use_region_zone_not_host', () => {
+  const date = alerts.feedbackDate;
+  assert.equal(date('2026-11-05T00:30:00Z', 'America/Los_Angeles'), 'Nov 4, 2026');
+  assert.equal(date('2026-11-05T00:30:00Z', 'UTC'), 'Nov 5, 2026');
+  assert.equal(date('2026-07-01T09:00:00Z', 'Pacific/Honolulu'), 'Jun 30, 2026');
+  assert.equal(date('2026-07-01T09:00:00Z', 'America/Los_Angeles'), 'Jul 1, 2026');
+  for (const at of ['2026-03-08T09:59:00Z', '2026-03-08T10:01:00Z', '2026-11-01T08:59:00Z', '2026-11-01T09:01:00Z']) assert.equal(date(at, 'America/Los_Angeles'), at.includes('03-08') ? 'Mar 8, 2026' : 'Nov 1, 2026');
+  for (const zone of [undefined, '', 'invalid']) assert.equal(date('2026-11-05T00:30:00Z', zone), 'Nov 4, 2026');
+  assert.equal(date('invalid', 'UTC'), 'Date unavailable');
+  assert.equal(date('invalid', 'UTC', 'es'), 'Fecha no disponible');
+});
 
 test('a saved trip posts v1\'s body: the form, the region, the species and the boat only when one is saved', () => {
   const form = {date: '2026-10-13', point: 'central', start_hour: 7, end_hour: 13, wind_limit: 8, gust_limit: 12, sea_limit: 3};

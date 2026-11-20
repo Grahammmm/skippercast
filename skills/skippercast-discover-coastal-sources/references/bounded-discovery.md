@@ -202,7 +202,7 @@ window requires actual host inspection before attesting stopped. Then finalize.
 Offline verification:
 
 ```bash
-python -m pytest -q tests/unit/test_coastal_source_discovery.py
+python -m pytest -q research/tests/test_coastal_snapshot_inventory.py   # the only test at 2fb56f06 that references discover.py; the rest of the discovery CLI has no test (say so, do not claim verification)
 ```
 
 Fixtures cover an empty-cache external candidate, CRS/nonoverlap, missing fields,

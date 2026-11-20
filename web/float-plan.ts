@@ -67,7 +67,9 @@ type SeedBrief = {date: string; profile: string; bar: {hours: readonly BarHour[]
 /** The saved boat as one line: its literal name and a finite length, `name · N ft`; blank when none (never the reference boat). */
 export function boatLine(boat: {name?: unknown; loa_ft?: unknown} | null | undefined): string {
   const name = typeof boat?.name === 'string' ? boat.name.trim() : '', loa = typeof boat?.loa_ft === 'number' && Number.isFinite(boat.loa_ft) ? boat.loa_ft : null;
-  return [name, loa === null ? '' : `${loa} ft`].filter(Boolean).join(' · ').slice(0, BOAT_MAX);
+  const cut = [name, loa === null ? '' : `${loa} ft`].filter(Boolean).join(' · ').slice(0, BOAT_MAX);
+  // BOAT_MAX counts UTF-16 units; drop a high surrogate whose low half was cut off.
+  return /[\ud800-\udbff]$/.test(cut) ? cut.slice(0, -1) : cut;
 }
 
 /**

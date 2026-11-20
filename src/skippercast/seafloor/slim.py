@@ -46,9 +46,11 @@ def slim_features(export_features):
 def write_slim(folder, *, region, expires_at, export_sha256, protected, export_features):
     """Write the slim file into `folder`; return its manifest fields (empty when there are no verdicts to carry)."""
     folder = Path(folder)
-    for stale in folder.glob('habitat-slim*.geojson.gz'):   # a build without verdicts must not leave an earlier build's file
-        stale.unlink()
+    def clear_stale():   # a build without verdicts must not leave an earlier build's file
+        for stale in folder.glob('habitat-slim*.geojson.gz'):
+            stale.unlink()
     if not protected or not export_features:
+        clear_stale()
         return {}
     data = {'type': 'FeatureCollection', 'schema_version': 1, 'region': region, 'expires_at': expires_at,
             'slim_of': export_sha256, 'protected_screen': protected, 'features': slim_features(export_features)}
@@ -57,6 +59,7 @@ def write_slim(folder, *, region, expires_at, export_sha256, protected, export_f
     if len(packed) > SLIM_MAX_BYTES:
         raise ValueError(f'Slim reef file is {len(packed)} bytes, over its {SLIM_MAX_BYTES} byte budget (slim.py SLIM_MAX_BYTES)')
     sha = hashlib.sha256(packed).hexdigest()
+    clear_stale()   # only once the replacement validated: a refused build keeps the previous files
     (folder/slim_file(sha)).write_bytes(packed)
     return {'slim_file': slim_file(sha), 'slim_sha256': sha, 'slim_bytes': len(packed),
             'slim_decoded_bytes': len(raw)}

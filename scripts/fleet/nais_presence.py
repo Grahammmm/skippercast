@@ -31,7 +31,8 @@ from skippercast.fleet.config import load_region
 MAX_DAYS = 7
 MAX_LABELS = 5
 DEFAULT_PORTS = "morro-bay,port-san-luis"
-NOTE = ("\"Not heard\" proves neither that a boat has no transponder nor that it made no trip; "
+NOTE = ("Positive days can include partially checked days and show transmissions, not departures or fishing. "
+        "\"Not heard\" proves neither that a boat has no transponder nor that it made no trip; "
         "NAIS coverage and the boat's transponder use both vary.")
 
 
@@ -134,8 +135,9 @@ def main(argv=None, source=None, out=None) -> int:
     workdir = Path(args.workdir) if args.workdir else ais_root(region.id) / "nais-check"
     zone, bbox = ZoneInfo(region.timezone), bbox_of(region.ais)
     first, last = args.start, args.end
-    window = window_ms(first, last, region.timezone)
-    window_days = {(first + timedelta(days=k)).isoformat() for k in range((last - first).days + 1)}
+    local_days = [first + timedelta(days=k) for k in range((last - first).days + 1)]
+    required = {day: set(utc_days(*window_ms(day, day, region.timezone))) for day in local_days}
+    archives = sorted({archive for files in required.values() for archive in files})
     free = _free_gb(workdir)
     if free < args.min_free_gb:
         print(f"stopped: {free:.0f} GB free, below {args.min_free_gb:g} GB", file=out)
@@ -146,8 +148,9 @@ def main(argv=None, source=None, out=None) -> int:
     home = {label: set() for label in targets}
     anywhere = {label: set() for label in targets}
     by_mmsi = {m: label for label, m in targets.items()}
-    read, missing, failed = [], [], []
-    for day in utc_days(*window):
+    read: set[date] = set()
+    missing, failed = [], []
+    for day in archives:
         free = _free_gb(workdir)
         if free < args.min_free_gb:
             print(f"stopped: {free:.0f} GB free, below {args.min_free_gb:g} GB", file=out)
@@ -157,23 +160,27 @@ def main(argv=None, source=None, out=None) -> int:
                 label = by_mmsi.get(message.mmsi)
                 if label is None:
                     continue
-                local = datetime.fromtimestamp(message.ts / 1000, timezone.utc).astimezone(zone).date().isoformat()
-                if local not in window_days:
+                local_day = datetime.fromtimestamp(message.ts / 1000, timezone.utc).astimezone(zone).date()
+                if local_day not in required:
                     continue
+                local = local_day.isoformat()
                 anywhere[label].add(local)
                 if isinstance(message, AisPosition) and any(p.contains(message.lat, message.lon) for p in ports):
                     home[label].add(local)
-            read.append(day.isoformat())
+            read.add(day)
         except DayNotPublished:
             missing.append(day.isoformat())
         except (CorruptDay, MalformedFile) as error:
             failed.append(f"{day.isoformat()} ({type(error).__name__})")
+    checked = sum(bool(files) and files <= read for files in required.values())
     print("# NAIS transmit check (counts only)", file=out)
-    print(f"\nWindow: {first.isoformat()} to {last.isoformat()} ({region.timezone} days, {len(window_days)} days). "
-          f"Home ports: {', '.join(port_ids)}. UTC day files read: {len(read)} of {len(read) + len(missing) + len(failed)}.\n", file=out)
-    print("| Label | Days heard at home ports | Days heard anywhere in region | Days checked |\n|---|---|---|---|", file=out)
+    print(f"\nWindow: {first.isoformat()} to {last.isoformat()} ({region.timezone}). "
+          f"Home ports: {', '.join(port_ids)}. UTC day files read: {len(read)} of {len(archives)}.", file=out)
+    print(f"Local days requested: {len(required)}. Partial/unknown local days: {len(required) - checked}.\n", file=out)
+    print("| Label | Days heard at home ports | Days heard anywhere in region | Days fully checked |\n|---|---|---|---|",
+          file=out)
     for label in sorted(targets):
-        print(f"| {label} | {len(home[label])} | {len(anywhere[label])} | {len(window_days)} |", file=out)
+        print(f"| {label} | {len(home[label])} | {len(anywhere[label])} | {checked} |", file=out)
     print(f"\nMissing (not published): {', '.join(missing) or 'none'}", file=out)
     print(f"Failed: {', '.join(failed) or 'none'}\n", file=out)
     print(NOTE, file=out)

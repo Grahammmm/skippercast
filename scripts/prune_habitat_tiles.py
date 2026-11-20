@@ -22,11 +22,13 @@ def _load(path,ident):
 
 def prune(published,incoming):
     """Check every manifest first; only then delete the planned stale tiles (all-or-nothing)."""
+    if (published/'regions').is_symlink():raise ValueError('Habitat regions folder is a link')
     plan=[]
     for manifest in sorted((incoming/'regions').glob('*/habitat-dynamics.json')):
         ident=manifest.parent.name
         if not re.fullmatch(r'[a-z][a-z0-9-]{1,63}',ident):raise ValueError(f'Invalid region: {ident}')
         target=published/'regions'/ident
+        if target.is_symlink():raise ValueError(f'Habitat region folder is a link: {ident}')
         keep=set()
         for path in (manifest,target/'habitat-dynamics.json'):
             if not path.exists():continue

@@ -18,14 +18,19 @@ from .. import validate
 from ..util.units import KT_PER_MS as KNOTS_PER_MS
 
 
+def _is_measure(v):
+    """A finite number; booleans (an int subclass) are not measurements."""
+    return isinstance(v,(int,float)) and not isinstance(v,bool) and math.isfinite(v)
+
+
 def _member_value(series,t,times):
     """A member's value at unix time t, linear between native three-hour steps; None if a neighbour is missing."""
     if t in times:
         value=series[times.index(t)]
-        return value if isinstance(value,(int,float)) and math.isfinite(value) else None
+        return value if _is_measure(value) else None
     after=next(i for i,x in enumerate(times) if x>t);before=after-1
     a,b=series[before],series[after]
-    if not all(isinstance(v,(int,float)) and math.isfinite(v) for v in (a,b)):return None
+    if not all(_is_measure(v) for v in (a,b)):return None
     return a+(b-a)*(t-times[before])/(times[after]-times[before])
 
 
@@ -132,9 +137,12 @@ def model_verification_records(model, source_result, npoints, stations):
 
 
 def collection_health(sources):
-    return {'status':'ok' if all(s['status']=='ok' and not s.get('verification_issue') for s in sources.values()) else 'degraded',
-            'issues':[k for k,s in sources.items() if (s['status']!='ok' or s.get('verification_issue')) and not (k.startswith('hfr-') and s['status']=='missing')],
-            'coverage_gaps':[k for k,s in sources.items() if (k.startswith('hfr-') and s['status']=='missing') or s.get('verification_deferral')]}
+    # Freshness and horizon coverage are separate; keep exact wave samples usable even on a partial run.
+    wave=(sources.get('wave-ensemble') or {}).get('data') or {}
+    partial_wave=wave.get('horizon_status')=='partial'
+    return {'status':'ok' if not partial_wave and all(s['status']=='ok' and not s.get('verification_issue') for s in sources.values()) else 'degraded',
+            'issues':[k for k,s in sources.items() if (s['status']!='ok' or s.get('verification_issue') or (k=='wave-ensemble' and partial_wave)) and not (k.startswith('hfr-') and s['status']=='missing')],
+            'coverage_gaps':[k for k,s in sources.items() if (k.startswith('hfr-') and s['status']=='missing') or s.get('verification_deferral') or (k=='wave-ensemble' and partial_wave)]}
 
 
 def run(region_id,output,previous_root=None,now=None,clock=None):

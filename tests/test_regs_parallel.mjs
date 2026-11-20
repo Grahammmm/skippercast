@@ -1,5 +1,5 @@
-// SC1938-16: loadRegs starts the committed registry and the daily regulations part together (the phone shell's rules line
-// waits for the later of the two, not their sum) and still applies them in the old order: registry first, daily part last.
+// SC1938-16: loadRegs starts the committed registry and the daily regulations part together. SCA-388: the rules line
+// can use daily data before the registry is ready, and equal review times still favour daily.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {isDeepStrictEqual} from 'node:util';
@@ -45,7 +45,7 @@ test('2: the daily part answering first, with an equal reviewed_at, still ends o
   fresh(); const s = held();
   const p = loadRegs(MORRO, s.fetchFn);
   s.ok(daily('morro-bay'), part('morro-bay', 'daily')); await tick();
-  assert.equal(regsData.value, null, 'nothing is applied before the registry has answered');
+  assert.equal(regsData.value?.data.mark, 'daily', 'daily is applied before the registry has answered');
   s.ok(COPY, regs('registry')); await p;
   assert.equal(regsData.value.data.mark, 'daily');
 });
@@ -108,7 +108,7 @@ test('7: a successful fallback clears only the copy failure, not an early daily 
     await tick();
     s.status(COPY, 503); await tick();
     assert.deepEqual(s.urls, [COPY, daily('morro-bay'), FALLBACK]);
-    assert.equal(regsData.value, null, 'daily still waits for the fallback registry');
+    assert.equal(regsData.value?.data.mark, dailyFails ? undefined : 'daily', 'only a valid daily answer shows while fallback is pending');
     s.ok(FALLBACK, regs('fallback')); await p;
     assert.equal(regsData.value.data.mark, dailyFails ? 'fallback' : 'daily');
     const before = s.urls.length, again = loadRegs(MORRO, s.fetchFn);

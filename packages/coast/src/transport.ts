@@ -8,6 +8,7 @@ export function coastPath(path: string): string {
 }
 export const coastFetch: typeof fetch = (input, init) => {
   if (typeof input !== 'string') throw Error('Coastal requests require a public relative path');
-  if (init?.method && !['GET','HEAD'].includes(init.method)) throw Error('Coastal data is read only');
-  return fetch(coastPath(input), {...init, credentials: 'omit', redirect: 'error'});
+  const method = init?.method?.toUpperCase();
+  if (method && !['GET','HEAD'].includes(method)) throw Error('Coastal data is read only');
+  return fetch(coastPath(input), {...init, ...(method && {method}), credentials: 'omit', redirect: 'error'});
 };

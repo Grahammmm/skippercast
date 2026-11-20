@@ -36,6 +36,9 @@ def derivatives(depth, valid, resolution_m):
     _validate_resolution(resolution_m)
     if depth.ndim != 2 or depth.shape != valid.shape:
         raise ValueError('Invalid terrain grid')
+    if min(depth.shape) < 2:
+        # np.gradient needs two cells per axis; no 3x3 stencil fits, so every layer is unknown.
+        return {k: np.full(depth.shape, np.nan) for k in ('slope_deg', 'vrm', 'bpi_fine_m', 'bpi_broad_m')}
     good = valid & np.isfinite(depth)
     supported = binary_erosion(good, structure=np.ones((3, 3)), border_value=0)
     # Invalid values cannot contaminate accepted derivatives: all 3x3 neighbors are required.

@@ -34,8 +34,8 @@ export const PROTECTED: readonly ProtectedSpecies[] = Object.freeze(protectedLis
 
 /** Cues for a key, falling back to a synonym's entry (halibut uses california-halibut's). */
 function cuesFor(key: string): LookalikeEntry | null {
-  if (CUES[key]) return CUES[key]!;
-  for (const [synonym, parent] of SYNONYMS) if (parent === key && CUES[synonym]) return CUES[synonym]!;
+  if (Object.hasOwn(CUES, key)) return CUES[key]!;
+  for (const [synonym, parent] of SYNONYMS) if (parent === key && Object.hasOwn(CUES, synonym)) return CUES[synonym]!;
   return null;
 }
 

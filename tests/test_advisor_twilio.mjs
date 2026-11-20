@@ -233,7 +233,7 @@ dbTest('send: MediaUrl per media key from its advisor_media row (public route), 
   assert.equal(t.calls.length, 1, 'nothing sent for a refused media set');
 });
 
-dbTest('send: 21610 stops the contact and fails with opted-out; other 4xx fail without retry; network errors retry once; timeout is unknown', async () => {
+dbTest('send: 21610 stops the contact; other 4xx fail; timeout and 5xx are unknown; none are retried', async () => {
   const {sql, db} = advisorDatabase(), at = '2026-10-03T15:00:00.000Z';
   const hash = await phoneHash(await deriveKeys(KEY), '+15555550101');
   sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,channel,status,last_seen_at,created_at,updated_at) VALUES('c1',?,'sms','active',?,?,?)`).run(hash, at, at, at);
@@ -248,9 +248,7 @@ dbTest('send: 21610 stops the contact and fails with opted-out; other 4xx fail w
   const bad = fakeTwilio({'/Messages.json': {status: 400, body: {code: 21211, message: 'Invalid To', status: 400}}});
   assert.deepEqual(await createTwilio({fetcher: bad.fetch}).send({id: 'x', to, text: 'hi'}, env), {providerId: null, status: 'failed', error: 'twilio-21211'});
   assert.equal(bad.calls.length, 1);
-  const flaky = fakeTwilio({'/Messages.json': (_u, _i, n) => n === 1 ? new TypeError('fetch failed') : {status: 201, body: fixture('send-response.json').response}});
-  assert.equal((await createTwilio({fetcher: flaky.fetch}).send({id: 'x', to, text: 'hi'}, env)).status, 'sent');
-  assert.equal(flaky.calls.length, 2, 'one retry on a network error');
+
   const slow = fakeTwilio({'/Messages.json': () => Object.assign(new Error('timed out'), {name: 'TimeoutError'})});
   assert.deepEqual(await createTwilio({fetcher: slow.fetch}).send({id: 'x', to, text: 'hi'}, env), {providerId: null, status: 'unknown', error: 'timeout'});
   assert.equal(slow.calls.length, 1, 'never retried after a timeout');
@@ -324,6 +322,9 @@ test('health: GET the account; 200 is ok', async () => {
   const tw = createTwilio({fetcher: t.fetch});
   assert.deepEqual(await tw.health({...TW}), {ok: true, detail: 'account active'});
   assert.equal(t.calls[0].url.href, `https://api.twilio.com/2010-04-01/Accounts/${SID}.json`); assert.equal(t.calls[0].headers.Authorization, BASIC);
+  const flaky = fakeTwilio({[`/Accounts/${SID}.json`]: (_u, _i, n) => n === 1 ? new TypeError('fetch failed') : {status: 200, body: fixture('account.json').response}});
+  assert.deepEqual(await createTwilio({fetcher: flaky.fetch}).health({...TW}), {ok: true, detail: 'account active'});
+  assert.deepEqual(flaky.calls.map(call => call.method), ['GET', 'GET'], 'read-only health check retries once on a network error');
   const denied = createTwilio({fetcher: fakeTwilio({[`/Accounts/${SID}.json`]: {status: 401, body: {code: 20003}}}).fetch});
   assert.deepEqual(await denied.health({...TW}), {ok: false, detail: 'account http-401'});
   assert.deepEqual(await tw.health({}), {ok: false, detail: 'not-configured'});

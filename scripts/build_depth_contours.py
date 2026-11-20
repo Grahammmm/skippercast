@@ -7,9 +7,14 @@ Run on the processing host, with the survey stack (requirements-survey.txt):
         --grid usgs-morro-bay=/path/Bathymetry_OffshoreMorroBay.tif \\
         --grid usgs-point-estero=/path/Bathymetry_OffshorePointEstero.tif
 
-Each grid must be the original producer GeoTIFF of an approved bathymetry
-source bound to the region (catalog/sources.json, regions/<id>/region.json),
-or for an `adapter: bag` source one regular NOAA BAG, named with its survey:
+Each grid must be an original producer GeoTIFF or a hash-bound normalised
+GeoTIFF of an approved bathymetry source bound to the region
+(catalog/sources.json, regions/<id>/region.json). For a normalised grid give
+--normalized-sidecar SOURCE_ID=PATH; provenance retains the original digest. With
+--set v2 its native detail also needs --normalized-support SOURCE_ID=PATH (the grid's
+support.tif): only cells it marks measured are traced at native detail. The sidecar must
+pin that file as outputs["support.tif"]; a missing pin or a different file is refused.
+For an original `adapter: bag` source, supply one regular NOAA BAG named with its survey:
 `--grid noaa-bag=/path/H12345_MB_2m.bag --bag-survey noaa-bag=H12345`.
 Its SHA-256 is recorded in the output's provenance; local paths never reach
 the output. The output is catalog/depth-contours/<id>.geojson (or --output PATH, outside the
@@ -17,11 +22,15 @@ work tree, for the same approved-only collection); then rebuild the
 platform (PYTHONPATH=src python -m skippercast.platform.build), which checks it
 and publishes dist/regions/<id>/depth-contours*.geojson. The method is
 described in src/skippercast/platform/depth_contours.py.
+
+--set v2 opts into the zoom-tagged feet contours (300 ft shelf); v1 is
+the unchanged default. Use --output or --held-output for private trials.
 """
 import argparse
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 import hashlib
 import importlib.util
+import json
 from pathlib import Path
 import re
 import sys
@@ -34,10 +43,11 @@ from rasterio.warp import transform_bounds
 from rasterio.windows import Window
 from pyproj import CRS, Transformer
 from shapely import line_merge, unary_union
-from shapely.geometry import shape
+from shapely.geometry import LineString, shape
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from skippercast.platform.contracts import REPO, atomic_json, load_catalogs, load_region  # noqa: E402
+from skippercast.platform.contracts import owner_display_cleared  # noqa: E402
 from skippercast.platform import depth_contours as dc  # noqa: E402
 from skippercast.platform import seafloor_ec as ec  # noqa: E402
 
@@ -57,6 +67,9 @@ STRIP_BLOCKS = 64
 EDGE_TOLERANCE_M = 12
 EDGE_MIN_LENGTH_M = 200
 CONTOUR_TOLERANCE_M = 3
+V2_COARSE_TOLERANCE_M = 6
+V2_DECIMALS = 6
+NORMALIZED_DATUMS = {'MLLW', 'NAVD88', 'MSL', 'EGM2008', 'unstated', 'instantaneous_sea_level'}
 # P4's preflight (check_grid / Refused), loaded from beside this script: it imports nothing from seafloor/.
 _spec = importlib.util.spec_from_file_location('preflight_native_grid', Path(__file__).with_name('preflight_native_grid.py'))
 preflight = importlib.util.module_from_spec(_spec)
@@ -70,19 +83,85 @@ def sha256(path):
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 
-def native_offsets(grid, lattice):
+def public_refusal(ident, region, sources, *, explicit=True, selected=False):
+    source = sources.get(ident) or {}
+    rights = source.get('rights') or {}
+    display = rights.get('public_display')
+    if ((explicit or selected) and display != 'allowed') or display in ('private', 'excluded'):
+        return 'not cleared for public display'
+    owner_cleared = selected and owner_display_cleared(rights)
+    if not owner_cleared and source.get('publication_allowed') is False:
+        return 'publication_allowed is false'
+    if (not owner_cleared and source.get('review_status') != 'approved') or 'bathymetry' not in source.get('needs', ()):
+        return 'not an approved bathymetry source'
+    if not selected and ident not in region['source_bindings']['bathymetry']:
+        return 'not a static region bathymetry binding'
+    return None
+
+
+def normalized_identity(ident, grid, path, reviewed_datum):
+    """Read only the R2 receipt fields needed to bind this derivative to its original."""
+    try:
+        side = json.loads(Path(path).read_text(encoding='utf-8'))
+        original = side['original_sha256']
+        digest = side['outputs']['grid.tif']
+        datum = side['vertical_datum']
+        if (side['schema'] != 'sc-relief-normalized/1' or side['units'] != 'm'
+                or side['value_convention'] != 'elevation_positive_up'
+                or datum not in NORMALIZED_DATUMS
+                or not dc.SHA256.fullmatch(original) or not dc.SHA256.fullmatch(digest)):
+            raise ValueError('expected a hash-bound normalised metre elevation grid')
+        if (grid.driver != 'GTiff' or grid.count != 1 or grid.scales[0] != 1 or grid.offsets[0] != 0
+                or grid.crs != rasterio.crs.CRS.from_user_input(side['crs'])
+                or list(grid.shape) != side['shape'] or list(grid.transform)[:6] != side['transform']
+                or any(abs(cell - side['resolution_m']) > 1e-9 for cell in grid.res)):
+            raise ValueError('normalised sidecar geometry mismatch')
+        if sha256(grid.name) != digest:
+            raise ValueError('normalised grid hash mismatch')
+        if datum != 'unstated' and reviewed_datum not in (None, dc.UNVERIFIED_DATUM, datum):
+            raise ValueError('normalised datum differs from the reviewed original')
+        return original, digest, datum if datum != 'unstated' else reviewed_datum
+    except (KeyError, OSError, TypeError, ValueError) as exc:
+        raise SystemExit(f'{ident}: invalid normalised sidecar: {exc}') from None
+
+
+def verify_support_binding(ident, sidecar_path, support_path):
+    """Refuse a support raster the normalised receipt does not pin: only the receipt's own support.tif may grant native detail."""
+    try:
+        pin = json.loads(Path(sidecar_path).read_text(encoding='utf-8'))['outputs'].get('support.tif')
+    except (AttributeError, KeyError, OSError, TypeError, ValueError):
+        pin = None
+    if not isinstance(pin, str) or not dc.SHA256.fullmatch(pin):
+        raise SystemExit(f'{ident}: the normalised sidecar does not pin outputs[\"support.tif\"], so no support raster can be trusted')
+    if sha256(Path(support_path).expanduser()) != pin:
+        raise SystemExit(f'{ident}: --normalized-support differs from the support.tif the normalised sidecar pins')
+
+
+@contextmanager
+def open_geotiff(path, *, normalized):
+    if not normalized:
+        with rasterio.open(path) as grid:
+            yield grid
+    else:
+        # Keep the fence active through boundless reads, which can reopen the TIFF.
+        with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR', GDAL_PAM_ENABLED='NO'), \
+                rasterio.open(path, driver='GTiff', sharing=False) as grid:
+            yield grid
+
+
+def native_offsets(grid, lattice, block_m=dc.CELL_M):
     """The grid's native column and row at the lattice's top-left corner, and cells per block; refuses misaligned grids."""
     x0, y0, _, _ = lattice
     crs = horizontal_crs(grid)
     if not crs.is_projected or any(axis.unit_name != 'metre' for axis in crs.axis_info[:2]):
         raise ValueError(f'{grid.name}: expected a projected, metre-based survey grid')
     cell = grid.res[0]
-    if abs(grid.res[0] - grid.res[1]) > 1e-9 or (dc.CELL_M / cell) % 1:
-        raise ValueError(f'{grid.name}: square cells dividing {dc.CELL_M} m are required, got {grid.res}')
+    if abs(grid.res[0] - grid.res[1]) > 1e-9 or (block_m / cell) % 1:
+        raise ValueError(f'{grid.name}: square cells dividing {block_m} m are required, got {grid.res}')
     col0, row0 = (x0 - grid.transform.c) / cell, (grid.transform.f - y0) / cell
     if abs(col0 - round(col0)) > 1e-6 or abs(row0 - round(row0)) > 1e-6:
-        raise ValueError(f'{grid.name}: native cells do not align with the {dc.CELL_M} m lattice')
-    return round(col0), round(row0), int(dc.CELL_M / cell)
+        raise ValueError(f'{grid.name}: native cells do not align with the {block_m} m lattice')
+    return round(col0), round(row0), int(block_m / cell)
 
 
 def merged_blocks(grids, lattice, offsets, keys, ecs=None):
@@ -106,6 +185,7 @@ def merged_blocks(grids, lattice, offsets, keys, ecs=None):
     groups = {}
     for i, key in enumerate(keys):
         groups.setdefault(key, []).append(i)
+    prefer_complete = len(groups) > 1
     depth = np.full((height, width), np.nan, dtype='float64')
     owner = np.full((height, width), -1, dtype='int8')
     cls, reason = np.full((height, width), -1, dtype='int8'), np.full((height, width), -1, dtype='int8')
@@ -126,16 +206,23 @@ def merged_blocks(grids, lattice, offsets, keys, ecs=None):
                 values = grids[i].read(1, window=window, boundless=True, masked=True).filled(np.nan).astype('float64')
                 water = np.isfinite(values) & (values < 0) & (values >= -3000)
                 own_valid = water.reshape(rows, n, width, n).all(axis=(1, 3))
-                complete[(complete == len(grids)) & own_valid] = i
+                first_complete = (complete == len(grids)) & own_valid
+                complete[first_complete] = i
+                replace_partial = prefer_complete and first_complete.any()
                 fill = water & (source < 0)
                 codes = ecs[i] and ecs[i][0].read(1, window=window, boundless=True, fill_value=PAD)
                 if ecs[i]:
                     named.append((i, codes))
                     fill |= np.isin(codes, UNRESOLVED_CODES) & (source < 0)
-                    if not np.isin(codes[fill], list(ec.CODES.values())).all():
-                        raise SystemExit(f'{grids[i].name}: provenance code not in seafloor_ec.CODES')
-                    if len(ecs[i]) > 1:
-                        shoal[fill] = ecs[i][1].read(1, window=window, boundless=True, fill_value=np.nan)[fill]
+                # Across groups a complete grid wins as a unit: replace any earlier partial cells and their EC data.
+                if replace_partial:
+                    fill.reshape(rows, n, width, n)[:] |= first_complete[:, None, :, None]
+                if ecs[i] and not np.isin(codes[fill], list(ec.CODES.values())).all():
+                    raise SystemExit(f'{grids[i].name}: provenance code not in seafloor_ec.CODES')
+                if ecs[i] and len(ecs[i]) > 1:
+                    shoal[fill] = ecs[i][1].read(1, window=window, boundless=True, fill_value=np.nan)[fill]
+                elif replace_partial:
+                    shoal[fill] = np.nan
                 merged[fill], source[fill] = values[fill], i
                 code[fill] = codes[fill] if ecs[i] else ec.CODES['measured']
             # A no-data or masked cell its own grid names (never padding) takes what no grid gave water: in a block with
@@ -153,16 +240,15 @@ def merged_blocks(grids, lattice, offsets, keys, ecs=None):
             # A complete individual grid outranks any group completed only by merging partial grids.
             priority = np.where(complete < len(grids), complete, len(grids) + first)
             take = covered & (priority < rank)
-            good = take & valid & (klass != CLASS_INDEX['unresolved'])
-            depth[by:by + rows][good] = (-blocks.sum(axis=(1, 3)) / (n * n) * dc.FEET_PER_M)[good]
+            unresolved = klass == CLASS_INDEX['unresolved']
+            # A better-ranked group replaces the entire result, including absent depth or reason.
+            depth[by:by + rows][take] = np.where(valid & ~unresolved,
+                                                -blocks.sum(axis=(1, 3)) / (n * n) * dc.FEET_PER_M, np.nan)[take]
             credited = np.array(members)[counts.argmax(axis=0)]
-            if len(groups) > 1:
-                credited = np.where(complete < len(grids), complete, credited)
             owner[by:by + rows][take] = credited[take]
             cls[by:by + rows][take] = klass[take]
             why = np.stack([per_block(np.isin(code, c) & (source >= 0), np.sum) for c in REASON_CODES]).argmax(axis=0)
-            bad = take & (klass == CLASS_INDEX['unresolved'])
-            reason[by:by + rows][bad] = why[bad]
+            reason[by:by + rows][take] = np.where(unresolved, why, -1)[take]
             hint[by:by + rows][take] = np.fmax.reduce(shoal.reshape(rows, n, width, n).swapaxes(1, 2).reshape(rows, width, -1),
                                                       axis=2)[take]
             rank[take] = priority[take]
@@ -194,7 +280,7 @@ def horizontal(grids):
     return found[0][1]
 
 
-def lattice_for(grids, clip):
+def lattice_for(grids, clip, block_m=dc.CELL_M):
     """The shared lattice (x0, y0, width, height) covering every grid inside `clip` (west, south, east, north, in the
     grids' CRS), its corner on the first grid's native cell edges."""
     bounds = [g.bounds for g in grids]
@@ -202,18 +288,18 @@ def lattice_for(grids, clip):
     east, north = min(max(b.right for b in bounds), clip[2]), min(max(b.top for b in bounds), clip[3])
     # Phase: the first grid's own corner, stepped out in whole blocks (the other grids must share its cell edges).
     px, py = bounds[0].left, bounds[0].top
-    x0 = px - np.ceil((px - west) / dc.CELL_M) * dc.CELL_M
-    y0 = py + np.ceil((north - py) / dc.CELL_M) * dc.CELL_M
-    width, height = int(np.ceil((east - x0) / dc.CELL_M)), int(np.ceil((y0 - south) / dc.CELL_M))
+    x0 = px - np.ceil((px - west) / block_m) * block_m
+    y0 = py + np.ceil((north - py) / block_m) * block_m
+    width, height = int(np.ceil((east - x0) / block_m)), int(np.ceil((y0 - south) / block_m))
     if width < 1 or height < 1:
         raise SystemExit('The grids do not reach the region bounds')
     return float(x0), float(y0), width, height
 
 
-def inside_blocks(transformer, lattice, bounds):
+def inside_blocks(transformer, lattice, bounds, block_m=dc.CELL_M):
     """The blocks whose four corners lie inside the region's lon/lat bounds; only these are traced."""
     x0, y0, width, height = lattice
-    xs, ys = np.meshgrid(x0 + np.arange(width + 1) * dc.CELL_M, y0 - np.arange(height + 1) * dc.CELL_M)
+    xs, ys = np.meshgrid(x0 + np.arange(width + 1) * block_m, y0 - np.arange(height + 1) * block_m)
     lon, lat = transformer.transform(xs, ys)
     ok = (lon >= bounds[0]) & (lat >= bounds[1]) & (lon <= bounds[2]) & (lat <= bounds[3])
     return ok[:-1, :-1] & ok[:-1, 1:] & ok[1:, :-1] & ok[1:, 1:]
@@ -276,9 +362,9 @@ def check_first_strip(ident, grid, lattice, offsets, datum, is_bag):
         raise SystemExit(f'{ident}: preflight refused: {err}')
 
 
-def to_lonlat(transformer, points):
+def to_lonlat(transformer, points, decimals=dc.DECIMALS):
     xs, ys = transformer.transform([p[0] for p in points], [p[1] for p in points])
-    return [[round(x, dc.DECIMALS), round(y, dc.DECIMALS)] for x, y in zip(xs, ys)]
+    return [[round(x, decimals), round(y, decimals)] for x, y in zip(xs, ys)]
 
 
 def dedupe(line):
@@ -334,10 +420,122 @@ def geometry_points(geometry):
     return [pt for ring in rings for pt in ring]
 
 
+MEASURED_SUPPORT = 3  # support raster class for a measured (not interpolated/unknown) native cell
+
+
+def v2_native(grid, offset, mine, provenance, support=None):
+    """Native depth and the footprint of traceable squares. Never resample or use known EC fills.
+
+    `support` is an open uint8 support raster aligned cell for cell with `grid`; only cells it marks
+    measured (class 3, not masked) can carry native detail."""
+    col, row, n = offset
+    rows, = np.nonzero(mine.any(axis=1))
+    cols, = np.nonzero(mine.any(axis=0))
+    x, y = max(0, col + int(cols[0]) * n), max(0, row + int(rows[0]) * n)
+    w = min(grid.width, col + (int(cols[-1]) + 1) * n) - x
+    h = min(grid.height, row + (int(rows[-1]) + 1) * n) - y
+    if w <= 0 or h <= 0:
+        return None
+    if w * h > preflight.MAX_PIXELS:
+        raise SystemExit(f'{grid.name}: v2 native window exceeds {preflight.MAX_PIXELS} pixels; use a smaller region window')
+    window = Window(x, y, w, h)
+    values = grid.read(1, window=window, masked=True).astype('float64').filled(np.nan)
+    valid = np.isfinite(values) & (values < 0) & (values >= -3000)
+    valid &= mine[((y - row) + np.arange(h))[:, None] // n, ((x - col) + np.arange(w))[None, :] // n]
+    if provenance:
+        codes = provenance[0].read(1, window=window, masked=True)
+        valid &= codes.filled(PAD) == ec.CODES['measured']
+    if support is not None:
+        if (support.count != 1 or support.dtypes[0] != 'uint8' or support.shape != grid.shape
+                or support.crs != grid.crs or support.transform != grid.transform):
+            raise SystemExit(f'{grid.name}: support raster must be single-band uint8 aligned with the native grid')
+        valid &= (support.read(1, window=window) == MEASURED_SUPPORT) & (support.read_masks(1, window=window) != 0)
+    transform = grid.window_transform(window)
+    squares = valid[:-1, :-1] & valid[:-1, 1:] & valid[1:, :-1] & valid[1:, 1:]
+    footprint = polygons(squares, transform @ Affine.translation(0.5, 0.5)) if squares.any() else None
+    return np.where(valid, -values * dc.FEET_PER_M, np.nan), transform, footprint
+
+
+def v2_smooth(depth):
+    """Smooth the 10 m surface (sigma 1.2 cells) without reaching across missing cells or source boundaries."""
+    from scipy.ndimage import gaussian_filter, minimum_filter
+
+    valid = np.isfinite(depth)
+    interior = minimum_filter(valid, size=11, mode='constant', cval=False)  # full Gaussian kernel
+    return np.where(interior, gaussian_filter(np.where(valid, depth, 0), sigma=1.2, radius=5), depth)
+
+
+def line_parts(geometry):
+    if geometry.is_empty:
+        return
+    if geometry.geom_type == 'LineString':
+        yield geometry
+    else:
+        for part in getattr(geometry, 'geoms', ()):
+            yield from line_parts(part)
+
+
+def v2_contour_runs(depth, block, native, transformer, square):
+    """Yield depth, zoom range, EC class and lines; native replaces coarse only on its supported footprint."""
+    native_depth, native_transform, support = native if native is not None else (None, None, None)
+    coarse_valid = np.isfinite(depth)
+    squares = coarse_valid[:-1, :-1] & coarse_valid[:-1, 1:] & coarse_valid[1:, :-1] & coarse_valid[1:, 1:]
+    coarse_support = polygons(squares, block @ Affine.translation(0.5, 0.5)) if squares.any() else None
+    fallback = coarse_support.difference(support) if coarse_support is not None and support is not None else coarse_support
+    for is_native, values, transform, domain, tolerance in (
+            (False, v2_smooth(depth), block, coarse_support, V2_COARSE_TOLERANCE_M),
+            (True, native_depth, native_transform, support, CONTOUR_TOLERANCE_M)):
+        if domain is None or values is None or transform is None:
+            continue
+        rows = np.where(np.isfinite(values), values, None).tolist()
+        classes = square if not is_native else None
+        levels = [d for d, z in dc.V2_MINZOOM.items() if is_native or z < dc.V2_NATIVE_ZOOM]
+        for d, lines in dc.trace(rows, levels, squares=classes is not None).items():
+            start = dc.V2_MINZOOM[d]
+            runs = {}
+            for line in lines:
+                for name, part in (class_runs(line[0], line[1], classes) if classes is not None else [('measured', line)]):
+                    original = LineString([transform @ (c + 0.5, r + 0.5) for c, r in part])
+                    if not is_native and support is not None:
+                        pieces = [(original.difference(support), None, fallback),
+                                  (original.intersection(support), dc.V2_NATIVE_ZOOM, support)]
+                    else:
+                        pieces = [(original, None, domain)]
+                    for geometry, stop, allowed in pieces:
+                        for piece in line_parts(geometry):
+                            short = piece.simplify(tolerance)
+                            safe = short if allowed is not None and allowed.covers(short) else piece
+                            ll = dedupe(to_lonlat(transformer, list(safe.coords), V2_DECIMALS))
+                            if len(ll) >= 2:
+                                runs.setdefault((stop, name), []).append(ll)
+            for (stop, name), lines in runs.items():
+                yield d, max(start, dc.V2_NATIVE_ZOOM) if is_native else start, stop, name, lines
+
+
+def v1_contour_runs(own, x0, y0, transformer, square):
+    rows = [[None if not np.isfinite(v) else float(v) for v in row] for row in own]
+    for d, lines in dc.trace(rows, dc.levels(float(np.nanmin(own)), float(np.nanmax(own))), squares=square is not None).items():
+        runs = {}
+        for line in lines:
+            for name, part in (class_runs(line[0], line[1], square) if square is not None else [('measured', line)]):
+                metres = [(x0 + (c + 0.5) * dc.CELL_M, y0 - (r + 0.5) * dc.CELL_M) for c, r in part]
+                ll = dedupe(to_lonlat(transformer, dc.simplify(metres, CONTOUR_TOLERANCE_M, (1.0, 1.0))))
+                if len(ll) >= 2:
+                    runs.setdefault(str(name), []).append(ll)
+        for name in (n for n in ec.PROVENANCE_CLASSES if runs.get(n)):
+            yield d, name, runs[name]
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--region', required=True)
+    p.add_argument('--set', choices=('v1', 'v2'), default='v1', help='Feet contour set (default: v1).')
     p.add_argument('--grid', action='append', required=True, metavar='SOURCE_ID=PATH')
+    p.add_argument('--normalized-sidecar', action='append', default=[], metavar='SOURCE_ID=PATH',
+                   help='The R2 sidecar.json for a --grid normalised GeoTIFF.')
+    p.add_argument('--normalized-support', action='append', default=[], metavar='SOURCE_ID=PATH',
+                   help='The support.tif (uint8, class 3 = measured) aligned with a --normalized-sidecar grid; required for '
+                   'its z14+ native detail, which is drawn only over measured cells.')
     p.add_argument('--bag-survey', action='append', default=[], metavar='SOURCE_ID=SURVEY_ID',
                    help='The survey id of the one BAG file given for an adapter: bag source (required for each).')
     group = p.add_mutually_exclusive_group()
@@ -349,6 +547,9 @@ def main():
                    help='The EC provenance raster (uint8, EC_VERSION tag, same lattice) of a --grid GeoTIFF; a shoal_hint.tif '
                    'beside it is read too. Its blocks then carry their class (docs/seafloor-ec.md).')
     args = p.parse_args()
+    v2 = args.set == 'v2'
+    block_m = dc.V2_CELL_M if v2 else dc.CELL_M
+    decimals = V2_DECIMALS if v2 else dc.DECIMALS
     held = args.held_output and Path(args.held_output).expanduser().resolve()
     output = args.output and Path(args.output).expanduser().resolve()
     repo = Path(REPO).resolve()
@@ -359,26 +560,42 @@ def main():
     region = load_region(args.region)
     _, sources = load_catalogs()
     bound = region['source_bindings']['bathymetry']
-    grids, surveys, provs = {}, {}, {}
-    for pairs, items in ((grids, args.grid), (surveys, args.bag_survey), (provs, args.provenance)):
+    grids, surveys, provs, sidecars, supports = {}, {}, {}, {}, {}
+    for pairs, items in ((grids, args.grid), (surveys, args.bag_survey), (provs, args.provenance),
+                         (sidecars, args.normalized_sidecar), (supports, args.normalized_support)):
         for ident, value in (item.split('=', 1) for item in items):
             if ident in pairs:
                 raise SystemExit(f'{ident} given twice; one file per source per build')
             pairs[ident] = value
     for ident in sorted(set(provs) - set(grids)):
         raise SystemExit(f'{ident}: --provenance is only for a source given with --grid')
+    if set(sidecars) - set(grids):
+        raise SystemExit('--normalized-sidecar is only for a source given with --grid')
+    if set(supports) - set(sidecars):
+        raise SystemExit('--normalized-support is only for a source given with --grid and --normalized-sidecar')
+    for ident, value in supports.items():
+        if '://' in value or value.startswith('/vsi') or not Path(value).expanduser().is_file():
+            raise SystemExit(f'{ident}: --normalized-support must be an existing local file')
+        verify_support_binding(ident, sidecars[ident], value)
     order = [ident for ident in bound if ident in grids]
     if set(grids) - set(order):
         raise SystemExit(f'Not bathymetry bindings of {region["id"]}: {sorted(set(grids) - set(order))}')
     # Every grid's approval is checked before any grid is opened or hashed.
     for ident in order:
-        status, licence = sources[ident]['review_status'], (sources[ident].get('rights') or {}).get('license')
+        source = sources[ident]
+        rights = source.get('rights') or {}
+        status, licence = source['review_status'], rights.get('license')
+        display = rights.get('public_display')
+        if display == 'excluded':
+            raise SystemExit(f'{ident} is not cleared for public display')
         if held and (status not in ('approved', 'candidate') or licence in (None, '', 'unresolved', 'dataset-review-needed')
                      or 'bathymetry' not in sources[ident]['needs']):
             raise SystemExit(f'{ident} cannot be traced, even held: {status}, licence {licence}')
-        if not held and (status != 'approved' or 'bathymetry' not in sources[ident]['needs']):
-            raise SystemExit(f'{ident} is not an approved bathymetry source')
-    adapters = {ident: sources[ident].get('adapter', 'geotiff') for ident in order}
+        # Original and normalised grids alike need an affirmative public_display: 'allowed'; silence is not clearance.
+        if not held and (reason := public_refusal(ident, region, sources)):
+            raise SystemExit(f'{ident} is {reason}')
+    adapters = {ident: 'geotiff' if ident in sidecars else sources[ident].get('adapter', 'geotiff')
+                for ident in order}
     kinds = set(adapters.values())
     for ident in order:
         if adapters[ident] not in ('geotiff', 'bag'):
@@ -390,31 +607,38 @@ def main():
     for ident in sorted(set(surveys) - {i for i in order if adapters[i] == 'bag'}):
         raise SystemExit(f'{ident}: --bag-survey is only for a bag source given with --grid')
     # Each grid's identity: the reviewed catalog entry for a GeoTIFF; for a BAG its own metadata, never converted.
-    identity = {}
+    identity, original_hashes, grid_hashes = {}, {}, {}
     for ident in order:
         if adapters[ident] == 'bag':
             identity[ident] = bag_identity(ident, grids[ident], surveys[ident], sources[ident])
             continue
-        native = sources[ident].get('native_resolution_m')
-        with rasterio.open(grids[ident]) as grid:
+        reviewed = sources[ident]
+        native, datum = reviewed.get('native_resolution_m'), reviewed.get('vertical_datum')
+        with open_geotiff(grids[ident], normalized=ident in sidecars) as grid:
             res = grid.res
+            if ident in sidecars:
+                original_hashes[ident], grid_hashes[ident], datum = normalized_identity(ident, grid, sidecars[ident], datum)
             ec_version = check_provenance(ident, grid, provs[ident]) if ident in provs else None
         # The provenance labels each grid with the reviewed native cell; a resample must not carry that label.
-        if not isinstance(native, (int, float)) or any(abs(r - native) > 1e-9 for r in res):
+        if ident not in sidecars and (not isinstance(native, (int, float)) or any(abs(r - native) > 1e-9 for r in res)):
             raise SystemExit(f'{ident}: grid cell {res} differs from reviewed native_resolution_m {native}')
-        identity[ident] = {'name': sources[ident]['name'], 'survey_date': str(sources[ident]['survey_year']),
-                           'vertical_datum': sources[ident].get('vertical_datum') or dc.UNVERIFIED_DATUM,
+        if ident in sidecars:
+            # Reprojection must not upgrade the original source's detail eligibility.
+            native = max(res[0], native) if isinstance(native, (int, float)) else None
+        identity[ident] = {'name': reviewed['name'], 'survey_date': str(reviewed['survey_year']),
+                           'vertical_datum': datum or dc.UNVERIFIED_DATUM,
                            'native_cell_m': native, 'extra': {'ec_version': ec_version} if ec_version else {}}
-    hashes = {ident: sha256(grids[ident]) for ident in order}
-    if len(set(hashes.values())) != len(hashes):
+    hashes = {ident: original_hashes[ident] if ident in sidecars else sha256(grids[ident]) for ident in order}
+    if len(set(hashes.values())) != len(hashes) or len({grid_hashes.get(i, hashes[i]) for i in order}) != len(order):
         raise SystemExit('Two --grid sources are the same file; each binding needs its own survey grid')
     with ExitStack() as stack:
-        opened = [stack.enter_context(open_grid(ident, grids[ident], surveys.get(ident))) for ident in order]
+        opened = [stack.enter_context(open_geotiff(grids[ident], normalized=True) if ident in sidecars
+                                      else open_grid(ident, grids[ident], surveys.get(ident))) for ident in order]
         crs = horizontal(opened)
         # Reads are clipped to the region (plus one block): a coast-wide BAG is never read whole.
         west, south, east, north = transform_bounds('EPSG:4326', crs, *region['bounds'], densify_pts=21)
-        lattice = lattice_for(opened, (west - dc.CELL_M, south - dc.CELL_M, east + dc.CELL_M, north + dc.CELL_M))
-        offsets = [native_offsets(g, lattice) for g in opened]
+        lattice = lattice_for(opened, (west - block_m, south - block_m, east + block_m, north + block_m), block_m)
+        offsets = [native_offsets(g, lattice, block_m) for g in opened]
         for ident, grid, offset in zip(order, opened, offsets):
             if adapters[ident] == 'bag':
                 identity[ident]['native_cell_m'] = grid.res[0]
@@ -423,11 +647,30 @@ def main():
         ecs = [[stack.enter_context(rasterio.open(q)) for q in ec_paths(provs[ident])] if ident in provs else None
                for ident in order]
         depth, owner, cls, reason, hint = merged_blocks(opened, lattice, offsets, keys, ecs)
-    x0, y0, _, _ = lattice
-    block = Affine(dc.CELL_M, 0, x0, 0, -dc.CELL_M, y0)
-    transformer = Transformer.from_crs(crs, 'EPSG:4326', always_xy=True)
-    # Blocks outside the region are not traced but stay in the union, so no survey edge is drawn along the clip.
-    inside = inside_blocks(transformer, lattice, region['bounds'])
+        x0, y0, _, _ = lattice
+        block = Affine(block_m, 0, x0, 0, -block_m, y0)
+        transformer = Transformer.from_crs(crs, 'EPSG:4326', always_xy=True)
+        # Blocks outside the region are not traced but stay in the union: no survey edge along the clip.
+        inside = inside_blocks(transformer, lattice, region['bounds'], block_m)
+        eligible = [i for i, g in enumerate(opened) if v2 and g.res[0] <= dc.V2_NATIVE_MAX_CELL_M
+                    and (order[i] not in sidecars or (identity[order[i]]['native_cell_m'] or float('inf')) <= dc.V2_NATIVE_MAX_CELL_M)
+                    and ((owner == i) & inside & np.isfinite(depth)).any()]
+        # A normalised grid's support raster says which cells are measured rather than interpolated; native detail is
+        # granted only there (as in the region stage), so a normalised source cannot draw it without that evidence.
+        for i in eligible:
+            if order[i] in sidecars and order[i] not in supports:
+                raise SystemExit(f'{order[i]}: native detail from a normalised grid needs --normalized-support {order[i]}=PATH '
+                                 '(its support raster; interpolated cells are never traced at native detail)')
+        def bound_support(exit_stack, ident):
+            # Re-checked at open time so the bytes traced are the bytes the receipt pins.
+            if ident not in supports:
+                return None
+            verify_support_binding(ident, sidecars[ident], supports[ident])
+            return exit_stack.enter_context(open_geotiff(supports[ident], normalized=True))
+
+        native = {i: v2_native(opened[i], offsets[i], (owner == i) & inside & np.isfinite(depth), ecs[i],
+                               bound_support(stack, order[i]))
+                  for i in eligible}
     # Unresolved blocks are left out of the union: survey edges run round them as round a gap (they are drawn as areas).
     unresolved = cls == CLASS_INDEX['unresolved']
     union = polygons((owner >= 0) & ~unresolved, block)
@@ -447,6 +690,7 @@ def main():
             entry['provenance_counts'] = {name: int(((owner == i) & inside & (cls == k)).sum()) for name, k in CLASS_INDEX.items()}
         listed.append(entry)
         common = {'source_id': ident, 'survey_date': survey_date, 'vertical_datum': entry['vertical_datum']}
+        ancillary = {**common, 'minzoom': 8, 'index': False} if v2 else common
         # Unresolved blocks are areas, never contours: one MultiPolygon per reason, a conflict with its shallowest hint.
         # They are drawn whether or not the source also has valid water, so an all-unresolved source still shows.
         for k, why in enumerate(ec.UNRESOLVED_REASONS):
@@ -458,34 +702,34 @@ def main():
             if why == 'conflict' and np.isfinite(hint[here]).any():
                 props[ec.SHOAL_HINT_KEY] = round(-float(np.nanmax(hint[here])) * dc.FEET_PER_M)
             features.append({'type': 'Feature', 'id': f'{ident}-unresolved-{why}', 'geometry': {'type': 'MultiPolygon', 'coordinates': [
-                [dedupe(to_lonlat(transformer, list(ring.coords))) for ring in (g.exterior, *g.interiors)]
-                for g in getattr(area, 'geoms', [area])]}, 'properties': {**props, **common}})
+                [dedupe(to_lonlat(transformer, list(ring.coords), decimals)) for ring in (g.exterior, *g.interiors)]
+                for g in getattr(area, 'geoms', [area])]}, 'properties': {**props, **ancillary}})
         if not mine.any():
             continue
         own = np.where(mine, depth, np.nan)
-        rows = [[None if not np.isfinite(v) else float(v) for v in row] for row in own]
-        for d, lines in dc.trace(rows, dc.levels(float(np.nanmin(own)), float(np.nanmax(own))), squares=bool(provs)).items():
-            runs = {}
-            for line in lines:
-                for name, part in (class_runs(*line, square) if provs else [('measured', line)]):
-                    metres = [(x0 + (c + 0.5) * dc.CELL_M, y0 - (r + 0.5) * dc.CELL_M) for c, r in part]
-                    ll = dedupe(to_lonlat(transformer, dc.simplify(metres, CONTOUR_TOLERANCE_M, (1.0, 1.0))))
-                    if len(ll) >= 2:
-                        runs.setdefault(str(name), []).append(ll)
-            # One feature per class; a measured run keeps today's id, so an input without provenance keeps today's bytes.
-            for name in (n for n in ec.PROVENANCE_CLASSES if runs.get(n)):
+        if v2:
+            for d, start, stop, name, lines in v2_contour_runs(own, block, native.pop(i, None), transformer, square if provs else None):
+                variant = '-native' if start >= dc.V2_NATIVE_ZOOM else '-overview' if stop is not None else ''
+                features.append({'type': 'Feature', 'id': f'{ident}-{d}ft{variant}' + ('' if name == 'measured' else f'-{name}'),
+                                 'geometry': {'type': 'MultiLineString', 'coordinates': lines},
+                                 'properties': {'kind': 'contour', 'depth_ft': d, 'index': d in dc.V2_INDEX_FT,
+                                                'minzoom': start, 'estimated': True,
+                                                **({'maxzoom': stop} if stop is not None else {}), **common,
+                                                **({'provenance': name} if provs else {})}})
+        else:
+            for d, name, lines in v1_contour_runs(own, x0, y0, transformer, square if provs else None):
                 features.append({'type': 'Feature', 'id': f'{ident}-{d}ft' + ('' if name == 'measured' else f'-{name}'),
-                                 'geometry': {'type': 'MultiLineString', 'coordinates': runs[name]},
+                                 'geometry': {'type': 'MultiLineString', 'coordinates': lines},
                                  'properties': {'kind': 'contour', 'depth_ft': d, 'index': d % dc.INDEX_FT == 0, **common,
                                                 **({'provenance': name} if provs else {})}})
         # Where the contours stop: the outline of all the surveys' supported blocks together, each part credited to the
         # survey whose blocks it bounds. A seam between two surveys is not an edge: a reviewed grid continues there.
         edge = line_merge(polygons(mine, block).boundary.intersection(union.boundary))
         pieces = [g for g in getattr(edge, 'geoms', [edge]) if g.geom_type == 'LineString' and g.length >= EDGE_MIN_LENGTH_M]
-        lines = sorted(ll for ll in (dedupe(to_lonlat(transformer, list(g.simplify(EDGE_TOLERANCE_M).coords))) for g in pieces) if len(ll) >= 2)
+        lines = sorted(ll for ll in (dedupe(to_lonlat(transformer, list(g.simplify(EDGE_TOLERANCE_M).coords), decimals)) for g in pieces) if len(ll) >= 2)
         if lines:
             features.append({'type': 'Feature', 'id': f'{ident}-edge', 'geometry': {'type': 'MultiLineString', 'coordinates': lines},
-                             'properties': {'kind': 'survey-edge', **common}})
+                             'properties': {'kind': 'survey-edge', **ancillary}})
     # A supplied grid that adds nothing (wrong sign, no water, fully overlapped) would look like full coverage; one whose
     # only blocks are unresolved still contributes its areas.
     empty = [e['source_id'] for e in listed if not e['supported_blocks'] and not e.get('provenance_counts', {}).get('unresolved')]
@@ -494,19 +738,22 @@ def main():
     xs = [pt[0] for f in features for pt in geometry_points(f['geometry'])]
     ys = [pt[1] for f in features for pt in geometry_points(f['geometry'])]
     collection = {'type': 'FeatureCollection', 'schema_version': dc.SCHEMA_VERSION, 'provenance': {
-        'region_id': region['id'], 'units': 'ft', 'interval_ft': dc.INTERVAL_FT, 'index_ft': dc.INDEX_FT,
-        'shelf_limit_ft': dc.SHELF_LIMIT_FT, 'cell_m': dc.CELL_M, 'horizontal_crs': crs,
-        'bounds': [min(xs), min(ys), max(xs), max(ys)], 'features': len(features), 'sources': listed,
+        'region_id': region['id'], 'units': 'ft',
+        **({'set': dc.FT_V2, 'intervals': dc.v2_intervals(), 'index_depths_ft': list(dc.V2_INDEX_FT)} if v2
+           else {'interval_ft': dc.INTERVAL_FT, 'index_ft': dc.INDEX_FT}),
+        'shelf_limit_ft': dc.V2_SHELF_LIMIT_FT if v2 else dc.SHELF_LIMIT_FT, 'cell_m': block_m, 'horizontal_crs': crs,
+        'bounds': region['bounds'] if v2 and not features else [min(xs), min(ys), max(xs), max(ys)],
+        'features': len(features), 'sources': listed,
         # The region's bound surveys not drawn here, with their catalog review_status (checked by dc.check_contours).
         'sources_omitted': dc.omitted_sources(region, sources, order),
         # Held mode (--held-output): private, never published; names the traced sources that are not approved.
         **({'publication_held': True, 'held_sources': [{'source_id': i, 'review_status': sources[i]['review_status']}
                                                        for i in order if sources[i]['review_status'] != 'approved']}
            if held else {}),
-        'coordinate_decimals': dc.DECIMALS, 'simplify_tolerance_m': CONTOUR_TOLERANCE_M,
+        'coordinate_decimals': decimals, 'simplify_tolerance_m': V2_COARSE_TOLERANCE_M if v2 else CONTOUR_TOLERANCE_M,
         'edge': {'tolerance_m': EDGE_TOLERANCE_M, 'min_length_m': EDGE_MIN_LENGTH_M,
                  'note': 'The outline of all the surveys\' supported blocks together; seams between surveys are not edges.'},
-        'datum_note': 'Depths are below each survey\'s own vertical datum.' + (USGS_DATUM if 'geotiff' in kinds else '')
+        'datum_note': 'Depths are below each survey\'s own vertical datum.' + (USGS_DATUM if 'geotiff' in kinds and not sidecars else '')
                       + (BAG_DATUM if 'bag' in kinds else '') + ' Not converted or certified.',
         'method': f'Native cells are merged in the region\'s binding order (the first survey with valid water wins each cell); '
                   f'each {dc.CELL_M} m block is their mean and counts only when all of them are valid water. Marching squares '
@@ -515,6 +762,12 @@ def main():
         'limitations': 'Not for navigation. Historical survey; the bottom can have changed. Display contours from averaged blocks, '
                        'not soundings or chart depths.'},
         'features': features}
+    if v2:
+        collection['provenance']['method'] = (
+            'Marching squares on valid 10 m mean blocks, smoothed at sigma 1.2 cells within supported neighborhoods. '
+            'At z14 reviewed grids of 2 m or finer replace the coarse geometry only on their supported squares. '
+            'At z15 those grids add 5, 15 and 25 ft. These display lines are estimates, not certified measurements.'
+            + (EC_METHOD if provs else ''))
     (dc.check_held_contours if held else dc.check_contours)(collection, region, sources)
     receipt = atomic_json(held or output or REPO / 'catalog/depth-contours' / f'{region["id"]}.geojson', collection)
     print({'features': len(features), **receipt, **({'held': True} if held else {}), 'sources': [(s['source_id'], s['sha256'][:12], s['supported_blocks']) for s in listed]})

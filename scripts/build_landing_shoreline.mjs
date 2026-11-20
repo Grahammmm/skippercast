@@ -45,7 +45,9 @@ export function simplify(points, tolerance = TOLERANCE) {
     let worst = -1, index = -1;
     for (let i = a + 1; i < b; i++) {
       const [px, py] = points[i];
-      const d = length ? Math.abs(dy * px - dx * py + bx * ay - by * ax) / length : Math.hypot(px - ax, py - ay);
+      // Distance to the finite segment a-b (projection clamped to its endpoints), not its supporting line.
+      const t = length ? Math.min(1, Math.max(0, ((px - ax) * dx + (py - ay) * dy) / (length * length))) : 0;
+      const d = Math.hypot(px - ax - t * dx, py - ay - t * dy);
       if (d > worst) { worst = d; index = i; }
     }
     if (worst > tolerance) { keep[index] = 1; stack.push([a, index], [index, b]); }

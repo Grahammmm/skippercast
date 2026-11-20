@@ -556,8 +556,11 @@ def strip_command(ffmpeg, source, out, hevc=False):
 
 def probe(ffprobe, path, run=None):
     """ffprobe's format and streams as JSON; Unreadable('probe-failed') when it cannot read the file."""
-    result = (run or subprocess.run)([ffprobe, '-v', 'error', '-show_format', '-show_streams', '-of', 'json', str(path)],
-                 capture_output=True, timeout=120, check=False)
+    try:
+        result = (run or subprocess.run)([ffprobe, '-v', 'error', '-show_format', '-show_streams', '-of', 'json', str(path)],
+                     capture_output=True, timeout=120, check=False)
+    except subprocess.TimeoutExpired:
+        raise Unreadable('probe-timeout') from None
     if result.returncode:
         raise Unreadable('probe-failed')
     try:
@@ -605,6 +608,30 @@ def derive_video(item, r2, log=print, which=None, run=None):
 
 # ---- the job -----------------------------------------------------------------------
 
+# Bump when image-producing code or assets change without a corresponding spec change.
+IMAGE_RENDERER_VERSION = 1
+RENDER_META = 'render-sha256'
+
+
+def _digest(basis):
+    return hashlib.sha256(json.dumps(basis, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+
+def _render_digest(spec, layout, **inputs):
+    return _digest([IMAGE_RENDERER_VERSION, spec.get('renderer_version'), spec.get(layout), inputs])
+
+
+def _art_inputs(spec, number):
+    footer = spec.get('footer', {})
+    return {'colors': spec.get('colors'), 'fonts': spec.get('fonts'),
+            'footer': [footer.get('text'), display_number(number) or footer.get('fallback')]}
+
+
+def _decode_orientation(orientation):
+    # None lets decode use embedded EXIF; invalid explicit values leave pixels upright as stored.
+    return orientation if orientation is None or type(orientation) is int and 1 <= orientation <= 8 else 1
+
+
 def _dims(meta):
     try:
         return int(meta['width']), int(meta['height'])
@@ -617,9 +644,14 @@ def derive_media(item, r2, spec, number, log=print):
     keys, sha = item['keys'], item['sha256']
     orientation = item.get('orientation')
     turned = str(orientation) if type(orientation) is int and 1 <= orientation <= 8 else '1'
+    source_inputs = {'sha': sha, 'mime': item['mime'], 'orientation': _decode_orientation(orientation)}
+    digests = {name: _render_digest(spec, name, source=source_inputs) for name in ('public', 'thumb')}
+    digests['story'] = _render_digest(spec, 'story', source=source_inputs,
+                                      max_side=spec.get('public', {}).get('max_side'), **_art_inputs(spec, number))
     metas = {name: r2.head(key) for name, key in keys.items()}
-    # Files made before orientation was recorded carry no value: they count as '1'.
-    if all(m is not None and m.get(META) == sha and m.get('orientation', '1') == turned for m in metas.values()) and _dims(metas['public']):
+    stale = {name for name, digest in digests.items()
+             if metas[name] is None or metas[name].get(RENDER_META) != digest or not _dims(metas[name])}
+    if not stale:
         width, height = _dims(metas['public'])
         source = _dims({'width': metas['public'].get('source-width'), 'height': metas['public'].get('source-height')})
         log(f'media {item["id"]}: unchanged, skipped')
@@ -629,49 +661,74 @@ def derive_media(item, r2, spec, number, log=print):
     if original is None:
         raise Unreadable('original-missing')
     photo = decode(original, item['mime'], orientation)
-    public = fit(photo, spec['public']['max_side'])
-    thumb = fit(photo, spec['thumb']['max_side'])
-    story = story_image(spec, public, number)
     common = {META: sha, 'orientation': turned, 'source-width': photo.width, 'source-height': photo.height}
-    # public.jpg last: its metadata is what a rerun checks first for the sizes.
-    r2.put(keys['thumb'], jpeg(thumb, spec['thumb']['quality']), {**common, 'width': thumb.width, 'height': thumb.height})
-    r2.put(keys['story'], jpeg(story, spec['story']['quality']), {**common, 'width': story.width, 'height': story.height})
-    r2.put(keys['public'], jpeg(public, spec['public']['quality']), {**common, 'width': public.width, 'height': public.height})
-    log(f'media {item["id"]}: {photo.width}x{photo.height} (orientation {turned}) -> {public.width}x{public.height}')
-    return {'media_id': item['id'], 'keys': keys, 'width': public.width, 'height': public.height,
+    public = fit(photo, spec['public']['max_side'])
+    for name in ('thumb', 'story', 'public'):
+        if name not in stale:
+            continue
+        if name == 'thumb':
+            image = fit(photo, spec['thumb']['max_side'])
+        elif name == 'story':
+            image = story_image(spec, public, number)
+        else:
+            image = public
+        r2.put(keys[name], jpeg(image, spec[name]['quality']),
+               {**common, RENDER_META: digests[name], 'width': image.width, 'height': image.height})
+    width, height = public.width, public.height
+    log(f'media {item["id"]}: {photo.width}x{photo.height} (orientation {turned}) -> {width}x{height}')
+    return {'media_id': item['id'], 'keys': keys, 'width': width, 'height': height,
             'source_width': photo.width, 'source_height': photo.height}
 
 
 def request_digest(item):
     """What a graphic is rendered from: kind, data and its photos' sources."""
     basis = {'kind': item['kind'], 'data': item.get('data') or {}, 'media': [m['id'] for m in item.get('media') or []]}
-    return hashlib.sha256(json.dumps(basis, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    return _digest(basis)
 
 
-def _photo(r2, spec, source):
-    """A graphic's photo: the media's public.jpg when it exists, else its original, reduced the same way."""
+def _photo_input(r2, spec, source):
+    """Select the exact bytes and decode inputs to use for both hashing and rendering."""
     data = r2.get(source['public_key'])
     if data is not None:
-        return decode(data, 'image/jpeg')
+        return data, 'image/jpeg', None, None
     data = r2.get(source['r2_key'])
     if data is None:
         raise Unreadable('original-missing')
-    return fit(decode(data, source['mime'], source.get('orientation')), spec['public']['max_side'])
+    return data, source['mime'], _decode_orientation(source.get('orientation')), spec['public']['max_side']
 
 
 def render_graphic(item, r2, spec, number, log=print):
     """Render one graphic request to its out_key (roundup slides beside it); returns the media-done payload."""
-    digest, out = request_digest(item), item['out_key']
+    kind, out = item['kind'], item['out_key']
     stem = out[:-len('.jpg')]
     meta = r2.head(out)
+    sources = item.get('media') or []
+    if kind == 'story':
+        sources = sources[:1]
+    elif kind == 'roundup':
+        sources = sources[:spec['roundup']['max_slides'] - 1]
+    else:
+        sources = []
+    # Hash bytes rather than object IDs or source metadata: public.jpg can be
+    # re-derived from the same original, or replace the original fallback.
+    inputs = [_photo_input(r2, spec, source) for source in sources]
+    digest = _render_digest(spec, kind, request=request_digest(item), **_art_inputs(spec, number),
+                            photos=[(hashlib.sha256(body).hexdigest(), mime, orientation, max_side)
+                                    for body, mime, orientation, max_side in inputs])
     if meta is not None and meta.get(META) == digest and _dims(meta):
         width, height = _dims(meta)
         slides = [f'{stem}-{i}.jpg' for i in range(1, int(meta.get('slides', '0') or 0) + 1)]
-        log(f'graphic {item["id"]}: unchanged, skipped')
-        return {'graphic_id': item['id'], 'keys': {'public': out, **({'slides': slides} if slides else {})}, 'width': width, 'height': height}
-    photos = [_photo(r2, spec, source) for source in item.get('media') or []]
+        # Slides are written before the cover, so a failed cover write can leave a slide from a
+        # newer render beside an older matching cover: accept the hit only if every slide matches too.
+        slide_metas = [r2.head(key) for key in slides]
+        if all(m is not None and m.get(META) == digest and _dims(m) for m in slide_metas):
+            log(f'graphic {item["id"]}: unchanged, skipped')
+            return {'graphic_id': item['id'], 'keys': {'public': out, **({'slides': slides} if slides else {})}, 'width': width, 'height': height}
+    photos = []
+    for body, mime, orientation, max_side in inputs:
+        photo = decode(body, mime, orientation)
+        photos.append(fit(photo, max_side) if max_side is not None else photo)
     data = item.get('data') or {}
-    kind = item['kind']
     if kind == 'daily':
         images = [daily_graphic(spec, data, number)]
     elif kind == 'story':

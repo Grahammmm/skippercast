@@ -532,25 +532,36 @@ def _boat_page(root: Node, url: str, fallback_name: str) -> dict:
             "rates": _rates(root), "schedule": _schedule(root, name)}
 
 
-def _row_prices(columns: list[tuple[str, str]]) -> list[tuple[str, int | None]]:
-    """(day label, cents) for one rate row's price columns, chosen by header and cell label, never by position.
+def _row_prices(columns: list[tuple[str, str]]) -> list[tuple[str, tuple[str, ...] | None, int | None]]:
+    """(day label, days, cents) for one rate row's price columns, chosen by header and cell label, never by position.
 
-    Day columns ("Mon - Thu", "Fri - Sun") give one price each, merged when every day has the same one; a
-    column headed Credit or Card is ignored; with payment columns ("Price", "Cash", "Credit") the cash column
-    wins, else the one non-credit price. Two different unlabelled prices are ambiguous: price unknown.
+    Day columns ("Mon - Thu", "Fri - Sun") give one price each. Columns with the same price merge into one
+    entry whose days are their exact union (Mon + Fri stays two days, Friday alone stays Friday); only a
+    price whose days cover the whole week is unrestricted (blank label, days None). A column headed Credit
+    or Card is ignored; with payment columns ("Price", "Cash", "Credit") the cash column wins, else the one
+    non-credit price. Two different unlabelled prices are ambiguous: price unknown.
     """
-    days = [(label, cash_cents(cell)) for label, cell in columns if day_set(label)]
+    days = [(label, day_set(label), cash_cents(cell)) for label, cell in columns if day_set(label)]
     if days:
-        priced = [(label, cents) for label, cents in days if cents is not None]
-        if len(priced) == len(days) and len({cents for _, cents in priced}) == 1:  # one price every day
-            return [("", priced[0][1])]
-        return priced
+        groups: dict[int, tuple[list[str], set[str]]] = {}
+        for label, found, cents in days:
+            if cents is not None:
+                labels, covered = groups.setdefault(cents, ([], set()))
+                labels.append(label.strip())
+                covered.update(found)
+        out = []
+        for cents, (labels, covered) in groups.items():
+            if len(covered) == len(DAY_KEYS):  # one price every day
+                out.append(("", None, cents))
+            else:
+                out.append((" + ".join(labels), tuple(d for d in DAY_KEYS if d in covered), cents))
+        return out
     other = [(label, cell) for label, cell in columns if not CREDIT.search(label)]
     other = [x for x in other if CASH.search(x[0])] or other
     values = {cash_cents(cell) for _, cell in other} - {None}
     if len(values) == 1:
-        return [("", values.pop())]
-    return [("", None)] if values else []
+        return [("", None, values.pop())]
+    return [("", None, None)] if values else []
 
 
 def _rates(root: Node) -> list[dict]:
@@ -572,8 +583,7 @@ def _rates(root: Node) -> list[dict]:
             name = f"{name} ({season})"
         capacity = int(cells[2]) if cells[2].isdigit() else None
         priced = _row_prices([(header[i] if i < len(header) else "", c) for i, c in enumerate(cells[3:], start=3)])
-        for label, cents in priced:
-            days = day_set(label) if label else None
+        for label, days, cents in priced:
             out.append({"name": f"{name} ({label})" if days else name, "trip_type": trip_type(cells[0]),
                         "price_cents": cents, "price_basis": "private", "capacity": capacity,
                         "season_from": months[0] if months else None, "season_to": months[1] if months else None,

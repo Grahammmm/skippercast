@@ -1,6 +1,6 @@
-// UXFIX-12 @nightly: network faults and a clean console, on fixtures. Runs only when E2E_WIDE=1 (the nightly e2e step in ci.yml);
-// a pull-request run lists these cases and skips every one. Nothing here reaches a live host: fixtures.ts aborts every other origin,
-// and every case takes the `v2` fixture, which answers the local Worker's /feeds/ proxy offline (404 unless stubbed).
+// UXFIX-12 @nightly: browser network-fault cases run only when E2E_WIDE=1 (the nightly e2e step in ci.yml).
+// Nothing here reaches a live host: fixtures.ts aborts every other origin,
+// and browser cases take the `v2` fixture, which answers the local Worker's /feeds/ proxy offline (404 unless stubbed).
 import type {Page, Route} from '@playwright/test';
 import {test, expect, type V2} from './fixtures.ts';
 
@@ -113,6 +113,22 @@ test.describe('visible map share geometry', () => {
   });
 });
 
+function responseFinding(origin: string, method: string, url: URL, status: number): string | undefined {
+  if (url.origin !== origin || status < 400) return;
+  // The Fleet view's HEAD probe of /ports/<id> answers 404 by design while the public boat list is off (web/fleet.ts).
+  if (status === 404 && method === 'HEAD' && /^\/ports\/[^/]+$/.test(url.pathname)) return;
+  return `${method} ${url.pathname}${url.search} ${status}`;
+}
+
+test('response budget exempts only the disabled Fleet HEAD 404', () => {
+  const origin = 'https://budget.test';
+  const finding = (method: string, path: string, status: number) => responseFinding(origin, method, new URL(path, origin), status);
+  expect(finding('HEAD', '/ports/example', 404)).toBeUndefined();
+  expect(finding('HEAD', '/ports/example', 500)).toBe('HEAD /ports/example 500');
+  expect(finding('GET', '/ports/example', 404)).toBe('GET /ports/example 404');
+  expect(finding('HEAD', '/other/example', 404)).toBe('HEAD /other/example 404');
+});
+
 test.describe('@nightly net-faults', () => {
   test.beforeEach(async ({v2}) => { test.skip(!WIDE, 'nightly only: set E2E_WIDE=1'); await stubDailyFeed(v2); });
 
@@ -162,7 +178,7 @@ test.describe('@nightly net-faults', () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test('console budget on a baseline /map load: no CSP violation, no same-origin response >= 400 except the Fleet HEAD probe; CLS and long tasks recorded', async ({page, v2, pageErrors}) => {
+  test('console budget on a baseline /map load: no CSP violation, no same-origin response >= 400 except the Fleet HEAD 404; CLS and long tasks recorded', async ({page, v2, pageErrors}) => {
     await page.addInitScript(() => {
       const w = window as unknown as {__csp: string[]; __cls: number; __long: number};
       w.__csp = []; w.__cls = 0; w.__long = 0;
@@ -173,11 +189,8 @@ test.describe('@nightly net-faults', () => {
     const bad: string[] = [];
     const origin = new URL(test.info().project.use.baseURL ?? `http://localhost:${process.env.E2E_PORT || '8787'}`).origin;
     page.on('response', res => {
-      const req = res.request(), url = new URL(res.url());
-      if (url.origin !== origin || res.status() < 400) return;
-      // The Fleet view's HEAD probe of /ports/<id> answers 404 by design while the public boat list is off (web/fleet.ts).
-      if (req.method() === 'HEAD' && /^\/ports\/[^/]+$/.test(url.pathname)) return;
-      bad.push(`${req.method()} ${url.pathname}${url.search} ${res.status()}`);
+      const finding = responseFinding(origin, res.request().method(), new URL(res.url()), res.status());
+      if (finding !== undefined) bad.push(finding);
     });
     await stubBaselineAnswers(page, v2);
     await v2.open('app', SHELL);

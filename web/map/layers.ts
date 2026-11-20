@@ -67,6 +67,34 @@ export interface LayerEntry {
 
 export const COASTLINE_SOURCE = 'coastline';
 export const ENC_SOURCE = 'enc';
+/** Chart overlay for a region whose reviewed pointer resolves `ready`; not the terrain's `relief` entry or the Seafloor type rail. */
+export const BOTTOM_RELIEF = 'bottom-relief';
+/**
+ * MSK-2: the kit's intended bottom-to-top slots (`overlays.draw_order`), mapped to MapLibre IDs. The relief raster adds a
+ * per-attach suffix; the `nearshore-*` IDs are reserved for MSK-6 (hard edge, rock piles, pier and cast arcs).
+ * The live Chart follows it through the `before` anchors each controller hands to `setOverlay`: the colour fields (water
+ * temperature, chlorophyll, swell, in that order) go under DEPTH_BOTTOM and the contours under the basemap's place labels
+ * (`PLACE_LABELS`, the top slot), whichever of them arrives first and with or without Swell. tests/test_map_layers.mjs
+ * pins the slot mapping and the live insertion order.
+ */
+export const NEARSHORE_HARD_EDGE = 'nearshore-hard-edge';
+export const NEARSHORE_PILE_OUTLINE = 'nearshore-pile-outline';
+export const NEARSHORE_PILE_LABEL = 'nearshore-pile-label';
+export const NEARSHORE_PIER = 'nearshore-pier';
+export const NEARSHORE_CAST_ARCS = 'nearshore-cast-arcs';
+export const NEARSHORE_DRAW_ORDER: readonly (readonly string[])[] = Object.freeze([
+  [BOTTOM_RELIEF], ['water-temp', 'chlorophyll', 'swell'], ['depth-contours-line'], ['depth-contours-line-index'],
+  [NEARSHORE_HARD_EDGE], [NEARSHORE_PILE_OUTLINE], ['depth-contours-label'], [NEARSHORE_PILE_LABEL],
+  [NEARSHORE_PIER, NEARSHORE_CAST_ARCS], ['labels-places'],
+]);
+/**
+ * DATA-LIVE-9 (E2E-16): who may ask for the relief overlay. Everyone, signed out included, on the Chart in the coast view
+ * while the base map works; there is deliberately no admin or preview input. The pointer then decides: no `ready`
+ * pointer means nothing is drawn and no archive or tile is requested. The private Morro study preview and this overlay
+ * would both paint the seabed, so the study preview, when an admin turns it on, takes the Chart.
+ */
+export const reliefWanted = (s: {presentation: string; view: string; basemapAvailable: boolean; studyPreviewOn: boolean}) =>
+  s.presentation === 'chart' && s.view === 'coast' && s.basemapAvailable && !s.studyPreviewOn;
 /** The seafloor publication's admitted features (web/map/seafloor.ts, FE-14). */
 export const SEAFLOOR_SOURCE = 'seafloor';
 /** FE-18's GeoJSON sources (web/map/marks.ts): survey habitat, geology, atlas reef marks and the selection. */
@@ -141,7 +169,7 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
     basis: copy('wind', 'basis', lang), task: 'CI6-10'}),
   // CI6-13: shelf contours from reviewed survey grids, every zoom, Chart only; the ENC base above zoom 10 is unchanged.
   entry({id: 'depth-contours', label: copy('depth-contours', 'label', lang), control: 'always', presentations: ['chart'], sources: [DEPTH_CONTOURS_SOURCE],
-    attribution: t('layer.attr.depth', 'en'), legend: [{label: copy('depth-contours', 'legend0', lang), swatch: 'mapContour'}, {label: copy('depth-contours', 'legend1', lang), swatch: 'mapLabel'}],
+    attribution: t('layer.attr.depth', 'en'), legend: [{label: copy('depth-contours', 'legend0', lang), swatch: 'sknContourIndex'}, {label: copy('depth-contours', 'legend1', lang), swatch: 'mapLabel'}],
     basis: copy('depth-contours', 'basis', lang), task: 'CI6-13'}),
 
   entry({id: 'mpas', label: copy('mpas', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
@@ -188,7 +216,7 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
     legend: [{label: copy('planning-route', 'legend0', lang), swatch: 'amber'}],
     basis: copy('planning-route', 'basis', lang), task: 'SC1407-15'}),
   entry({id: 'marks', label: copy('marks', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
-    terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: t('layer.gate.marks', 'en'), sources: [DENSITY_SOURCE, MARKS_SOURCE],
+    terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 14}, gate: t('layer.gate.marks', 'en'), sources: [DENSITY_SOURCE, MARKS_SOURCE],
     legend: [{label: copy('marks', 'legend0', lang), swatch: 'markRing'}, {label: copy('marks', 'legend1', lang), swatch: 'depth1'}],
     basis: copy('marks', 'basis', lang), task: 'FE-18'}),
   entry({id: 'selection', label: copy('selection', 'label', lang), control: 'always', presentations: ['chart'], sources: [SELECTION_SOURCE],

@@ -19,8 +19,9 @@
 import {readdir, readFile, writeFile} from 'node:fs/promises';
 import {join, posix} from 'node:path';
 import {gzipSync} from 'node:zlib';
-import {MANIFEST, STABLE} from './client-build.mjs';
+import {hashName, MANIFEST, STABLE} from './client-build.mjs';
 import {appStartup, installAssets, SHELLS} from './precache.mjs';
+import {shellFor} from '../server/routes/assets.ts';
 
 const dir = process.argv[2] || 'dist/client';
 const budgetFile = process.argv[4] || new URL('./startup-budget.json', import.meta.url).pathname;
@@ -92,16 +93,36 @@ for (const file of assets.filter(n => n.endsWith('.js'))) {
 }
 
 // 5. Stable service worker and the precache list.
+let installCount = 0, installBytes = 0;
 if (precache) {
   const listed = [...(precache.assets || [])].sort();
   const expected = installAssets(manifest, assets.map(n => n.replace(/^assets\//, '')));
   if (JSON.stringify(listed) !== JSON.stringify(expected)) problems.push('precache.json assets differ from the hashed scripts and styles the other pages can load plus the landing\'s first paint');
-  for (const path of listed) if (!await exists(path.slice(1))) problems.push(`precache.json -> ${path} (missing)`);
   for (const path of listed) if (/maplibre/i.test(path)) problems.push(`precache.json installs ${path}; MapLibre is stored only in a v2 pack (FE-51)`);
   if (manifest['app.html'] && !precache.v2?.assets?.length) problems.push('precache.json lists no v2 offline shell');
   for (const path of [...precache.v2?.assets || [], ...precache.v2?.static || []]) if (!await exists(path.slice(1))) problems.push(`precache.json v2 -> ${path} (missing)`);
   if (JSON.stringify(precache.shells) !== JSON.stringify(SHELLS)) problems.push(`precache.json must list the shells ${SHELLS.join(' and ')} (#497)`);
-  for (const path of precache.static || []) if (!await exists(path.slice(1))) problems.push(`precache.json -> ${path} (missing)`);
+  // Match precacheList in dist/sw.js. Deduplicate URLs, not files: two
+  // different routes that serve the same HTML still fetch it twice.
+  for (const path of new Set([...(precache.shells || []), ...listed, ...(precache.static || [])])) {
+    if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')) {
+      problems.push(`precache.json -> ${path} (not a same-origin path)`);
+      continue;
+    }
+    const origin = 'https://build.invalid';
+    const url = URL.parse(path, origin);
+    if (url?.origin !== origin) {
+      problems.push(`precache.json -> ${path} (not a same-origin path)`);
+      continue;
+    }
+    const shell = shellFor(url.pathname, url.searchParams);
+    const page = (shell ?? url.pathname).slice(1);
+    const hashed = page.endsWith('.html') ? hashName(page, build) : null;
+    const file = shell || pages.includes(hashed) ? hashed : page;
+    installCount++;
+    try { installBytes += (await readFile(join(dir, file))).length; }
+    catch { problems.push(`precache.json -> ${path} (missing ${file})`); }
+  }
   const sw = await readFile(join(dir, 'sw.js'), 'utf8').catch(() => '');
   if (!sw) problems.push('sw.js missing at the site root');
   if (!sw.includes(`const BUILD = '${precache.build}';`)) problems.push('sw.js does not carry the precache build id');
@@ -140,15 +161,21 @@ for (const [page, budget] of Object.entries(budgets)) {
   measured.push(`${page} js ${size.js} B, css ${size.css} B gzipped`);
   measurements.bundles[page] = size;
   for (const kind of ['js', 'css']) {
-    const max = budget[`${kind}_gzip_max`];
+    const key = `${kind}_gzip_max`;
+    // An omitted ceiling is optional; a present one must be a finite number >= 0 (never silently disabled).
+    if (Object.hasOwn(budget ?? {}, key) && !(typeof budget[key] === 'number' && Number.isFinite(budget[key]) && budget[key] >= 0)) {
+      problems.push(`${page}: ${key} must be a finite number >= 0, got ${JSON.stringify(budget[key]) ?? String(budget[key])} (${budgetFile})`);
+      continue;
+    }
+    const max = budget?.[key];
     nearBudget(`${page} initial ${kind === 'js' ? 'JavaScript' : 'CSS'} (gzipped)`, size[kind], max);
     if (Number.isFinite(max) && size[kind] > max) problems.push(`${page}: initial ${kind === 'js' ? 'JavaScript' : 'CSS'} ${size[kind]} B gzipped exceeds its budget of ${max} B (${budgetFile})`);
   }
 }
 
 // 6b. Precache budgets: raw bytes of what every visitor's worker installs and of
-// what an offline pack stores for the v2 app shell (FE-51). Missing files are
-// reported by section 5; here they count as zero.
+// what an offline pack stores for the v2 app shell (FE-51). Section 5 measures
+// the install payload and reports missing install and pack files.
 // The repository's budget file must carry both keys; a misspelled or missing key fails rather than switching a check off.
 const precacheBudget = JSON.parse(await readFile(budgetFile, 'utf8')).precache;
 const defaultBudget = !process.argv[4];
@@ -156,7 +183,7 @@ if (defaultBudget && !precacheBudget) problems.push(`${budgetFile} has no "preca
 if (precache) {
   const raw = async paths => { let n = 0; for (const p of paths) n += await readFile(join(dir, p.slice(1))).then(b => b.length, () => 0); return n; };
   const sizes = {
-    install: await raw([...(precache.assets || []), ...(precache.static || [])]),
+    install: installBytes,
     pack_shell: await raw([...(precache.v2?.assets || []), ...(precache.v2?.static || [])]),
   };
   measured.push(`precache install ${sizes.install} B, pack shell ${sizes.pack_shell} B raw`);
@@ -205,4 +232,4 @@ if (problems.length) {
   console.error(`Client check failed:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Client check passed: ${assets.length} hashed assets, ${pages.length} pages, ${references} page references and ${imports} script references resolve, ${precache.assets.length + precache.shells.length + precache.static.length} precached for build ${precache.build}.${measured.length ? ` Budgets: ${measured.join('; ')}.` : ''}`);
+console.log(`Client check passed: ${assets.length} hashed assets, ${pages.length} pages, ${references} page references and ${imports} script references resolve, ${installCount} precached for build ${precache.build}.${measured.length ? ` Budgets: ${measured.join('; ')}.` : ''}`);

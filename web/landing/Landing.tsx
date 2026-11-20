@@ -11,7 +11,7 @@
 // "Explore the coast" takes the same second step with nothing to warm. No map
 // engine loads here (FE-25 adds the live map after first paint).
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {carryAsk} from '../boat-entry.ts';
+import {carryAsk} from '../boat-ask.ts';
 import {exploreURL, loadPorts, portURL, savePort, type Port} from '../ports.ts';
 import type {Profile} from '../profile.ts';
 import {PortInput} from './PortInput.tsx';
@@ -68,13 +68,15 @@ export type LandingAppProps = {
 
 /**
  * Tomorrow's answer for the boat saved on this device (else the reference boat), named, as the app's lead gives it; below the funnel, so nothing above the port input moves.
- * SC1322-06: `saved` (the Worker is past its cost ceiling, web/degraded.ts) labels it as from saved copies, not current.
+ * SC1322-06: the warning also covers this verdict if the page later sees a mark.
+ * The verdict's own saved-input label lasts even after that page-wide warning clears.
  */
 export const LiveVerdict = ({v, saved = false}: {v: LandingVerdict; saved?: boolean}) => {
   const lang = language.value;
+  const fromSaved = saved || v.saved;
   return (
-  <section class="landing-verdict" aria-live="polite" aria-label={t(saved ? 'landing.verdict.ariaSaved' : 'landing.verdict.aria', lang)} data-day={v.date} data-degraded={saved ? 'cost-ceiling' : undefined}>
-    <p class="landing-verdict-head">{saved ? t('landing.verdict.saved', lang) : null}{t('landing.verdict.head', lang, {day: v.day, place: v.place, boat: v.boatName})}<strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
+    <section class="landing-verdict" aria-live="polite" aria-label={t(fromSaved ? 'landing.verdict.ariaSaved' : 'landing.verdict.aria', lang)} data-day={v.date} data-degraded={fromSaved ? 'cost-ceiling' : undefined}>
+    <p class="landing-verdict-head">{fromSaved ? t('landing.verdict.saved', lang) : null}{t('landing.verdict.head', lang, {day: v.day, place: v.place, boat: v.boatName})}<strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
     <p class="landing-verdict-limit">{v.sentence}</p>
     {v.boatNote ? <p class="landing-verdict-note">{v.boatNote}</p> : null}
     <a class="landing-verdict-link" href={v.href}>{t('landing.verdict.link', lang)}</a>
@@ -153,7 +155,7 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
         ? <ProfileStep place={choice.place} warm={choice.port ? warmth : null} current={initialProfile} onChoose={finish} onBack={restart} />
         : <PortInput ports={ports} onChoose={choose} onExplore={explore} onRetry={failed ? loadList : undefined} autoFocus={back} />}
       {/* SC1322-06: /map's cost-ceiling notice, above the verdict, which then reads as saved copies; nothing while live. */}
-      <DegradedNotice />
+      <DegradedNotice translate={t} />
       {answer ? <LiveVerdict v={answer} saved={degraded.value !== null} /> : null}
     </>
   );

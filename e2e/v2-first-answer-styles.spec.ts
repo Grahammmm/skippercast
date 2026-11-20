@@ -16,6 +16,11 @@ const FISHABLE_ROLE = {yes: 'mint', marginal: 'amber', no: 'coral', unknown: 'mu
 type Fishable = keyof typeof FISHABLE_ROLE;
 
 test.beforeEach(async ({page}) => {
+  // The first answer waits for every verdict source, the bound coast report included (web/brief/Brief.tsx bindBriefReport).
+  // The local Worker answers that report from upstream, which browser-origin blocking cannot stop, so an unstubbed
+  // request can stay pending and leave the answer on "waiting" past the assertion timeout. Settle it offline, as the
+  // other app specs do; every assertion below is unchanged.
+  await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
   await page.addInitScript(() => { try { localStorage.setItem('skippercast-profile-v1', 'boat'); } catch { /* storage blocked */ } });
 });
 

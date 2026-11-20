@@ -46,8 +46,8 @@ test('required contrast CI adopts pinned surface proof and keeps every failure g
   assert.deepEqual(bridged.failures, []);
   assert.equal(bridged.rows.length, 2 * PAIRS_BRIDGE.length);
   opaquePairs += bridged.rows.length;
-  // 2 × (17 web/tokens.css text + 2 map text + 2 non-text + 20 bridge) pairs; FE-61 Accept 2 retired v1 dist/tokens.css; MGL-15 adds two map-only text pairs.
-  assert.equal(opaquePairs, 82);
+  // 2 × (17 web/tokens.css text + 4 map text + 2 non-text + 20 bridge) pairs; FE-61 Accept 2 retired v1 dist/tokens.css; MGL-15 adds two map-only text pairs; MB-05 adds two more (map label on land and park).
+  assert.equal(opaquePairs, 86);
   assert.ok(checkBridge(bridge.replace('--coast-text: var(--text);', '--coast-text: var(--panel);'), tokens).failures.length > 0);
 
   // Run the real approved explicit CLI, without importing/rerunning its math suite.

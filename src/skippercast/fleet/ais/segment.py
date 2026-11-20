@@ -11,11 +11,10 @@ loaded with ``skippercast.fleet.config``):
 - **In port** means inside any harbor geofence of the region (even-odd ray
   casting from ``config.point_in_polygon``; no GIS dependency).
 - A trip **departs** at the first position outside every geofence after the
-  vessel has been in port, and **returns** at the first position of a stay
-  inside any geofence that is held for ``in_port_debounce_min`` (the next
-  position outside comes at least that long after the first one inside, or
-  the data ends inside after that long). A shorter dip into a geofence does
-  not end the trip; ``classify`` labels it ``in-port``.
+  vessel has been in port, and **returns** at the first position of a run of
+  fixes in the same harbor once a later fix in that run spans at least
+  ``in_port_debounce_min``. A shorter dip into a geofence does not end the
+  trip; ``classify`` labels it ``in-port``.
 - If the positions start at sea the trip has no departure port and is emitted
   ``truncated`` (its start is unknown).
 - A silence at sea longer than ``gap_split_hours`` after which the vessel is next
@@ -210,7 +209,12 @@ def offshore_nm(ports: Sequence[Geofence], lat: float, lon: float) -> float:
 # ---------------------------------------------------------------- positions
 
 def is_suspect(position: AisPosition) -> bool:
-    """True when the report reached the source more than ``LATE_MS`` after its fix, so its minute is uncertain."""
+    """Flag a receipt-minus-fix gap greater than ``LATE_MS``.
+
+    For an independently dated fix, this compares two timestamps. For AISStream,
+    ``ts`` is receipt-derived, so whole-minute delays can go undetected. An
+    unflagged position is not proof that it arrived on time.
+    """
     return position.received_at - position.ts > LATE_MS
 
 
@@ -255,10 +259,13 @@ def _make_trip(positions, ports, depart_port, return_port, departed_at, returned
                 distance_nm=round(distance, 6), max_offshore_nm=round(offshore, 6))
 
 
-def _keep(trip: Trip, th: ActivityThresholds) -> bool:
+def _keep(trip: Trip, ports: Sequence[Geofence], th: ActivityThresholds) -> bool:
     if trip.status == "open":
         return True
-    return trip.duration_min >= th.min_trip_minutes and trip.max_offshore_nm > th.min_trip_offshore_nm
+    if trip.duration_min < th.min_trip_minutes:
+        return False
+    # Compare the unrounded distance: max_offshore_nm is a six-decimal display value.
+    return any(offshore_nm(ports, p.lat, p.lon) > th.min_trip_offshore_nm for p in trip.positions)
 
 
 def split_trips(positions: Iterable[AisPosition], ports: Sequence[Geofence], thresholds: ActivityThresholds, *,
@@ -295,30 +302,24 @@ def split_trips(positions: Iterable[AisPosition], ports: Sequence[Geofence], thr
         # At sea (in a trip).
         prev = current[-1] if current else None
         if port is not None:
-            if prev is not None and p.ts - prev.ts > split_ms:
+            if prev is not None and where[i - 1] is None and p.ts - prev.ts > split_ms:
                 # Long silence, next seen in port: close at the last position, truncated.
                 trips.append(_make_trip(current, ports, depart_port, None, current[0].ts, prev.ts, "truncated"))
                 in_port, current, last_port = True, [], port
                 i += 1
                 continue
-            # A stay inside: held for the debounce?
+            # Only observed fixes in this harbor count toward the debounce.
             j = i
-            while j + 1 < n and where[j + 1] is not None:
+            while j + 1 < n and where[j + 1] == port:
                 j += 1
-            held_until = rows[j + 1].ts if j + 1 < n else rows[j].ts
-            if held_until - p.ts >= debounce_ms:
+            if j > i and rows[j].ts - p.ts >= debounce_ms:
                 status = "truncated" if started_unknown else "closed"
                 start = current[0].ts if current else p.ts
                 if current:
                     # Only a closed trip (known departure, confirmed return) counts its return leg.
                     trips.append(_make_trip(current, ports, depart_port, port, start, p.ts, status,
                                             return_fix=p if status == "closed" else None))
-                in_port, current, last_port = True, [], where[j]
-                i = j + 1
-                continue
-            if j + 1 >= n:
-                # The data ends inside before the debounce: the trip is still open.
-                current.extend(rows[i:j + 1])
+                in_port, current, last_port = True, [], port
                 i = j + 1
                 continue
             current.extend(rows[i:j + 1])
@@ -330,4 +331,4 @@ def split_trips(positions: Iterable[AisPosition], ports: Sequence[Geofence], thr
     if not in_port and current:
         status = "truncated" if started_unknown or now - current[0].ts > th.max_open_ms(vessel_class) else "open"
         trips.append(_make_trip(current, ports, depart_port, None, current[0].ts, current[-1].ts, status))
-    return [trip for trip in trips if _keep(trip, th)]
+    return [trip for trip in trips if _keep(trip, ports, th)]

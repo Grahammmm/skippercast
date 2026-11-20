@@ -24,9 +24,11 @@ The method, kept here so it is tested without the GIS stack:
 - `trace` runs marching squares over the block centres at every INTERVAL_FT
   multiple to SHELF_LIMIT_FT. A square draws only when its four corners are
   valid blocks, so lines stop where the reviewed grid stops.
-- Where two surveys overlap, each block belongs to the first source in the
-  region's bathymetry binding order that fully supports it; every line then
-  comes from one survey and carries that survey's source, date and datum.
+- Overlaps merge cells in binding order within a group of one cell size and
+  datum. In a single group, or if no grid can support the block on its own,
+  a complete seam block is credited to its majority supplier. Across groups,
+  the first complete grid in binding order wins with its own cells and
+  provenance. Contour encoding uses the credited survey's source, date and datum.
 - The survey-edge lines outline each survey's supported blocks: where the
   contours stop because there is no reviewed grid beyond.
 - With an error-correction provenance grid (docs/seafloor-ec.md) a contour is
@@ -40,10 +42,11 @@ source, survey date and datum. Coordinates have 5 decimals (about 1 m).
 """
 from datetime import date, timedelta
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import math
 import re
 
-from .contracts import atomic_json, read_json
+from .contracts import atomic_json, owner_display_cleared, read_json
 from .shoreline import simplify
 from ..util.units import FT_PER_M
 
@@ -55,6 +58,20 @@ INDEX_FT = 150
 SHELF_LIMIT_FT = 600
 CELL_M = 16
 DECIMALS = 5
+FT_V2 = 'ft-v2'
+V2_SHELF_LIMIT_FT = 300
+V2_CELL_M = 10
+V2_NATIVE_MAX_CELL_M = 2
+V2_NATIVE_ZOOM = 14
+V2_INDEX_FT = (60, 150, 300)
+# Additions at each app zoom (not MapLibre zoom), with no duplicate depths.
+V2_DEPTHS = {
+    8: (60, 120, 180, 240, 300),
+    11: (30, 90, 150, 210, 270),
+    13: (10, 20, 40, 50, 70, 80, 100),
+    15: (5, 15, 25),
+}
+V2_MINZOOM = {depth: zoom for zoom, depths in V2_DEPTHS.items() for depth in depths}
 # Shared owner, kept at its historical five decimals so builder bytes and the packages/coast mirror stay unchanged.
 FEET_PER_M = round(FT_PER_M, DECIMALS)
 UNVERIFIED_DATUM = 'unverified source datum'
@@ -79,6 +96,12 @@ def levels(low_ft, high_ft, interval=INTERVAL_FT, limit=SHELF_LIMIT_FT):
     """The contour depths (ft) inside [low_ft, high_ft]: multiples of `interval`, at least one interval, at most `limit`."""
     first = max(interval, math.ceil(low_ft / interval) * interval)
     return list(range(first, min(limit, math.floor(high_ft / interval) * interval) + 1, interval))
+
+
+def v2_intervals():
+    return [{'minzoom': zoom, 'depths_ft': list(depths),
+             **({'native_max_cell_m': V2_NATIVE_MAX_CELL_M} if zoom == 15 else {})}
+            for zoom, depths in V2_DEPTHS.items()]
 
 
 def _cross(grid, edge, level):
@@ -220,19 +243,66 @@ def _survey_date(value):
     return True
 
 
+class _ContoursHeld(ValueError):
+    """An explicit publication hold on the region's contour import."""
+
+
+def _bound_bathymetry(ident, source, bound, allowed):
+    return ident in bound and source.get('review_status') in allowed and 'bathymetry' in source.get('needs', [])
+
+
+def _public_display_allowed(source):
+    display = source.get('rights', {}).get('public_display')
+    return source.get('publication_allowed') is not False and display not in ('private', 'excluded')
+
+
+def _require_not_held(collection, region):
+    features = collection.get('features') or []
+    parts = [collection, collection.get('provenance') or {}, *features, *(f.get('properties') or {} for f in features)]
+    if any(isinstance(part, dict) and 'publication_held' in part for part in parts):
+        raise _ContoursHeld(f"Depth contours for {region['id']} are held and cannot be published")
+
+
 def check_contours(collection, region, sources):
     """Raise ValueError unless `collection` is an in-region contour set from approved, bound survey grids.
 
     `sources` is the catalog by id. Every feature must name one of the region's approved bathymetry
     bindings with its survey date and vertical datum (the source entry also carries the grid hash);
-    contours must be INTERVAL_FT multiples no deeper than SHELF_LIMIT_FT; every point must lie inside the region.
+    contours must follow the named feet set (the legacy intervals if unnamed); every point must lie inside the region.
     A held collection (a `publication_held` key anywhere: see check_held_contours) is never publishable.
+    Explicit catalog denials also block publication; legacy sources keep their reviewed policy.
     """
-    features = collection.get('features') or []
-    parts = [collection, collection.get('provenance') or {}, *features, *(f.get('properties') or {} for f in features)]
-    if any(isinstance(part, dict) and 'publication_held' in part for part in parts):
-        raise ValueError(f"Depth contours for {region['id']} are held and cannot be published")
+    _require_not_held(collection, region)
     _check(collection, region, sources, {'approved'})
+    for entry in collection['provenance'].get('sources', []):
+        ident = str(entry.get('source_id'))
+        if not _public_display_allowed(sources[ident]):
+            raise ValueError(f"Depth contour source {ident} is not cleared for public display")
+
+
+def omitted_selected_sources(selected, sources, listed):
+    """Admitted selector families that did not contribute, in source ID order."""
+    return [{'source_id': ident, 'review_status': sources[ident]['review_status']}
+            for ident in sorted(set(selected).difference(listed))]
+
+
+def check_selected_contours(collection, region, sources, selected):
+    """Check R5b contours against the admitted source IDs from the attested selection."""
+    _require_not_held(collection, region)
+
+    def selected_bathymetry(ident, source, bound, allowed):
+        return (ident in bound and 'bathymetry' in source.get('needs', ())
+                and (source.get('review_status') in allowed or owner_display_cleared(source.get('rights') or {})))
+
+    _check(collection, region, sources, {'approved'}, binding=selected_bathymetry, selected=set(selected))
+    for entry in collection['provenance'].get('sources', []):
+        ident = str(entry.get('source_id'))
+        source = sources[ident]
+        rights = source.get('rights') or {}
+        if rights.get('public_display') != 'allowed' or (
+            source.get('publication_allowed') is False and not owner_display_cleared(rights)
+        ):
+            raise ValueError(f"Depth contour source {ident} is not cleared for public display")
 
 
 def held_sources(collection, sources):
@@ -245,8 +315,9 @@ def held_sources(collection, sources):
 def check_held_contours(collection, region, sources):
     """Raise ValueError unless `collection` is a held (private, never published) contour set.
 
-    The same checks as check_contours, except a listed source may be `approved` or `candidate`; the provenance
-    must also say `publication_held: true` and list every non-approved source in `held_sources`.
+    The same shape checks as check_contours, except a listed source may be `approved` or `candidate`;
+    public-display clearance is not required. The provenance must say `publication_held: true`
+    and list every non-approved source in `held_sources`.
     """
     _check(collection, region, sources, {'approved', 'candidate'})
     provenance = collection['provenance']
@@ -254,20 +325,25 @@ def check_held_contours(collection, region, sources):
         raise ValueError(f"Depth contours for {region['id']} do not state their publication hold and held sources")
 
 
-def _check(collection, region, sources, allowed):
-    """check_contours' shape checks, with `allowed` the review statuses a listed source may have."""
+def _check(collection, region, sources, allowed, *, binding=_bound_bathymetry, selected=None):
+    """Shared shape checks; by default use the region's static bathymetry bindings."""
     provenance = collection.get('provenance') or {}
     if collection.get('type') != 'FeatureCollection' or provenance.get('region_id') != region['id']:
         raise ValueError(f"Depth contours for {region['id']} are not its FeatureCollection")
-    if provenance.get('features') != len(collection['features']) or provenance.get('interval_ft') != INTERVAL_FT:
+    v2 = provenance.get('set') == FT_V2
+    if 'set' in provenance and not v2:
+        raise ValueError(f"Depth contours for {region['id']} have an unknown contour set")
+    intervals_ok = (provenance.get('intervals') == v2_intervals() and provenance.get('index_depths_ft') == list(V2_INDEX_FT)
+                    if v2 else provenance.get('interval_ft') == INTERVAL_FT)
+    if provenance.get('features') != len(collection['features']) or not intervals_ok:
         raise ValueError(f"Depth contours for {region['id']} have incomplete provenance")
-    if provenance.get('shelf_limit_ft') != SHELF_LIMIT_FT or provenance.get('units') != 'ft':
+    if provenance.get('shelf_limit_ft') != (V2_SHELF_LIMIT_FT if v2 else SHELF_LIMIT_FT) or provenance.get('units') != 'ft':
         raise ValueError(f"Depth contours for {region['id']} do not state feet and the shelf limit")
-    bound = set(region.get('source_bindings', {}).get('bathymetry', []))
+    bound = set(region.get('source_bindings', {}).get('bathymetry', [])) if selected is None else selected
     listed = {str(s.get('source_id')): s for s in provenance.get('sources', [])}
     for ident, entry in listed.items():
         reviewed = sources.get(ident) or {}
-        if ident not in bound or reviewed.get('review_status') not in allowed or 'bathymetry' not in reviewed.get('needs', []):
+        if not binding(ident, reviewed, bound, allowed):
             raise ValueError(f"Depth contour source {ident} is not an approved bathymetry binding of {region['id']}")
         if not SHA256.fullmatch(str(entry.get('sha256'))) or not _survey_date(entry.get('survey_date')) \
                 or not entry.get('vertical_datum'):
@@ -276,8 +352,13 @@ def _check(collection, region, sources, allowed):
         if not isinstance(entry.get('ec_version', ''), str) or not isinstance(counts, dict) \
                 or not set(counts) <= {*ec.PROVENANCE_CLASSES, 'unresolved'} or not all(_count(n, 0) for n in counts.values()):
             raise ValueError(f"Depth contour source {ident} misstates its error-correction version or class counts")
-    if 'sources_omitted' in provenance and provenance['sources_omitted'] != omitted_sources(region, sources, listed):
-        raise ValueError(f"Depth contours for {region['id']} misstate the omitted bound surveys")
+    if 'sources_omitted' in provenance:
+        if selected is None:
+            omitted = omitted_sources(region, sources, listed)
+        else:
+            omitted = omitted_selected_sources(selected, sources, listed)
+        if provenance['sources_omitted'] != omitted:
+            raise ValueError(f"Depth contours for {region['id']} misstate the omitted bound surveys")
     west, south, east, north = region['bounds']
     for feature in collection['features']:
         p, geometry = feature.get('properties') or {}, feature.get('geometry') or {}
@@ -288,13 +369,15 @@ def _check(collection, region, sources, allowed):
             raise ValueError(f"Depth contour {feature.get('id')} lacks its source's survey date or datum")
         if 'provenance' in p and p['provenance'] not in ec.PROVENANCE_CLASSES:
             raise ValueError(f"Depth contour {feature.get('id')} has an unknown provenance class")
+        if v2:
+            _check_v2_zoom(feature, p, entry)
         if p['kind'] == ec.UNRESOLVED_KIND:
             _check_area(feature, p, geometry, region)
             continue
         if p['kind'] == 'contour':
             depth = p.get('depth_ft')
-            if (not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0 or depth % INTERVAL_FT
-                    or depth > SHELF_LIMIT_FT or p.get('index') is not (depth % INDEX_FT == 0)):
+            if not v2 and (not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0 or depth % INTERVAL_FT
+                           or depth > SHELF_LIMIT_FT or p.get('index') is not (depth % INDEX_FT == 0)):
                 raise ValueError(f"Depth contour {feature.get('id')} is not a {INTERVAL_FT} ft shelf contour")
             # A filled or verified run says so in its id; a measured run (or one without provenance) never does.
             named = next((c for c in ec.PROVENANCE_CLASSES[1:] if str(feature.get('id')).endswith(f'-{c}')), 'measured')
@@ -304,6 +387,29 @@ def _check(collection, region, sources, allowed):
         if not lines or any(len(line) < 2 or any(not (west <= x <= east and south <= y <= north) for x, y in line)
                             for line in lines):
             raise ValueError(f"Depth contour {feature.get('id')} is not a line inside {region['id']}")
+
+
+def _check_v2_zoom(feature, p, entry):
+    """Check the v2 display range; maxzoom, when present, is exclusive (native replaces coarse at z14)."""
+    zoom, stop = p.get('minzoom'), p.get('maxzoom')
+    error = f"Depth contour {feature.get('id')} has invalid ft-v2 depth, index or zoom"
+    if type(zoom) is not int or ('maxzoom' in p and type(stop) is not int):
+        raise ValueError(error)
+    if p['kind'] != 'contour':
+        if zoom != 8 or stop is not None or p.get('index') is not False:
+            raise ValueError(error)
+        return
+    depth = p.get('depth_ft')
+    start = V2_MINZOOM.get(depth) if type(depth) is int else None
+    cell = entry.get('native_cell_m')
+    native = type(cell) in (int, float) and 0 < cell <= V2_NATIVE_MAX_CELL_M
+    if start is None or p.get('index') is not (depth in V2_INDEX_FT) or p.get('estimated') is not True:
+        raise ValueError(error)
+    if zoom >= V2_NATIVE_ZOOM:
+        if not native or zoom != max(V2_NATIVE_ZOOM, start) or stop is not None or p.get('provenance', 'measured') != 'measured':
+            raise ValueError(error)
+    elif zoom != start or (stop is not None and (not native or stop != V2_NATIVE_ZOOM)):
+        raise ValueError(error)
 
 
 def _count(value, least):
@@ -339,6 +445,8 @@ def overview_contours(collection, tolerance_m=OVERVIEW_TOLERANCE_M):
     scale = (111_320 * math.cos(math.radians((south + north) / 2)), 110_540)
     features = []
     for feature in collection['features']:
+        if collection['provenance'].get('set') == FT_V2 and feature['properties']['minzoom'] >= OVERVIEW_MAX_ZOOM + 1:
+            continue  # app zoom is one more than MapLibre zoom; these features need only the full form.
         if feature['geometry']['type'] in ('Polygon', 'MultiPolygon'):
             # An unresolved area: rings simplified alike; a polygon spanning less than OVERVIEW_MIN_SPAN_M is left out.
             polys = feature['geometry']['coordinates']
@@ -373,12 +481,43 @@ def review_expires(collection, sources):
     return (min(reviewed) + timedelta(days=SOURCE_REVIEW_DAYS)).isoformat()
 
 
+def _uses_withdrawn_source(path, region, sources):
+    # Check the previous generation's source IDs, not the incoming import's or the informational omitted list.
+    try:
+        previous = read_json(path)
+    except (FileNotFoundError, ValueError):
+        return False  # No identifiable prior contour publication at this path.
+    provenance = previous.get('provenance') if isinstance(previous, dict) else None
+    if not isinstance(provenance, dict) or provenance.get('region_id') != region['id']:
+        return False
+    bound = set(region.get('source_bindings', {}).get('bathymetry', []))
+    for entry in provenance.get('sources', []):
+        ident = str(entry.get('source_id'))
+        source = sources.get(ident) or {}
+        if not _bound_bathymetry(ident, source, bound, {'approved'}) or not _public_display_allowed(source):
+            return True
+    return False
+
+
+def _stage_and_replace(full, overview, collection, light, region_id):
+    full.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=full.parent) as staging:
+        staging = Path(staging)
+        for path, value, budget in ((full, collection, MAX_BYTES), (overview, light, OVERVIEW_MAX_BYTES)):
+            size = atomic_json(staging / path.name, value)['bytes']
+            if size > budget:
+                raise ValueError(f"{path.name} for {region_id} is {size} bytes, over its {budget}-byte budget")
+        for path in (full, overview):
+            (staging / path.name).replace(path)
+
+
 def publish_depth_contours(root, region, output, sources):
-    """Write the checked import and its overview form to `output`; remove stale copies when there is none.
+    """Check both byte budgets before replacing the contour pair in `output`.
 
     Both forms carry `review_expires`, the date the Chart withholds them from (the layer's age limit), and
     `sources_omitted`, the region's bound surveys the file does not draw, with their catalog review_status.
-    Returns the published paths (full, overview) or None. Raises ValueError when a form is over its byte budget.
+    Returns the published paths (full, overview), or None and removes both files if the import is absent.
+    On refusal, keep the old pair unless the import is explicitly held or the old layer uses a withdrawn source.
     """
     source = Path(root) / 'catalog/depth-contours' / f"{region['id']}.geojson"
     full, overview = Path(output) / 'depth-contours.geojson', Path(output) / 'depth-contours-overview.geojson'
@@ -386,22 +525,26 @@ def publish_depth_contours(root, region, output, sources):
         full.unlink(missing_ok=True)
         overview.unlink(missing_ok=True)
         return None
-    collection = read_json(source)
-    check_contours(collection, region, sources)
-    # The three stamped keys are dropped from the catalog provenance first, so they always land last, in this order:
-    # the published bytes then do not depend on where (or whether) the catalog file carries them.
-    stamped = ('review_expires', 'review_days', 'sources_omitted')
-    collection = {**collection, 'provenance': {**{k: v for k, v in collection['provenance'].items() if k not in stamped},
-                                               'review_expires': review_expires(collection, sources),
-                                               'review_days': SOURCE_REVIEW_DAYS, 'sources_omitted': omitted_sources(
-                                                   region, sources, [s['source_id'] for s in collection['provenance']['sources']])}}
-    light = overview_contours(collection)
-    check_contours(light, region, sources)
-    for path, value, budget in ((full, collection, MAX_BYTES), (overview, light, OVERVIEW_MAX_BYTES)):
-        receipt = atomic_json(path, value)
-        if receipt['bytes'] > budget:
-            path.unlink()
-            raise ValueError(f"{path.name} for {region['id']} is {receipt['bytes']} bytes, over its {budget}-byte budget")
+    try:
+        collection = read_json(source)
+        check_contours(collection, region, sources)
+        # Append stamped keys in fixed order, regardless of where they appeared in the catalog provenance.
+        stamped = ('review_expires', 'review_days', 'sources_omitted')
+        provenance = collection['provenance']
+        collection = {**collection, 'provenance': {
+            **{k: v for k, v in provenance.items() if k not in stamped},
+            'review_expires': review_expires(collection, sources),
+            'review_days': SOURCE_REVIEW_DAYS,
+            'sources_omitted': omitted_sources(region, sources, [s['source_id'] for s in provenance['sources']]),
+        }}
+        light = overview_contours(collection)
+        check_contours(light, region, sources)
+        _stage_and_replace(full, overview, collection, light, region['id'])
+    except ValueError as error:
+        if isinstance(error, _ContoursHeld) or any(_uses_withdrawn_source(path, region, sources) for path in (full, overview)):
+            full.unlink(missing_ok=True)
+            overview.unlink(missing_ok=True)
+        raise
     return f"regions/{region['id']}/depth-contours.geojson", f"regions/{region['id']}/depth-contours-overview.geojson"
 
 

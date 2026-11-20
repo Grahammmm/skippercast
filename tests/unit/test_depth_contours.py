@@ -6,6 +6,7 @@ import sys
 import pytest
 
 from skippercast.platform import depth_contours as dc
+from skippercast.platform.contracts import OWNER_DISPLAY_BASIS
 from tests._support import ROOT
 
 REGION = {'id': 'test-bay', 'bounds': [-121.2, 35.0, -120.7, 35.6],
@@ -105,6 +106,78 @@ def test_check_rejects_a_source_that_is_not_an_approved_binding():
         dc.check_contours(collection(), unbound, SOURCES)
 
 
+@pytest.fixture
+def owner_selected_contours():
+    ident = 'survey-c'  # Candidate and deliberately absent from the static binding.
+    doc = collection(sources=(ident,))
+    for feature in doc['features']:
+        feature['properties']['source_id'] = ident
+    sources = {**SOURCES, ident: {**SOURCES[ident], 'publication_allowed': False,
+                                'rights': {'public_display': 'allowed', 'owner_public_display': {
+                                    'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}}}}
+    return doc, sources, ident
+
+
+def test_owner_cleared_selection_does_not_change_repo_channel(owner_selected_contours):
+    # R5b can use attested selection in place of static binding; R10 must not follow it.
+    doc, sources, ident = owner_selected_contours
+    dc.check_selected_contours(doc, REGION, sources, {ident})
+    with pytest.raises(ValueError, match='approved bathymetry binding'):
+        dc.check_contours(doc, REGION, sources)
+
+
+@pytest.mark.parametrize('case, reason', [
+    ('missing-marker', 'approved bathymetry binding'),
+    ('wrong-basis', 'approved bathymetry binding'),
+    ('approved-but-denied', 'not cleared for public display'),
+    ('private', 'not cleared for public display'),
+    ('excluded', 'not cleared for public display'),
+    ('no-display', 'not cleared for public display'),
+    ('not-selected', 'approved bathymetry binding'),
+    ('not-bathymetry', 'approved bathymetry binding'),
+])
+def test_selected_contour_validator_refuses_ineligible_provenance(owner_selected_contours, case, reason):
+    # A selection ID or a lookalike owner marker cannot override any other gate.
+    doc, sources, ident = owner_selected_contours
+    selected = {ident}
+    source, rights = sources[ident], sources[ident]['rights']
+    if case in ('missing-marker', 'approved-but-denied'):
+        del rights['owner_public_display']
+        if case == 'approved-but-denied':
+            source['review_status'] = 'approved'
+    elif case == 'wrong-basis':
+        rights['owner_public_display']['basis'] = 'unrelated decision'
+    elif case in ('private', 'excluded'):
+        rights['public_display'] = case
+    elif case == 'no-display':
+        del rights['public_display']
+    elif case == 'not-selected':
+        selected.clear()
+    elif case == 'not-bathymetry':
+        source['needs'] = ['imagery']
+    with pytest.raises(ValueError, match=reason):
+        dc.check_selected_contours(doc, REGION, sources, selected)
+
+
+def test_selected_contours_keep_publication_hold(owner_selected_contours):
+    # Even a false-valued nested hold marker prevents export, as for R10.
+    doc, sources, ident = owner_selected_contours
+    doc['features'][0]['properties']['publication_held'] = False
+    with pytest.raises(dc._ContoursHeld):
+        dc.check_selected_contours(doc, REGION, sources, {ident})
+
+
+def test_selected_contour_omissions_follow_selection_not_static_bindings(owner_selected_contours):
+    # Reusing the repo-channel omission list would include an unrelated static survey.
+    doc, sources, ident = owner_selected_contours
+    provenance = doc['provenance']
+    provenance['sources_omitted'] = [{'source_id': 'survey-a', 'review_status': 'approved'}]
+    dc.check_selected_contours(doc, REGION, sources, {ident, 'survey-a'})
+    provenance['sources_omitted'].append({'source_id': 'survey-b', 'review_status': 'approved'})
+    with pytest.raises(ValueError, match='omitted bound surveys'):
+        dc.check_selected_contours(doc, REGION, sources, {ident, 'survey-a'})
+
+
 def test_review_expires_is_a_year_after_the_oldest_review():
     c = collection(sources=('survey-a', 'survey-b'))
     assert dc.review_expires(c, SOURCES) == '2027-09-26'
@@ -137,11 +210,11 @@ def test_publish_writes_both_forms_with_the_age_limit_and_enforces_the_budget(tm
     assert full['provenance']['review_expires'] == '2027-09-26' and full['provenance']['review_days'] == 365
     assert json.loads((out / 'depth-contours-overview.geojson').read_text())['provenance']['review_expires'] == '2027-09-26'
     monkeypatch.setattr(dc, 'MAX_BYTES', 100)
+    fresh = tmp_path / 'fresh'
     with pytest.raises(ValueError, match='over its 100-byte budget'):
-        dc.publish_depth_contours(root, REGION, out, SOURCES)
-    assert not (out / 'depth-contours.geojson').exists(), 'an over-budget form is not left behind'
+        dc.publish_depth_contours(root, REGION, fresh, SOURCES)
+    assert not (fresh / 'depth-contours.geojson').exists(), 'an over-budget form is not left behind'
     (root / 'catalog/depth-contours/test-bay.geojson').unlink()
-    (out / 'depth-contours.geojson').write_text('{}')
     assert dc.publish_depth_contours(root, REGION, out, SOURCES) is None
     assert not (out / 'depth-contours.geojson').exists() and not (out / 'depth-contours-overview.geojson').exists(), 'stale copies removed'
 
@@ -376,3 +449,57 @@ def test_publish_refuses_an_impossible_date_before_writing_either_form(tmp_path)
     assert (out / 'depth-contours.geojson').read_text() == 'full-sentinel'
     assert (out / 'depth-contours-overview.geojson').read_text() == 'overview-sentinel'
     assert list(fresh.iterdir()) == []
+
+
+def _v2_collection():
+    c = collection()
+    p = c['provenance']
+    p.pop('interval_ft')
+    p.pop('index_ft')
+    p.update(set='ft-v2', shelf_limit_ft=300, index_depths_ft=[60, 150, 300], intervals=[
+        {'minzoom': 8, 'depths_ft': [60, 120, 180, 240, 300]},
+        {'minzoom': 11, 'depths_ft': [30, 90, 150, 210, 270]},
+        {'minzoom': 13, 'depths_ft': [10, 20, 40, 50, 70, 80, 100]},
+        {'minzoom': 15, 'depths_ft': [5, 15, 25], 'native_max_cell_m': 2},
+    ])
+    p['sources'][0]['native_cell_m'] = 2
+    c['features'][0]['properties'].update(minzoom=11, estimated=True, maxzoom=14)
+    c['features'][1]['properties'].update(minzoom=11, estimated=True)
+    c['features'][2]['properties'].update(minzoom=8, index=False)
+    native = {**c['features'][0], 'id': 'survey-a-5ft-native', 'properties': {
+        **c['features'][0]['properties'], 'depth_ft': 5, 'minzoom': 15}}
+    native['properties'].pop('maxzoom')
+    c['features'].append(native)
+    p['features'] += 1
+    return c
+
+
+def test_publish_v2_preserves_the_zoom_contract_and_leaves_native_detail_out_of_overview(tmp_path):
+    c = _v2_collection()
+    (tmp_path / 'catalog/depth-contours').mkdir(parents=True)
+    (tmp_path / 'catalog/depth-contours/test-bay.geojson').write_text(json.dumps(c))
+    dc.publish_depth_contours(tmp_path, REGION, tmp_path, SOURCES)
+    full = json.loads((tmp_path / 'depth-contours.geojson').read_text())
+    overview = json.loads((tmp_path / 'depth-contours-overview.geojson').read_text())
+    assert full['features'] == c['features']
+    assert [f['properties'] for f in overview['features']] == [f['properties'] for f in c['features'][:-1]]
+    for form in (full, overview):
+        assert form['provenance']['set'] == 'ft-v2' and form['provenance']['intervals'] == c['provenance']['intervals']
+        assert form['provenance']['review_expires'] == '2027-09-26'
+
+
+@pytest.mark.parametrize('edit,message', [
+    (lambda c: c['provenance'].update(set='ft-v3'), 'unknown contour set'),
+    (lambda c: c['provenance']['intervals'].pop(), 'incomplete provenance'),
+    (lambda c: c['features'][0]['properties'].update(depth_ft=330), 'invalid ft-v2'),
+    (lambda c: c['features'][0]['properties'].update(maxzoom=15), 'invalid ft-v2'),
+    (lambda c: c['features'][1]['properties'].update(index=False), 'invalid ft-v2'),
+    (lambda c: c['features'][-1]['properties'].update(minzoom=13), 'invalid ft-v2'),
+    (lambda c: c['features'][-1]['properties'].update(estimated=False), 'invalid ft-v2'),
+    (lambda c: c['provenance']['sources'][0].update(native_cell_m=5), 'invalid ft-v2'),
+])
+def test_v2_check_refuses_misleading_depth_or_zoom_metadata(edit, message):
+    c = _v2_collection()
+    edit(c)
+    with pytest.raises(ValueError, match=message):
+        dc.check_contours(c, REGION, SOURCES)

@@ -2,6 +2,7 @@
 import io
 import json
 from contextlib import redirect_stdout
+from datetime import datetime, timedelta, timezone
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,9 +24,16 @@ def opener_for(answers, seen):
     def opener(request, timeout):
         sql = request.data.decode()
         seen.append((request.full_url, request.get_header('Authorization'), sql))
+        if sql == ops_report.QUERIES['route_totals'] and 'request' in answers and isinstance(answers['request'], list):
+            rows = answers['request']
+            totals = [{'requests': sum(float(r['requests']) for r in rows),
+                       's5xx': sum(float(r['s5xx']) for r in rows)}] if rows else []
+            return FakeResponse(json.dumps({'data': totals}).encode())
         for key, rows in answers.items():
             if f"index1 = '{key}'" in sql:
                 if isinstance(rows, Exception):
+                    if isinstance(rows, HTTPError):
+                        rows.fp.seek(0)
                     raise rows
                 return FakeResponse(json.dumps({'meta': [], 'data': rows, 'rows': len(rows)}).encode())
         return FakeResponse(b'{"data": []}')
@@ -37,7 +45,7 @@ def run(argv, env, opener):
         return ops_report.main(argv, env, opener=opener)
 
 
-ENV = {'CF_ANALYTICS_TOKEN': 'token-value', 'CLOUDFLARE_ACCOUNT_ID': 'acct123'}
+ENV = {'ENABLE_ANALYTICS': 'true', 'CF_ANALYTICS_TOKEN': 'token-value', 'CLOUDFLARE_ACCOUNT_ID': 'acct123'}
 
 
 class OpsReportTests(unittest.TestCase):
@@ -45,9 +53,10 @@ class OpsReportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             summary = Path(tmp) / 'summary.md'
             calls = []
-            self.assertEqual(run([], {'GITHUB_STEP_SUMMARY': str(summary)}, opener_for({}, calls)), 0)
+            self.assertEqual(run([], {'ENABLE_ANALYTICS': 'true', 'GITHUB_STEP_SUMMARY': str(summary)}, opener_for({}, calls)), 0)
             self.assertEqual(calls, [])
             self.assertIn('skipped', summary.read_text())
+            self.assertIn('batched reads unknown; configured ceiling unknown; headroom unknown', summary.read_text())
 
     def test_queries_the_dataset_for_the_last_day_with_bearer_auth(self):
         seen = []
@@ -78,6 +87,43 @@ class OpsReportTests(unittest.TestCase):
         self.assertIn('| boat_lookup | claude-sonnet-5 | ok | 3 | 3,900 | 900 | 6 |', text)
         self.assertIn('## Cron runs (last 24 h)', text)
         self.assertIn('_No data points in this window._', text)
+        self.assertIn('batched reads unknown; configured ceiling unknown; headroom unknown', text)
+        self.assertIn('degraded duration unknown', text)
+
+    def test_local_r2_meter_reports_utc_headroom_without_querying_or_writing_summary(self):
+        # The operator is still on October 4 locally, while the meter has rolled to October 5 UTC.
+        now = datetime(2026, 10, 4, 18, tzinfo=timezone(-timedelta(hours=7)))
+        seen = []
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()) as stdout:
+            summary = Path(tmp) / 'summary.md'
+            env = dict(ENV, ENABLE_ANALYTICS='false', GITHUB_STEP_SUMMARY=str(summary), GITHUB_REPOSITORY='example/skippercast')
+            self.assertEqual(ops_report.main(
+                ['--r2-meter', '2026-10-05', '249400', '250000'], env,
+                opener=opener_for({}, seen), github_opener=opener_for({}, seen), now=now,
+            ), 0)
+            self.assertFalse(summary.exists(), 'operator-supplied counts stay local')
+        self.assertEqual(seen, [])
+        text = stdout.getvalue()
+        self.assertIn('2026-10-05 UTC', text)
+        self.assertIn('249,400 batched reads; configured ceiling 250,000; 600 reads of recorded headroom', text)
+        self.assertIn('may omit pending reads', text)
+        self.assertIn('degraded duration unknown', text)
+
+    def test_local_r2_meter_keeps_unknown_inputs_distinct_from_measured_zero(self):
+        now = datetime(2026, 10, 5, 10, tzinfo=timezone.utc)
+        cases = [
+            (('2026-10-04', '299400', '300000'), 'batched reads unknown; configured ceiling unknown; headroom unknown'),
+            (('2026-10-05', 'NaN', '300000'), 'batched reads unknown; configured ceiling 300,000; headroom unknown'),
+            (('2026-10-05', '299400', 'unknown'), '299,400 batched reads; configured ceiling unknown; headroom unknown'),
+            (('2026-10-05', '299400', 'off'), '299,400 batched reads; configured ceiling off; headroom not applicable'),
+            (('2026-10-05', '0', '300000'), '0 batched reads; configured ceiling 300,000; 300,000 reads of recorded headroom'),
+            (('2026-10-05', '300001', '300000'), '300,001 batched reads; configured ceiling 300,000; headroom exhausted (1 over ceiling)'),
+        ]
+        for meter, expected in cases:
+            with self.subTest(meter=meter), redirect_stdout(io.StringIO()) as stdout:
+                self.assertEqual(ops_report.main(['--r2-meter', *meter], {}, now=now), 0)
+                self.assertIn(expected, stdout.getvalue())
+                self.assertIn('degraded duration unknown', stdout.getvalue())
 
     def test_report_shows_the_client_funnel_in_order_and_the_top_client_errors(self):
         answers = {
@@ -124,7 +170,6 @@ class OpsReportTests(unittest.TestCase):
         self.assertEqual(run([], dict(ENV), opener_for(denied, [])), 1)
 
     def test_fleet_ais_line_gives_heartbeat_age_messages_and_the_open_issue(self):
-        from datetime import datetime, timezone
         answers = {'fleet_ais': [{'region': 'CA', 'pushed_at': '2026-10-05 09:00:00', 'heartbeat_age_s': '1800',
                                   'last_message_age_s': 1790, 'messages_24h': '512000'}]}
         issues = []
@@ -152,6 +197,8 @@ class OpsReportTests(unittest.TestCase):
     def test_workflow_is_daily_pinned_and_passes_the_optional_token(self):
         text = (ROOT / '.github' / 'workflows' / 'ops-report.yml').read_text()
         self.assertIn('schedule:', text)
+        self.assertIn("  report:\n    if: vars.ENABLE_ANALYTICS == 'true'\n", text)
+        self.assertIn('      ENABLE_ANALYTICS: ${{ vars.ENABLE_ANALYTICS }}\n', text)
         self.assertIn('CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}', text)
         self.assertIn('python scripts/ops_report.py', text)
         for line in text.splitlines():

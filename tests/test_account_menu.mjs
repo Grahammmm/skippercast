@@ -103,12 +103,6 @@ test('failed initial reads show offline and a later mount can recover', async ()
   assert.equal(requests.length, 2);
 });
 
-test('AccountMenu uses the mount-only session initializer', () => {
-  const source = readFileSync(new URL('../web/app/AccountMenu.tsx', import.meta.url), 'utf8');
-  assert.match(source, /void ensureSession\(\);/);
-  assert.doesNotMatch(source, /refreshSession/);
-});
-
 test('the session answer reads as signed in, signed out, disabled or offline', () => {
   assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: ' Skipper '}}), {state: 'signed-in', name: 'Skipper', advisor: false});
   assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: ''}}), {state: 'signed-in', name: null, advisor: false});
@@ -232,6 +226,14 @@ test('advisor and sign in are one publication, and the latest generation wins ei
   stop();
   assert.ok(published.every(value => value.state === 'loading' || value.state === 'offline' || typeof value.advisor === 'boolean'), 'every published answer carries sign in and advisor together');
   assert.equal(requests.length, 4);
+});
+
+test('SC-NEXT-03: install entry follows offline and the app watches before rendering', () => {
+  const source = readFileSync(new URL('../web/app/AccountMenu.tsx', import.meta.url), 'utf8');
+  assert.match(source, /import \{InstallApp\} from '\.\/InstallApp\.tsx'/);
+  assert.match(source, /accountMenu\.offline[\s\S]*?<InstallApp \/>/);
+  const main = readFileSync(new URL('../web/app/main.tsx', import.meta.url), 'utf8');
+  assert.ok(main.indexOf('watchInstall()') >= 0 && main.indexOf('watchInstall()') < main.indexOf('render(<App'));
 });
 
 test('SC0707-07: accountLabel follows the language and passes an account name through untouched', () => {

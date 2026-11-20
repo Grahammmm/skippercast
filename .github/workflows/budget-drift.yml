@@ -9,8 +9,8 @@ name: Budget drift
 # pull request, or by deleting this workflow (the warn-only checks keep working without it).
 
 on:
-  push:
-    branches: [main]
+  schedule:
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   drift:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     # actions: dispatch Offline checks on the bot branch. contents: push bot/budget-drift (never main).
     permissions:
@@ -64,7 +64,7 @@ jobs:
           python3 scripts/budget_drift.py --check
       - name: Propose the budget change (never push main)
         id: pr
-        uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
+        uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8.1.3
         with:
           branch: bot/budget-drift
           add-paths: |
@@ -73,6 +73,8 @@ jobs:
           title: "Budget drift: raise size budgets that reached 97% to measured + 5%"
           body-path: var/budget-drift-body.md
           commit-message: "Budget drift: raise size budgets that reached 97% to measured + 5%"
+          # The action signs off as the committer; DCO checks the author's email.
+          author: 'github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>'
           signoff: true
           delete-branch: true
       # GitHub starts no pull_request workflows for pushes made with GITHUB_TOKEN, so the required
@@ -83,3 +85,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref bot/budget-drift
+      # Offline checks do not include DCO. Pass the action's immutable head to
+      # the separate required sign-off job, even if the CI dispatch failed.
+      - name: Check sign-off on the bot PR head
+        if: ${{ !cancelled() && (steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.pr.outputs.pull-request-number }}
+          HEAD: ${{ steps.pr.outputs.pull-request-head-sha }}
+        run: gh workflow run dco.yml --repo "$GITHUB_REPOSITORY" --ref bot/budget-drift -f "pr=$PR" -f "head=$HEAD"

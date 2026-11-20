@@ -24,7 +24,9 @@ def geometry_roles(spec):
     return ('segment','native_interest')
 
 def _finite(values,n):
-    return isinstance(values,list) and len(values)==n and all(type(v) in (int,float) and math.isfinite(v) for v in values)
+    if not (isinstance(values,list) and len(values)==n and all(type(v) in (int,float) for v in values)):return False
+    try:return all(math.isfinite(v) for v in values)
+    except OverflowError:return False  # int too large for a float is not finite geometry
 def rectangle(bounds,source,target):
     from pyproj import Transformer
     from shapely.geometry import Polygon
@@ -44,9 +46,14 @@ def geometry_in_target(record,target='EPSG:3310'):
     from shapely.ops import transform as project
     from shapely import segmentize
     source=CRS.from_user_input(record['crs'])
-    if 'bbox' in record:return rectangle(record['bbox'],source,target)
+    if 'bbox' in record and 'geometry' not in record:return rectangle(record['bbox'],source,target)
     geometry=shape(record['geometry'])
     if geometry.is_empty or not geometry.is_valid:raise ValueError('invalid support geometry')
+    if 'bbox' in record:
+        # Both present: the polygon is the truth (holes/concavities count); the box may only restate its envelope.
+        box_=record['bbox']
+        if not _finite(box_,4) or not all(math.isclose(p,q,rel_tol=1e-12,abs_tol=1e-9) for p,q in zip(box_,geometry.bounds)):
+            raise ValueError('bbox does not match geometry envelope')
     # Densify geographic edges before transforming; preserve interior rings.
     geometry=segmentize(geometry,.00001 if source.is_geographic else 2.)
     transform=Transformer.from_crs(source,target,always_xy=True,allow_ballpark=False)

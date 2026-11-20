@@ -16,6 +16,8 @@ export type TileProps = {
   /** The reading as already formatted text ("12", "4.1", "no fresh buoy"). */
   reading: string;
   unit?: string;
+  /** Optional canonical reading for print, when the screen uses different units. */
+  printReading?: {reading: string; unit: string};
   /** A second line under the reading (direction, period, trend). */
   detail?: string;
   /** Source and age, in mono ("NWS 2 h", "Buoy 46011 14 min"). */
@@ -29,17 +31,21 @@ export type TileProps = {
   class?: string;
 };
 
-export function Tile({label, icon, hue, reading, unit, detail, source, stale = false, basis, basisLabel, class: cls}: TileProps) {
+export function Tile({label, icon, hue, reading, unit, printReading, detail, source, stale = false, basis, basisLabel, class: cls}: TileProps) {
   return (
     <div class={['ui-tile', cls].filter(Boolean).join(' ')} data-hue={hue} data-state={stale ? 'stale' : 'ok'}>
       <div class="ui-tile-label ui-eyebrow">
         {icon ? <Icon name={icon} size={14} /> : null}
         <span>{label}</span>
       </div>
-      <div class="ui-tile-reading">
+      <div class={printReading ? 'ui-tile-reading app-screen-height' : 'ui-tile-reading'}>
         <span class="ui-reading">{reading}</span>
         {unit ? <span class="ui-tile-unit">{unit}</span> : null}
       </div>
+      {printReading ? <div class="ui-tile-reading app-print-height">
+        <span class="ui-reading">{printReading.reading}</span>
+        <span class="ui-tile-unit">{printReading.unit}</span>
+      </div> : null}
       {detail ? <div class="ui-tile-detail">{detail}</div> : null}
       {source || stale ? (
         <div class="ui-tile-source">

@@ -3,9 +3,11 @@
 // forecast was within a stated tolerance of what the buoy then read, over a named rolling window, with its sample
 // size. Like the status page, this only reads the published file in the visitor's browser: no timer, no second
 // source. A figure is never shown without its sample size and window, or when the sample is below the minimum.
+import {publicPageText, readPublicPageLanguage} from './public-page-language.js';
+const t = (id, lang, vars) => publicPageText('skill.' + id, lang, vars);
 export const WINDOWS = Object.freeze([7, 30]);
-export const LEADS = Object.freeze({24: 'Up to 24 h ahead', 48: '24–48 h ahead', 72: '48–72 h ahead'});
-export const VARIABLES = Object.freeze({wind_speed_10m: 'Wind speed', wave_height: 'Wave height'});
+export const LEADS = Object.freeze({24: t('lead.24'), 48: t('lead.48'), 72: t('lead.72')});
+export const VARIABLES = Object.freeze({wind_speed_10m: t('variable.wind_speed_10m'), wave_height: t('variable.wave_height')});
 const FUTURE_TOLERANCE = 10 * 60_000;   // as dist/status-page.js: a stamp further ahead than this is a clock or stamp error
 
 const text = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -36,36 +38,41 @@ export function readScorecard(file, index, now = Date.now()) {
 }
 
 /** One table cell: the hit rate with its sample size and window, or "not enough data yet" and no percentage. */
-export function cell(row, minimum, window) {
-  const label = `last ${window} days`;
-  if (!row || !row.enough || row.within === null || row.n < minimum) return `<td class="skill-none">Not enough data yet${row ? ` <small>(${row.n} checked, ${label})</small>` : ` <small>(${label})</small>`}</td>`;
-  return `<td><strong>${percent(row.within, row.n)}%</strong> <small>(${row.within} of ${row.n} checked, ${label})</small></td>`;
+export function cell(row, minimum, window, lang = 'en') {
+  const label = t('window', lang, {days: window});
+  if (!row || !row.enough || row.within === null || row.n < minimum) return `<td class="skill-none">${text(t('notEnough', lang))} <small>(${text(row ? t('checked', lang, {n: row.n, window: label}) : label)})</small></td>`;
+  return `<td><strong>${percent(row.within, row.n)}%</strong> <small>(${text(t('hits', lang, {within: row.within, n: row.n, window: label}))})</small></td>`;
 }
 
 /** The HTML of the scorecard: one table per buoy of each port, one row per variable and lead time. */
-export function renderScorecard(card) {
-  const stamp = card.future ? 'The publish time on this scorecard is in the future, so its age and windows cannot be trusted.'
-    : `Published <time datetime="${text(new Date(card.generated).toISOString())}">${text(new Date(card.generated).toISOString().slice(0, 16).replace('T', ' '))} UTC</time>.`;
-  const skipped = [card.skippedPorts && `${card.skippedPorts} port(s) left out because they are not in the region list`, card.skippedRows && `${card.skippedRows} row(s) could not be read`].filter(Boolean);
+export function renderScorecard(card, lang = 'en') {
+  const stamp = card.future ? text(t('future', lang))
+    : `${text(t('published', lang))} <time datetime="${text(new Date(card.generated).toISOString())}">${text(new Date(card.generated).toISOString().slice(0, 16).replace('T', ' '))} UTC</time>.`;
+  const skipped = [card.skippedPorts && t('skippedPorts', lang, {n: card.skippedPorts}), card.skippedRows && t('skippedRows', lang, {n: card.skippedRows})].filter(Boolean);
   const body = card.ports.map(port => `<h2>${text(port.name)}</h2>\n${port.stations.map(station => {
     const find = (variable, lead, window) => station.rows.find(r => r.variable === variable && Number(r.lead_hours) === Number(lead) && r.window_days === window);
-    const rows = Object.entries(VARIABLES).flatMap(([variable, name]) => Object.entries(LEADS).filter(([lead]) => WINDOWS.some(w => find(variable, lead, w))).map(([lead, leadName]) =>
-      `<tr><th scope="row">${text(name)}</th><td>${text(leadName)}</td><td>${text((find(variable, lead, 7) || find(variable, lead, 30)).tolerance)}</td>${WINDOWS.map(w => cell(find(variable, lead, w), card.minimum, w)).join('')}</tr>`));
-    return `<h3>${text(station.name)} <small>(buoy ${text(station.id)})</small></h3>\n${rows.length ? `<table class="evidence-table skill-table"><thead><tr><th scope="col">Forecast</th><th scope="col">Lead time</th><th scope="col">Counts as right when</th><th scope="col">Last 7 days</th><th scope="col">Last 30 days</th></tr></thead><tbody>\n${rows.join('\n')}\n</tbody></table>` : '<p>No scores are published for this buoy yet.</p>'}`;
-  }).join('\n') || '<p>No buoy is verified for this port yet.</p>'}`).join('\n');
-  return `<p>${stamp}</p>${skipped.length ? `<p>${text(skipped.join('; '))}.</p>` : ''}\n${body || '<p>No port has a published record yet.</p>'}`;
+    const rows = Object.keys(VARIABLES).flatMap(variable => Object.keys(LEADS).filter(lead => WINDOWS.some(w => find(variable, lead, w))).map(lead => {
+      const tolerance = (find(variable, lead, 7) || find(variable, lead, 30)).tolerance, id = 'tolerance.' + variable;
+      // Only translate known publisher wording; never substitute a threshold the feed did not send.
+      return `<tr><th scope="row">${text(t('variable.' + variable, lang))}</th><td>${text(t('lead.' + lead, lang))}</td><td>${text(tolerance === t(id) ? t(id, lang) : tolerance)}</td>${WINDOWS.map(w => cell(find(variable, lead, w), card.minimum, w, lang)).join('')}</tr>`;
+    }));
+    return `<h3>${text(station.name)} <small>(${text(t('buoy', lang, {id: station.id}))})</small></h3>\n${rows.length ? `<table class="evidence-table skill-table"><thead><tr>${['forecast', 'lead', 'tolerance', 'week', 'month'].map(key => `<th scope="col">${text(t('column.' + key, lang))}</th>`).join('')}</tr></thead><tbody>\n${rows.join('\n')}\n</tbody></table>` : `<p>${text(t('noScores', lang))}</p>`}`;
+  }).join('\n') || `<p>${text(t('noBuoy', lang))}</p>`}`).join('\n');
+  return `<p>${stamp}</p>${skipped.length ? `<p>${text(skipped.join('; '))}.</p>` : ''}\n${body || `<p>${text(t('noRecord', lang))}</p>`}`;
 }
 
-export const UNREADABLE = '<p>The scorecard could not be read. No scores are shown.</p>';
+const unreadable = lang => `<p>${text(t('unreadable', lang))}</p>`;
+export const UNREADABLE = unreadable('en');
 
 async function load(url) {
   try { const response = await fetch(url, {cache: 'no-store'}); return response.ok ? await response.json() : null; } catch { return null; }
 }
 
 async function main() {
+  const lang = await readPublicPageLanguage(document, 'skill');
   const [file, index] = await Promise.all([load('/data/forecast-skill.json'), load('/regions/index.json')]);
   const card = readScorecard(file, index, Date.now());
-  document.getElementById('skill-rows').innerHTML = card ? renderScorecard(card) : UNREADABLE;
+  document.getElementById('skill-rows').innerHTML = card ? renderScorecard(card, lang) : unreadable(lang);
 }
 
 if (typeof document !== 'undefined' && document.getElementById('skill-rows')) main();

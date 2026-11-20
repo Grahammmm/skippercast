@@ -10,6 +10,7 @@ import math
 from pathlib import Path
 import re
 import shutil
+from tempfile import TemporaryDirectory
 
 from skippercast.platform.contracts import atomic_json
 from ..io import sha256
@@ -74,34 +75,47 @@ def reviewed_receipt(path, row):
     return receipt
 
 
+def _check_source(path, row):
+    if not path.is_file() or path.stat().st_size != row['bytes'] or sha256(path) != row['sha256']:
+        raise ValueError('Private derived COG checksum/byte mismatch')
+
+
 def source_files(row, cache, local):
-    """Local paired import or exact cached pair only; never fetch a landing URL."""
+    """Import or recover from the reviewed local pair; never fetch a landing URL."""
     validate_binding(row)
     if not re.fullmatch(r'[a-f0-9]{64}', row['sha256']) or not isinstance(row['bytes'], int) or row['bytes'] <= 0:
         raise ValueError('Derived source needs reviewed bytes and hash')
     folder = Path(cache)/row['sha256']; source = folder/'source.tif'; receipt = folder/'preparation.json'
-    if source.exists() or receipt.exists():
-        if not source.exists() or not receipt.exists():
+    if folder.is_symlink() or source.is_symlink() or receipt.is_symlink():
+        raise ValueError('Unsafe private derived source cache path')
+    if receipt.exists():
+        if not source.exists():
             raise ValueError('Incomplete private derived source cache')
-    else:
-        if local is None:
-            raise FileNotFoundError('Private derived grid missing; import paired --local COG and same-stem JSON receipt')
-        local = Path(local); sidecar = local.with_suffix('.json')
-        if local.stat().st_size != row['bytes'] or sha256(local) != row['sha256']:
-            raise ValueError('Private derived COG checksum/byte mismatch')
-        reviewed_receipt(sidecar, row)
-        folder.mkdir(parents=True, exist_ok=True)
-        try:
-            shutil.copyfile(local, source.with_suffix('.part'))
-            shutil.copyfile(sidecar, receipt.with_suffix('.part'))
-            source.with_suffix('.part').replace(source)
-            receipt.with_suffix('.part').replace(receipt)
-        finally:
-            source.with_suffix('.part').unlink(missing_ok=True)
-            receipt.with_suffix('.part').unlink(missing_ok=True)
-    if source.stat().st_size != row['bytes'] or sha256(source) != row['sha256']:
-        raise ValueError('Cached derived COG checksum/byte mismatch')
-    return source, reviewed_receipt(receipt, row)
+        _check_source(source, row)
+        return source, reviewed_receipt(receipt, row)
+    orphaned = source.exists()
+    if local is None:
+        if orphaned:
+            raise ValueError('Incomplete private derived source cache; retry with the original local pair')
+        raise FileNotFoundError('Private derived grid missing; import paired --local COG and same-stem JSON receipt')
+    local = Path(local); sidecar = local.with_suffix('.json')
+    _check_source(local, row)
+    reviewed_receipt(sidecar, row)
+    if orphaned:
+        _check_source(source, row)
+    folder.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(prefix='.grid-import-', dir=folder) as work:
+        staged_source, staged_receipt = Path(work)/source.name, Path(work)/receipt.name
+        if not orphaned:
+            shutil.copyfile(local, staged_source)
+            _check_source(staged_source, row)
+        shutil.copyfile(sidecar, staged_receipt)
+        preparation = reviewed_receipt(staged_receipt, row)
+        # Install without replacing an orphan or another writer's evidence.
+        if not orphaned:
+            source.hardlink_to(staged_source)
+        receipt.hardlink_to(staged_receipt)
+    return source, preparation
 
 
 def supported_window(ds, window):
@@ -140,16 +154,21 @@ def ingest(row, bounds, *, root, local=None):
                   'normalized.py': sha256(Path(__file__).parents[1]/'normalized.py')}, 'margin_m': 100}
     key = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     output = source.parent/(key+'.tif'); receipt_path = output.with_suffix('.json')
-    if output.exists() or receipt_path.exists():
-        if not output.exists() or not receipt_path.exists():
+    if (output.is_symlink() or receipt_path.is_symlink()
+            or (output.exists() and not output.is_file())
+            or (receipt_path.exists() and not receipt_path.is_file())):
+        raise ValueError('Unsafe private normalized grid cache path')
+    if receipt_path.exists():
+        if not output.exists():
             raise ValueError('Incomplete private normalized grid cache')
         saved = json.loads(receipt_path.read_bytes())
         if saved['inputs'] != inputs or sha256(output) != saved['cog_sha256']:
             raise ValueError('Private normalized COG cache failed verification')
         return saved, False, True
-    temporary = output.with_suffix('.working.tif'); part = output.with_suffix('.part.tif')
     valid_count = shallow_count = sparse_count = 0
-    try:
+    orphaned = output.exists()
+    with TemporaryDirectory(prefix='.grid-normalize-', dir=source.parent) as work:
+        temporary, part = Path(work)/'working.tif', Path(work)/'part.tif'
         with rasterio.open(source) as ds:
             if (ds.count != 5 or ds.descriptions != DESCRIPTIONS or ds.crs is None
                     or ds.crs.to_string() != preparation['horizontal_crs']
@@ -185,10 +204,14 @@ def ingest(row, bounds, *, root, local=None):
                                 source_id=row['id'],adapter_version=VERSION,source_qualification='private-physical-only',
                                 fishing_export='prohibited',uncertainty='unknown')
             raster_copy(temporary,part,driver='COG',COMPRESS='DEFLATE',BLOCKSIZE=512,OVERVIEWS='NONE')
-            part.replace(output)
+            output_hash = sha256(part)
+            # Recompute the receipt and pixels from the verified source pair,
+            # not from the orphan. Only identical installed bytes can resume.
+            if orphaned and sha256(output) != output_hash:
+                raise ValueError('Private normalized COG cache failed verification')
             saved = dict(inputs=inputs, adapter_version=VERSION, source_id=row['id'],source_sha256=row['sha256'],
-                         source_bytes=row['bytes'],cog_sha256=sha256(output),cog_bytes=output.stat().st_size,
-                         raster_identity=raster_identity(output),requested_bounds_wgs84=list(bounds),seam_margin_m=100,
+                         source_bytes=row['bytes'],cog_sha256=output_hash,cog_bytes=part.stat().st_size,
+                         raster_identity=raster_identity(part),requested_bounds_wgs84=list(bounds),seam_margin_m=100,
                          valid_pixels_in_requested_bounds=valid_count,nominal_0_300ft_pixels_in_requested_bounds=shallow_count,
                          sparse_bins_excluded_in_requested_bounds=sparse_count,native_resolution_m='unknown',
                          grid_spacing_m=list(ds.res),native_sampling=binding['native_sampling'],horizontal_crs=ds.crs.to_string(),
@@ -198,7 +221,9 @@ def ingest(row, bounds, *, root, local=None):
                                    'grid_sha256':preparation['grid_sha256'],'preparation_code_sha256':binding['preparation_code_sha256']},
                          note='Private measured-bin habitat processing; derived spacing is not native resolution or accuracy. '
                               'Counts are contributors, not independent confirmation or calibrated uncertainty. Source rights unqualified.')
-            atomic_json(receipt_path,saved,indent=2)
+            staged_receipt = Path(work)/receipt_path.name
+            atomic_json(staged_receipt,saved,indent=2)
+            if not orphaned:
+                output.hardlink_to(part)
+            receipt_path.hardlink_to(staged_receipt)
             return saved, False, False
-    finally:
-        temporary.unlink(missing_ok=True); part.unlink(missing_ok=True)

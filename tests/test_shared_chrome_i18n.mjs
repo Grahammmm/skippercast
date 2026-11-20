@@ -17,8 +17,13 @@ async function load() {
   await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
     export {Guard, GuardFallback} from './web/ui/Guard.tsx';
     export {Popover} from './web/ui/Popover.tsx';
-    export {DegradedNotice} from './web/degraded-notice.tsx';
-    export {degraded, degradedText} from './web/degraded.ts';
+    import {DegradedNotice as Notice} from './web/degraded-notice.tsx';
+    import {degradedText as text} from './web/degraded.ts';
+    import {t} from './web/i18n.ts';
+    import {h} from 'preact';
+    export const DegradedNotice = () => h(Notice, {translate: t});
+    export const degradedText = (state, time, lang) => text(state, t, time, lang);
+    export {degraded} from './web/degraded.ts';
     export {language} from './web/i18n.ts';
     export {render} from 'preact-render-to-string';
     export {h} from 'preact';`},

@@ -38,7 +38,8 @@ function feed() {
     sources: {
       'buoy-46011': {id: 'buoy-46011', name: 'NOAA NDBC 46011 observations', kind: 'observation', url: 'https://www.ndbc.noaa.gov/station_page.php?station=46011',
         checked_at: checked, max_age_hours: 6, status: 'ok',
-        data: {station: '46011', observations: [{time: iso(-5 * HOUR), WSPD: 4, GST: 6, WVHT: 1.2, DPD: 11, MWD: 295, WTMP: 14.5}]}},
+        data: {station: '46011', units: {WVHT: 'm', DPD: 'sec', WTMP: 'degC', WSPD: 'm/s', GST: 'm/s', MWD: 'degT'},
+          observations: [{time: iso(-5 * HOUR), WSPD: 4, GST: 6, WVHT: 1.2, DPD: 11, MWD: 295, WTMP: 14.5}]}},
       tides: {id: 'tides', name: 'NOAA CO-OPS 9412110 predictions', kind: 'prediction', url: 'https://tidesandcurrents.noaa.gov/stationhome.html?id=9412110',
         checked_at: checked, max_age_hours: 36, status: 'ok',
         data: {station: '9412110', datum: 'MLLW', predictions: [{time: iso(2 * HOUR), height_ft: 4.1, type: 'H'}, {time: iso(8 * HOUR), height_ft: 0.6, type: 'L'}]}},

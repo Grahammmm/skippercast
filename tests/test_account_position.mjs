@@ -12,7 +12,7 @@ function el(extra = {}) {
   return {value: '', disabled: false, textContent: '', hidden: false, isConnected: true, events: [], ...extra,
     setAttribute(k, v) { attrs.set(k, String(v)); }, getAttribute: k => attrs.has(k) ? attrs.get(k) : null, removeAttribute: k => attrs.delete(k),
     addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
-    dispatchEvent(event) { this.events.push(event.type); return true; },
+    dispatchEvent(event) { this.events.push(event.type); for (const fn of listeners[event.type] ?? []) fn(event); return true; },
     click() { for (const fn of listeners.click ?? []) fn({}); }};
 }
 function form(prefix = 'log') {
@@ -162,4 +162,76 @@ test('the catch-log redraw keeps Save off while a position request is pending, a
   assert.equal(f.save.disabled, true, 'a redraw during the request does not re-enable Save');
   g.calls[0].ok(fix(1, 2, 3));
   assert.equal(f.save.disabled, false, 'Save returns once the answer arrives');
+});
+
+
+const {createLogSpotChoice, projectLogSpots, logSpotOptionsHTML, logBody, logEditBody} = await import('../dist/account.js');
+const SPOTS = [{id: 'zero', name: ' Zero ', lat: 0, lon: 0, note: 'PRIVATE SENTINEL'}, {id: 'precise', name: 'Reef', lat: 35.123456789, lon: -120.987654321}];
+function choiceForm() {
+  const f = form(), g = geo();
+  f.els['#log-spot'] = el(); f.els['#log-spot-choice'] = el({hidden: true});
+  const pos = make(f, g), choice = createLogSpotChoice({$: f.$, invalidate: pos.invalidate});
+  const select = id => { f.els['#log-spot'].value = id; f.els['#log-spot'].dispatchEvent(new Event('change')); };
+  return {...f, g, choice, select, selected: () => f.els['#log-spot'].value};
+}
+test('saved_spot_choice_fills_only_coordinates and serializers never expand the payload', () => {
+  const f = choiceForm(); f.choice.update(SPOTS); f.select('zero');
+  assert.equal(f.lat.value, '0'); assert.equal(f.lon.value, '0');
+  f.select('precise'); assert.equal(f.lat.value, String(SPOTS[1].lat)); assert.equal(f.lon.value, String(SPOTS[1].lon));
+  assert.ok(!f.lat.disabled && !f.lon.disabled); assert.equal(f.g.calls.length, 0);
+  const fields = {started: '2026-01-01T00:00:00Z', outcome: 'blank', lat: f.lat.value, lon: f.lon.value, note: 'my own note', spot_id: 'zero', name: 'Zero'};
+  for (const body of [logBody(fields), logEditBody(fields)]) {
+    assert.equal(body.note, 'my own note'); assert.equal(body.lat, SPOTS[1].lat); assert.equal(body.lon, SPOTS[1].lon);
+    assert.ok(!Object.hasOwn(body, 'spot_id') && !Object.hasOwn(body, 'name'));
+    assert.ok(!JSON.stringify(body).includes('PRIVATE SENTINEL'));
+  }
+});
+test('saved spot tiny coordinates fill decimal text and save without precision loss', () => {
+  for (const [lat, lon] of [[1e-7, -1.234567890123456e-9], [-Number.MIN_VALUE, Number.MIN_VALUE], [1e-6, -1e-6]]) {
+    const f = choiceForm(); f.choice.update([{id: 'tiny', name: 'Tiny', lat, lon}]); f.select('tiny');
+    assert.match(f.lat.value, /^-?\d+(\.\d+)?$/);
+    assert.match(f.lon.value, /^-?\d+(\.\d+)?$/);
+    const fields = {started: '2026-01-01T00:00:00Z', outcome: 'blank', lat: f.lat.value, lon: f.lon.value};
+    for (const body of [logBody(fields), logEditBody(fields)]) {
+      assert.equal(body.lat, lat); assert.equal(body.lon, lon);
+    }
+  }
+});
+test('saved_spot_none_preserves_coordinates; manual input clears only selection and accuracy', () => {
+  const f = choiceForm(); f.choice.update(SPOTS); f.lat.value = '01.23456789'; f.lon.value = '-002';
+  f.select(''); assert.equal(f.lat.value, '01.23456789'); assert.equal(f.lon.value, '-002');
+  f.select('precise'); f.select(''); assert.equal(f.lat.value, String(SPOTS[1].lat));
+  f.select('zero'); f.status.textContent = 'stale accuracy'; f.lat.value = '1'; f.lat.dispatchEvent(new Event('input'));
+  assert.equal(f.selected(), ''); assert.equal(f.lon.value, '0'); assert.equal(f.status.textContent, '');
+  f.select('unknown'); assert.equal(f.selected(), ''); assert.equal(f.lat.value, '1');
+});
+test('saved_spot_failed_empty_or_malformed_read_keeps_form_usable and never partly accepts a list', () => {
+  for (const rows of [null, {}, [], [null], [{...SPOTS[0], id: ''}], [SPOTS[0], SPOTS[0]], [{...SPOTS[0], lat: '0'}],
+    ...[NaN, Infinity, 90, -90].map(lat => [{...SPOTS[0], lat}]), ...[180, -180].map(lon => [{...SPOTS[0], lon}])]) {
+    const f = choiceForm(); f.choice.update(SPOTS); f.select('zero'); f.lat.value = '12'; f.choice.update(rows);
+    assert.ok(f.els['#log-spot-choice'].hidden); assert.equal(f.selected(), ''); assert.equal(f.lat.value, '12');
+    assert.ok(!f.save.disabled && !f.lat.disabled); f.select('zero'); assert.equal(f.lat.value, '12');
+  }
+});
+test('saved_spot_names_escaped_notes_not_copied; exact ids and localized fallback', () => {
+  const rows = projectLogSpots([{...SPOTS[0], id: '\"<&', name: ' \u0000<svg onload=x> '}, {...SPOTS[1], name: '\u001f\uffff'}]);
+  assert.equal(Object.keys(rows[0]).sort().join(','), 'id,lat,lon,name');
+  const html = logSpotOptionsHTML(rows); assert.ok(html.includes('&quot;&lt;&amp;') && html.includes('&lt;svg onload=x&gt;'));
+  assert.ok(!html.includes('<svg') && !html.includes('PRIVATE SENTINEL') && !html.includes('data-'));
+  const es = createCopy({lang: 'es', strings: {'account.spots.unnamed': catalog['account.spots.unnamed'].es, 'account.log.noSpot': 'Ninguno'}});
+  assert.ok(logSpotOptionsHTML(rows, es).includes('Sitio sin nombre')); assert.ok(html.includes('Unnamed spot'));
+  assert.equal(projectLogSpots([{...SPOTS[0], name: 'same'}, {...SPOTS[1], name: 'same'}]).length, 2);
+});
+test('saved_spot_choice_survives_refresh_without_refilling and drops deleted selection', () => {
+  const f = choiceForm(); f.choice.update(SPOTS); f.select('zero'); f.lat.value = '9';
+  f.choice.update([{...SPOTS[0], name: 'renamed', lat: 10}]); assert.equal(f.selected(), 'zero'); assert.equal(f.lat.value, '9');
+  f.choice.update([SPOTS[1]]); assert.equal(f.selected(), ''); assert.equal(f.lat.value, '9');
+  f.choice.restore('zero'); assert.equal(f.selected(), ''); f.choice.restore('precise'); assert.equal(f.selected(), 'precise'); assert.equal(f.lat.value, '9');
+});
+test('saved_spot_and_device_fix_last_deliberate_source_wins, including a late expired callback', () => {
+  const f = choiceForm(); f.choice.update(SPOTS); f.button.click(); f.select('precise');
+  assert.ok(!f.lat.disabled && !f.save.disabled); f.g.calls[0].ok(fix(1, 2, 3)); f.g.calls[0].fail({code: 3});
+  assert.equal(f.lat.value, String(SPOTS[1].lat)); assert.equal(f.status.textContent, '');
+  f.button.click(); f.g.calls[1].ok(fix(3, 4, 5)); assert.equal(f.lat.value, '3.000000'); assert.equal(f.selected(), '');
+  assert.equal(f.status.textContent, en('account.position.filled', {accuracy: 5}));
 });

@@ -1,0 +1,21 @@
+{
+  "default": "nearshore-v1.0.0",
+  "versions": {
+    "nearshore-v1.0.0": {
+      "file": "nearshore-v1.0.0.json",
+      "sha256": "fecc2af86e3313d16c630af22386d91567d7124753a48545f03f3f5271a786aa",
+      "kit_zip_sha256": "5e0ff9968a6c905e583aeb8da7c129e890fee89ce453d718053ce29a95958b39",
+      "digests": {
+        "baked": "d568d2aee05dccfb26d626a33a7f26386238a415b2bf4d296db6a89d48beb20b",
+        "contours": "83060cabb89fc1386bc31b41e57146eb30094d2eca222408523fba440f5ca572",
+        "habitat": "53aa8cf5192d6b751328749208a255e3c0e7a1872b947bca41fb8fbb60da9115",
+        "paint": "844f2d1fadaef7427fe499f7d396b8b4159dd9dddfee01d3b12b477accb5d084"
+      },
+      "status": "active"
+    },
+    "deep-fixed-v1": {
+      "legacy": true,
+      "status": "active"
+    }
+  }
+}

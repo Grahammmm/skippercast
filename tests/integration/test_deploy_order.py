@@ -31,7 +31,7 @@ def commit(sha, *parents):
 HISTORY = [commit(E, D), commit(D, C, T), commit(T, C), commit(C, B), commit(B, A), commit(A)]
 
 
-def run(sha, run_id, status='completed', conclusion='success', **extra):
+def run(sha, run_id, status='completed', conclusion: str | None = 'success', **extra):
     return {'id': run_id, 'name': 'Offline checks', 'path': '.github/workflows/ci.yml', 'event': 'push',
             'head_branch': 'main', 'head_sha': sha, 'head_repository': {'full_name': REPO},
             'status': status, 'conclusion': conclusion, **extra}
@@ -86,14 +86,18 @@ class SourceSelectionTests(unittest.TestCase):
                 self.assertTrue(all(request.get_header('Authorization') is None and timeout == 15 for request, timeout in calls))
                 self.assertIn('Selected for deployment: ' + E, stdout)
 
-    def test_pending_newer_main_deploys_the_newest_checked_ancestor(self):
-        # The starvation case: CI for C passed after D and E merged; D's and E's CI still run.
-        code, out, _, stderr, _ = self.run_gate({E: [run(E, 12, 'in_progress', None)], D: [run(D, 11, 'queued', None)],
-                                                 C: [run(C, 10)], B: [run(B, 9)]}, trigger=C)
-        self.assertEqual(code, 0, stderr)
-        self.assertEqual((out['eligible'], out['sha']), ('true', C))
-        self.assertIn('eeeeeeeee pending', out['reason'])
-        self.assertIn('ddddddddd pending', out['reason'])
+    def test_newer_unchecked_main_deploys_the_newest_checked_ancestor(self):
+        # CI for C passed after D and E merged. D may still be queued, or E may
+        # have superseded it. Neither state may count as passing CI for D.
+        for status, conclusion, reason in [('queued', None, 'pending'), ('completed', 'cancelled', 'cancelled')]:
+            with self.subTest(status=status, conclusion=conclusion):
+                code, out, _, stderr, _ = self.run_gate({E: [run(E, 12, 'in_progress', None)],
+                                                        D: [run(D, 11, status, conclusion)],
+                                                        C: [run(C, 10)], B: [run(B, 9)]}, trigger=C)
+                self.assertEqual(code, 0, stderr)
+                self.assertEqual((out['eligible'], out['sha']), ('true', C))
+                self.assertIn('eeeeeeeee pending', out['reason'])
+                self.assertIn('ddddddddd ' + reason, out['reason'])
 
     def test_failed_newer_commit_is_never_selected_and_an_older_green_one_is(self):
         code, out, _, stderr, _ = self.run_gate({E: [run(E, 12, conclusion='failure')], D: [run(D, 11, conclusion='cancelled')],

@@ -11,7 +11,7 @@ import coasts from '../../../catalog/coasts.json' with {type: 'json'};
 import speciesPages from '../../../catalog/advisor/species-pages.json' with {type: 'json'};
 import aliases from '../../../catalog/advisor/port-aliases.json' with {type: 'json'};
 
-import {dailyInputs, hashInputs, composeDaily, seasonOpen} from '../answers/reports.ts';
+import {dailyInputs, hashInputs, canUseDailyCache, composeDaily, seasonOpen} from '../answers/reports.ts';
 import type {DailyInputs} from '../answers/reports.ts';
 import {targetSpecies} from '../answers/confidence.ts';
 import {regionConfig} from '../answers/regions.ts';
@@ -89,8 +89,7 @@ async function todaysAnswer(env: Env, inputs: DailyInputs, language: PageLanguag
   const row = await env.DB!.prepare('SELECT text_en,text_es,inputs_hash FROM advisor_daily_answers WHERE key=?').bind(`${inputs.port}:${inputs.date}`)
     .first<{text_en: string; text_es: string; inputs_hash: string}>();
   const self = `${base}/ports/${inputs.port}?s=txt`;
-  // The stored answer while it is current (or while a feed is down, as dailyAnswer does); else the composition.
-  if (row && (row.inputs_hash === hash || !inputs.feeds.daily || !inputs.feeds.intelligence)) return {text: withoutSelfLink(language === 'es' ? row.text_es : row.text_en, self)};
+  if (row && canUseDailyCache(inputs, row.inputs_hash, hash)) return {text: withoutSelfLink(language === 'es' ? row.text_es : row.text_en, self)};
   return {text: withoutSelfLink(resolveLinks(composeDaily(inputs, language), base).text, self)};
 }
 

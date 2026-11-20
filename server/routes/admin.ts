@@ -45,21 +45,21 @@
 //   GET  /api/admin/fleet/ais/health   ?region=   fleet/admin/ais-health.ts (CF-35)
 //   GET  /api/admin/fleet/trips        ?region= &labelled=all|yes|no|agent|approved &cursor=   fleet/admin/labels.ts (CF-48): trip labelling
 //   GET  /api/admin/fleet/trips/:id, POST /api/admin/fleet/trips/:id/labels {started_at, ended_at, label, basis}, POST /api/admin/fleet/labels/:id/delete
-//   POST /api/admin/fleet/trips/:id/approve   the trip's agent labels become the signed-in admin's (N7)
+//   POST /api/admin/fleet/trips/:id/approve   {reviewed_ids}: the reviewed agent labels become the signed-in admin's (N7)
 import {Hono} from 'hono';
 import {json, body} from '../http.ts';
 import {requireAdmin, adminUser, NOT_FOUND} from '../middleware/admin.ts';
 import {shellResponse} from './assets.ts';
 import {fleetMap} from '../fleet/map.ts';   // CF-50
 import {advisorSettings} from '../advisor/settings.ts';
-import {listReviews, REVIEW_KINDS, REVIEW_STATUSES} from '../advisor/admin/queue.ts';
+import {listReviews, reviewView, REVIEW_KINDS, REVIEW_STATUSES} from '../advisor/admin/queue.ts';
 import {decideReview, DECISIONS} from '../advisor/admin/decisions.ts';
 import type {Decision} from '../advisor/admin/decisions.ts';
 import {adminHealth, subscribeWebhooks} from '../advisor/admin/health.ts';
 import {teamSender} from '../advisor/consumer.ts';
 import {derivedKey} from '../advisor/media.ts';
 // TA-W3: skippers, crew, invites and contacts.
-import {listBoats, editBoat, removeCrew, inviteSkipper, contactView, setBlocked, validId} from '../advisor/admin/skippers.ts';
+import {boatView, listBoats, editBoat, removeCrew, inviteSkipper, contactView, setBlocked, validId} from '../advisor/admin/skippers.ts';
 import type {AdminOutcome} from '../advisor/admin/skippers.ts';
 import {exportContact} from '../advisor/contacts.ts';
 // TA-W4: the funnel.
@@ -69,7 +69,7 @@ import type {FunnelDays, SqlFetcher} from '../advisor/admin/funnel.ts';
 import {listRules, createRule, editRule, retireRule} from '../advisor/admin/rules.ts';
 import type {RuleOutcome} from '../advisor/admin/rules.ts';
 // TA-S1: social posts.
-import {listPosts} from '../advisor/admin/posts.ts';
+import {listPosts, postDetail} from '../advisor/admin/posts.ts';
 // TA-S2: post now, schedule, retry.
 import {postNow, schedulePost, retryPost} from '../advisor/admin/posts.ts';
 import type {PostActionOutcome} from '../advisor/admin/posts.ts';
@@ -162,6 +162,12 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
     return json(await listReviews(c.env.DB!, {status, kind, cursor}));
   });
 
+  admin.get('/api/admin/reviews/:id', async c => {
+    const id = c.req.param('id');
+    const review = REVIEW_ID.test(id) ? await reviewView(c.env.DB!, id) : null;
+    return review ? json({review}) : NOT_FOUND();
+  });
+
   admin.post('/api/admin/reviews/:id', async c => {
     const id = c.req.param('id');
     if (!REVIEW_ID.test(id)) return NOT_FOUND();
@@ -213,7 +219,11 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
 
   // ---- TA-W3: skippers, crew, invites, contacts ----
   const now = (): number => (deps.now ?? Date.now)();
-  admin.get('/api/admin/boats', async c => json(await listBoats(c.env.DB!, now())));
+  admin.get('/api/admin/boats', async c => json(await listBoats(c.env.DB!, now(), {cursor: c.req.query('cursor') ?? null})));
+  admin.get('/api/admin/boats/:id', async c => {
+    const boat = await boatView(c.env.DB!, c.req.param('id'), now());
+    return boat ? json({boat}) : NOT_FOUND();
+  });
   // Registered before /api/admin/boats/:id, which would otherwise take "invite" as an id.
   admin.post('/api/admin/boats/invite', async c => {
     const input = await body(c.req.raw, 4096);
@@ -272,12 +282,20 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
     return new Response(object.body, {status: 200, headers: {'Content-Type': 'image/jpeg', 'Content-Length': String(object.size), 'Content-Disposition': 'inline',
       'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff'}});
   });
+  admin.get('/api/admin/posts/:id', async c => {
+    const id = c.req.param('id');
+    const detail = MEDIA_ID.test(id) ? await postDetail(c.env.DB!, id) : null;
+    return detail ? json(detail) : NOT_FOUND();
+  });
   // ---- TA-S2: publishing ----
   const publishDeps = (): PublishDeps => ({...(deps.now ? {now: deps.now} : {}), ...(deps.metaFetcher ? {fetcher: deps.metaFetcher} : {}),
     ...(deps.metaSleep ? {sleep: deps.metaSleep} : {}), consumer: deps, ...(deps.dispatchWorkflow ? {dispatch: deps.dispatchWorkflow} : {})});
   admin.post('/api/admin/posts/:id/publish', async c => postAnswer(await postNow(c.env, c.req.param('id'), now(), publishDeps())));
   admin.post('/api/admin/posts/:id/schedule', async c => postAnswer(await schedulePost(c.env, c.req.param('id'), await body(c.req.raw, 1024), now())));
   admin.post('/api/admin/posts/:id/retry', async c => postAnswer(await retryPost(c.env, c.req.param('id'), publishDeps())));
+
+  // Navigation only: the fleet gate (routes/fleet.ts) and admin middleware have already admitted this request.
+  admin.get('/api/admin/fleet/capability', () => new Response(null, {status: 204, headers: {'Cache-Control': 'private, no-store'}}));
 
   // ---- CF-34: fleet /go/ click counts (the FLEET_ENABLED gate runs first, in routes/fleet.ts) ----
   admin.get('/api/admin/fleet/clicks', async c => {
@@ -328,7 +346,10 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   admin.get('/api/admin/fleet/trips/:id', async c => found(await tripDetail(c.env.DB!, c.req.param('id'))));
   admin.post('/api/admin/fleet/trips/:id/labels', async c => answer(await addLabel(c.env.DB!, c.req.param('id'), await body(c.req.raw, 4096), c.var.owner, stamp())));
   admin.post('/api/admin/fleet/labels/:id/delete', async c => answer(await deleteLabel(c.env.DB!, c.req.param('id'))));
-  admin.post('/api/admin/fleet/trips/:id/approve', async c => answer(await approveTrip(c.env.DB!, c.req.param('id'), c.var.owner)));   // N7
+  admin.post('/api/admin/fleet/trips/:id/approve', async c => {   // N7
+    const {reviewed_ids} = await body(c.req.raw);
+    return answer(await approveTrip(c.env.DB!, c.req.param('id'), c.var.owner, reviewed_ids));
+  });
 
   admin.post('/api/admin/contacts/:id/block', async c => {
     const input = await body(c.req.raw, 1024);

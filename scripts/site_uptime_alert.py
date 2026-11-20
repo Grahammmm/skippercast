@@ -59,6 +59,14 @@ def _request(url):
     return request.Request(url, headers={"User-Agent": USER_AGENT, "Cache-Control": "no-cache"})
 
 
+def _json_body(response, cap=1 << 20):
+    """The body when it fits the cap; ValueError when bytes remain past it (a valid prefix is not the whole body)."""
+    data = response.read(cap)
+    if len(data) >= cap and response.read(1):
+        raise ValueError("body over limit")
+    return data
+
+
 def probe(base, path, timeout=TIMEOUT):
     """None when the path is up, else {path, status|error}. Never keeps a response body or header."""
     try:
@@ -67,7 +75,7 @@ def probe(base, path, timeout=TIMEOUT):
                 return {"path": path, "status": response.status}
             if path.startswith('/feeds/tiles/seafloor/manifest-') and path.endswith('.json'):
                 try:
-                    manifest = json.loads(response.read(1 << 20))
+                    manifest = json.loads(_json_body(response))
                     region = path.removeprefix('/feeds/tiles/seafloor/manifest-').removesuffix('.json')
                     expires = datetime.fromisoformat(manifest['expires_at'].replace('Z', '+00:00'))
                     ok = (manifest['status'] == 'ready' and manifest['region'] == region
@@ -78,7 +86,7 @@ def probe(base, path, timeout=TIMEOUT):
                     return {'path': path, 'status': 200, 'error': 'habitat unavailable'}
             if path == "/api/health":
                 try:
-                    ok = isinstance(json.loads(response.read(1 << 20)), dict)
+                    ok = isinstance(json.loads(_json_body(response)), dict)
                 except (ValueError, RecursionError):
                     ok = False
                 if not ok:

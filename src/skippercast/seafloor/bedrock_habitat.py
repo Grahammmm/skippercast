@@ -543,7 +543,7 @@ def features_for(patches, reach, policy, row, binding, **metadata):
         geo = strict_geographic(patch.geometry) if audited(policy) else geographic(patch.geometry)
         content = hashlib.sha256(normalize(patch.geometry).wkb).hexdigest()[:20]
         properties = {'id':f'bedrock-{reach}-{policy["id"]}-{patch.record}-{content}', 'reach':reach,
-            'source_ids':[row['id'],binding['row']['id']], 'source_year':row.get('survey_year','unknown'),
+            'source_ids':[row['id'],binding['row']['id']], 'source_year':row.get('year') or row.get('survey_year') or 'unknown',
             'resolution_m':row['resolution_m'], 'vertical_datum':row['vertical_datum'],
             'terrain':'unknown', 'fit':{'lingcod':'unknown','rockfish-reef':'unknown'},
             'depth_min_ft':25,'depth_max_ft':300,'depth_basis':'nominal-band','detail_level':'classified-area',

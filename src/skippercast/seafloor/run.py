@@ -27,6 +27,7 @@ from .habitat import build_candidates, compare_atlas, validate_rules
 from .substrate import resolve_bindings, verify_sources
 from .terrain_support import verify_sources as verify_terrain_support
 from .screen import load_snapshot, input_identity, screen_candidates
+from .scoped import load_snapshot as scoped_snapshot
 from .resolution_profile import fine_detail_valid
 from .normalized import verify_review
 from .source_scope import scoped_manifest
@@ -99,21 +100,45 @@ def apply_ledger(root, reach_id, summary):
     atomic_json(path, ledger, indent=2)
 
 
-def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
+def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False, scope_config=None):
     started = monotonic()
     root = Path(root)
-    catalog = read_json(root / 'catalog/reaches.json')
+    context = None
+    if scope_config is not None:
+        from .scope_paths import resolve_scope
+        if not resolve_scope(root, scope_config=scope_config)[1].is_central_default:
+            if not physical_only or fetch:
+                raise ValueError('Non-central processing is disabled for ordinary runs; only private '
+                                 '--physical-only runs without --fetch are allowed')
+            from .scoped_processing import load_context
+            context = load_context(root, scope_config, reach_id)
+    if context is None:
+        catalog = read_json(root / 'catalog/reaches.json')
+        if not any(r['id'] == reach_id for r in catalog['reaches']):
+            raise ValueError('Unknown reach')
+        baseline_path = root / 'var/seafloor/reference/cells.json'
+        baseline = read_json(baseline_path)
+        reference_receipt = read_json(root / 'var/seafloor/reference/run.json')
+        reaches_path = root / 'catalog/reaches.json'
+        if (baseline['input_hash'] != catalog['input_hash']
+                or reference_receipt['input_hash'] != catalog['input_hash']
+                or reference_receipt['output_hashes']['cells.json'] != sha256(baseline_path)):
+            raise ValueError('Reference grid does not match verified baseline')
+        baseline_cells = baseline['cells']
+    else:
+        catalog, baseline_path = context['catalog'], context['paths'].cells_path
+        reaches_path, baseline_cells = context['paths'].reaches_path, context['cells']
     reach = next((r for r in catalog['reaches'] if r['id'] == reach_id), None)
     if reach is None:
         raise ValueError('Unknown reach')
-    baseline_path = root / 'var/seafloor/reference/cells.json'
-    baseline = read_json(baseline_path)
-    reference_receipt = read_json(root / 'var/seafloor/reference/run.json')
-    if (baseline['input_hash'] != catalog['input_hash']
-            or reference_receipt['input_hash'] != catalog['input_hash']
-            or reference_receipt['output_hashes']['cells.json'] != sha256(baseline_path)):
-        raise ValueError('Reference grid does not match verified baseline')
-    cells = [c for c in baseline['cells'] if c['reach'] == reach_id]
+    # Deferred screening is a property of the requested run, even if it
+    # selects only public inputs or finds no usable surveys at all.
+    if context is not None:
+        from .scoped_processing import reach_folder
+        folder = reach_folder(context, reach_id)
+    else:
+        folder = root / 'var/seafloor' / ('private-reaches' if physical_only else 'reaches') / reach_id
+    cells = [c for c in baseline_cells if c['reach'] == reach_id]
     scope = unary_union([cell_geometry(c) for c in cells])
     project = Transformer.from_crs(4326, 3310, always_xy=True).transform
     sources = []
@@ -125,8 +150,8 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         if not transform(project, box(*bounds)).intersects(scope):
             continue
         receipt, _, _ = ingest(row, bounds, root=root, fetch=fetch)
-        folder = root / 'var/seafloor/cache' / row['sha256']
-        paths = [p.with_suffix('.tif') for p in folder.glob('*.json')
+        cache = root / 'var/seafloor/cache' / row['sha256']
+        paths = [p.with_suffix('.tif') for p in cache.glob('*.json')
                  if read_json(p).get('cog_sha256') == receipt['cog_sha256']
                  and p.with_suffix('.tif').exists()]
         if not paths:
@@ -144,10 +169,12 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
     verify_terrain_support(sources, root=root)
     atlas_path = root / 'dist/data/atlas.json'
     screen = ({'version': 'deferred', 'status': 'held', 'reasons': ['screen-deferred'], 'layers': []}
-              if physical_only else load_snapshot(root, reach_id))
+              if physical_only and context is None else
+              load_snapshot(root, reach_id) if context is None else
+              scoped_snapshot(root, reach_id, scope_config=scope_config))
     inputs = {'rule_version': VERSION, 'reach_id': reach_id,
               'reference_cells_sha256': sha256(baseline_path),
-              'reaches_sha256': sha256(root / 'catalog/reaches.json'),
+              'reaches_sha256': sha256(reaches_path),
               'sources': [s['row'] for s in sources],
               'habitat_rules': rules, 'substrate_bindings': bindings,
               'atlas_sha256': sha256(atlas_path),
@@ -157,12 +184,12 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
                                  for n in ('coverage.py', 'terrain.py', 'run.py', 'habitat.py', 'habitat_tiles.py', 'substrate.py', 'terrain_support.py', 'resolution_profile.py', 'normalized.py', 'source_scope.py')}}
     if source_scope is not None:
         inputs['source_scope'] = source_scope
+    if context is not None:
+        inputs['scope'] = context['identity']
     physical_hash = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     inputs['screen'] = input_identity(screen)
     inputs['screen_implementation_sha256'] = sha256(Path(__file__).parent/'screen.py')
     digest = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
-    private_sources = any(s['row']['status'] == 'physical-only' for s in sources)
-    folder = root / 'var/seafloor' / ('private-reaches' if private_sources else 'reaches') / reach_id
     receipt_path = folder / 'run.json'
     outputs = [folder / name for name in ('cells.json', 'terrain.json', 'habitat.geojson', 'atlas-comparison.json',
                                         'held.geojson', 'candidates.geojson', 'physical.json')]
@@ -171,7 +198,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         if previous['input_hash'] == digest and all(p.exists() for p in outputs):
             if previous['outputs'] != {p.name: sha256(p) for p in outputs}:
                 raise ValueError('Reach outputs failed hash verification')
-            if not private_sources:
+            if not physical_only:
                 apply_ledger(root, reach_id, previous['ledger_summary'])
             return previous, True
     # Physical outputs are immutable relative to survey/rule inputs. A changed
@@ -201,6 +228,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         band_checkpoint = sum(c['band_area_m2'] for c in classified)/1e6
         atomic_json(folder/'coverage-checkpoint.json', {
             **({'source_scope': source_scope} if source_scope is not None else {}),
+            **({'scope': context['identity']} if context is not None else {}),
             'physical_input_hash': physical_hash,
             'catalog_sha256': sha256(root/'catalog/surveys.json'),
             'rules_sha256': sha256(root/'catalog/habitat-rules.json'),
@@ -250,6 +278,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
         'polygons_by_grade': {g: screened['habitat_by_grade'].get(g, 0) for g in 'ABC'},
         'physical_candidate_count': len(candidates['features']),
         'processing_incomplete': False,
+        **({'scope_id': context['identity']['scope_id']} if context is not None else {}),
         'physical_input_hash': physical_hash,
         'habitat_rule_version': rules['rule_version'], 'roughness_thresholds': candidates['thresholds'],
         'atlas_comparison': {key: value for key, value in comparison.items() if key != 'areas'},
@@ -259,13 +288,13 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False):
     atomic_json(folder / 'habitat.geojson', habitat)
     atomic_json(folder / 'held.geojson', held)
     receipt = {'input_hash': digest, 'inputs': inputs, 'ledger_summary': summary,
-               'publication_prohibited': private_sources,
+               'publication_prohibited': physical_only,
                'physical_reused': reuse_physical, 'physical_input_hash': physical_hash,
                'timings_seconds': {'coverage': coverage_seconds, 'terrain': terrain_seconds, 'habitat': habitat_seconds,
                                    'screen': screen_seconds, 'total': monotonic() - started},
                'outputs': {p.name: sha256(p) for p in outputs},
                'source_receipts': [s['receipt'] for s in sources]}
     atomic_json(receipt_path, receipt, indent=2)
-    if not private_sources:
+    if not physical_only:
         apply_ledger(root, reach_id, summary)
     return receipt, False

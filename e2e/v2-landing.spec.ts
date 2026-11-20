@@ -16,7 +16,9 @@
 // motion standing still under reduced motion, and the shoreline SVG alone
 // with WebGL disabled.
 import {readFileSync} from 'node:fs';
-import type {Page} from '@playwright/test';
+import {createServer, get} from 'node:http';
+import type {AddressInfo} from 'node:net';
+import {test as browserTest, type Page} from '@playwright/test';
 import {test, expect, checkA11y, LCP_BUDGET_MS} from './fixtures.ts';
 import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
@@ -477,7 +479,9 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('not a Morro Bay bar-current prediction');
   await page.locator('[data-reading="wind"] summary').click();
   await expect(page.locator('[data-reading="wind"] .ui-popover-body')).toContainText('about 56 nm WNW of Morro Bay harbor, out at sea: not a harbor or launch reading');
-  await expect(page.locator('.landing-credit')).toHaveText('Shoreline: NOAA National Geodetic Survey · CUSP shoreline, surveyed 1994–2010.');
+  // MAP-SOURCES-PAGE-1: no shoreline or basemap credit on the landing; the nav's Sources link lists them.
+  await expect(page.locator('#landing-credit')).not.toContainText('Shoreline');
+  await expect(page.locator('.landing-head a[href="/sources"]')).toHaveCount(1);
   await checkA11y(page, 'v2-landing', info.project.name);
   expect(requests.filter(url => THREE.test(new URL(url).pathname)), 'no three request').toEqual([]);
   expect(pageErrors).toEqual([]);
@@ -590,16 +594,66 @@ test('Explore the coast takes the profile step with nothing to warm, and Save-Da
   expect(pageErrors).toEqual([]);
 });
 
-// #622: every file the warm-up fetched is one the map then reads at startup (no wasted bytes), and the static ones are
-// answered by the browser cache (a revalidation or a cache hit, never a second full download).
-test('the map reads every warmed file at startup, the static ones from the browser cache', async ({page, pageErrors, v2}, info) => {
+const WARM_STATIC = ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
+  '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json'];
+const WARM_FORECAST = '/api/forecast?region=morro-bay';
+
+// A private proxy, not Playwright routing (which disables the HTTP cache).
+// Only asset GETs go to the local test server, with its original cache headers
+// and bytes. Neither the browser nor the Worker gets to call a live service.
+const cacheTest = browserTest.extend({
+  proxy: async ({baseURL}, use) => {
+    const origin = new URL(baseURL!).origin;
+    const proxy = createServer((req, res) => {
+      const url = URL.canParse(req.url ?? '') ? new URL(req.url!) : null;
+      if (req.method !== 'GET' || url?.origin !== origin) { res.writeHead(403).end(); return; }
+      if (url.pathname + url.search === WARM_FORECAST) {
+        res.writeHead(200, {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}).end('{}');
+        return;
+      }
+      if (url.pathname !== '/' && url.pathname !== '/map' && !/^\/(assets|regions|data|icons|vendor|tiles|basemap)\//.test(url.pathname)) {
+        res.writeHead(404).end(); return;
+      }
+      const upstream = get(url, {headers: req.headers}, response => {
+        res.writeHead(response.statusCode!, response.headers);
+        response.pipe(res);
+      });
+      upstream.on('error', () => res.destroy());
+      res.on('close', () => upstream.destroy());
+    });
+    proxy.on('connect', (_req, socket) => socket.destroy());
+    await new Promise<void>((resolve, reject) => proxy.once('error', reject).listen(0, '127.0.0.1', resolve));
+    try {
+      // Remove Chromium's implicit loopback bypass too: all HTTP targets go through the allowlist.
+      await use({server: `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`, bypass: '<-loopback>'});
+    } finally {
+      await new Promise<void>(resolve => { proxy.close(() => resolve()); proxy.closeAllConnections(); });
+    }
+  },
+});
+
+async function warmStaticTimings(page: Page) {
+  const urls = WARM_STATIC.map(path => new URL(path, page.url()).href);
+  const read = (expected: string[]) => (performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+    .filter(e => expected.includes(e.name))
+    .map(e => ({path: new URL(e.name).pathname, transfer: e.transferSize, body: e.encodedBodySize, status: e.responseStatus}));
+  // MapLibre can read the shoreline in a dedicated worker, not in the document.
+  const samples = await Promise.all([page.evaluate(read, urls), ...page.workers().map(worker => worker.evaluate(read, urls))]);
+  return samples.flat();
+}
+
+// #622: a request event isn't evidence of cache reuse. Require a cold body and
+// a completed map timing for each path, and reject any second full body.
+cacheTest('the map reads every warmed file at startup, the static ones from the browser cache', async ({page}, info) => {
   test.skip(info.project.name !== 'phone', 'checked once');
-  await stubLiveFeeds(page);
-  await landingFeeds(page);
-  const read = new Set<string>();
-  let onMap = false;
-  page.on('request', r => { const u = new URL(r.url()); if (onMap) read.add(u.pathname + u.search); });
-  await v2.open('landing');
+  const pageErrors: string[] = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await page.addInitScript(() => {
+    sessionStorage.setItem('skippercast-flyover-v1', '1');
+    performance.setResourceTimingBufferSize(1_000);
+  });
+  await page.goto('/?ui=v2');
+  await expect(page).toHaveTitle(/SkipperCast/);
   const input = page.getByLabel('Where are you launching?');
   await input.fill('morro');
   // The input is interactive before the async port directory arrives; Enter
@@ -607,28 +661,46 @@ test('the map reads every warmed file at startup, the static ones from the brows
   await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
   await expect(page.locator('.landing-step [role="status"]')).toHaveText('Morro Bay map files ready.');
-  const list = ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
-    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay'];
-  onMap = true;
-  await page.locator('.landing-step [data-profile="boat"]').click();
+  const cold = await warmStaticTimings(page);
+  // Chromium Resource Timing reports 300 bytes of overhead plus the encoded
+  // body on a full transfer, 300 on revalidation, and zero for a local hit.
+  const overhead = 300;
+  for (const path of WARM_STATIC) {
+    expect(cold.some(e => e.path === path && e.status === 200 && e.body > 0 && e.transfer === overhead + e.body),
+      `landing downloaded ${path}`).toBe(true);
+  }
+  const forecastURL = new URL(WARM_FORECAST, page.url()).href;
+  await Promise.all([
+    page.waitForResponse(response => response.url() === forecastURL && response.ok()),
+    page.locator('.landing-step [data-profile="boat"]').click(),
+  ]);
+  await expect(page).toHaveURL(/\/map\?/);
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
-  await expect.poll(() => list.filter(p => !read.has(p)), {timeout: 30_000, message: 'the map reads each warmed file'}).toEqual([]);
-  // Committed files: the second read moved no full body (a 304 or a cache hit: fewer bytes over the wire than the body).
-  const sizes = await page.evaluate(paths => performance.getEntriesByType('resource').map(e => e as PerformanceResourceTiming)
-    .filter(e => paths.includes(new URL(e.name).pathname)).map(e => ({path: new URL(e.name).pathname, transfer: e.transferSize, body: e.encodedBodySize})),
-  list.filter(p => !p.startsWith('/api/')));
-  for (const s of sizes) expect(s.transfer, `${s.path} came from the cache (${s.transfer} of ${s.body} bytes moved)`).toBeLessThan(s.body);
+  let timings: Awaited<ReturnType<typeof warmStaticTimings>> = [];
+  await expect.poll(async () => {
+    timings = await warmStaticTimings(page);
+    return WARM_STATIC.filter(path => !timings.some(e => e.path === path));
+  }, {timeout: 30_000, message: 'map timings missing for warmed static paths'}).toEqual([]);
+  for (const {path, transfer, body, status} of timings) {
+    expect(status, `${path} loaded successfully`).toBe(200);
+    expect(body, `${path} has measurable body bytes`).toBeGreaterThan(0);
+    expect([0, overhead], `${path} reused the cached body (${transfer} bytes transferred)`).toContain(transfer);
+  }
   expect(pageErrors).toEqual([]);
 });
 
 test('the landing paints within the LCP budget on the throttled mobile profile, with the night map loading after it', async ({page, pageErrors, v2}, info) => {
   test.skip(info.project.name !== 'phone', 'measured once, at phone size');
   await nightFixtures(page);
-  const lcp = await v2.lcp('landing');
-  console.log(`v2 landing LCP ${Math.round(lcp)} ms (budget ${LCP_BUDGET_MS}, design § 13)`);
-  expect(lcp, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
-  expect(lcp).toBeLessThanOrEqual(LCP_BUDGET_MS);
-  await expect(page.locator('.landing-night')).toHaveAttribute('data-state', 'ready');   // the map drew in the same load
+  const paint = await v2.lcpSettled('landing', {}, {ready: [
+    '.landing-readout:not([aria-busy="true"])', '.landing .port-input-list [data-port]', '.landing-night[data-state="ready"]',
+  ]});
+  const receipt = `v2 landing LCP ${paint.settled ? `${Math.round(paint.ms)} ms` : 'INCONCLUSIVE (paint did not settle)'}`
+    + ` (budget ${LCP_BUDGET_MS}, design § 13); candidates ${JSON.stringify(paint.candidates)}`;
+  console.log(receipt);
+  expect(paint.settled, receipt).toBe(true);
+  expect(paint.ms, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
+  expect(paint.ms, receipt).toBeLessThanOrEqual(LCP_BUDGET_MS);
   expect(pageErrors).toEqual([]);
 });
 
@@ -674,7 +746,7 @@ test('after first paint the night map draws the coastline and animated currents 
   // The SVG stays as the fallback, faded out under the drawn map.
   await expect(page.locator('.landing-shore path')).toHaveCount(2);
   await expect.poll(() => page.locator('.landing-shore').evaluate(el => getComputedStyle(el).opacity)).toBe('0');
-  await expect(page.locator('[data-credit="basemap"]')).toHaveText('Basemap: © OpenStreetMap contributors, © Protomaps.');
+  await expect(page.locator('[data-credit="basemap"]'), 'MAP-SOURCES-PAGE-1: no basemap credit; the Sources page lists it').toHaveCount(0);
   await expect(page.locator('[data-credit="currents"]')).toHaveText(/^Currents: NOAA WCOFS surface forecast, about 4 km, issued 3 h ago; arrows follow the toward-bearing and their motion is illustrative\.$/);
   // MapLibre is fetched only after the first paint and the load event (design § 13).
   const timing = await page.evaluate(() => ({
@@ -877,28 +949,43 @@ const COLD_PHONES = [{width: 390, height: 844}, {width: 360, height: 640}] as co
 /** The cold-load window, from navigation start. Every qualifying shift in it counts, not only the largest session window. */
 const SAMPLE_MS = 5000;
 const CLS_BUDGET = 0.1;
-type ShiftStore = {observer: PerformanceObserver | null; entries: {value: number; hadRecentInput: boolean}[]};
+type ShiftEntry = PerformanceEntry & {value: number; hadRecentInput: boolean};
+type ColdReadiness = {readingsMs: number | null; portsMs: number | null};
+type ShiftStore = {observer: PerformanceObserver | null; entries: ShiftEntry[]; readiness: ColdReadiness};
 /** Install a buffered layout-shift observer before navigation; the sampling itself clicks, scrolls and focuses nothing. */
-const watchShifts = (page: Page) => page.addInitScript(() => {
-  const store: ShiftStore = {observer: null, entries: []};
+const watchShifts = (page: Page, trackReadiness = false) => page.addInitScript(({sampleMs, trackReadiness}) => {
+  const store: ShiftStore = {observer: null, entries: [], readiness: {readingsMs: null, portsMs: null}};
   (window as unknown as {__shifts: ShiftStore}).__shifts = store;
   try {
-    const observer = new PerformanceObserver(list => { for (const e of list.getEntries()) { const s = e as PerformanceEntry & {value: number; hadRecentInput: boolean}; store.entries.push({value: s.value, hadRecentInput: s.hadRecentInput}); } });
+    const observer = new PerformanceObserver(list => { store.entries.push(...list.getEntries() as ShiftEntry[]); });
     observer.observe({type: 'layout-shift', buffered: true});
     store.observer = observer;
   } catch { /* unsupported: shiftSums reports it */ }
-});
+  if (!trackReadiness) return;
+  const sample = () => {
+    const readings = document.querySelectorAll('.landing-tiles li[data-reading]').length === 4;
+    const port = document.querySelector('.landing .port-input-list [data-port]');
+    const ports = port && port.checkVisibility({visibilityProperty: true}) && port.getClientRects().length > 0;
+    const now = performance.now();
+    if (now >= sampleMs) return; // never backfill a mount that missed the navigation-relative window
+    store.readiness.readingsMs = readings ? store.readiness.readingsMs ?? now : null;
+    store.readiness.portsMs = ports ? store.readiness.portsMs ?? now : null;
+    requestAnimationFrame(sample);
+  };
+  requestAnimationFrame(sample);
+}, {sampleMs: SAMPLE_MS, trackReadiness});
 /** Wait out the window, drain the observer, and sum the entries: those without recent input (the budget) and all of them (no input is ever sent here). */
-async function shiftSums(page: Page): Promise<{counted: number; all: number; entries: number}> {
+async function shiftSums(page: Page) {
   await page.waitForFunction(ms => performance.now() >= ms, SAMPLE_MS);
-  const sums = await page.evaluate(() => {
+  const sums = await page.evaluate(sampleMs => {
     const store = (window as unknown as {__shifts?: ShiftStore}).__shifts;
     if (!store?.observer) return null;
-    for (const e of store.observer.takeRecords()) { const s = e as PerformanceEntry & {value: number; hadRecentInput: boolean}; store.entries.push({value: s.value, hadRecentInput: s.hadRecentInput}); }
+    store.entries.push(...store.observer.takeRecords() as ShiftEntry[]);
     store.observer.disconnect();
-    const sum = (list: ShiftStore['entries']) => list.reduce((total, e) => total + e.value, 0);
-    return {counted: sum(store.entries.filter(e => !e.hadRecentInput)), all: sum(store.entries), entries: store.entries.length};
-  });
+    const inWindow = store.entries.filter(e => e.startTime < sampleMs);
+    const sum = (list: ShiftEntry[]) => list.reduce((total, e) => total + e.value, 0);
+    return {counted: sum(inWindow.filter(e => !e.hadRecentInput)), all: sum(inWindow), entries: inWindow.length, readiness: store.readiness};
+  }, SAMPLE_MS);
   expect(sums, 'the layout-shift observer is supported and was installed before navigation').not.toBeNull();
   return sums!;
 }
@@ -926,13 +1013,13 @@ for (const {width, height} of COLD_PHONES) {
     test.setTimeout(60_000);
     await page.setViewportSize({width, height});
     await landingFeeds(page);
-    await watchShifts(page);
-    await page.goto('/?ui=v2');   // no saved home, no click, no scroll, no focus
+    await watchShifts(page, true);
+    await page.goto('/?ui=v2', {waitUntil: 'commit'});   // no saved home, no click, no scroll, no focus
     const sums = await shiftSums(page);
-    // The synthetic feeds answered inside the window: a hung feed would otherwise pass on an unchanged page.
-    await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
-    await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();
-    console.log(`SC1922-05 ${width}x${height}: ${sums.entries} layout-shift entries, qualifying sum ${sums.counted.toFixed(4)}, all ${sums.all.toFixed(4)}`);
+    console.log(`SC1922-05 ${width}x${height}: ${sums.entries} layout-shift entries, qualifying sum ${sums.counted.toFixed(4)}, all ${sums.all.toFixed(4)}; readiness ${JSON.stringify(sums.readiness)}`);
+    // Eventual readiness after disconnect cannot qualify a quiet but unfinished cold load.
+    expect(sums.readiness.readingsMs, 'all four readings observed within the cold window').not.toBeNull();
+    expect(sums.readiness.portsMs, 'featured ports visible within the cold window').not.toBeNull();
     expect(sums.counted, 'layout shift without recent input').toBeLessThan(CLS_BUDGET);
     expect(sums.all, 'headless Chromium may mark early entries as input-driven although none was sent; none may hide a shift').toBeLessThan(CLS_BUDGET);
     expect(pageErrors).toEqual([]);
@@ -958,10 +1045,9 @@ for (const {width, height} of COLD_PHONES) {
     near(mounted.readout!.y, before.readout!.y, 'readout y on mount'); near(mounted.readout!.h, before.readout!.h, 'readout height on mount');
     near(mounted.form!.y, before.form!.y, 'port form y on mount'); near(mounted.form!.h, before.form!.h, 'port form height on mount (the port list still loading)');
     expect(await page.locator('.landing-slot').count(), 'the mount replaced both placeholders').toBe(0);
-    // The layer dots and the credit mounted with the form; the footer that sat under the slots did not move.
-    const credit = await boxOf(page, '#landing-credit');
+    // The layer dots mounted with the form; the footer that sat under the slots did not move. MAP-SOURCES-PAGE-1: no shoreline credit is mounted.
     near(mounted.footer!.y, before.footer!.y, 'footer y on mount');
-    expect(credit && credit.h > 0, 'the shoreline credit is in the footer').toBeTruthy();
+    await expect(page.locator('#landing-credit')).not.toContainText('Shoreline');
     // Late data: the readings and the port list resolve; the form stays where the slot was, and below it only the verdict (a fresh block, not reserved) pushes the footer.
     await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
     await expect(page.locator('.landing .port-input-list [data-port]').first()).toBeVisible();

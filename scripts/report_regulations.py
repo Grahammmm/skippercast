@@ -9,6 +9,8 @@ REGION_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}')
 
 
 def _region_lines(ident, data):
+    if not isinstance(data['valid_for_current_date'], bool):
+        raise ValueError('valid_for_current_date must be a boolean')
     legal_review = data['rules_review_status'] == 'reviewed' and data['valid_for_current_date']
     affected = [p['name'] for p in data['species'].values() if p['issues'] or not legal_review]
     areas = [p['name'] for p in data['areas'].values() if p['issues'] or not legal_review]
@@ -44,8 +46,15 @@ def report(root):
             unreadable.append(f'{ident} (listed twice)')
             continue
         seen.add(ident)
+        if region.get('status') == 'failed':
+            lines.extend([f'### {ident}', 'Regional refresh failed. Any retained receipt was not checked.', ''])
+            needs_attention = True
+            continue
         try:
-            section, attention = _region_lines(ident, json.loads((root / 'regions' / ident / 'regulations-health.json').read_text()))
+            data = json.loads((root / 'regions' / ident / 'regulations-health.json').read_text())
+            if not isinstance(data, dict) or data.get('region_id') != ident:
+                raise ValueError('receipt region_id does not match the index')
+            section, attention = _region_lines(ident, data)
         except FileNotFoundError:
             problem = 'missing'
         except (OSError, UnicodeDecodeError, ValueError, RecursionError, KeyError, TypeError, AttributeError) as exc:

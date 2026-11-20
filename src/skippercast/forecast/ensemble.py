@@ -54,6 +54,8 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def stamp(moment=None):
     moment = moment or datetime.now(timezone.utc)
+    if moment.tzinfo is not None:
+        moment = moment.astimezone(timezone.utc)
     return moment.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
@@ -84,7 +86,7 @@ def mask_url(cycle):
 def latest_cycle(now=None, lookback_hours=48, exists=None):
     """Newest cycle whose control and last perturbation both publish the final step."""
     exists = exists or fetch.exists
-    now = now or datetime.now(timezone.utc)
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)  # GEFS cycles are UTC hours
     start = now.replace(minute=0, second=0, microsecond=0)
     for back in range(0, lookback_hours + 1):
         cycle = start - timedelta(hours=back)

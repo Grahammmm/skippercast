@@ -28,9 +28,25 @@ def _tif(path, values, x0, y0, cell=2.0, crs='EPSG:32610', dtype='float32', noda
 
 def _sources(*ids, native=2):
     return {i: {'id': i, 'review_status': 'approved', 'needs': ['bathymetry'], 'name': f'Synthetic {i}',
-                'documentation_url': 'https://example.invalid/doc', 'rights': {'attribution': 'Synthetic'},
+                'documentation_url': 'https://example.invalid/doc', 'rights': {'attribution': 'Synthetic', 'public_display': 'allowed'},
                 'survey_year': 2008, 'vertical_datum': None, 'native_resolution_m': native,
                 'reviewed_at': '2026-10-01'} for i in ids}
+
+
+@pytest.mark.parametrize('ident, publication_allowed, reason', [
+    ('usace-ncmp-ca-8482', False, 'publication_allowed is false'),
+    ('noaa-morro-bay-topobathy-2022-9630', False, 'publication_allowed is false'),
+    ('noaa-bluetopo', None, 'not an approved bathymetry source'),
+])
+def test_standalone_public_refusal_preserves_morro_legacy_reasons(ident, publication_allowed, reason):
+    # The display exception must not leak into the standalone builder's default path.
+    pytest.importorskip('rasterio')
+    from skippercast.platform.contracts import OWNER_DISPLAY_BASIS
+
+    sources = _sources(ident)
+    sources[ident].update(review_status='candidate', publication_allowed=publication_allowed)
+    sources[ident]['rights']['owner_public_display'] = {'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}
+    assert _load_builder().public_refusal(ident, {'source_bindings': {'bathymetry': []}}, sources) == reason
 
 
 def _run_builder(monkeypatch, grids, sources, *extra, captured=None):
@@ -111,7 +127,8 @@ def test_held_output_traces_a_candidate_grid_privately_and_the_default_still_ref
     import rasterio
     from skippercast.platform import depth_contours as dc
     sources = _sources('noaa-x')
-    sources['noaa-x'].update(review_status='candidate', rights={'attribution': 'Synthetic', 'license': 'CC0-1.0'})
+    sources['noaa-x'].update(review_status='candidate', rights={'attribution': 'Synthetic', 'license': 'CC0-1.0',
+                                                                 'public_display': 'allowed'})
     x = _tif(tmp_path / 'x.tif', _slope((64, 64)), X0, Y0)
     captured = {}
     doc = _run_builder(monkeypatch, {'noaa-x': x}, sources, '--held-output', str(tmp_path / 'held.geojson'), captured=captured)
@@ -467,6 +484,57 @@ def test_without_provenance_the_output_matches_the_frozen_pre_change_bytes(tmp_p
     got = {'slope': _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a')),
            'seam': _run_builder(monkeypatch, {'usgs-a': a, 'usgs-b': b}, _sources('usgs-a', 'usgs-b'))}
     assert {k: hashlib.sha256(json.dumps(v).encode()).hexdigest() for k, v in got.items()} == FROZEN
+    for key, grids in [('slope', {'usgs-a': a}), ('seam', {'usgs-a': a, 'usgs-b': b})]:
+        explicit = _run_builder(monkeypatch, grids, _sources(*grids), '--set', 'v1')
+        assert json.dumps(explicit) == json.dumps(got[key])
+
+
+@pytest.mark.parametrize('cell', [2, 5, 10])
+def test_v2_emits_the_feet_set_at_each_zoom_and_caps_the_shelf(tmp_path, monkeypatch, cell):
+    # Same reach at all three native spacings. Deep enough to emit >300 ft if the cap is missing.
+    width = 1000 // cell
+    grid = _tif(tmp_path / 'shelf.tif', _slope((40, width), shallow=-0.1, deep=-160), X0, Y0, cell=cell)
+    doc = _run_builder(monkeypatch, {'shelf': grid}, _sources('shelf', native=cell), '--set', 'v2')
+    props = [f['properties'] for f in doc['features'] if f['properties']['kind'] == 'contour']
+    z8 = {60, 120, 180, 240, 300}
+    z11 = set(range(30, 301, 30))
+    z13 = z11 | set(range(10, 101, 10))
+    z15 = z13 | ({5, 15, 25} if cell == 2 else set())
+    for zoom, expected in [(8, z8), (11, z11), (13, z13), (14, z13), (15, z15)]:
+        assert {p['depth_ft'] for p in props if p['minzoom'] <= zoom < p.get('maxzoom', 18)} == expected
+    assert {p['depth_ft'] for p in props if p['index']} == {60, 150, 300}
+    assert max(p['depth_ft'] for p in props) == 300
+    assert all(p['estimated'] is True for p in props)
+    assert all(type(f['properties']['index']) is bool and type(f['properties']['minzoom']) is int for f in doc['features'])
+    assert doc['provenance']['set'] == 'ft-v2' and doc['provenance']['shelf_limit_ft'] == 300
+    if cell == 2:
+        assert {p['depth_ft'] for p in props if p['minzoom'] == 15} == {5, 15, 25}
+        assert {p['depth_ft'] for p in props if p['minzoom'] == 14} == z13
+        assert {p['depth_ft'] for p in props if p.get('maxzoom') == 14} == z13
+    else:
+        assert all(p['minzoom'] <= 13 and 'maxzoom' not in p for p in props)
+
+
+def test_v2_native_detail_stops_at_filled_cells_and_does_not_replace_the_coarse_line_there(tmp_path, monkeypatch):
+    import numpy as np
+    from pyproj import Transformer
+    from shapely import transform
+    from shapely.geometry import LineString, box
+
+    grid = _tif(tmp_path / 'native.tif', _slope((100, 100), shallow=-0.1, deep=-35), X0, Y0)
+    codes = np.full((100, 100), 10)
+    codes[40:60, :] = 20  # EC fill covers the full slope within this band, including every contour crossing.
+    prov = _ec(tmp_path / 'provenance.tif', codes)
+    doc = _run_builder(monkeypatch, {'native': grid}, _sources('native'), '--set', 'v2', '--provenance', f'native={prov}')
+    utm = Transformer.from_crs('EPSG:4326', 'EPSG:32610', always_xy=True)
+    fill = box(X0, Y0 - 115, X0 + 200, Y0 - 85)
+    native = [f for f in doc['features'] if f['properties']['minzoom'] >= 14]
+    assert {f['properties']['depth_ft'] for f in native} >= {5, 15, 25, 30}
+    assert all(not transform(LineString(line), utm.transform, interleaved=False).intersects(fill)
+               for f in native for line in f['geometry']['coordinates'])
+    fallback, = [f for f in doc['features'] if f['properties'].get('depth_ft') == 30
+                 and f['properties'].get('provenance') == 'filled' and 'maxzoom' not in f['properties']]
+    assert any(transform(LineString(line), utm.transform, interleaved=False).intersects(fill) for line in fallback['geometry']['coordinates'])
 
 
 @pytest.mark.parametrize('case,message', [

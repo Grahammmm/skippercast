@@ -1,7 +1,7 @@
 // Rollback switch: false hides both entry points without changing any region or feed.
 import type {ComponentType} from 'preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {language, t} from './i18n.ts';
+import {language, t} from './landing/i18n.ts';
 
 export const REGION_COVERAGE_ENABLED = true;
 

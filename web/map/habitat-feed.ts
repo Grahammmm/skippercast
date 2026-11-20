@@ -28,6 +28,7 @@ export const WCOFS_LAYER_ID = 'wcofs-surface-forecast';
 const TIMEOUT_MS = 15_000;
 const MAX_TILES = 64;
 const MAX_TILE_BYTES = 5_000_000;
+const TILE_CONCURRENCY = 4;
 const TILE_PATH = /^habitat-tiles\/[a-z0-9-]+-[a-f0-9]{16}\.json$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const REGION_ID = /^[a-z0-9-]+$/;
@@ -72,7 +73,7 @@ export function habitatManifestURL(regionId: string, page: string): string {
 /** A tile reference's URL, only inside the manifest's own region folder. */
 export function habitatTileURL(manifestURL: string, record: unknown, regionId: string): string {
   if (!object(record) || typeof record.path !== 'string' || !TILE_PATH.test(record.path) || typeof record.sha256 !== 'string' || !SHA256.test(record.sha256)
-    || !numeric(record.bytes) || record.bytes < 1 || record.bytes > MAX_TILE_BYTES || !box(record.bounds)) throw new Error('Invalid ocean tile reference');
+    || !numeric(record.bytes) || !Number.isInteger(record.bytes) || record.bytes < 1 || record.bytes > MAX_TILE_BYTES || !box(record.bounds)) throw new Error('Invalid ocean tile reference');
   const url = new URL(record.path, manifestURL), root = new URL('.', manifestURL);
   if (url.origin !== root.origin || !url.pathname.startsWith(root.pathname) || !root.pathname.endsWith(`/regions/${regionId}/`)) throw new Error('Ocean tile outside region');
   return url.href;
@@ -144,28 +145,75 @@ export async function tileRows(bytes: ArrayBuffer, record: Record<string, unknow
   return out;
 }
 
-type Get = (url: string) => Promise<Response>;
+type Get = (url: string, signal?: AbortSignal) => Promise<Response>;
 interface ReadOptions {fetchFn: typeof fetch; page: string; now: Date; signal?: AbortSignal}
 class NetworkReadError extends Error {}
-const getter = (o: ReadOptions): Get => async url => {
+const getter = (o: ReadOptions): Get => async (url, signal = o.signal) => {
+  signal?.throwIfAborted();
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
   try {
-    return await o.fetchFn(url, {signal: o.signal ? AbortSignal.any([o.signal, AbortSignal.timeout(TIMEOUT_MS)]) : AbortSignal.timeout(TIMEOUT_MS)});
+    return await o.fetchFn(url, {signal: signal ? AbortSignal.any([signal, timeout]) : timeout});
   } catch (error) {
     if (error instanceof TypeError) throw new NetworkReadError('Ocean data could not be fetched');
     throw error;
   }
 };
 
-/** Every tile's rows, merged by frame time; one failed tile throws. */
-async function allRows(get: Get, manifestURL: string, regionId: string, layer: Layer): Promise<Map<number, unknown[][]>> {
+/** Count decoded body bytes, not Content-Length (which can describe compressed bytes). */
+async function readTile(response: Response, bytes: number, signal: AbortSignal): Promise<ArrayBuffer> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('Ocean tile unavailable');
+  const cancel = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener('abort', cancel, {once: true});
+  try {
+    signal.throwIfAborted();
+    if (!response.ok) throw new Error('Ocean tile unavailable');
+    const body = new Uint8Array(bytes);
+    let offset = 0;
+    for (;;) {
+      const {done, value} = await reader.read();
+      signal.throwIfAborted();
+      if (done) break;
+      if (value.byteLength > bytes - offset) throw new Error('Ocean tile length mismatch');
+      body.set(value, offset);
+      offset += value.byteLength;
+    }
+    if (offset !== bytes) throw new Error('Ocean tile length mismatch');
+    return body.buffer;
+  } finally {
+    signal.removeEventListener('abort', cancel);
+    cancel();
+    reader.releaseLock();
+  }
+}
+
+/** Every tile's rows, merged in manifest order; one failed tile refuses the layer. */
+async function allRows(get: Get, manifestURL: string, regionId: string, layer: Layer, caller?: AbortSignal): Promise<Map<number, unknown[][]>> {
   const records = layer.tiles.map(record => ({record, url: habitatTileURL(manifestURL, record, regionId)}));
-  const parts = await Promise.all(records.map(async ({record, url}) => {
-    const r = await get(url);
-    if (!r.ok) throw new Error('Ocean tile unavailable');
-    return tileRows(await r.arrayBuffer(), record, regionId, layer);
+  const stop = new AbortController();
+  const signal = caller ? AbortSignal.any([caller, stop.signal]) : stop.signal;
+  const parts: Map<number, unknown[][]>[] = [];
+  let next = 0;
+  await Promise.all(Array.from({length: Math.min(TILE_CONCURRENCY, records.length)}, async () => {
+    try {
+      while (next < records.length) {
+        signal.throwIfAborted();
+        const i = next++, {record, url} = records[i]!;
+        const response = await get(url, signal);
+        parts[i] = await tileRows(await readTile(response, record.bytes as number, signal), record, regionId, layer);
+      }
+    } catch (error) {
+      stop.abort(error);
+      throw signal.reason;
+    }
   }));
+  signal.throwIfAborted();
   const out = new Map<number, unknown[][]>();
-  for (const part of parts) for (const [time, rows] of part) out.set(time, [...(out.get(time) ?? []), ...rows]);
+  for (const part of parts) for (const [time, rows] of part) {
+    const merged = out.get(time);
+    if (merged) for (const row of rows) merged.push(row);
+    else out.set(time, rows);
+  }
   return out;
 }
 
@@ -210,7 +258,7 @@ export async function regionalChlorophyll(regionId: string, o: ReadOptions): Pro
     const observation: ChlorophyllObservation = {product: layer.product, sampleAt: new Date(latest * 1000).toISOString(),
       maxAgeMs: layer.maxAgeMs, resolution: layer.resolution, cells: []};
     if (!chlorophyllFresh(observation, o.now)) return {state: 'listed'};
-    const rows = await allRows(get, manifestURL, regionId, layer), index = layer.fields.indexOf('chlorophyll_mg_m3');
+    const rows = await allRows(get, manifestURL, regionId, layer, o.signal), index = layer.fields.indexOf('chlorophyll_mg_m3');
     const cells = (rows.get(latest) ?? []).flatMap(r => {
       const value = r[index], lat = r[0] as number, lon = r[1] as number;
       return numeric(value) && value >= 0.001 && value <= 100 && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180
@@ -236,7 +284,7 @@ export async function regionalSST(regionId: string, o: ReadOptions): Promise<Reg
     const age = analysedAt === null ? NaN : o.now.getTime() - Date.parse(analysedAt);
     if (!loads(layer) || latest === null || !(age < layer.maxAgeMs) || !layer.fetchedAt)
       return {state: 'listed', product: layer.product, analysedAt, maxAgeMs: layer.maxAgeMs, layerStatus: layer.status};
-    const rows = await allRows(get, manifestURL, regionId, layer);
+    const rows = await allRows(get, manifestURL, regionId, layer, o.signal);
     const [lat, lon] = layer.resolution;
     if (lat !== lon) return {state: 'error'};   // packages/coast surfaceField takes one spacing
     const t = layer.fields.indexOf('temperature_c'), e = layer.fields.indexOf('analysis_error_c'), points: SSTPoint[] = [];
@@ -293,7 +341,7 @@ export async function regionalContrast(regionId: string, o: ReadOptions): Promis
     const gradients = GRADIENT_FIELDS.every(f => layer.fields.includes(f));
     if (!gradients || !loads(layer) || latest === null || !(age < layer.maxAgeMs) || !layer.fetchedAt)
       return {state: 'listed', product: layer.product, analysedAt, maxAgeMs: layer.maxAgeMs, layerStatus: layer.status, gradients};
-    const rows = await allRows(get, manifestURL, regionId, layer);
+    const rows = await allRows(get, manifestURL, regionId, layer, o.signal);
     const [t, e, g, s] = ['temperature_c', 'analysis_error_c', ...GRADIENT_FIELDS].map(f => layer.fields.indexOf(f)) as [number, number, number, number];
     const value = (v: unknown): number | null => numeric(v) ? v : null;
     const samples = (rows.get(latest) ?? []).map((r): ContrastSample => {
@@ -325,7 +373,7 @@ export async function regionalCurrents(regionId: string, o: ReadOptions): Promis
     const validAt = times.map(t => new Date(t * 1000).toISOString());
     if (!loads(layer) || !times.length || !issuedAt || !(o.now.getTime() - Date.parse(issuedAt) < layer.maxAgeMs) || !layer.fetchedAt || layer.raw.surface_only !== true)
       return {state: 'listed', validAt, layerStatus: layer.status};
-    const rows = await allRows(get, manifestURL, regionId, layer);
+    const rows = await allRows(get, manifestURL, regionId, layer, o.signal);
     const u = layer.fields.indexOf('u_mps'), v = layer.fields.indexOf('v_mps');
     const frames = times.map(time => ({validAt: new Date(time * 1000).toISOString(), cells: (rows.get(time) ?? []).flatMap((r): CurrentCell[] => {
       const east = r[u], north = r[v];

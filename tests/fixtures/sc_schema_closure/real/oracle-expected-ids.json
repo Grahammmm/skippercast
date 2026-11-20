@@ -123,6 +123,11 @@
     {
       "dialect": "https://json-schema.org/draft/2020-12/schema",
       "pointer": "/$schema",
+      "source_path": "schemas/sc-render-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
       "source_path": "schemas/shore-habitat.schema.json"
     },
     {
@@ -610,7 +615,7 @@
       "source_path": "skills/coast-campaign-shared/schemas/coast-tier2-check-v1.schema.json"
     }
   ],
-  "manifest_sha256": "b5e9d473f11d164025ce5f4871f6272b45332cf71edcd4974163bbc1c4a733f7",
+  "manifest_sha256": "cec9550bed3f6b1e1c2e4113e0ab328ef57139b53a1f6e13ed5c3ecd6b6948ee",
   "oracle": "referencing.jsonschema.DRAFT202012 id_of + subresources_of; exact-string duplicate ids",
   "schema": "sc-schema-closure-oracle-ids-v1"
 }

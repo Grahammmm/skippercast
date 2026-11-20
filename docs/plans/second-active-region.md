@@ -259,3 +259,39 @@ Read against `origin/main` `093abd0739bc4f4dd8dcfe340cfdce5f05ccf5e6` on 2026-11
 | M5 tides reason | **Still stands** | `regions/morro-bay/region.json:433-435` and `dist/regions/morro-bay/coverage.json` still say "Port San Luis reference water levels, not Morro Bay entrance currents." (also `region.json:245-247`). The timing code works from forecasts and tide predictions (`packages/coast/src/bar-conditions.ts:18-22`), so it does not measure the entrance current. | Keep the reason. It closes only if a measured entrance-current source is reviewed and added, which no merged work has done. |
 
 **Result: Morro Bay is not yet refined.** #610's two parts, M3, M4 and the M5 timing code are done at the SHA above. M1 and M2 are open, and both wait on the owner for review dates that no agent run, download or test can supply. SC1952-07 is merged evidence for M1b; SC1952-08 is still a queued unit. This record does not promote Cambria–San Simeon or Southern California, does not waive M1b or the roadmap decisions in section 6, and does not close any other issue.
+
+## 8. Promotion sheet 2026-11-16
+
+Report only. This sheet changes no `region.json`, roadmap or status flag, and sends, publishes, deploys and approves nothing. Promotion is G's decision. The preflight is technical only: "human/legal approval and beta GO still required".
+
+```text
+$ node scripts/check_region_promotion.mjs cambria-san-simeon south-big-sur-san-simeon big-sur-coast monterey-point-sur point-arguello-conception
+checked 2026-11-17T06:54:22.934Z (2026-11-16 PST); live head 76554dc53346e522333ca8a5f40e6baeefcff54f; exit 1
+FAIL big-sur-coast / cambria-san-simeon / monterey-point-sur / point-arguello-conception / south-big-sur-san-simeon
+each of the five, same lines (rule species order varies):
+  PASS package: preview
+  FAIL feeds: data/latest.json: feed-clock-stale-invalid-or-future
+  FAIL tides: tide-retrieval-stale-invalid-or-future
+  FAIL rules: lingcod, rockfish, halibut, salmon, dungeness, albacore, bluefin: rules.reason.checkOld
+  PASS habitat: ready; current screening manifest (archive not downloaded)
+  FAIL smoke: regional-brief-stale
+```
+
+Today every region fails on stale live feeds, tides and rules checks, and the brief is stale. The earlier all-PASS re-run (`reports/promotion/PROMOTION-CHECK-2026-11.md:40-41`) no longer holds. The five regions are all `preview`.
+
+| Open gate, true at main | Where | Regions |
+| --- | --- | --- |
+| Roadmap: "Morro Bay is the only active region until it is refined" | `docs/plans/second-active-region.md:76`, `:240` (item 6, G's written roadmap order NOT RECORDED) | all five |
+| M1 shore reviews expired; owner gate M1b, no decision recorded | `:80`, `:164`, `:235`, `:254` | all five (Morro Bay must be refined first) |
+| Held CSUMB right: habitat cannot honestly reach ready | `:128`, `:136-144` | cambria-san-simeon |
+| Held `access-vandenberg-maritime` (not a checker gate) | `jurisdictions/reviews/2026-11-14-california-central.json:116-119`; `reports/promotion/PROMOTION-CHECK-2026-11.md:46-49` | point-arguello-conception |
+| G's rules signature: ALREADY GIVEN, not open | `reports/promotion/PROMOTION-CHECK-2026-11.md:42` (applied in `71444dff3a`) | all five |
+
+**Held:** santa-cruz-monterey-bay. Same fresh-data FAILs, and habitat is `GAP: habitat held for screening; app withholds it (SC-D1=B)`.
+
+**Recommended order, recommendation first:**
+1. `HOLD` (recommended now): all five fail the preflight, and M1 and the roadmap rule are open.
+2. `CAMBRIA`: the roadmap's step 2, but only after fresh feeds give a PASS and G records the roadmap order (`:240`). Its CSUMB habitat hold stays.
+3. `ALL5`: not recommended; M1 and the Vandenberg hold apply to several at once, so none would be reviewed one at a time.
+
+Reply with one word: `CAMBRIA`, `ALL5` or `HOLD`. Rerun the command first; this sheet is dated 2026-11-16.

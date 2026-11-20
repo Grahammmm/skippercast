@@ -186,12 +186,17 @@ test('production discovery tags only the registered case, in both original proje
     }
   }
   walk(json.suites);
-  const admitted = registry()[0];
-  assert.equal(tagged.length, quarantine(admitted.spec).retries ? 1 : 0);
+  const admitted = registry().filter(r => quarantine(r.spec).retries);
+  assert.equal(tagged.length, admitted.length);
   for (const spec of tagged) {
-    assert.equal(spec.title, admitted.test);
-    assert.equal(spec.file, admitted.spec.replace(/^e2e\//, ''));
+    const match = admitted.filter(r => r.test === spec.title && r.spec.replace(/^e2e\//, '') === spec.file);
+    assert.equal(match.length, 1);
     assert.deepEqual(spec.tests.map(t => t.projectName).sort(), ['laptop', 'phone']);
   }
   assert.ok(json.config.projects.every(p => p.retries === 0));
+});
+
+test('header_only_registry_is_empty_and_nightly_has_no_active_rows', () => {
+  assert.deepEqual(registry(header), []);
+  assert.deepEqual(nightly(reports(), [], empty(), '2030-01-01').report.active, []);
 });
