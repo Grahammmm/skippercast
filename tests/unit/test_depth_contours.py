@@ -6,6 +6,7 @@ import sys
 import pytest
 
 from skippercast.platform import depth_contours as dc
+from skippercast.platform.contracts import OWNER_DISPLAY_BASIS
 from tests._support import ROOT
 
 REGION = {'id': 'test-bay', 'bounds': [-121.2, 35.0, -120.7, 35.6],
@@ -103,6 +104,78 @@ def test_check_rejects_a_source_that_is_not_an_approved_binding():
     unbound = {**REGION, 'source_bindings': {'bathymetry': ['survey-b']}}
     with pytest.raises(ValueError, match='approved bathymetry binding'):
         dc.check_contours(collection(), unbound, SOURCES)
+
+
+@pytest.fixture
+def owner_selected_contours():
+    ident = 'survey-c'  # Candidate and deliberately absent from the static binding.
+    doc = collection(sources=(ident,))
+    for feature in doc['features']:
+        feature['properties']['source_id'] = ident
+    sources = {**SOURCES, ident: {**SOURCES[ident], 'publication_allowed': False,
+                                'rights': {'public_display': 'allowed', 'owner_public_display': {
+                                    'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}}}}
+    return doc, sources, ident
+
+
+def test_owner_cleared_selection_does_not_change_repo_channel(owner_selected_contours):
+    # R5b can use attested selection in place of static binding; R10 must not follow it.
+    doc, sources, ident = owner_selected_contours
+    dc.check_selected_contours(doc, REGION, sources, {ident})
+    with pytest.raises(ValueError, match='approved bathymetry binding'):
+        dc.check_contours(doc, REGION, sources)
+
+
+@pytest.mark.parametrize('case, reason', [
+    ('missing-marker', 'approved bathymetry binding'),
+    ('wrong-basis', 'approved bathymetry binding'),
+    ('approved-but-denied', 'not cleared for public display'),
+    ('private', 'not cleared for public display'),
+    ('excluded', 'not cleared for public display'),
+    ('no-display', 'not cleared for public display'),
+    ('not-selected', 'approved bathymetry binding'),
+    ('not-bathymetry', 'approved bathymetry binding'),
+])
+def test_selected_contour_validator_refuses_ineligible_provenance(owner_selected_contours, case, reason):
+    # A selection ID or a lookalike owner marker cannot override any other gate.
+    doc, sources, ident = owner_selected_contours
+    selected = {ident}
+    source, rights = sources[ident], sources[ident]['rights']
+    if case in ('missing-marker', 'approved-but-denied'):
+        del rights['owner_public_display']
+        if case == 'approved-but-denied':
+            source['review_status'] = 'approved'
+    elif case == 'wrong-basis':
+        rights['owner_public_display']['basis'] = 'unrelated decision'
+    elif case in ('private', 'excluded'):
+        rights['public_display'] = case
+    elif case == 'no-display':
+        del rights['public_display']
+    elif case == 'not-selected':
+        selected.clear()
+    elif case == 'not-bathymetry':
+        source['needs'] = ['imagery']
+    with pytest.raises(ValueError, match=reason):
+        dc.check_selected_contours(doc, REGION, sources, selected)
+
+
+def test_selected_contours_keep_publication_hold(owner_selected_contours):
+    # Even a false-valued nested hold marker prevents export, as for R10.
+    doc, sources, ident = owner_selected_contours
+    doc['features'][0]['properties']['publication_held'] = False
+    with pytest.raises(dc._ContoursHeld):
+        dc.check_selected_contours(doc, REGION, sources, {ident})
+
+
+def test_selected_contour_omissions_follow_selection_not_static_bindings(owner_selected_contours):
+    # Reusing the repo-channel omission list would include an unrelated static survey.
+    doc, sources, ident = owner_selected_contours
+    provenance = doc['provenance']
+    provenance['sources_omitted'] = [{'source_id': 'survey-a', 'review_status': 'approved'}]
+    dc.check_selected_contours(doc, REGION, sources, {ident, 'survey-a'})
+    provenance['sources_omitted'].append({'source_id': 'survey-b', 'review_status': 'approved'})
+    with pytest.raises(ValueError, match='omitted bound surveys'):
+        dc.check_selected_contours(doc, REGION, sources, {ident, 'survey-a'})
 
 
 def test_review_expires_is_a_year_after_the_oldest_review():
