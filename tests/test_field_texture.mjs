@@ -69,6 +69,9 @@ test('SST-B raster and band-edge paint match the independently generated fragmen
   const {layers} = JSON.parse(await readFile(new URL('../style/generated/maplibre-layers-v1.0.0.json', import.meta.url)));
   const actual = sstBandLayers(palette, true);
   assert.deepEqual(actual, layers.filter(l => actual.some(a => a.id === l.id)));
+  const [operators, stops] = [actual[0].paint['raster-opacity'].slice(0, 3), actual[0].paint['raster-opacity'].slice(3)];
+  const mapLibreCurve = [...operators, ...stops.map((value, i) => i % 2 ? value : value - 1)];
+  assert.deepEqual(waterTempOverlay(palette).layers[0].paint['raster-opacity'], mapLibreCurve);
 });
 
 test('SST-B stretches the finite display samples and changes bands at z13 without bridging gaps', () => {

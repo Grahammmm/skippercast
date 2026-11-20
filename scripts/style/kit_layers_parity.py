@@ -129,7 +129,7 @@ def one_case(kit, path, target, options, env):
     if options.now:
         cmd += ['--now', options.now]
     if options.negative:
-        cmd += ['--palette-override', '--skl-sst-fill-ramp-stops-4=#a0e05a']
+        cmd += ['--palette-override=--skl-sst-fill-ramp-stops-4=#a0e05a']
     checked(*cmd, env=env)
     raw = ours / 'field.rgba'
     if raw.is_file():

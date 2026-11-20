@@ -341,18 +341,22 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       const p = palette();
       // § 9 order: under Temp contrast, else swell, wind, depth contours, or protected areas.
       const overlay = waterTempOverlay(p);
-      let paintedKey = '';
+      let paintedKey = '', edgeKey = '';
       raster = imageGrid(a.field);
       restyleBands = (pal: Palette): void => {
         const grid = raster, band = bandState.peek();
         if (!grid || !band) return;
-        const ramp = sstRamp(pal), key = [band.low, band.high, band.step, ...ramp].join();
+        const bounds = [band.low, band.high, band.step].join();
+        const ramp = sstRamp(pal), key = [bounds, ...ramp].join();
         if (key === paintedKey) return;
         paintedKey = key;
         const {width, height, coordinates, samples} = grid;
         e.setImage(SST_SOURCE, {width, height, coordinates, data: sstBandPixels(samples, band, ramp)});
-        const levels = Array.from({length: band.count - 1}, (_, i) => band.low + (i + 1) * band.step);
-        e.setData(SST_BAND_SOURCE, isolines(a.field, levels, () => ({label: '', major: false})));
+        if (bounds !== edgeKey) {
+          edgeKey = bounds;
+          const levels = Array.from({length: band.count - 1}, (_, i) => band.low + (i + 1) * band.step);
+          e.setData(SST_BAND_SOURCE, isolines(a.field, levels, () => ({label: '', major: false})));
+        }
       };
       e.setOverlay(REGISTRY_ID, {...overlay, themePaint: (pal: Palette) => { restyleBands?.(pal); return overlay.themePaint!(pal); }},
         [CONTRAST_LAYER, 'chlorophyll', SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);

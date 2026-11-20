@@ -70,9 +70,9 @@ export function sstBandLayers(p: Palette, fragment = false) {
       paint: {'raster-opacity': opacity as MapLibre.ExpressionSpecification, 'raster-resampling': 'linear', 'raster-fade-duration': 0},
       metadata: {'skippercast:ramp': {ramp_stops: sstRamp(p), band_step_f_by_zoom: SST_STYLE.band_step_f_by_zoom, stretch: SST_STYLE.stretch, rule: SST_STYLE.band_colors_rule},
         'skippercast:water_only': SST_STYLE.water_only, 'skippercast:gaps': LAYERS_STYLE.display_sampling,
-        'skippercast:z': 'color-field', 'skippercast:layer': 'sst-fill'}, _token: 'layers.sst-fill.ramp_stops'},
+        'skippercast:z': 'color-field', 'skippercast:layer': 'sst-fill'}, ...(fragment ? {_token: 'layers.sst-fill.ramp_stops'} : {})},
     {id: SST_BAND_EDGE, type: 'line', source: SST_BAND_SOURCE, ...layout,
       paint: {'line-color': sklColor(p, edge.color), 'line-width': edge.width_pt, 'line-opacity': edge.opacity},
-      metadata: {'skippercast:hide_when_any_on': edge.hide_when_any_on, 'skippercast:z': 'isolines', 'skippercast:layer': 'sst-fill'}, _token: 'layers.sst-fill.band_edge'},
-  ] as const satisfies readonly (MapLibre.LayerSpecification & {_token: string})[];
+      metadata: {'skippercast:hide_when_any_on': edge.hide_when_any_on, 'skippercast:z': 'isolines', 'skippercast:layer': 'sst-fill'}, ...(fragment ? {_token: 'layers.sst-fill.band_edge'} : {})},
+  ] as const satisfies readonly (MapLibre.LayerSpecification & {_token?: string})[];
 }
