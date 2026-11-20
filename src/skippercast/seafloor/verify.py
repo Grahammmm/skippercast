@@ -28,8 +28,11 @@ def verify_public(region, manifest, *, base='https://skippercast.com', session=N
     session = session or http.default_session()
     prefix = base.rstrip('/')+'/feeds/tiles/seafloor/'
     options = {'timeout': 30, 'allowed_hosts': [urlsplit(base).hostname], 'use_cache': False}
-    current = session.get(prefix+f'manifest-{region}.json', headers={'Cache-Control': 'no-cache'},
-                          max_bytes=1_000_000, **options).json()
+    manifest_response = session.get(prefix+f'manifest-{region}.json', headers={'Cache-Control': 'no-cache'},
+                                    max_bytes=1_000_000, **options)
+    if manifest_response.status != 200:
+        raise ValueError(f'Public manifest must return HTTP 200 (got {manifest_response.status})')
+    current = manifest_response.json()
     if not _public_descriptor_matches(current, manifest) or current.get('status') != 'ready':
         raise ValueError('Public manifest does not match R2 publication')
     # A server that ignores Range sends the whole archive: over the 128-byte bound, so it fails too.
