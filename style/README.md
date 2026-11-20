@@ -1,4 +1,4 @@
-# Nearshore style releases
+# Map style releases
 
 `nearshore-v1.0.0.json` is byte-identical to the owner-approved kit's
 `style-guide/style-tokens.json` (design card `t_a37142cd`). Kit ZIP SHA-256:
@@ -37,3 +37,18 @@ Commit the inputs and outputs together. `python scripts/style/gen_style.py
 --check` checks all indexed token files and projections without writing them;
 its smoke test runs in the existing Python core tier. Do not edit generated
 blocks or add local style overrides in render tools.
+
+## All-layers style
+
+`layers-v1.0.0.json` and `stacking-v1.0.0.json` are byte-identical to the
+owner-approved all-layers kit's `layer-tokens.json` and `stacking.json`.
+The kit ZIP hash and both raw-byte pins are in `index.json`. The same licence
+boundary applies: only derived tokens are included from the kit; the kit
+archive, fixtures, goldens, images and reference scripts stay private.
+
+`layers_default` selects the version; `skippercast.style.load_layers()` returns
+the resolved, read-only tokens with the `stacking` table and uses the indexed
+nearshore version for `base:` references. Layer releases do not enter relief
+generation keys. The same generator writes the `--skl-*` CSS block, the web
+projection and the MapLibre reference fragment. `--check` also verifies the
+fragment against the kit's pinned canonical JSON digest.
