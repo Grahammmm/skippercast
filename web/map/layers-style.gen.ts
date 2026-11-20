@@ -205,7 +205,6 @@ export const LAYERS_STYLE = {
       "view": "REG",
       "zoom": 9,
       "units": "°F",
-      "value": "analysed_sst °C × 9/5 + 32",
       "ramp_stops": [
         "--skl-sst-fill-ramp-stops-0",
         "--skl-sst-fill-ramp-stops-1",
@@ -274,14 +273,7 @@ export const LAYERS_STYLE = {
         "rule": "analysis and its retrieval each under 72 h old (at most 5 min ahead of the clock) and the source status ok (or a regional feed's 'retained' with its own max_age_hours); otherwise nothing draws and the legend gives the reason and the analysis date (web/map/sst.ts)",
         "max_age_h": 72
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "NASA JPL MUR SST v4.1 (jplMURSST41, ERDDAP coastwatch.pfeg)",
-        "res": "0.01° (~1 km)",
-        "time": "Nov 18 1 AM PST",
-        "area": "Piedras Blancas–Pt Sal",
-        "data_time_utc": "2026-11-18T09:00:00"
-      }
+      "desaturates_base": true
     },
     "sst-breaks": {
       "pick": "BREAKS-D",
@@ -374,14 +366,7 @@ export const LAYERS_STYLE = {
         "rule": "same analysis as sst-fill, same 72 h gate; fronts from the sst-fronts feed keep its own 48 h max_age_hours (catalog/feed-health.json), capped at 72 h (web/map/fronts.ts)",
         "max_age_h": 72
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "NASA JPL MUR SST v4.1 (jplMURSST41, ERDDAP coastwatch.pfeg)",
-        "res": "0.01° (~1 km)",
-        "time": "Nov 18 1 AM PST",
-        "area": "Piedras Blancas–Pt Sal",
-        "data_time_utc": "2026-11-18T09:00:00"
-      }
+      "desaturates_base": false
     },
     "chlorophyll": {
       "pick": "CHL-B",
@@ -450,14 +435,7 @@ export const LAYERS_STYLE = {
         "rule": "sample older than 96 h is withheld (web/map/chlorophyll.ts, legend 'Withheld at 96 h')",
         "max_age_h": 96
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "NOAA-20 VIIRS chlorophyll-a, US sector daily (noaacwN20VIIRSchlaSectorUSDaily, ERDDAP coastwatch.noaa.gov)",
-        "res": "~750 m",
-        "time": "8-day median Nov 10–Nov 17",
-        "area": "Piedras Blancas–Pt Sal",
-        "data_time_utc": "2026-11-17T19:23:12"
-      }
+      "desaturates_base": true
     },
     "kd490": {
       "pick": "KD-B",
@@ -469,7 +447,6 @@ export const LAYERS_STYLE = {
       "view": "REG",
       "zoom": 9,
       "units": "ft",
-      "value": "estimated light depth = 3.28084 / Kd490 (1/m); label it an estimate",
       "bands_ft": [
         0,
         10,
@@ -519,14 +496,7 @@ export const LAYERS_STYLE = {
         "rule": "same VIIRS daily feed as chlorophyll: withheld past 96 h",
         "max_age_h": 96
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "NOAA-20 VIIRS Kd(490), US sector daily (noaacwN20VIIRSkd490SectorUSDaily)",
-        "res": "~750 m",
-        "time": "8-day median Nov 10–Nov 17",
-        "area": "Piedras Blancas–Pt Sal",
-        "data_time_utc": "2026-11-17T19:23:12"
-      }
+      "desaturates_base": true
     },
     "ssh": {
       "pick": "SSH-B",
@@ -538,7 +508,6 @@ export const LAYERS_STYLE = {
       "view": "OFF",
       "zoom": 7,
       "units": "cm",
-      "value": "sea level anomaly × 100",
       "step_cm": 5,
       "range_cm": [
         -30,
@@ -569,14 +538,7 @@ export const LAYERS_STYLE = {
         "rule": "daily product; withheld past 72 h; with WCOFS missing or stale, SSH and eddies are withheld with the WCOFS status (spec 05)",
         "max_age_h": 72
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "NOAA CoastWatch blended SSH anomaly (noaacwBLENDEDsshDaily)",
-        "res": "0.25°",
-        "time": "Nov 17 (daily)",
-        "area": "Central California offshore 32–38.5°N",
-        "data_time_utc": "2026-11-17T12:00:00"
-      }
+      "desaturates_base": false
     },
     "upwelling": {
       "pick": "UPW-A",
@@ -629,13 +591,7 @@ export const LAYERS_STYLE = {
         "rule": "the index is published with a 6–8 week lag: always print the index date; never call it current; withheld when the latest day is older than 90 days",
         "withhold_after_days": 90
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "CUTI & BEUTI daily (erdCUTIdaily / erdBEUTIdaily, ERDDAP coastwatch.pfeg; Jacox et al.)",
-        "res": "1° latitude bands along coast",
-        "time": "latest day in feed 2026-09-27 (index published with lag)",
-        "area": "31–40°N, 35°N = Morro Bay"
-      }
+      "desaturates_base": false
     },
     "currents": {
       "pick": "CUR-C",
@@ -647,7 +603,6 @@ export const LAYERS_STYLE = {
       "view": "REG",
       "zoom": 9,
       "units": "kt",
-      "value": "hypot(u, v) m/s × 1.94384",
       "fill": {
         "ramp_stops": [
           "--skl-currents-fill-ramp-stops-0",
@@ -712,14 +667,7 @@ export const LAYERS_STYLE = {
         "rule": "HF radar hourly; withheld past its age limit (legend: 'legend.fresh.limit.currents'; HF radar and WCOFS gate differently, web/map/freshness.ts)",
         "max_age_h": 6
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "HF radar surface currents, US West Coast 6 km — NDBC THREDDS hfradar_uswc_6km",
-        "res": "6 km",
-        "time": "Nov 19 10 AM PST",
-        "area": "Piedras Blancas–Pt Sal",
-        "data_time_utc": "2026-11-19T18:00:00"
-      }
+      "desaturates_base": true
     },
     "subsurface-temp": {
       "pick": "SUB-A",
@@ -792,14 +740,7 @@ export const LAYERS_STYLE = {
         "rule": "model run older than 72 h is withheld; the legend prints the run time",
         "max_age_h": 72
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "HYCOM ESPC-D-V02 3-D temperature (t3z), ncss.hycom.org",
-        "res": "1/12° (~8 km), 40 levels",
-        "time": "Nov 17 1 AM PST",
-        "area": "Morro Bay coast, 0–300 m",
-        "data_time_utc": "2026-11-17T09:00:00"
-      }
+      "desaturates_base": true
     },
     "salinity": {
       "pick": "SAL-B",
@@ -854,14 +795,7 @@ export const LAYERS_STYLE = {
         "rule": "model run older than 72 h is withheld",
         "max_age_h": 72
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "HYCOM ESPC-D-V02 surface salinity (s3z), ncss.hycom.org",
-        "res": "1/12°",
-        "time": "Nov 17 1 AM PST",
-        "area": "Morro Bay coast",
-        "data_time_utc": "2026-11-17T09:00:00"
-      }
+      "desaturates_base": true
     },
     "sea-ice": {
       "pick": "ICE-B",
@@ -893,14 +827,7 @@ export const LAYERS_STYLE = {
         "rule": "daily product; withheld past 72 h",
         "max_age_h": 72
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "Univ. Bremen AMSR2 ASI 6.25 km (GeoTIFF)",
-        "res": "6.25 km",
-        "time": "Nov 18, 2026 (daily)",
-        "area": "NOT LOCAL — Bering/Chukchi Sea example (no sea ice on the Central Coast)",
-        "data_time_utc": "2026-11-18T12:00:00"
-      }
+      "desaturates_base": true
     },
     "wind": {
       "pick": "WIND-A",
@@ -1047,13 +974,7 @@ export const LAYERS_STYLE = {
           "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
         }
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "NOAA HRRR 3 km via Open-Meteo (models=gfs_hrrr), 10 m wind + gusts",
-        "res": "3 km model, sampled 0.05°",
-        "time": "Nov 19 1 PM PST",
-        "area": "Piedras Blancas–Pt Sal"
-      }
+      "desaturates_base": true
     },
     "pressure": {
       "pick": "PRES-A",
@@ -1106,13 +1027,7 @@ export const LAYERS_STYLE = {
           "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
         }
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "NOAA GFS 0.25° via Open-Meteo (gfs_seamless), mean sea-level pressure",
-        "res": "0.25°",
-        "time": "Nov 18 10 PM PST",
-        "area": "California synoptic 31–40°N"
-      }
+      "desaturates_base": false
     },
     "waves-swell": {
       "pick": "WAVE-A",
@@ -1124,7 +1039,6 @@ export const LAYERS_STYLE = {
       "view": "REG",
       "zoom": 9,
       "units": "ft",
-      "value": "significant wave height m × 3.28084",
       "fill": {
         "ramp_stops": [
           "--skl-waves-swell-fill-ramp-stops-0",
@@ -1202,13 +1116,7 @@ export const LAYERS_STYLE = {
           "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
         }
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "Open-Meteo Marine API (ECMWF WAM / GFS-Wave blend, cell_selection=sea) + CDIP 076 Diablo Canyon (NDBC 46215) check",
-        "res": "~5 km grid sampled 0.05°",
-        "time": "Nov 19 1 PM PST",
-        "area": "Piedras Blancas–Pt Sal"
-      }
+      "desaturates_base": true
     },
     "tides": {
       "pick": "TIDE-A",
@@ -1266,13 +1174,7 @@ export const LAYERS_STYLE = {
         "observation_stale_h": 3,
         "prediction_stale_h": 36
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "NOAA CO-OPS 9412110 Port San Luis: 6-min predictions, hi/lo, observed water level (MLLW, ft, LST)",
-        "res": "station",
-        "time": "Nov 18–21, 2026, now = Nov 19 2:00 PM PST",
-        "area": "Port San Luis (nearest CO-OPS harmonic station to Morro Bay)"
-      }
+      "desaturates_base": false
     },
     "precip-radar": {
       "pick": "RADAR-C",
@@ -1332,14 +1234,7 @@ export const LAYERS_STYLE = {
         "rule": "newest frame older than 15 min is withheld (MRMS updates every 2 min)",
         "max_age_min": 15
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "NOAA MRMS MergedReflectivityQCComposite (noaa-mrms-pds S3)",
-        "res": "0.01° (~1 km), 2-min",
-        "time": "Nov 18, 2026 9:00 PM PST (05:00Z Nov 19)",
-        "area": "Piedras Blancas–Pt Sal (front passage)",
-        "data_time_utc": "2026-11-19T05:00:35"
-      }
+      "desaturates_base": true
     },
     "clouds": {
       "pick": "CLOUD-A",
@@ -1364,14 +1259,7 @@ export const LAYERS_STYLE = {
         "rule": "frames older than 90 min are not shown (web/map/freshness.ts clouds 90 min)",
         "max_age_min": 90
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "GOES-18 ABI L2 CMIP, PACUS sector, band 13 (10.3 µm clean IR) — noaa-goes18 S3",
-        "res": "2 km, 5-min",
-        "time": "Nov 18, 2026 9:01 PM PST",
-        "area": "Piedras Blancas–Pt Sal",
-        "data_time_utc": "2026-11-19T05:01:00"
-      }
+      "desaturates_base": false
     },
     "visibility-fog": {
       "pick": "VIS-B",
@@ -1383,7 +1271,6 @@ export const LAYERS_STYLE = {
       "view": "REG",
       "zoom": 9,
       "units": "nm",
-      "value": "visibility m / 1852",
       "bands_nm": [
         0,
         0.5,
@@ -1436,13 +1323,7 @@ export const LAYERS_STYLE = {
           "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
         }
       },
-      "desaturates_base": true,
-      "source": {
-        "source": "NOAA HRRR surface visibility via Open-Meteo (gfs_hrrr)",
-        "res": "3 km model, sampled 0.05°",
-        "time": "Nov 18 7 PM PST",
-        "area": "Piedras Blancas–Pt Sal (rain-reduced visibility during the front)"
-      }
+      "desaturates_base": true
     },
     "stations": {
       "pick": "STN-B",
@@ -1479,13 +1360,7 @@ export const LAYERS_STYLE = {
         "observation_stale_h": 3,
         "prediction_stale_h": 36
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "NDBC realtime2 (buoys 46011, 46028, 46215/CDIP 076, 46259/CDIP 222, 46286/CDIP 285; C-MAN/NOS mbxc1, pslc1)",
-        "res": "points",
-        "time": "latest obs ~Nov 19, 2026 12:50–1:10 PM PST",
-        "area": "Morro Bay coast"
-      }
+      "desaturates_base": false
     },
     "marine-zones-mpas": {
       "pick": "ZONE-A",
@@ -1563,13 +1438,7 @@ export const LAYERS_STYLE = {
         "status": "repo (mpas) + new (zones)",
         "rule": "alerts are live: a hazard tint shows only while its alert is active and is removed at 'ends'; MPA outlines follow the protected-areas rule row"
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "NWS marine zones (api.weather.gov/zones/coastal) + active alerts (api.weather.gov/alerts/active?area=PZ); CDFW MPAs from repo protected-areas.geojson",
-        "res": "vector",
-        "time": "alerts fetched Nov 19, 2026 ~1:52 PM PST",
-        "area": "Piedras Blancas–Pt Sal"
-      }
+      "desaturates_base": false
     },
     "kelp-habitat": {
       "pick": "KELP-D",
@@ -1608,13 +1477,7 @@ export const LAYERS_STYLE = {
         "status": "dated",
         "rule": "annual canopy survey: always print the survey month (Sept 2024); never presented as current canopy"
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "Planet Dove kelp canopy polygons Sept 2024 (Zenodo record 17644635) + repo shore-habitat (NOAA ESI)",
-        "res": "3 m imagery-derived polygons",
-        "time": "Sept 2024 (annual)",
-        "area": "Estero Bay: Cayucos–Pt Buchon"
-      }
+      "desaturates_base": false
     },
     "places": {
       "pick": "PLACE-A",
@@ -1646,13 +1509,7 @@ export const LAYERS_STYLE = {
         "status": "static",
         "rule": "static reference data"
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "Repo launch-points.json (CA DBW) + OpenStreetMap piers/slipways/marinas (Overpass, fetched Nov 19, 2026)",
-        "res": "points / pier lines",
-        "time": "static",
-        "area": "Estero Bay; cluster view = whole coast"
-      }
+      "desaturates_base": false
     },
     "spots-marks": {
       "pick": "SPOT-B",
@@ -1684,13 +1541,7 @@ export const LAYERS_STYLE = {
         "status": "dated",
         "rule": "atlas edition date printed on the card (2026-09-27)"
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "Repo atlas-marks.json (USGS-surveyed habitat targets, habitat_score/grade/rank)",
-        "res": "points",
-        "time": "atlas edition 2026-09-27",
-        "area": "Estero Bay–Pt Buchon"
-      }
+      "desaturates_base": false
     },
     "routes-tracks": {
       "pick": "ROUTE-A",
@@ -1739,13 +1590,7 @@ export const LAYERS_STYLE = {
           "rule": "forecast gate (web/map/frames.ts forecastTime): the model run at most run_max_h old AND retrieved at most retrieved_max_h ago; otherwise withheld"
         }
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "Planning route from repo data: Morro Bay public launch → departure point → top 3 ranked atlas targets",
-        "res": "vector",
-        "time": "plan",
-        "area": "Morro Bay → Pt Buchon"
-      }
+      "desaturates_base": false
     },
     "ais-fleet": {
       "pick": "AIS-A",
@@ -1784,13 +1629,7 @@ export const LAYERS_STYLE = {
         "status": "dated",
         "rule": "historical (2024) dataset: print its activity dates; never presented as live"
       },
-      "desaturates_base": false,
-      "source": {
-        "source": "Repo commercial-ais-effort.geojson (Global Fishing Watch apparent fishing effort, aggregated cells)",
-        "res": "GFW 0.01°-cell aggregates",
-        "time": "as built in repo",
-        "area": "Piedras Blancas–Pt Sal"
-      }
+      "desaturates_base": false
     }
   },
   "display_sampling": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
