@@ -345,11 +345,15 @@ class RealAdapter:
         from .saved_area import acceptance
         return acceptance(self.native,preparation)
 
-    def states(self,preparation):
+    def states(self,preparation,*,historical=False):
         windows=preparation["window_set"]
         rows=[{} for _ in windows];domain=preparation["grant_identity"]
         if preparation.get("saved_area_continuation_contract"):
-            self.saved_area_acceptance(preparation)
+            if historical:
+                from .saved_area import historical_registration
+                historical_registration(self.native,preparation)
+            else:
+                self.saved_area_acceptance(preparation)
             rows[0].update(acquire="done",qualify="done")
         for phase in self.native.db.execute(
                 "SELECT p.window_key,p.stage,j.state,j.record_json FROM authenticated_window_phases p JOIN jobs j USING(job_id)"):
@@ -365,7 +369,7 @@ class RealAdapter:
                 record=json.loads(job["record_json"])
                 if not record.get("sourcefree_contract"):continue
                 from .source_free import validate_input
-                archived=self.mapping.clock()>=preparation["deadline_epoch"]
+                archived=historical or self.mapping.clock()>=preparation["deadline_epoch"]
                 if archived:
                     # Historical SQL state is not a fresh scientific acceptance.
                     # Read only sealed manifest/proof metadata after the deadline.
@@ -707,7 +711,7 @@ class Controller:
             raise ValueError("immutable native admission cutoff")
         return now,mono
 
-    def _permitted(self,state,load_rows,action_ref=None):
+    def _permitted(self,state,load_rows,action_ref=None,*,now=None):
         """Read-only decision shared by status and step: what step would allow next.
 
         Order is fail-closed: durable preparation hold, durable stop, an already-recorded
@@ -726,7 +730,7 @@ class Controller:
             return previous.get("outcome",dict(state="recovery_required",reason="durable interrupted admission"))
         if any("outcome" not in x for x in state["intents"]):
             return dict(state="recovery_required",reason="unresolved durable admission")
-        rows=load_rows();decision=select_next(self.preparation,rows,self.clock())
+        rows=load_rows();decision=select_next(self.preparation,rows,self.clock() if now is None else now)
         if state.get("native_fenced") and decision.get("stage") in {"acquire","qualify"}:
             waiting=[i for i,row in enumerate(rows) if row.get("qualify")=="done" and row.get("map") not in TERMINAL]
             decision=dict(state="ready",stage="map",index=waiting[0]) if waiting else dict(state="native_fenced")
@@ -736,11 +740,17 @@ class Controller:
 
     def status(self,adapter):
         if type(adapter) is not RealAdapter:raise TypeError("sealed production adapter required")
-        state=self._state();rows=adapter.states(self.preparation)
-        observed=inventory(self.preparation)
-        return dict(schema=STATE,preparation=self.descriptor,windows=rows,intents=state["intents"],
-            accounting=adapter.accounting(self.preparation),inventory=observed,next=self._permitted(state,lambda:rows),
-            stop_reason=state["stop_reason"],archived=self.clock()>=self.preparation["deadline_epoch"])
+        p=self.preparation;state=self._state()
+        now=_finite(self.clock());archived=now>=p["deadline_epoch"]
+        historical=archived and bool(p.get("saved_area_continuation_contract"))
+        rows=adapter.states(p,historical=True) if historical else adapter.states(p)
+        observed=inventory(p)
+        result=dict(schema=STATE,preparation=self.descriptor,windows=rows,intents=state["intents"],
+            accounting=adapter.accounting(p),inventory=observed,next=self._permitted(state,lambda:rows,now=now),
+            stop_reason=state["stop_reason"],archived=archived)
+        if historical:
+            result["saved_area_adoption"]=p["saved_area_adoption"]
+        return result
 
     def step(self,adapter,action_ref):
         if type(adapter) is not RealAdapter:raise TypeError("sealed production adapter required")

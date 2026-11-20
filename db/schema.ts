@@ -211,6 +211,7 @@ export const advisorRules=sqliteTable('advisor_rules',{
   areaNotes:text('area_notes'),gearNotes:text('gear_notes'),sourceName:text('source_name').notNull(),sourceUrl:text('source_url').notNull(),
   reviewedAt:text('reviewed_at').notNull(),reviewDue:text('review_due').notNull(),status:text('status').notNull().default('review'),
   updatedBy:text('updated_by').notNull(),updatedAt:text('updated_at').notNull(),
+  importOrigin:text('import_origin'),
 },t=>[index('rule_lookup').on(t.region,t.speciesKey,t.status),index('rule_due').on(t.reviewDue)]);
 
 // One answer per port per day (FR-1): key '<port>:<YYYY-MM-DD>', regenerated

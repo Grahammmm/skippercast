@@ -174,7 +174,7 @@ def build_terrain(root, document):
                 raise ValueError('source_vertical_evidence_invalid')
             if evidence.get('kind') == 'raster_header' and (
                     evidence.get('source_sha256') != source_hash
-                    or any(evidence['facts'].get(key) != source_vertical.get(key) for key in vertical.FIELDS)):
+                    or vertical.observed_field_holds(source_vertical, evidence['facts'])):
                 raise ValueError('source_vertical_evidence_lineage_mismatch')
         if (stored_vertical != document['vertical'] or actual_vertical['sign'] != 'positive_down'
                 or actual_vertical['units'] != 'm' or ds.descriptions != ('depth_m_positive_down',)

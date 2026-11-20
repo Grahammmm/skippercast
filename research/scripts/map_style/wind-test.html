@@ -44,15 +44,18 @@ const map=new maplibregl.Map({container:'map',renderWorldCopies:false,maxPitch:0
 window.__map=map;
 map.on('error',e=>{window.__error=String(e.error?.message||e.error);});
 const toggle=document.getElementById('toggle'),status=document.getElementById('status');
+const readout=document.getElementById('sample');
 let grid,overlay;
 function freshness() {
   const usable=fresh(grid);toggle.disabled=!usable;
   status.textContent=usable ? `Model run age ${((Date.now()-Date.parse(grid.run_time))/3600000).toFixed(1)} h · forecast, not observations` : 'STALE / invalid time — wind hidden (18 h run-age limit)';
   status.className=usable?'':'warning';
   if(!usable) toggle.checked=false;
-  overlay.setVisible(usable && toggle.checked);window.__windFresh=usable;
+  const visible=usable && toggle.checked;
+  overlay.setVisible(visible);window.__windFresh=usable;
+  if(!visible) readout.textContent='';
 }
-toggle.addEventListener('change',()=>overlay.setVisible(toggle.checked && fresh(grid)));
+toggle.addEventListener('change',freshness);
 map.on('move',()=>{document.getElementById('zoom').textContent=`Zoom ${map.getZoom().toFixed(2)}`;});
 map.on('load',async()=>{
   try {
@@ -63,8 +66,12 @@ map.on('load',async()=>{
     overlay=particles(map,document.getElementById('wind'),grid);
     toggle.checked=true;freshness();setInterval(freshness,60000);
     map.on('click',e=>{
+      if(!toggle.checked || !fresh(grid)) {
+        readout.textContent='';
+        return;
+      }
       const uv=sample(grid,e.lngLat.lng,e.lngLat.lat);
-      document.getElementById('sample').textContent=uv ? `${(Math.hypot(...uv)*1.94384449).toFixed(1)} kt · east ${uv[0].toFixed(2)}, north ${uv[1].toFixed(2)} m/s · ${grid.data_time}` : 'No GFS coverage at this point.';
+      readout.textContent=uv ? `${(Math.hypot(...uv)*1.94384449).toFixed(1)} kt · east ${uv[0].toFixed(2)}, north ${uv[1].toFixed(2)} m/s · ${grid.data_time}` : 'No GFS coverage at this point.';
     });
     document.getElementById('zoom').textContent=`Zoom ${map.getZoom().toFixed(2)}`;
     window.__windLoaded=true;
