@@ -185,6 +185,36 @@ def test_chunks_with_the_tile_buffer_match_the_whole_render():
     assert np.array_equal(np.vstack([mask for _, mask in parts]), whole.piles()[0])
 
 
+@pytest.mark.parametrize("shape", [(1, 1), (1, 2), (2, 1), (1, 9), (9, 1)])
+def test_engine_renders_one_row_or_column_windows(shape):
+    # Contract: the engine accepts any non-empty DEM window, so every product must render for a
+    # single row or column too. Bug caught: np.gradient raising on a length-1 axis (base/shade/VRM).
+    rows, cols = shape
+    z = -5.0 - np.arange(rows * cols, dtype=float).reshape(shape)
+    engine = nearshore.Nearshore(z, 2.0, (0.0, 0.0, 2.0 * cols, 2.0 * rows), BAKED)
+    for zoom_class in nearshore.ZOOM_CLASSES:
+        image = engine.base(zoom_class)
+        assert image.shape == (*shape, 3) and np.isfinite(image).all()
+    assert engine.piles()[0].shape == shape and engine.metrics()["shape"] == list(shape)
+
+
+def test_refused_golden_change_leaves_every_file_untouched(tmp_path, monkeypatch, grids):
+    # Contract: a golden set that changed under an existing ENGINE_EPOCH is refused before any
+    # write (design 5.1), so pinned PNGs, epochs.json and metrics.json stay consistent.
+    # Bug caught: PNGs overwritten first and the mismatch only reported afterwards.
+    monkeypatch.setattr(GOLD, "synthetic_grids", lambda: {4: grids[4]})
+    GOLD.build(tmp_path)
+    epochs_path = tmp_path / "epochs.json"
+    epochs = json.loads(epochs_path.read_text())
+    epochs[str(nearshore.ENGINE_EPOCH)]["s4m_closeup.png"] = "0" * 64  # the pinned set differs
+    epochs_path.write_text(json.dumps(epochs))
+    (tmp_path / "s4m_overview.png").write_bytes((tmp_path / "s4m_mask.png").read_bytes())  # stale pixels on disk
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    with pytest.raises(SystemExit, match="ENGINE_EPOCH"):
+        GOLD.build(tmp_path)
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+
+
 def test_engine_and_helpers_read_only_their_views(grids):
     # Contract: render code reads style values only through its group view (design 1.1), so the
     # baked/contours digests cover everything it reads. Bug caught: a helper or engine step that

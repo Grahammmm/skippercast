@@ -58,8 +58,14 @@ def _distance_m(mask, cell_m):
     return ndimage.distance_transform_edt(~mask) * cell_m
 
 
+def _gradient(z, step_y, step_x):
+    """``np.gradient`` over rows then columns; an axis of one cell has no neighbours: slope 0."""
+    return tuple(np.gradient(z, step, axis=axis) if z.shape[axis] > 1 else np.zeros_like(z)
+                 for axis, step in ((0, step_y), (1, step_x)))
+
+
 def _hillshade(z, cell_m, ve, lights, altitude_deg):
-    dy, dx = np.gradient(z * ve, -cell_m, cell_m)
+    dy, dx = _gradient(z * ve, -cell_m, cell_m)
     normal = np.stack([-dx, -dy, np.ones_like(z)], -1)
     normal /= np.linalg.norm(normal, axis=-1, keepdims=True)
     out = np.zeros_like(z)
@@ -84,7 +90,7 @@ def _bpi(z, inner, outer):
 
 
 def _vrm(z, cell_m, window):
-    dy, dx = np.gradient(z, cell_m, cell_m)
+    dy, dx = _gradient(z, cell_m, cell_m)
     slope = np.arctan(np.hypot(dx, dy))
     aspect = np.arctan2(dy, dx)
 
@@ -171,7 +177,7 @@ class Nearshore:
             hs = s["hillshade"]
             hs6 = _hillshade(z, cell, self.ve, hs["lights"], hs["altitude_deg"])
             fine = hs6 - ndimage.gaussian_filter(hs6, s["hp_sigma_m"] / cell, mode="nearest")
-            dy, dx = np.gradient(z, cell, cell)
+            dy, dx = _gradient(z, cell, cell)
             slope = np.degrees(np.arctan(np.hypot(dx, dy)))
             sv = s["sky_view"]
             svf = _sky_view(z, cell, _cells(sv["radius_m"], cell), sv["ve"], sv["directions"])

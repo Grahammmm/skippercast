@@ -103,8 +103,7 @@ def _rounded(value):
 
 def build(out=OUT):
     baked = style.load().view("baked")
-    out.mkdir(parents=True, exist_ok=True)
-    metrics, hashes = {}, {}
+    metrics, staged, hashes = {}, {}, {}  # staged: PNG bytes to be on disk; nothing is written before the check
     for cell, (z, size, bounds) in synthetic_grids().items():
         images, piles, m = render(baked, z, size, bounds)
         metrics[f"s{cell}m"] = _rounded({**m, "pile_heights_m": [p["height_m"] for p in piles]})
@@ -112,15 +111,24 @@ def build(out=OUT):
             name = f"s{cell}m_{kind}.png"
             path = out / name
             pixels = images[kind]
-            if not (path.exists() and np.array_equal(png8.decode(path.read_bytes()), pixels.reshape(*pixels.shape[:2], -1))):
-                path.write_bytes(png8.encode(pixels))
-            hashes[name] = sha256(path.read_bytes()).hexdigest()
+            current = path.read_bytes() if path.exists() else None
+            if current is not None and np.array_equal(png8.decode(current), pixels.reshape(*pixels.shape[:2], -1)):
+                staged[name] = current
+            else:
+                staged[name] = png8.encode(pixels)
+            hashes[name] = sha256(staged[name]).hexdigest()
     epochs_path = out / "epochs.json"
     epochs = json.loads(epochs_path.read_text(encoding="utf-8")) if epochs_path.exists() else {}
     key = str(nearshore.ENGINE_EPOCH)
     if key in epochs and epochs[key] != hashes:
         raise SystemExit(f"golden pixels changed under ENGINE_EPOCH {key}: bump ENGINE_EPOCH in "
-                         "src/skippercast/relief/nearshore.py for a deliberate look change, then rerun")
+                         "src/skippercast/relief/nearshore.py for a deliberate look change, then rerun; "
+                         "no file was written")
+    out.mkdir(parents=True, exist_ok=True)
+    for name, data in staged.items():
+        path = out / name
+        if not (path.exists() and path.read_bytes() == data):
+            path.write_bytes(data)
     epochs[key] = hashes
     epochs_path.write_text(json.dumps(epochs, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     # check_repository.py admits a binary file only with its pin in the shared manifest.
