@@ -70,10 +70,11 @@ export const ENC_SOURCE = 'enc';
 /** Chart overlay for a region whose reviewed pointer resolves `ready`; not the terrain's `relief` entry or the Seafloor type rail. */
 export const BOTTOM_RELIEF = 'bottom-relief';
 /**
- * MSK-2: G's nearshore kit draw order (web/map/nearshore-style.gen.ts `overlays.draw_order`), bottom to top, one slot per kit
- * entry, as the MapLibre layer ids that draw in it (the relief raster's id is BOTTOM_RELIEF plus a per-attach suffix). The
- * `nearshore-*` ids are reserved for MSK-6 (hard edge, rock piles, pier and cast arcs): no layer draws them yet, and each
- * must be added under the next drawn slot above it. tests/test_map_layers.mjs holds the drawn layers to this order.
+ * MSK-2: the kit's intended bottom-to-top slots (`overlays.draw_order`), mapped to MapLibre IDs. The relief raster adds a
+ * per-attach suffix; the `nearshore-*` IDs are reserved for MSK-6 (hard edge, rock piles, pier and cast arcs).
+ * This table does not order the live Chart: the static basemap's place labels are below the contour overlay, and without
+ * Swell, chlorophyll inserts before MPA_FILL rather than before DEPTH_BOTTOM. tests/test_map_layers.mjs pins the slot
+ * mapping separately from the current Chart insertion order.
  */
 export const NEARSHORE_HARD_EDGE = 'nearshore-hard-edge';
 export const NEARSHORE_PILE_OUTLINE = 'nearshore-pile-outline';

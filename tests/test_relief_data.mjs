@@ -214,10 +214,29 @@ test('the style member resolves a look key or an unknown look, never a refusal',
   assert.equal(look({}), LEGACY_LOOK);
   assert.equal(look({style}), sha('e'));
   assert.equal(look({style: {...style, habitat: null}}), sha('e'));
-  for (const bad of [null, 'nearshore-v1.0.0', {...style, extra: 1}, {...style, baked: 'E'.repeat(64)}, {...style, contours: undefined},
-    {...style, habitat: 'x'}, {...style, built_with: 'Nearshore v1'}, {...style, built_with: 'n'.repeat(65)}]) {
+  const {contours: _contours, ...missingContours} = style;
+  for (const bad of [null, 'nearshore-v1.0.0', {...style, extra: 1}, {...style, baked: 'E'.repeat(64)}, missingContours,
+    {...style, habitat: 'x'}, {...style, built_with: {relief: style.built_with}},
+    {...style, built_with: 'Nearshore v1'}, {...style, built_with: 'n'.repeat(65)}]) {
     assert.equal(look({style: bad}), null, JSON.stringify(bad));
   }
+});
+
+// A3 rollback replaces the current pointer file, never reads its previous member. A fallback to
+// previous could mislabel current tiles or draw old reviewed tiles after the current pointer is held.
+test('MSK-2: previous is never read to select relief bytes or their legend look', () => {
+  const prior = {...pointer(), style: {baked: NEARSHORE_STYLE_DIGESTS.baked, contours: null, habitat: null, built_with: 'nearshore-v1.0.0'}};
+  assert.equal(ready(prior).look, NEARSHORE_STYLE_DIGESTS.baked, 'the prior file is valid on its own');
+  let reads = 0;
+  const current = edits => Object.defineProperty({...pointer(), sha256: sha('f'), ...edits}, 'previous', {
+    enumerable: true, get() { reads++; return prior; },
+  });
+  const absent = ready(current({}));
+  assert.deepEqual([absent.sha256, absent.look], [sha('f'), LEGACY_LOOK]);
+  const malformed = ready(current({style: null}));
+  assert.deepEqual([malformed.sha256, malformed.look], [sha('f'), null]);
+  assert.deepEqual(resolveRelief(morro, current({status: 'held'})), unavailable('unreviewed'));
+  assert.equal(reads, 0, 'not even inspect the previous pointer');
 });
 
 // Frozen shape (rule-29 checkpoint t_1ed6dc7c): `contours` may be null (tiles built without a contour group). Believable
