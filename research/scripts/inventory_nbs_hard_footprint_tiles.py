@@ -99,7 +99,9 @@ def inventory(scheme, context_files, sectors):
                     or context.get('scope') != 'generalized-statewide-usgs-hard-bottom-context'
                     or context.get('coast_id') != coast):
                 raise ValueError('Unreviewed USGS hard-bottom display context: ' + coast)
-            features = context['features']
+            # New shards retain centroid ownership in features; discovery needs
+            # the coast-clipped view. Older receipts have only features.
+            features = context.get('regional_features', context['features'])
             references.append({'coast_id': coast, 'path': str(path),
                                'sha256': digest(path), 'display_outlines': len(features)})
             for feature in features:
