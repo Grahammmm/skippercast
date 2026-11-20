@@ -476,7 +476,8 @@ def line_parts(geometry):
             yield from line_parts(part)
 
 
-def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=False, provenance=None):
+def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=False, provenance=None,
+            positive_down=False):
     """Trace on one native lattice, with no mosaic/resampling fallback."""
     from scipy.ndimage import gaussian_filter, minimum_filter
     from shapely import transform as transform_geometry
@@ -505,6 +506,8 @@ def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=
     window = Window(x, y, w, h)
     tf = grid.window_transform(window)
     values = grid.read(1, window=window, masked=True).astype('float64').filled(np.nan)
+    if positive_down:
+        values = -values
     valid = np.isfinite(values) & (values < 0) & (values >= -3000)
     if provenance is not None:
         valid &= provenance.read(1, window=window, masked=True).filled(PAD) == ec.CODES['measured']

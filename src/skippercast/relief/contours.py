@@ -3,6 +3,7 @@ from collections import defaultdict
 import contextlib
 from importlib.util import module_from_spec, spec_from_file_location
 import json
+import math
 
 from skippercast.paths import repo_root
 from skippercast.platform import depth_contours as dc
@@ -355,9 +356,9 @@ def trace_v3(job, view):
     for i, (row, path, sidecar, side_pin, support) in enumerate(entries):
         ident = row['source_id']
         source = sources[ident]
-        native = source.get('native_resolution_m')
-        if row['value_convention'] != 'elevation_positive_up':
-            continue
+        convention = row['value_convention']
+        if convention not in ('elevation_positive_up', 'depth_positive_down'):
+            raise ValueError(f'{ident}: unknown value_convention {convention!r}')
         if receipts.sha256_file(path) != row['sha256']:
             raise ValueError(f'{ident}: selected grid hash changed')
         with tool.open_geotiff(path, normalized=True) as grid, contextlib.ExitStack() as stack:
@@ -375,7 +376,15 @@ def trace_v3(job, view):
                       'vertical_datum': datum or dc.UNVERIFIED_DATUM}
             certified = (row['id'] in native_ids and row.get('support_class_cap') == 3
                          and (row.get('max_zoom') or 0) >= 16)
-            lines = list(tool.v3_grid(grid, region, view, common, native, support=measured, certified=certified))
+            # Native cell evidence: the reviewed source value; else a normalized twin's per-tile resolution that
+            # matches the grid. A raw grid without reviewed evidence is not traced (it is listed as omitted).
+            native = source.get('native_resolution_m')
+            if not (type(native) in (int, float) and native > 0):
+                tile = row.get('resolution_m')
+                native = tile if (sidecar is not None and type(tile) in (int, float) and tile > 0
+                                  and math.isclose(tile, grid.res[0], rel_tol=1e-8)) else None
+            lines = list(tool.v3_grid(grid, region, view, common, native, support=measured, certified=certified,
+                                      positive_down=convention == 'depth_positive_down'))
             if not lines:
                 continue
             entry = listed.setdefault(ident, {**common, 'name': source['name'], 'url': source['documentation_url'],

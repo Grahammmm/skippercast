@@ -90,7 +90,14 @@ test('ft-v2 returns the v2 ids and none of the v1 basis, legend or planner ids',
   for (const key of ['basis', 'plannerText']) assert.notEqual(v2[key], v1[key]);
   for (const i of [0, 1]) assert.notEqual(v2.legend[i], v1.legend[i]);
   assert.equal(v2.label, v1.label, 'the row keeps one name');
-  assert.deepEqual(contourCopy('ft-v3'), {...v2, set: 'ft-v3'});
+  const v3 = contourCopy('ft-v3');
+  assert.equal(v3.set, 'ft-v3');
+  assert.equal(v3.basis, 'layer.depth-contours.v3.basis');
+  assert.equal(v3.legend[0], 'layer.depth-contours.v3.legend0');
+  assert.equal(v3.legend[1], v2.legend[1], 'the survey-edge key keeps its meaning');
+  assert.equal(v3.plannerText, v2.plannerText);
+  assert.notEqual(v3.basis, v2.basis, 'v3 never shows the v2 60/150/300 ft copy');
+  assert.notEqual(v3.legend[0], v2.legend[0]);
   assert.throws(() => contourCopy('ft-v4'), RangeError, 'an unknown set never shows possibly-wrong copy');
 });
 
