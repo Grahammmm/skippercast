@@ -1,12 +1,11 @@
-// SCA-574 / F01-06. Default: qualify the desired contract against a fixture-only
-// reference. Opt-in: `node tests/test_f01_06_audit.mjs --baseline` runs the same
-// observations against the unchanged production readers and exits 1 on a gap.
+// SCA-427 / F01-06. Exercise production readers by default. The reference
+// mode remains a fixture-only positive control for the original audit.
 // These are D1 statement counts, not timing, SQL query plans, or fleet size.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {advisorDatabase} from './_advisor_d1.mjs';
 
-const baseline = process.argv.includes('--baseline');
+const reference = process.argv.includes('--reference');
 const AT = '2026-10-03T18:00:00.000Z', NOW = Date.parse(AT);
 const PAGE = 500, MANY = 12;
 const boatId = i => `boat-${String(i).padStart(3, '0')}`;
@@ -14,10 +13,11 @@ const reviewId = i => i.toString(16).padStart(32, '0');
 const NOTE = 'fixture-only consent note', REPORT = 'fixture-only report notes', CAPTION = 'fixture-only draft caption';
 const noteKey = id => `advisor.boat-note.${id}`;
 Object.assign(globalThis, {REGIONS: {}, DEPLOYMENT: {allowed_origins: []}, fetch: () => assert.fail('offline fixture must not fetch')});
-const {listBoats, boatView} = await import('../server/advisor/admin/skippers.ts');
-const {listReviews, reviewDetail} = await import('../server/advisor/admin/queue.ts');
-const {listPosts, postDetail, preparePostDecision} = await import('../server/advisor/admin/posts.ts');
-const {requireAdmin} = await import('../server/middleware/admin.ts');
+const {listBoats} = await import('../server/advisor/admin/skippers.ts');
+const {listReviews} = await import('../server/advisor/admin/queue.ts');
+const {listPosts, preparePostDecision} = await import('../server/advisor/admin/posts.ts');
+const {adminRoutes} = await import('../server/routes/admin.ts');
+const {Hono} = await import('hono');
 
 function fixture(t, boats, cards = 0) {
   const {sql, db} = advisorDatabase();
@@ -93,10 +93,10 @@ async function referencePosts(db) {
     JSON.stringify(posts.flatMap(p => JSON.parse(p.media_json))));
   return {posts: posts.map(p => ({id: p.id, status: p.status, media_count: media.filter(m => JSON.parse(p.media_json).includes(m.id)).length}))};
 }
-const boatsPage = (db, cursor) => baseline ? listBoats(db, NOW, {cursor}) : referenceBoats(db, cursor);
-const reviewsPage = db => baseline ? listReviews(db, {kind: 'report', status: 'open'}) : referenceReviews(db);
-const postsPage = db => baseline ? listPosts(db, {status: 'draft'}) : referencePosts(db);
-const label = baseline ? 'baseline' : 'reference';
+const boatsPage = (db, cursor) => reference ? referenceBoats(db, cursor) : listBoats(db, NOW, {cursor});
+const reviewsPage = db => reference ? referenceReviews(db) : listReviews(db, {kind: 'report', status: 'open'});
+const postsPage = db => reference ? referencePosts(db) : listPosts(db, {status: 'draft'});
+const label = reference ? 'reference' : 'production';
 
 // Collect independent mismatches before asserting, so an absent cursor does
 // not hide an N+1 or an out-of-page read on the same request.
@@ -153,30 +153,34 @@ for (const [kind, list, key, sentinel] of [['reviews', reviewsPage, 'items', REP
 
 test('expansion keeps private detail behind admin; approval rechecks consent after expansion and at decision time', async t => {
   const f = fixture(t, 1, 1), {db, sql, seed} = f;
-  const expand = () => Promise.all([boatView(db, boatId(1), NOW), reviewDetail(db, {kind: 'report', ref_id: 'report-1'}), postDetail(db, 'post-1')]);
-  // Exercise the real role middleware in-process with a role answer only (no
-  // login/session rows). This is not a new route or a browser auth replay.
-  let detailRows;
-  function requestAs(role) {
-    const roleDb = {prepare(query) {
-      assert.match(query, /^SELECT role FROM users WHERE id=\?$/);
-      return {bind: () => ({first: async () => ({role})})};
-    }};
-    return requireAdmin({env: {DB: roleDb, TEXT_ADVISOR_ENABLED: 'true'}, var: {owner: 'fixture'}}, async () => {
-      detailRows = await expand();
-    });
-  }
-  assert.equal((await requestAs('member')).status, 404);
+  const app = new Hono();
+  app.use('*', async (c, next) => {
+    c.set('owner', 'fixture');
+    c.set('path', c.req.path);
+    await next();
+  });
+  app.route('/', adminRoutes({now: () => NOW}));
+  // Exercise the real routes and role middleware with an in-process role answer only (no session/account rows).
+  const paths = [`boats/${boatId(1)}`, `reviews/${reviewId(1)}`, 'posts/post-1'];
+  const get = (role, path) => app.request(`/api/admin/${path}`, {}, {TEXT_ADVISOR_ENABLED: 'true', DB: {prepare(query) {
+    if (query === 'SELECT role FROM users WHERE id=?') return {bind: () => ({first: async () => ({role})})};
+    return db.prepare(query);
+  }}});
+  for (const path of paths) assert.equal((await get('member', path)).status, 404);
   assert.equal(f.reads.length, 0, 'a denied expansion must not touch any private rows');
-  await requestAs('admin');
-  assert.ok(detailRows, 'admin reaches the detail readers');
-  const [boat, review, detail] = detailRows;
+  const [{boat}, {review}, detail] = await Promise.all(paths.map(async path => {
+    const response = await get('admin', path);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    return response.json();
+  }));
   assert.equal(boat.consent_note.note, NOTE);
   assert.equal(boat.crew[0].display_name, 'Crew marker');
-  assert.equal(review.report.notes, REPORT);
+  assert.equal(review.detail.report.notes, REPORT);
   assert.equal(detail.post.caption, CAPTION);
   assert.match(detail.post.media[0].original, /^\/api\/admin\/media\/media-1\?v=original$/);
   assert.equal(detail.post.hold, null, 'the expanded card looked eligible');
+  assert.equal(f.reads.filter(r => /FROM advisor_media\b/i.test(r.query)).length, 1, 'draft detail uses one media read for display and hold');
 
   const approve = () => preparePostDecision(db, 'post-1', 'approve', null, null, NOW);
   const pending = await approve();
