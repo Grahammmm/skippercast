@@ -1,0 +1,2422 @@
+{
+  "_generated_from": "layer-tokens.json v1.0.0 + stacking.json + nearshore style-tokens.json",
+  "_note": "Generate ../maplibre-layers-fragment.json from ../layer-tokens.json + ../stacking.json (+ the nearshore base tokens\nthrough base: references). Never edit the fragment by hand. Literals appear here for review only; in web/ every colour\nmust come from web/tokens.css via web/map/palette.ts. Each layer carries \"_token\" naming the token path it reads.\nLayer order in the array = stacking.json z_order. Colour fields are value textures: the fragment fixes their order,\nopacity curve, resampling and the colour ramp (metadata) the texture colouring must use; vector layers are complete.\n    python make_maplibre.py",
+  "_z_order": [
+    {
+      "z": 0,
+      "id": "base-relief",
+      "note": "nearshore house base (depth ramp × shade, bottom tint, piles) — never hidden; desaturated while a colour field is on"
+    },
+    {
+      "z": 1,
+      "id": "color-field",
+      "members": [
+        "sst-fill",
+        "chlorophyll",
+        "kd490",
+        "salinity",
+        "subsurface-temp",
+        "currents.fill",
+        "wind.fill",
+        "waves-swell.fill",
+        "visibility-fog"
+      ],
+      "cap": 1
+    },
+    {
+      "z": 2,
+      "id": "veils",
+      "members": [
+        "clouds",
+        "sea-ice"
+      ],
+      "cap": 1
+    },
+    {
+      "z": 3,
+      "id": "radar",
+      "members": [
+        "precip-radar"
+      ],
+      "cap": 1
+    },
+    {
+      "z": 4,
+      "id": "depth-contours",
+      "note": "house contour ink, unchanged"
+    },
+    {
+      "z": 5,
+      "id": "polygons",
+      "members": [
+        "marine-zones-mpas",
+        "kelp-habitat",
+        "ais-fleet",
+        "upwelling"
+      ]
+    },
+    {
+      "z": 6,
+      "id": "isolines",
+      "members": [
+        "sst-breaks",
+        "sst-fill auto isotherms",
+        "ssh",
+        "pressure",
+        "subsurface-temp.isotherms"
+      ],
+      "cap": 2,
+      "second_set": "dashed"
+    },
+    {
+      "z": 7,
+      "id": "particles",
+      "members": [
+        "currents.streamlines",
+        "wind.particles"
+      ],
+      "cap": 1
+    },
+    {
+      "z": 8,
+      "id": "arrows-barbs",
+      "members": [
+        "wind.barbs",
+        "waves-swell.arrows"
+      ],
+      "cap": 1
+    },
+    {
+      "z": 9,
+      "id": "routes",
+      "members": [
+        "routes-tracks"
+      ]
+    },
+    {
+      "z": 10,
+      "id": "points",
+      "members": [
+        "stations",
+        "tides",
+        "places",
+        "spots-marks"
+      ]
+    },
+    {
+      "z": 11,
+      "id": "labels",
+      "note": "place, contour, pile labels with the house halo"
+    }
+  ],
+  "_presets": {
+    "STACK-A": {
+      "name": "Offshore bite (SST + currents + wind)",
+      "view": "REG",
+      "zoom": 9,
+      "layers": [
+        {
+          "layer": "sst-fill",
+          "as": [
+            "fill"
+          ]
+        },
+        {
+          "layer": "currents",
+          "as": [
+            "streamlines"
+          ],
+          "why": "P1: SST owns the fill slot"
+        },
+        {
+          "layer": "wind",
+          "as": [
+            "barbs"
+          ],
+          "why": "P1 + P2: SST owns the fill, currents own the particle slot"
+        }
+      ],
+      "legend": "SST °F · white lines = current · barbs = wind kt"
+    },
+    "NEAR-D": {
+      "name": "Nearshore z13 full stack",
+      "view": "MB",
+      "zoom": 13,
+      "layers": [
+        {
+          "layer": "sst-fill",
+          "as": [
+            "fill",
+            "auto isotherms"
+          ]
+        },
+        {
+          "layer": "kelp-habitat",
+          "as": [
+            "kelp"
+          ],
+          "why": "P6: kelp at opacity_with_color_field; shore lines off in this preset"
+        },
+        {
+          "layer": "spots-marks",
+          "as": [
+            "badges"
+          ],
+          "why": "P6: unranked dots hidden under a fill"
+        }
+      ],
+      "legend": "z13: fill + isotherms + kelp + ranked spots"
+    }
+  },
+  "_precedence": [
+    "P1-fill",
+    "P2-particles",
+    "P3-arrows",
+    "P4-veils",
+    "P5-isolines",
+    "P6-clutter"
+  ],
+  "sources": {
+    "ais-effort": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "ais-effort-labels": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "atlas-marks": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "chl-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "currents-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "cuti-ribbon": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "goes-c13-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "ice-edge": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "ice-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "isobars": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "kd490-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "kelp": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "launch-ramps": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "marine-zone-labels": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "marine-zones": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "mpa-labels": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "mpas": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "mrms-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "piers": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "planning-route": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "pressure-centers": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "recorded-track": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "route-legs": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "route-waypoints": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "salinity-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "shore-habitat": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "ssh-isolines": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "sst-bands": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "sst-gradient-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "sst-isolines": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "sst-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "stations": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "subsurface-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "tide-stations": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "visibility-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "wave-arrow-points": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "waves-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "wind-barb-points": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    },
+    "wind-texture": {
+      "type": "<raster value texture | geojson | vector — provided by the app's existing feed for this layer>"
+    }
+  },
+  "layers": [
+    {
+      "id": "skl-sst-fill-fill",
+      "type": "raster",
+      "source": "sst-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.75,
+          11,
+          0.55,
+          13,
+          0.35,
+          15,
+          0.2
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "ramp_stops": [
+            "#2c1a6b",
+            "#2f4fc4",
+            "#2aa7e0",
+            "#38d1b0",
+            "#8ee05a",
+            "#f2e33a",
+            "#f6a02a",
+            "#e2482a",
+            "#a3161f"
+          ],
+          "band_step_f_by_zoom": [
+            [
+              0,
+              1.0
+            ],
+            [
+              13,
+              0.5
+            ]
+          ],
+          "stretch": {
+            "method": "percentile of visible water cells",
+            "low_pct": 2,
+            "high_pct": 98,
+            "round": "floor/ceil to band_step_f",
+            "user_lock": "the user may lock the range; the legend says 'auto-stretched' only when not locked"
+          },
+          "rule": "n bands between the stretch limits; band i takes the ramp colour at position i/(n−1), linear in sRGB between ramp_stops"
+        },
+        "skippercast:water_only": true,
+        "skippercast:gaps": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+        "skippercast:z": "color-field",
+        "skippercast:layer": "sst-fill"
+      },
+      "_token": "layers.sst-fill.ramp_stops"
+    },
+    {
+      "id": "skl-chlorophyll-fill",
+      "type": "raster",
+      "source": "chl-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.75,
+          11,
+          0.55,
+          13,
+          0.35,
+          15,
+          0.2
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "ramp_stops": [
+            "#1b2f8f",
+            "#1f5fc8",
+            "#2ba3d6",
+            "#36c2a0",
+            "#7fcf4a",
+            "#d9d838",
+            "#f0a22e",
+            "#d9452a",
+            "#9a1a1a"
+          ],
+          "domain_mg_m3": [
+            0.05,
+            20
+          ],
+          "scale": "log10",
+          "composite": {
+            "method": "per-cell median of the daily passes in the window",
+            "window_days": 8,
+            "min_valid_passes": 1,
+            "gaps": "cloud gaps stay transparent, never interpolated"
+          }
+        },
+        "skippercast:water_only": true,
+        "skippercast:gaps": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+        "skippercast:z": "color-field",
+        "skippercast:layer": "chlorophyll"
+      },
+      "_token": "layers.chlorophyll.ramp_stops"
+    },
+    {
+      "id": "skl-kd490-fill",
+      "type": "raster",
+      "source": "kd490-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.75,
+          11,
+          0.55,
+          13,
+          0.35,
+          15,
+          0.2
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "bands_ft": [
+            0,
+            10,
+            20,
+            30,
+            50,
+            80
+          ],
+          "colors": [
+            "#5a3a1a",
+            "#8b6a3a",
+            "#b9a76a",
+            "#8fc1b0",
+            "#3f9cc0"
+          ],
+          "clip_ft": 79
+        },
+        "skippercast:water_only": true,
+        "skippercast:gaps": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+        "skippercast:z": "color-field",
+        "skippercast:layer": "kd490"
+      },
+      "_token": "layers.kd490.colors"
+    },
+    {
+      "id": "skl-currents-fill",
+      "type": "raster",
+      "source": "currents-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.75,
+          11,
+          0.55,
+          13,
+          0.35,
+          15,
+          0.2
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "ramp_stops": [
+            "#fffdcd",
+            "#e1cd73",
+            "#aaac20",
+            "#5f920c",
+            "#187328",
+            "#144b2a",
+            "#172313"
+          ],
+          "domain_kt": [
+            0,
+            1.2
+          ]
+        },
+        "skippercast:water_only": true,
+        "skippercast:gaps": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+        "skippercast:z": "color-field",
+        "skippercast:layer": "currents"
+      },
+      "_token": "layers.currents.fill"
+    },
+    {
+      "id": "skl-subsurface-temp-fill",
+      "type": "raster",
+      "source": "subsurface-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.75,
+          11,
+          0.55,
+          13,
+          0.35,
+          15,
+          0.2
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "ramp_stops": [
+            "#042333",
+            "#2c3395",
+            "#744992",
+            "#b15f82",
+            "#eb7958",
+            "#fbb43d",
+            "#e8fa5b"
+          ],
+          "stretch": {
+            "method": "percentile of visible water cells",
+            "low_pct": 2,
+            "high_pct": 98,
+            "round": "floor/ceil to whole °F"
+          },
+          "depth_stops_ft": [
+            0,
+            50,
+            100,
+            200,
+            300
+          ],
+          "vertical": "linear between the model's own levels; never extrapolated below the deepest valid level"
+        },
+        "skippercast:water_only": true,
+        "skippercast:gaps": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+        "skippercast:z": "color-field",
+        "skippercast:layer": "subsurface-temp"
+      },
+      "_token": "layers.subsurface-temp.ramp_stops"
+    },
+    {
+      "id": "skl-salinity-fill",
+      "type": "raster",
+      "source": "salinity-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.75,
+          11,
+          0.55,
+          13,
+          0.35,
+          15,
+          0.2
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "ramp_stops": [
+            "#2a186c",
+            "#14439c",
+            "#206e8b",
+            "#3c9387",
+            "#5ab978",
+            "#aad85c",
+            "#fdef9a"
+          ],
+          "stretch": {
+            "method": "percentile of visible water cells",
+            "low_pct": 2,
+            "high_pct": 98,
+            "round_decimals": 2
+          }
+        },
+        "skippercast:water_only": true,
+        "skippercast:gaps": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+        "skippercast:z": "color-field",
+        "skippercast:layer": "salinity"
+      },
+      "_token": "layers.salinity.ramp_stops"
+    },
+    {
+      "id": "skl-wind-fill",
+      "type": "raster",
+      "source": "wind-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.75,
+          11,
+          0.55,
+          13,
+          0.35,
+          15,
+          0.2
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "ramp_kt": [
+            [
+              0.0,
+              "#6271B7"
+            ],
+            [
+              1.9,
+              "#39619F"
+            ],
+            [
+              5.8,
+              "#4A94A9"
+            ],
+            [
+              9.7,
+              "#4D8D7B"
+            ],
+            [
+              13.6,
+              "#53A553"
+            ],
+            [
+              17.5,
+              "#359F35"
+            ],
+            [
+              21.4,
+              "#A79D51"
+            ],
+            [
+              25.3,
+              "#9F7F3A"
+            ],
+            [
+              29.2,
+              "#A16C5C"
+            ],
+            [
+              33.0,
+              "#813A4E"
+            ],
+            [
+              36.9,
+              "#AF5088"
+            ],
+            [
+              40.8,
+              "#754A93"
+            ],
+            [
+              46.7,
+              "#6D61A3"
+            ],
+            [
+              52.5,
+              "#44698D"
+            ]
+          ]
+        },
+        "skippercast:water_only": false,
+        "skippercast:gaps": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+        "skippercast:z": "color-field",
+        "skippercast:layer": "wind"
+      },
+      "_token": "layers.wind.fill.ramp_kt"
+    },
+    {
+      "id": "skl-waves-swell-fill",
+      "type": "raster",
+      "source": "waves-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.75,
+          11,
+          0.55,
+          13,
+          0.35,
+          15,
+          0.2
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "ramp_stops": [
+            "#f1edec",
+            "#dfbcb0",
+            "#d08b73",
+            "#c0583b",
+            "#a62225",
+            "#730e27",
+            "#3c0912"
+          ],
+          "domain_ft": [
+            0,
+            30
+          ]
+        },
+        "skippercast:water_only": true,
+        "skippercast:gaps": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+        "skippercast:z": "color-field",
+        "skippercast:layer": "waves-swell"
+      },
+      "_token": "layers.waves-swell.fill"
+    },
+    {
+      "id": "skl-visibility-fog-fill",
+      "type": "raster",
+      "source": "visibility-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.75,
+          11,
+          0.55,
+          13,
+          0.35,
+          15,
+          0.2
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "bands_nm": [
+            0,
+            0.5,
+            1,
+            3,
+            5
+          ],
+          "colors": [
+            "#d9452a",
+            "#f6a02a",
+            "#f2e33a",
+            "#e6efc2"
+          ],
+          "hide_at_or_above_nm": 5
+        },
+        "skippercast:water_only": true,
+        "skippercast:gaps": "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data).",
+        "skippercast:z": "color-field",
+        "skippercast:layer": "visibility-fog"
+      },
+      "_token": "layers.visibility-fog.colors"
+    },
+    {
+      "id": "skl-sst-breaks-glow",
+      "type": "raster",
+      "source": "sst-gradient-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": 0.75,
+        "raster-resampling": "linear"
+      },
+      "metadata": {
+        "skippercast:ramp": {
+          "ramp_stops": [
+            "#ffd9a0",
+            "#ff9a3c",
+            "#e2482a"
+          ],
+          "domain_f_per_nm": [
+            0.32,
+            0.55
+          ],
+          "threshold_f_per_nm": 0.32
+        },
+        "skippercast:z": "color-field",
+        "skippercast:layer": "sst-breaks"
+      },
+      "_token": "layers.sst-breaks.glow"
+    },
+    {
+      "id": "skl-clouds-veil",
+      "type": "raster",
+      "source": "goes-c13-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          0.92,
+          10,
+          0.92,
+          13,
+          0.45
+        ],
+        "raster-resampling": "linear",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:veil": {
+          "color": "#FFFFFF",
+          "alpha_rule": "alpha = clip((warm_k − BT)/range_k, 0, 1) × stacking:opacity_by_zoom.cloud_veil",
+          "warm_k": 285,
+          "range_k": 60
+        },
+        "skippercast:cap_with_field_or_radar": 0.55,
+        "skippercast:z": "veils",
+        "skippercast:layer": "clouds"
+      },
+      "_token": "layers.clouds.veil"
+    },
+    {
+      "id": "skl-sea-ice-veil",
+      "type": "raster",
+      "source": "ice-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": 1,
+        "raster-resampling": "linear"
+      },
+      "metadata": {
+        "skippercast:veil": {
+          "color": "#FFFFFF",
+          "max_alpha": 0.95,
+          "alpha_rule": "alpha = max_alpha × concentration/100"
+        },
+        "skippercast:z": "veils",
+        "skippercast:layer": "sea-ice"
+      },
+      "_token": "layers.sea-ice.veil"
+    },
+    {
+      "id": "skl-radar",
+      "type": "raster",
+      "source": "mrms-texture",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "raster-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          0.85,
+          12,
+          0.75,
+          15,
+          0.6
+        ],
+        "raster-resampling": "nearest",
+        "raster-fade-duration": 0
+      },
+      "metadata": {
+        "skippercast:bands_dbz": [
+          [
+            15,
+            "#9ec9e8",
+            "light"
+          ],
+          [
+            25,
+            "#3f8fd1",
+            "moderate"
+          ],
+          [
+            35,
+            "#f2b134",
+            "heavy"
+          ],
+          [
+            45,
+            "#d9452a",
+            "intense"
+          ]
+        ],
+        "skippercast:hide_below_dbz": 15,
+        "skippercast:animation": "loop the last 2 h at 2-min frames, 10 fps; reduced motion shows the newest frame only",
+        "skippercast:z": "radar",
+        "skippercast:layer": "precip-radar"
+      },
+      "_token": "layers.precip-radar.bands_dbz"
+    },
+    {
+      "id": "skl-hazard-fill",
+      "type": "fill",
+      "filter": [
+        "boolean",
+        [
+          "get",
+          "active"
+        ],
+        false
+      ],
+      "source": "marine-zones",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "fill-color": [
+          "match",
+          [
+            "get",
+            "event"
+          ],
+          "Small Craft Advisory",
+          "#f6a02a",
+          "Gale Warning",
+          "#d9452a",
+          "Gale Watch",
+          "#f2b134",
+          "#f6a02a"
+        ],
+        "fill-opacity": [
+          "min",
+          0.18,
+          [
+            "interpolate",
+            [
+              "linear"
+            ],
+            [
+              "zoom"
+            ],
+            8,
+            0.35,
+            14,
+            0.25
+          ]
+        ]
+      },
+      "metadata": {
+        "skippercast:z": "polygons",
+        "skippercast:layer": "marine-zones-mpas"
+      },
+      "_token": "layers.marine-zones-mpas.hazard_fill"
+    },
+    {
+      "id": "skl-zone-line",
+      "type": "line",
+      "source": "marine-zones",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#9aa3ad",
+        "line-width": 0.9,
+        "line-dasharray": [
+          4.444444444444445,
+          3.333333333333333
+        ]
+      },
+      "metadata": {
+        "skippercast:z": "polygons",
+        "skippercast:layer": "marine-zones-mpas"
+      },
+      "_token": "layers.marine-zones-mpas.zone_line"
+    },
+    {
+      "id": "skl-mpa-fill",
+      "type": "fill",
+      "source": "mpas",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "fill-color": [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          "SMR",
+          "#d9452a",
+          "SMCA",
+          "#2e6fd8",
+          "SMCA (No-Take)",
+          "#7b3fb0",
+          "SMP",
+          "#36a26b",
+          "SMRMA",
+          "#36a26b",
+          "#2e6fd8"
+        ],
+        "fill-opacity": [
+          "min",
+          0.32,
+          [
+            "interpolate",
+            [
+              "linear"
+            ],
+            [
+              "zoom"
+            ],
+            8,
+            0.35,
+            14,
+            0.25
+          ]
+        ]
+      },
+      "metadata": {
+        "skippercast:z": "polygons",
+        "skippercast:layer": "marine-zones-mpas"
+      },
+      "_token": "layers.marine-zones-mpas.mpa"
+    },
+    {
+      "id": "skl-mpa-line",
+      "type": "line",
+      "source": "mpas",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          "SMR",
+          "#d9452a",
+          "SMCA",
+          "#2e6fd8",
+          "SMCA (No-Take)",
+          "#7b3fb0",
+          "SMP",
+          "#36a26b",
+          "SMRMA",
+          "#36a26b",
+          "#2e6fd8"
+        ],
+        "line-width": 1.0
+      },
+      "metadata": {
+        "skippercast:z": "polygons",
+        "skippercast:layer": "marine-zones-mpas"
+      },
+      "_token": "layers.marine-zones-mpas.mpa"
+    },
+    {
+      "id": "skl-kelp",
+      "type": "fill",
+      "source": "kelp",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "fill-color": "#6b7f2a",
+        "fill-opacity": [
+          "case",
+          [
+            "boolean",
+            [
+              "global-state",
+              "fieldOn"
+            ],
+            false
+          ],
+          0.55,
+          0.65
+        ]
+      },
+      "metadata": {
+        "skippercast:z": "polygons",
+        "skippercast:layer": "kelp-habitat"
+      },
+      "_token": "layers.kelp-habitat.kelp"
+    },
+    {
+      "id": "skl-shore-halo",
+      "type": "line",
+      "source": "shore-habitat",
+      "layout": {
+        "visibility": "none",
+        "line-cap": "round"
+      },
+      "paint": {
+        "line-color": "#FFFFFF",
+        "line-width": 4.5
+      },
+      "metadata": {
+        "skippercast:z": "polygons",
+        "skippercast:layer": "kelp-habitat"
+      },
+      "_token": "layers.kelp-habitat.shore.halo"
+    },
+    {
+      "id": "skl-shore",
+      "type": "line",
+      "source": "shore-habitat",
+      "layout": {
+        "visibility": "none",
+        "line-cap": "round"
+      },
+      "paint": {
+        "line-color": [
+          "match",
+          [
+            "get",
+            "substrate_key"
+          ],
+          "rock",
+          "#7a3e12",
+          "rocky",
+          "#7a3e12",
+          "sand",
+          "#e0b84a",
+          "mixed",
+          "#b08a5a",
+          "gravel",
+          "#9a8a70",
+          "#9a8a70"
+        ],
+        "line-width": 3
+      },
+      "metadata": {
+        "skippercast:z": "polygons",
+        "skippercast:layer": "kelp-habitat"
+      },
+      "_token": "layers.kelp-habitat.shore.colors"
+    },
+    {
+      "id": "skl-ais-fill",
+      "type": "fill",
+      "source": "ais-effort",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "fill-color": "#E39B2D",
+        "fill-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.35,
+          14,
+          0.25
+        ],
+        "fill-pattern": "hatch-xx"
+      },
+      "metadata": {
+        "skippercast:z": "polygons",
+        "skippercast:layer": "ais-fleet"
+      },
+      "_token": "layers.ais-fleet.fill"
+    },
+    {
+      "id": "skl-ais-line",
+      "type": "line",
+      "source": "ais-effort",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#E39B2D",
+        "line-width": 1.2
+      },
+      "metadata": {
+        "skippercast:z": "polygons",
+        "skippercast:layer": "ais-fleet"
+      },
+      "_token": "layers.ais-fleet.line"
+    },
+    {
+      "id": "skl-upwelling-ribbon",
+      "type": "fill",
+      "source": "cuti-ribbon",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "fill-color": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "get",
+            "cuti"
+          ],
+          -1.0,
+          "#8b5a2b",
+          0.0,
+          "#e9e4d8",
+          1.0,
+          "#2bb3c0",
+          2.0,
+          "#0b5d8a"
+        ],
+        "fill-opacity": 0.9
+      },
+      "metadata": {
+        "skippercast:cell": {
+          "height_deg_lat": 0.96,
+          "width_deg_lon": 0.9,
+          "offset_from_coast_deg_lon": 0.05,
+          "coast_rule": "first land cell east of coast_search_from_lon on the latitude row",
+          "coast_search_from_lon": -125.5
+        },
+        "skippercast:z": "polygons",
+        "skippercast:layer": "upwelling"
+      },
+      "_token": "layers.upwelling.ramp_stops"
+    },
+    {
+      "id": "skl-sst-band-edge",
+      "type": "line",
+      "source": "sst-bands",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#FFFFFF",
+        "line-width": 0.35,
+        "line-opacity": 0.6
+      },
+      "metadata": {
+        "skippercast:hide_when_any_on": [
+          "isolines",
+          "particles",
+          "arrows_barbs"
+        ],
+        "skippercast:z": "isolines",
+        "skippercast:layer": "sst-fill"
+      },
+      "_token": "layers.sst-fill.band_edge"
+    },
+    {
+      "id": "skl-sea-ice-edge",
+      "type": "line",
+      "source": "ice-edge",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#d9452a",
+        "line-width": 1.0
+      },
+      "metadata": {
+        "skippercast:level_pct": 15,
+        "skippercast:z": "isolines",
+        "skippercast:layer": "sea-ice"
+      },
+      "_token": "layers.sea-ice.edge"
+    },
+    {
+      "id": "skl-sst-iso-minor",
+      "type": "line",
+      "filter": [
+        "==",
+        [
+          "get",
+          "index"
+        ],
+        false
+      ],
+      "source": "sst-isolines",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": [
+          "step",
+          [
+            "zoom"
+          ],
+          "#F4F7FA",
+          12,
+          "#0B1726"
+        ],
+        "line-width": 0.4,
+        "line-opacity": 0.525
+      },
+      "metadata": {
+        "skippercast:step_f_by_zoom": [
+          [
+            0,
+            0.5
+          ],
+          [
+            13,
+            0.25
+          ]
+        ],
+        "skippercast:z": "isolines",
+        "skippercast:layer": "sst-breaks"
+      },
+      "_token": "layers.sst-breaks.isolines.minor"
+    },
+    {
+      "id": "skl-sst-iso-index",
+      "type": "line",
+      "filter": [
+        "==",
+        [
+          "get",
+          "index"
+        ],
+        true
+      ],
+      "source": "sst-isolines",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": [
+          "step",
+          [
+            "zoom"
+          ],
+          "#F4F7FA",
+          12,
+          "#0B1726"
+        ],
+        "line-width": 0.9,
+        "line-opacity": 0.75
+      },
+      "metadata": {
+        "skippercast:step_f_by_zoom": [
+          [
+            0,
+            2.0
+          ],
+          [
+            13,
+            0.5
+          ]
+        ],
+        "skippercast:z": "isolines",
+        "skippercast:layer": "sst-breaks"
+      },
+      "_token": "layers.sst-breaks.isolines.index"
+    },
+    {
+      "id": "skl-ssh-positive",
+      "type": "line",
+      "filter": [
+        ">",
+        [
+          "get",
+          "cm"
+        ],
+        0
+      ],
+      "source": "ssh-isolines",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#ff6b57",
+        "line-width": 1.0
+      },
+      "metadata": {
+        "skippercast:step_cm": 5,
+        "skippercast:range_cm": [
+          -30,
+          30
+        ],
+        "skippercast:z": "isolines",
+        "skippercast:layer": "ssh"
+      },
+      "_token": "layers.ssh.positive"
+    },
+    {
+      "id": "skl-ssh-negative",
+      "type": "line",
+      "filter": [
+        "<",
+        [
+          "get",
+          "cm"
+        ],
+        0
+      ],
+      "source": "ssh-isolines",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#6fb3ff",
+        "line-width": 1.0,
+        "line-dasharray": [
+          4.0,
+          3.0
+        ]
+      },
+      "metadata": {
+        "skippercast:step_cm": 5,
+        "skippercast:range_cm": [
+          -30,
+          30
+        ],
+        "skippercast:z": "isolines",
+        "skippercast:layer": "ssh"
+      },
+      "_token": "layers.ssh.negative"
+    },
+    {
+      "id": "skl-ssh-zero",
+      "type": "line",
+      "filter": [
+        "==",
+        [
+          "get",
+          "cm"
+        ],
+        0
+      ],
+      "source": "ssh-isolines",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#F4F7FA",
+        "line-width": 0.6
+      },
+      "metadata": {
+        "skippercast:step_cm": 5,
+        "skippercast:range_cm": [
+          -30,
+          30
+        ],
+        "skippercast:z": "isolines",
+        "skippercast:layer": "ssh"
+      },
+      "_token": "layers.ssh.zero"
+    },
+    {
+      "id": "skl-isobar-minor",
+      "type": "line",
+      "filter": [
+        "!=",
+        [
+          "%",
+          [
+            "get",
+            "hpa"
+          ],
+          4
+        ],
+        0
+      ],
+      "minzoom": 4,
+      "maxzoom": 11,
+      "source": "isobars",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#F4F7FA",
+        "line-width": 0.6
+      },
+      "metadata": {
+        "skippercast:step_hpa": 2,
+        "skippercast:z": "isolines",
+        "skippercast:layer": "pressure"
+      },
+      "_token": "layers.pressure.width_pt.minor"
+    },
+    {
+      "id": "skl-isobar-bold",
+      "type": "line",
+      "filter": [
+        "==",
+        [
+          "%",
+          [
+            "get",
+            "hpa"
+          ],
+          4
+        ],
+        0
+      ],
+      "minzoom": 4,
+      "maxzoom": 11,
+      "source": "isobars",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#F4F7FA",
+        "line-width": 1.1
+      },
+      "metadata": {
+        "skippercast:step_hpa": 2,
+        "skippercast:z": "isolines",
+        "skippercast:layer": "pressure"
+      },
+      "_token": "layers.pressure.width_pt.bold"
+    },
+    {
+      "id": "skl-currents-streamlines",
+      "type": "custom",
+      "_custom": "streamline layer over the HF-radar u/v texture",
+      "metadata": {
+        "skippercast:params": {
+          "color": "#FFFFFF",
+          "width_pt": 0.6,
+          "density": 1.6,
+          "arrow_size": 0.6,
+          "sample_grid": 80,
+          "rule": "integrated from the HF-radar u/v on an 80×80 view grid; no line where u/v is no data"
+        },
+        "skippercast:z": "particles",
+        "skippercast:layer": "currents"
+      },
+      "_token": "layers.currents.streamlines"
+    },
+    {
+      "id": "skl-wind-particles",
+      "type": "custom",
+      "_custom": "particle layer over the wind u/v texture",
+      "metadata": {
+        "skippercast:params": {
+          "color": "#FFFFFF",
+          "width_pt": 0.8,
+          "trail_steps": 12,
+          "count": 900,
+          "step_frac_of_view_width": 0.00414,
+          "seed": 3,
+          "opacity": 0.9,
+          "fade": "linear tail → head",
+          "over_land": true
+        },
+        "skippercast:opacity_by_zoom": [
+          [
+            6,
+            0.9
+          ],
+          [
+            14,
+            0.8
+          ]
+        ],
+        "skippercast:z": "particles",
+        "skippercast:layer": "wind"
+      },
+      "_token": "layers.wind.particles"
+    },
+    {
+      "id": "skl-wind-barbs",
+      "type": "symbol",
+      "source": "wind-barb-points",
+      "layout": {
+        "visibility": "none",
+        "icon-image": [
+          "concat",
+          "barb-",
+          [
+            "to-string",
+            [
+              "*",
+              5,
+              [
+                "round",
+                [
+                  "/",
+                  [
+                    "get",
+                    "kt"
+                  ],
+                  5
+                ]
+              ]
+            ]
+          ]
+        ],
+        "icon-rotate": [
+          "get",
+          "dir_from_deg"
+        ],
+        "icon-rotation-alignment": "map",
+        "icon-allow-overlap": false,
+        "icon-padding": 24.0
+      },
+      "metadata": {
+        "skippercast:barb": {
+          "use": "the stacking fallback when wind loses the particle slot (see stacking.json precedence)",
+          "color_on_field": "#FFFFFF",
+          "color_on_light_base": "#0B1726",
+          "halo": "#0B1726",
+          "halo_pt": 1.6,
+          "length_pt": 5.5,
+          "width_pt": 0.8,
+          "stride_cells": 4,
+          "offset_cells": 1,
+          "min_spacing_px": 48
+        },
+        "skippercast:icons": "barb sprites drawn from barbs.length_pt/width_pt/halo, colour color_on_field over a fill else color_on_light_base",
+        "skippercast:z": "arrows-barbs",
+        "skippercast:layer": "wind"
+      },
+      "_token": "layers.wind.barbs"
+    },
+    {
+      "id": "skl-wave-arrows",
+      "type": "symbol",
+      "source": "wave-arrow-points",
+      "layout": {
+        "visibility": "none",
+        "icon-image": "wave-arrow",
+        "icon-rotate": [
+          "+",
+          [
+            "get",
+            "dir_from_deg"
+          ],
+          180
+        ],
+        "icon-rotation-alignment": "map"
+      },
+      "metadata": {
+        "skippercast:arrow": {
+          "color": "#F4F7FA",
+          "stride_cells": 3,
+          "offset_cells": 1,
+          "unit_length": true,
+          "pivot": "middle",
+          "width_frac": 0.004,
+          "scale": 30,
+          "water_only": true,
+          "direction": "toward (from the 'from' direction + 180°)"
+        },
+        "skippercast:z": "arrows-barbs",
+        "skippercast:layer": "waves-swell"
+      },
+      "_token": "layers.waves-swell.arrows"
+    },
+    {
+      "id": "skl-track",
+      "type": "line",
+      "source": "recorded-track",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#2b6c9d",
+        "line-width": 2,
+        "line-opacity": 0.85
+      },
+      "metadata": {
+        "skippercast:z": "routes",
+        "skippercast:layer": "routes-tracks"
+      },
+      "_token": "layers.routes-tracks.recorded_track"
+    },
+    {
+      "id": "skl-route-halo",
+      "type": "line",
+      "source": "planning-route",
+      "layout": {
+        "visibility": "none",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#FFFFFF",
+        "line-width": 5
+      },
+      "metadata": {
+        "skippercast:z": "routes",
+        "skippercast:layer": "routes-tracks"
+      },
+      "_token": "layers.routes-tracks.route.halo"
+    },
+    {
+      "id": "skl-route",
+      "type": "line",
+      "source": "planning-route",
+      "layout": {
+        "visibility": "none",
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#E39B2D",
+        "line-width": 3
+      },
+      "metadata": {
+        "skippercast:z": "routes",
+        "skippercast:layer": "routes-tracks"
+      },
+      "_token": "layers.routes-tracks.route"
+    },
+    {
+      "id": "skl-waypoint",
+      "type": "circle",
+      "source": "route-waypoints",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "circle-color": "#E39B2D",
+        "circle-radius": 5.5,
+        "circle-stroke-color": "#FFFFFF",
+        "circle-stroke-width": 1.4
+      },
+      "metadata": {
+        "skippercast:z": "points",
+        "skippercast:layer": "routes-tracks"
+      },
+      "_token": "layers.routes-tracks.waypoint"
+    },
+    {
+      "id": "skl-pier-halo",
+      "type": "line",
+      "source": "piers",
+      "layout": {
+        "visibility": "none",
+        "line-cap": "butt"
+      },
+      "paint": {
+        "line-color": "#FFFFFF",
+        "line-width": 4.2
+      },
+      "metadata": {
+        "skippercast:z": "points",
+        "skippercast:layer": "places"
+      },
+      "_token": "layers.places.pier.halo"
+    },
+    {
+      "id": "skl-pier",
+      "type": "line",
+      "source": "piers",
+      "layout": {
+        "visibility": "none",
+        "line-cap": "butt"
+      },
+      "paint": {
+        "line-color": "#0B1726",
+        "line-width": 2.2
+      },
+      "metadata": {
+        "skippercast:z": "points",
+        "skippercast:layer": "places"
+      },
+      "_token": "layers.places.pier"
+    },
+    {
+      "id": "skl-ramp",
+      "type": "symbol",
+      "source": "launch-ramps",
+      "layout": {
+        "visibility": "none",
+        "icon-image": "triangle-up",
+        "icon-size": 1.0,
+        "text-field": [
+          "get",
+          "name_short"
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 7,
+        "text-anchor": "left",
+        "text-offset": [
+          0.8,
+          0
+        ]
+      },
+      "paint": {
+        "text-color": "#0B1726",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.3,
+        "icon-color": "#2b6c9d",
+        "icon-halo-color": "#FFFFFF",
+        "icon-halo-width": 1.2
+      },
+      "metadata": {
+        "skippercast:label_strip": " Facility",
+        "skippercast:z": "points",
+        "skippercast:layer": "places"
+      },
+      "_token": "layers.places.ramp"
+    },
+    {
+      "id": "skl-tide-pin",
+      "type": "circle",
+      "source": "tide-stations",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "circle-color": "#2b6c9d",
+        "circle-radius": 4.5,
+        "circle-stroke-color": "#FFFFFF",
+        "circle-stroke-width": 1.5
+      },
+      "metadata": {
+        "skippercast:panel": {
+          "curve": {
+            "color": "#2b6c9d",
+            "width_pt": 1.6,
+            "window_h": [
+              -6,
+              18
+            ],
+            "inset_axes_frac": [
+              0.08,
+              0.06,
+              0.86,
+              0.3
+            ],
+            "background": "#FFFFFF",
+            "background_alpha": 0.9
+          },
+          "now": {
+            "color": "#B23A1A",
+            "width_pt": 1,
+            "dot_pt": 4
+          },
+          "hilo_label": {
+            "size_pt": 6,
+            "format": "{type} {ft:.1f}\\n{time}"
+          },
+          "stage_label": {
+            "format": "{ft:.1f} ft ↑|↓",
+            "size_pt": 9,
+            "color": "#2b6c9d",
+            "weight": "bold"
+          },
+          "datum": "MLLW",
+          "time": "local (PST/PDT)"
+        },
+        "skippercast:z": "points",
+        "skippercast:layer": "tides"
+      },
+      "_token": "layers.tides.pin"
+    },
+    {
+      "id": "skl-station-pin",
+      "type": "circle",
+      "source": "stations",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "circle-color": "#2b6c9d",
+        "circle-radius": 3.5,
+        "circle-stroke-color": "#FFFFFF",
+        "circle-stroke-width": 1.3
+      },
+      "metadata": {
+        "skippercast:z": "points",
+        "skippercast:layer": "stations"
+      },
+      "_token": "layers.stations.pin"
+    },
+    {
+      "id": "skl-spot-others",
+      "type": "circle",
+      "filter": [
+        ">",
+        [
+          "get",
+          "rank"
+        ],
+        10
+      ],
+      "source": "atlas-marks",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "circle-color": "#9aa3ad",
+        "circle-radius": 1.25
+      },
+      "metadata": {
+        "skippercast:hide_with_color_field": true,
+        "skippercast:z": "points",
+        "skippercast:layer": "spots-marks"
+      },
+      "_token": "layers.spots-marks.others"
+    },
+    {
+      "id": "skl-spot-badge",
+      "type": "circle",
+      "filter": [
+        "<=",
+        [
+          "get",
+          "rank"
+        ],
+        10
+      ],
+      "source": "atlas-marks",
+      "layout": {
+        "visibility": "none",
+        "circle-sort-key": [
+          "get",
+          "rank"
+        ]
+      },
+      "paint": {
+        "circle-color": "#B23A1A",
+        "circle-radius": 6.5,
+        "circle-stroke-color": "#FFFFFF",
+        "circle-stroke-width": 1.4
+      },
+      "metadata": {
+        "skippercast:z": "points",
+        "skippercast:layer": "spots-marks"
+      },
+      "_token": "layers.spots-marks.badge"
+    },
+    {
+      "id": "skl-sst-iso-label",
+      "type": "symbol",
+      "filter": [
+        "==",
+        [
+          "get",
+          "index"
+        ],
+        true
+      ],
+      "source": "sst-isolines",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "concat",
+          [
+            "to-string",
+            [
+              "get",
+              "label"
+            ]
+          ],
+          "°"
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 6.5,
+        "symbol-placement": "line"
+      },
+      "paint": {
+        "text-color": [
+          "step",
+          [
+            "zoom"
+          ],
+          "#F4F7FA",
+          12,
+          "#0B1726"
+        ],
+        "text-halo-color": [
+          "step",
+          [
+            "zoom"
+          ],
+          "#0B1726",
+          12,
+          "#FFFFFF"
+        ],
+        "text-halo-width": 1.1
+      },
+      "metadata": {
+        "skippercast:z": "labels",
+        "skippercast:layer": "sst-breaks"
+      },
+      "_token": "layers.sst-breaks.isolines.label"
+    },
+    {
+      "id": "skl-isobar-label",
+      "type": "symbol",
+      "filter": [
+        "==",
+        [
+          "%",
+          [
+            "get",
+            "hpa"
+          ],
+          4
+        ],
+        0
+      ],
+      "minzoom": 4,
+      "maxzoom": 11,
+      "source": "isobars",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "to-string",
+          [
+            "get",
+            "hpa"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 6.5,
+        "symbol-placement": "line"
+      },
+      "paint": {
+        "text-color": "#F4F7FA",
+        "text-halo-color": "#0B1726",
+        "text-halo-width": 1.1
+      },
+      "metadata": {
+        "skippercast:z": "labels",
+        "skippercast:layer": "pressure"
+      },
+      "_token": "layers.pressure.label"
+    },
+    {
+      "id": "skl-pressure-centers",
+      "type": "symbol",
+      "minzoom": 4,
+      "maxzoom": 11,
+      "source": "pressure-centers",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "get",
+          "letter"
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 16
+      },
+      "paint": {
+        "text-color": [
+          "match",
+          [
+            "get",
+            "letter"
+          ],
+          "H",
+          "#2e6fd8",
+          "#c0392b"
+        ],
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.5
+      },
+      "metadata": {
+        "skippercast:z": "labels",
+        "skippercast:layer": "pressure"
+      },
+      "_token": "layers.pressure.centers"
+    },
+    {
+      "id": "skl-zone-label",
+      "type": "symbol",
+      "source": "marine-zone-labels",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "get",
+          "id"
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 7
+      },
+      "paint": {
+        "text-color": "#4a5560",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.3
+      },
+      "metadata": {
+        "skippercast:z": "labels",
+        "skippercast:layer": "marine-zones-mpas"
+      },
+      "_token": "layers.marine-zones-mpas.zone_label"
+    },
+    {
+      "id": "skl-mpa-label",
+      "type": "symbol",
+      "source": "mpa-labels",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "get",
+          "short_name"
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 6.3
+      },
+      "paint": {
+        "text-color": [
+          "match",
+          [
+            "get",
+            "type"
+          ],
+          "SMR",
+          "#d9452a",
+          "SMCA",
+          "#2e6fd8",
+          "SMCA (No-Take)",
+          "#7b3fb0",
+          "SMP",
+          "#36a26b",
+          "SMRMA",
+          "#36a26b",
+          "#2e6fd8"
+        ],
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.3
+      },
+      "metadata": {
+        "skippercast:z": "labels",
+        "skippercast:layer": "marine-zones-mpas"
+      },
+      "_token": "layers.marine-zones-mpas.mpa.label"
+    },
+    {
+      "id": "skl-ais-label",
+      "type": "symbol",
+      "source": "ais-effort-labels",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "slice",
+          [
+            "get",
+            "label"
+          ],
+          0,
+          30
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 6.5
+      },
+      "paint": {
+        "text-color": "#8a5a10",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.3
+      },
+      "metadata": {
+        "skippercast:z": "labels",
+        "skippercast:layer": "ais-fleet"
+      },
+      "_token": "layers.ais-fleet.label"
+    },
+    {
+      "id": "skl-waypoint-num",
+      "type": "symbol",
+      "source": "route-waypoints",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "to-string",
+          [
+            "get",
+            "n"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 7,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#FFFFFF"
+      },
+      "metadata": {
+        "skippercast:z": "labels",
+        "skippercast:layer": "routes-tracks"
+      },
+      "_token": "layers.routes-tracks.waypoint"
+    },
+    {
+      "id": "skl-leg-label",
+      "type": "symbol",
+      "filter": [
+        ">",
+        [
+          "get",
+          "leg"
+        ],
+        1
+      ],
+      "source": "route-legs",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "concat",
+          [
+            "number-format",
+            [
+              "get",
+              "nm"
+            ],
+            {
+              "max-fraction-digits": 1,
+              "min-fraction-digits": 1
+            }
+          ],
+          " nm"
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 7,
+        "symbol-placement": "line-center"
+      },
+      "paint": {
+        "text-color": "#8a5a10",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.3
+      },
+      "metadata": {
+        "skippercast:z": "labels",
+        "skippercast:layer": "routes-tracks"
+      },
+      "_token": "layers.routes-tracks.leg_label"
+    },
+    {
+      "id": "skl-station-chip",
+      "type": "symbol",
+      "source": "stations",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "get",
+          "chip_text"
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 6.2,
+        "text-anchor": "left",
+        "text-offset": [
+          1,
+          0
+        ],
+        "icon-image": "chip-bg",
+        "icon-text-fit": "both",
+        "symbol-sort-key": [
+          "get",
+          "priority"
+        ]
+      },
+      "paint": {
+        "text-color": "#0B1726"
+      },
+      "metadata": {
+        "skippercast:chip": {
+          "fill": "#FFFFFF",
+          "fill_alpha": 0.95,
+          "stroke": "#2b6c9d",
+          "stroke_pt": 0.6,
+          "text": "#0B1726",
+          "size_pt": 6.2,
+          "lines": [
+            "{name}",
+            "{wspd}G{gust} kt · {wvht} ft @{dpd}s · {wtmp}°F"
+          ],
+          "missing_rule": "omit a missing reading's part; never print MM or 0 for missing"
+        },
+        "skippercast:collision": "hide the lowest-priority chip, keep its pin",
+        "skippercast:z": "labels",
+        "skippercast:layer": "stations"
+      },
+      "_token": "layers.stations.chip"
+    },
+    {
+      "id": "skl-spot-rank",
+      "type": "symbol",
+      "filter": [
+        "<=",
+        [
+          "get",
+          "rank"
+        ],
+        10
+      ],
+      "source": "atlas-marks",
+      "layout": {
+        "visibility": "none",
+        "text-field": [
+          "to-string",
+          [
+            "get",
+            "rank"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Medium (MapLibre glyphs)"
+        ],
+        "text-size": 7.5,
+        "text-allow-overlap": true
+      },
+      "paint": {
+        "text-color": "#FFFFFF"
+      },
+      "metadata": {
+        "skippercast:rank_by": "habitat_score (descending) of the atlas targets in view — a habitat rank, not a fish score",
+        "skippercast:z": "labels",
+        "skippercast:layer": "spots-marks"
+      },
+      "_token": "layers.spots-marks.badge"
+    }
+  ]
+}
