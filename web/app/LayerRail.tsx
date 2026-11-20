@@ -42,7 +42,7 @@ import {chartOnly, drawsIn, layerCopy, railNoteCopies, railNotes} from '../map/l
 import {statusText} from '../map/status-copy.ts';
 import type {CoastHabitat} from '../../packages/coast/src/embed-types.ts';
 import {
-  currentStatus, exploreRankedReef, selectRankedReef, setTerrainOption, shownPresentation, terrainHabitat, terrainOptions, terrainShading,
+  currentStatus, exploreRankedReef, selectRankedReef, setTerrainOption, shownPresentation, terrainFixedRamp, terrainHabitat, terrainOptions, terrainShading,
 } from '../map/stage.ts';
 import {base, current, DEFAULT_CURRENT, grade, isBase, layers, layersParam, profile, region, setParams, species, UNSUPPORTED, type Base} from '../state.ts';
 import {railEntries, railOn, toggled} from './rail.ts';
@@ -154,6 +154,7 @@ function HabitatRanks({habitat}: {habitat: CoastHabitat}) {
 /** The terrain's options under the Seafloor entry (FE-80), with the native panel's labels and notes, in a disclosure so the rail stays short. */
 export function TerrainOptions({on}: {on: boolean}) {
   const o = terrainOptions.value, habitat = terrainHabitat.value, lang = language.value, tx = (id: StringId) => t(id, lang);
+  const shading = terrainShading.value;
   return (
     <details class="app-rail-options app-rail-terrain">
       <summary class="app-rail-option">{tx('rail.terrain.options')}</summary>
@@ -165,8 +166,12 @@ export function TerrainOptions({on}: {on: boolean}) {
         onInput={v => setTerrainOption('waterOpacity', v)} /> : null}
       <p class="app-rail-hint">{tx('rail.terrain.waterHint')}</p>
       <Option label={tx('rail.terrain.contours')} checked={o.contours} onChange={v => setTerrainOption('contours', v)} />
-      <Option label={tx('rail.terrain.fixedRamp')} checked={o.fixedRamp} onChange={v => setTerrainOption('fixedRamp', v)} />
-      {terrainShading.value ? <p class="app-rail-hint" role="status"><EnglishDetail lang={lang}>{terrainShading.value.readout}</EnglishDetail></p> : null}
+      <Option label={tx('rail.terrain.fixedRamp')} checked={terrainFixedRamp.value} disabled={!!shading?.unmatched} onChange={v => setTerrainOption('fixedRamp', v)} />
+      {shading ? <p class="app-rail-hint" role="status">
+        <EnglishDetail lang={lang}>{shading.readout}</EnglishDetail>
+        {shading.unmatched ? <> · {tx('rail.terrain.unmatched')}</> : null}
+        {shading.noData ? <> · <span aria-hidden="true" style={{color: shading.noData}}>■</span> {tx('rail.terrain.noData')}</> : null}
+      </p> : null}
       <Range id="terrain-sun" label={tx('rail.terrain.sun')} value={o.sunAzimuth} text={`${o.sunAzimuth}°`} min={0} max={360} step={5} ends={[tx('rail.terrain.lightingOnly'), tx('rail.terrain.heightsUnchanged')]}
         onInput={v => setTerrainOption('sunAzimuth', v)} />
       <Range id="terrain-photo" label={tx('rail.terrain.land')} value={o.photoMix} text={o.photoMix >= 1 ? tx('rail.terrain.photo') : o.photoMix <= 0 ? tx('rail.terrain.shaded') : t('rail.terrain.photoPct', lang, {n: Math.round(o.photoMix * 100)})} min={0} max={1} step={0.05}
