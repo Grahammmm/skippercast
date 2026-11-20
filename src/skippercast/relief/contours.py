@@ -3,6 +3,7 @@ from collections import defaultdict
 import contextlib
 from importlib.util import module_from_spec, spec_from_file_location
 import json
+import logging
 import math
 
 from skippercast.paths import repo_root
@@ -376,13 +377,12 @@ def trace_v3(job, view):
                       'vertical_datum': datum or dc.UNVERIFIED_DATUM}
             certified = (row['id'] in native_ids and row.get('support_class_cap') == 3
                          and (row.get('max_zoom') or 0) >= 16)
-            # Native cell evidence: the reviewed source value; else a normalized twin's per-tile resolution that
-            # matches the grid. A raw grid without reviewed evidence is not traced (it is listed as omitted).
+            # A normalized tile's resolution describes its output pixels, not the original sampling.
             native = source.get('native_resolution_m')
-            if not (type(native) in (int, float) and native > 0):
-                tile = row.get('resolution_m')
-                native = tile if (sidecar is not None and type(tile) in (int, float) and tile > 0
-                                  and math.isclose(tile, grid.res[0], rel_tol=1e-8)) else None
+            if not (type(native) in (int, float) and 0 < native < math.inf):
+                logging.getLogger(__name__).warning(
+                    '%s/%s: missing or invalid reviewed original native resolution; withholding ft-v3 contours',
+                    ident, row['id'])
             lines = list(tool.v3_grid(grid, region, view, common, native, support=measured, certified=certified,
                                       positive_down=convention == 'depth_positive_down'))
             if not lines:

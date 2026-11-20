@@ -261,7 +261,7 @@ def test_selected_v3_pier_requires_attested_native_eligibility(builder, tmp_path
 
 
 def v3_selected_job(builder, tmp_path, *, convention='elevation_positive_up', native=None, tile_res=None,
-                    sidecar_on=True, cell=1):
+                    sidecar_on=True, cell=1, upsample=1):
     import numpy as np
     from rasterio.transform import from_origin
     from skippercast.relief import contours
@@ -273,9 +273,14 @@ def v3_selected_job(builder, tmp_path, *, convention='elevation_positive_up', na
         source['native_resolution_m'] = native
     region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36]}
     transform = from_origin(690000, 3915000, cell, cell)
-    values = np.tile(np.linspace(-0.2, -100, 100, dtype='float32'), (50, 1))
+    values = np.tile(np.linspace(-0.2, -100, 100 // upsample, dtype='float32'), (50 // upsample, 1))
     if convention == 'depth_positive_down':
         values = -values
+    original = None
+    if upsample != 1:
+        original = write_grid(tmp_path / 'original.tif', values, 'EPSG:32610',
+                              from_origin(690000, 3915000, cell * upsample, cell * upsample))
+        values = values.repeat(upsample, axis=0).repeat(upsample, axis=1)
     grid = write_grid(tmp_path / 'grid.tif', values, 'EPSG:32610', transform)
     support = write_support(tmp_path / 'support.tif', grid)
     row = {'id': 'tile', 'source_id': SOURCE, 'sha256': digest(grid), 'support_sha256': digest(support),
@@ -285,7 +290,7 @@ def v3_selected_job(builder, tmp_path, *, convention='elevation_positive_up', na
     sidecar = pin = support_in = None
     if sidecar_on:
         sidecar = tmp_path / 'sidecar.json'
-        sidecar.write_text(json.dumps({'schema': 'sc-relief-normalized/1', 'original_sha256': digest(grid),
+        sidecar.write_text(json.dumps({'schema': 'sc-relief-normalized/1', 'original_sha256': digest(original or grid),
                                        'outputs': {'grid.tif': digest(grid), 'support.tif': digest(support)},
                                        'units': 'm', 'value_convention': 'elevation_positive_up',
                                        'vertical_datum': 'MLLW', 'crs': 'EPSG:32610', 'shape': list(values.shape),
@@ -323,18 +328,19 @@ def test_v3_unknown_value_convention_raises(builder, tmp_path):
         contours.trace_v3(job, style.load().view('contours'))
 
 
-@pytest.mark.parametrize('sidecar_on,tile_res,expect', [(True, 1, True), (False, 1, False), (True, 2, False),
-                                                        (True, None, False)])
-def test_v3_tile_native_resolution_from_normalized_row(builder, tmp_path, sidecar_on, tile_res, expect):
-    # No source-level native_resolution_m: only a matching normalized-twin row resolution is evidence.
+@pytest.mark.parametrize('sidecar_on,tile_res,upsample', [(True, 1, 2), (False, 1, 1), (True, 2, 1),
+                                                         (True, None, 1)])
+def test_v3_requires_reviewed_original_resolution(builder, tmp_path, caplog, sidecar_on, tile_res, upsample):
+    # A matching tile declaration is not original sampling evidence: the 2 m original is resampled to 1 m.
     from skippercast import style
     from skippercast.relief import contours
 
-    _, job = v3_selected_job(builder, tmp_path, tile_res=tile_res, sidecar_on=sidecar_on)
+    _, job = v3_selected_job(builder, tmp_path, tile_res=tile_res, sidecar_on=sidecar_on, upsample=upsample)
     doc = contours.trace_v3(job, style.load().view('contours'))
-    assert bool(doc['features']) is expect
-    omitted = doc['provenance']['sources_omitted']
-    assert (not omitted) if expect else any(SOURCE in json.dumps(o) for o in omitted)
+    assert doc['features'] == []
+    assert doc['provenance']['sources'] == []
+    assert doc['provenance']['sources_omitted'] == [{'source_id': SOURCE, 'review_status': 'approved'}]
+    assert f'{SOURCE}/tile: missing or invalid reviewed original native resolution' in caplog.text
 
 
 def test_normalized_twin_retains_original_identity_and_shelf_lines(builder, geographic_twin, tmp_path):
