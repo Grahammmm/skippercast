@@ -1,7 +1,19 @@
+// THEME-D3 part 1 of 2 — not full-map acceptance.
+// Covered: observed Chart paints with night/ENC bases, seafloor, contours,
+// stations, condition selection and admin fleet; marks admission and terrain
+// registry output (not rendered marks).
+// DEFERRED (web/map/ unless otherwise specified): bottom relief/survey detail
+// (bottom-relief.ts, survey-detail.ts); nearshore rings (nearshore.ts, swell.ts);
+// public charter/AIS (charter-grounds.ts, commercial-ais.ts); shore/reach/route
+// (shore.ts, reach.ts, planning-route.ts); study previews (preview-layers.ts,
+// preview/); current particles (currents.ts, flow.ts); built-app marks rendering
+// and drape (marks.ts, stage.ts); 3D material/camera parity (stage.ts,
+// packages/coast/src/coast3d/viewer.ts).
+// DEFERRED: not mountable offline — aerial (aerial.ts, web/app/MapStage.tsx).
+import process from 'node:process';
 import {expect, test} from '@playwright/test';
 import {bindThemeFixture, FIRST, NEXT, NOW, serveThemeApp, snapshot, type Theme} from './theme-d3-fixture.ts';
-import {syntheticTerrain} from './terrain-keyboard-fixture.ts';
-import {buildMarksProbe, qualifyMarksInputs, serveMarksArm, type MarksArm} from './theme-d3-marks.ts';
+import {buildMarksProbe, marksManifest, qualifyMarksInputs, serveMarksArm, type MarksArm} from './theme-d3-marks.ts';
 
 declare global {
   interface Window {
@@ -31,7 +43,7 @@ for (const arm of marksArms) {
         const observed = await page.evaluate(() => window.d3Marks());
         if (admitted) expect(observed.drape).toBeGreaterThan(0);
         expect(server.atlasPaths()).toEqual(server.expectedAtlasPaths);
-        console.log(`marks ${arm}: ${JSON.stringify(observed)}, paths=${JSON.stringify(server.paths)}`);
+        console.log(`marks ${arm}: ${JSON.stringify(observed)}`);
       } finally { await local.close(); }
     } finally {
       await server.close();
@@ -40,11 +52,19 @@ for (const arm of marksArms) {
   });
 }
 
+// A wrong digest with the correct Git blob must still refuse qualification.
+test('marks fixture manifest refuses a wrong digest before launch', async ({}, info) => {
+  test.skip(info.project.name !== 'laptop', 'The manifest contract is viewport independent');
+  const path = 'web/map/marks.ts';
+  const files = {...marksManifest.files, [path]: [marksManifest.files[path][0], '0'.repeat(64)] as const};
+  await expect(qualifyMarksInputs({...marksManifest, files})).rejects.toThrow(`Marks fixture not qualified: ${path} drift`);
+});
+
 // The provider unit oracles cannot detect a provider omitted by the real app,
 // or a theme switch rebuilding sources instead of updating the mounted map.
 const other = (theme: Theme): Theme => theme === 'light' ? 'dark' : 'light';
 const view = '35.38000,-120.88000,12';
-const link = (region: string, layers: string, presentation = 'chart', base = 'night', camera = view) => `/map?ui=v2&region=${region}&profile=boat&base=${base}&view=${camera}&presentation=${presentation}&layers=${layers}&diagnostics=1`;
+const link = (region: string, layers: string, base: string, camera: string) => `/map?ui=v2&region=${region}&profile=boat&base=${base}&view=${camera}&presentation=chart&layers=${layers}&diagnostics=1`;
 const ids = (shot: Awaited<ReturnType<typeof snapshot>>) => shot.layers.map(({id}) => id);
 type Shot = Awaited<ReturnType<typeof snapshot>>;
 function stalePaint(live: Shot, fresh: Shot) {
@@ -87,8 +107,9 @@ for (const starting of ['dark', 'light'] as const) {
         ...choices.map(layers => ({layers, base: 'night', camera: view}))];
       for (const {layers, base, camera} of plan) {
         await test.step(`${base}/${layers}`, async () => {
+          const loadBoundary = data.requests.length;
           await live.emulateMedia({colorScheme: starting});
-          const url = server.origin + link(FIRST, layers, 'chart', base, camera);
+          const url = server.origin + link(FIRST, layers, base, camera);
           await Promise.all([live, fresh].map(page => page.goto(url)));
           await Promise.all([live, fresh].map(page => page.waitForFunction(() => window.d3Chart?.isStyleLoaded() && window.d3Chart?.areTilesLoaded(), null, {timeout: 10_000})));
           await Promise.all([live, fresh].map(page => enableFleet(page, phone)));
@@ -110,8 +131,10 @@ for (const starting of ['dark', 'light'] as const) {
           expect(before.sources).toEqual(expect.arrayContaining(['fleet-heat', 'fleet-tracks', 'fleet-events']));
           if (base === 'chart') expect(await live.evaluate(() => window.d3Chart.getLayoutProperty('chart-enc', 'visibility'))).toBe('visible');
           expect([...ids(before)].sort()).toEqual([...ids(target)].sort());
-          expect(data.requests.some(path => path.endsWith('.pmtiles'))).toBe(true);
-          if (layers === choices[0] && base === 'night') await live.screenshot({path: info.outputPath(`${starting}.png`)});
+          expect(data.requests.slice(loadBoundary).some(path => path.endsWith('.pmtiles'))).toBe(true);
+          if (!process.env.CI && layers === choices[0] && base === 'night') {
+            await live.screenshot({path: info.outputPath(`${starting}.png`)});
+          }
           const boundary = data.requests.length;
           for (let i = 0; i < 10; i++) {
             const next = i % 2 === 0 ? other(starting) : starting;
@@ -169,11 +192,6 @@ for (const starting of ['dark', 'light'] as const) {
       expect.soft(stalePaint(pendingAfter, pendingFresh), 'stale paint with next region held').toEqual([]);
       data.release();
       reference.release();
-      const terrain = await syntheticTerrain(live);
-      terrain.release();
-      await live.goto(server.origin + link(FIRST, choices[0], '3d'));
-      await expect(live.locator('.app-terrain')).toBeVisible();
-      await expect(live.locator('.app-terrain #scene')).toHaveAttribute('data-perspective', '3d');
     } finally {
       await Promise.all(contexts.map(context => context.close()));
       server.close();

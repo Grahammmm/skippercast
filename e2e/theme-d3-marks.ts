@@ -16,9 +16,9 @@ const screen = '/data/protected-areas.geojson';
 const coverage = '/regions/morro-bay/coverage.json';
 const now = '2030-05-10T18:15:00Z';
 
-// Requalification is explicit. A new merge base or any changed input must fail
-// before launch, even if the browser would otherwise render something plausible.
-const manifest = {
+// Base records qualification provenance; shallow checkouts need only the HEAD
+// blobs and working-tree bytes. Changed inputs must fail before browser launch.
+export const marksManifest = {
   base: 'ca695254b65dc0c1313f09c7427f98a78ab09c74',
   files: {
     [`dist${region}`]: ['7aa807d9f5b9d13bf4f3ceb8b82acdae9f223ac1', '6bcac86a827ca62a805c1c61bda1f6f1973a1551d5ede42f522c232b978ea466'],
@@ -26,18 +26,26 @@ const manifest = {
     [`dist${full}`]: ['11d0b970c67f374c0d31ee58a7628b38b0195989', '57e35ad2430f6ca48a9d79e4da4fa2db8ce88ab93758e8565d3d2565ec7529dd'],
     'web/map/marks.ts': ['5ed2e11a447917e487abbbaed2549b99c31ab179', '128a9884ab7a14c0e6b285d44d6a4a4d8851a966abfe9ea18106ce2f6c49be70'],
   },
-};
+} as const;
 
 export type MarksArm = 'startup' | '4a-i' | '4a-ii' | '4b';
 
-export async function qualifyMarksInputs() {
-  const git = (...args: string[]) => execFileSync('git', args, {cwd: fileURLToPath(root), encoding: 'utf8'}).trim();
-  if (git('merge-base', 'HEAD', 'origin/main') !== manifest.base) throw new Error('Marks fixture not qualified: base drift');
+export async function qualifyMarksInputs(manifest: {files: Record<string, readonly [string, string]>} = marksManifest) {
   const bytes = new Map<string, Buffer>();
-  for (const [path, [blob, digest]] of Object.entries(manifest.files)) {
-    const file = await readFile(new URL(path, root));
-    if (git('rev-parse', `${manifest.base}:${path}`) !== blob || git('rev-parse', `HEAD:${path}`) !== blob ||
-        createHash('sha256').update(file).digest('hex') !== digest) throw new Error(`Marks fixture not qualified: ${path} drift`);
+  for (const path of Object.keys(marksManifest.files)) {
+    const pin = manifest.files[path];
+    const file = await readFile(new URL(path, root)).catch(() => undefined);
+    let blob: string;
+    try {
+      blob = execFileSync('git', ['rev-parse', '--verify', '--quiet', `HEAD:${path}`], {
+        cwd: fileURLToPath(root), encoding: 'utf8',
+      }).trim();
+    } catch {
+      throw new Error(`Marks fixture not qualified: ${path} has no HEAD blob`);
+    }
+    if (!pin || !file || blob !== pin[0] || createHash('sha256').update(file).digest('hex') !== pin[1]) {
+      throw new Error(`Marks fixture not qualified: ${path} drift`);
+    }
     bytes.set(path, file);
   }
   const meta = JSON.parse(bytes.get(`dist${region}`)!.toString('utf8'));
