@@ -293,7 +293,7 @@ test('FE-80: in 2D and 3D the Seafloor entry holds the terrain\'s options with l
   m.terrainOptions.value = m.TERRAIN_DEFAULTS;
   let html = m.render(m.h(m.LayerRail));
   const terrain = html.match(/<details class="app-rail-options app-rail-terrain"><summary class="app-rail-option">Terrain options<\/summary>.*?<\/details>/s)[0];
-  assert.match(terrain, /<label for="terrain-relief">Seabed relief <b class="ui-mono">×5<\/b><\/label><input id="terrain-relief" type="range" min="1" max="12" step="1" value="5" aria-valuetext="×5"/);
+  assert.match(terrain, /<label for="terrain-relief">Seabed relief <b class="ui-mono">×2<\/b><\/label><input id="terrain-relief" type="range" min="1" max="12" step="1" value="2" aria-valuetext="×2"/);
   assert.match(terrain, /<label for="terrain-water">Water opacity <b class="ui-mono">50%<\/b>/);
   assert.match(terrain, /Illustrative \+0\.8 m water surface\. Not a live tide\./, 'the native note, verbatim');
   const boxes = [...terrain.matchAll(/<label class="app-rail-option"><input type="checkbox"([^>]*)\/?>([^<]+)<\/label>/g)].map(x => [x[2], /checked/.test(x[1]), /disabled/.test(x[1])]);
