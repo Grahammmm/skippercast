@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import errno
+import hashlib
 import os
 from pathlib import Path
 import signal
@@ -86,8 +87,9 @@ def test_both_modes_refuse_fifo_and_close_descriptor(root, monkeypatch, metadata
             leaf_fds.append(fd)
         return fd
     monkeypatch.setattr(os, "open", spy)
-    with pytest.raises(ValueError, match="regular bounded metadata required"):
-        driver._read(root, "pipe", metadata=metadata)
+    with pytest.raises(ValueError, match="regular (bounded metadata|artifact) required"):
+        driver._verify(root, dict(path="pipe", bytes=0, sha256=hashlib.sha256(b"").hexdigest()),
+                       "queue:synthetic", metadata=metadata)
     (fd,) = leaf_fds
     with pytest.raises(OSError) as closed:
         os.fstat(fd)
@@ -119,7 +121,8 @@ def test_regular_metadata_and_binary_controls_unchanged(root):
     assert driver._json(root, "small.json") == {"a": 1}
     with pytest.raises(ValueError, match="regular bounded metadata required"):
         driver._read(root, "over.json")
-    assert driver._read(root, "over.json", metadata=False) == over
+    assert driver._verify(root, dict(path="over.json", bytes=len(over), sha256=hashlib.sha256(over).hexdigest()),
+                          "queue:synthetic", metadata=False) is None
     assert (root / "over.json").read_bytes() == over
 
 
