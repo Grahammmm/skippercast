@@ -248,6 +248,8 @@ async function openManualPanel(page: Page, context: BrowserContext, size: {width
   await page.evaluate(theme => { document.documentElement.dataset.theme = theme; }, theme);
   const fleet = page.locator('.app-brief-links').first();
   await expect(fleet).toContainText('5 boats reported');
+  // The port directory loads separately; its longer label can wrap this row after the baseline is sampled.
+  await expect(portButton(page)).toHaveAttribute('aria-label', 'Change port (Morro Bay)');
   await revealShare(page);
   const gap = () => fleet.evaluate(el => el.getBoundingClientRect().top - document.querySelector('.app-share button')!.getBoundingClientRect().top);
   const idleGap = await gap();

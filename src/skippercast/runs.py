@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
+import math
 import os
 from pathlib import Path, PureWindowsPath
 import re
@@ -267,6 +268,18 @@ def validate(document):
     regions = document.get("regions", {})  # optional: added for the regional refresh jobs
     if not isinstance(regions, dict) or not all(status_row(r) for r in regions.values()):
         raise ValueError("Run manifest regions must map ids to status rows")
+    for section, rows in (("sources", document["sources"]), ("regions", regions)):
+        for row in rows.values():
+            value = row.get("duration_ms")
+            if value is None:
+                continue
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                try:
+                    if math.isfinite(value / 1000):  # same conversion as the report
+                        continue
+                except OverflowError:
+                    pass  # an oversized JSON integer cannot be rendered as seconds
+            raise ValueError(f"Run manifest {section}.duration_ms must be a finite number or null")
     # Every shape report.render() reads; messages name the field and never echo the value.
     for key in ("inputs", "outputs"):
         if not isinstance(document[key], list) or not all(isinstance(row, dict) for row in document[key]):
