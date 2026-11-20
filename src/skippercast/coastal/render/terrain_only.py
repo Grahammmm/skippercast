@@ -27,6 +27,7 @@ from .preview import output_path, publish_staging, sync_directory
 INPUT = 'coastal-terrain-only-input-v1'
 REVIEW = 'coastal-terrain-only-science-review-v1'
 RESULT = 'coastal-terrain-only-render-v1'
+COMPLETE = 'coastal-terrain-only-complete-v1'
 MAX_CLI_JSON_BYTES = 2_000_000
 DEFAULT_STYLE = dict(display_units='m', vertical_exaggeration=1.0,
     light_azimuth_degrees=315.0, light_elevation_degrees=45.0, light_intensity=0.65,
@@ -143,14 +144,19 @@ def verify(root, acceptance, *, now, minimum_valid_until=None):
     return document
 
 
-def build_terrain(root, document):
-    import numpy as np
-    import rasterio
+def _verified_terrain_paths(root, document):
     terrain = validate_derived_geotiff(root, document['terrain'], contract='coastal-normalized-terrain-v1', cap=MAX_FILE_BYTES)
     mask = validate_derived_geotiff(root, document['mask'], contract='coastal-native-support-v2', cap=MAX_FILE_BYTES)
     uncertainty = document.get('uncertainty')
     uncertainty_path = (validate_derived_geotiff(root, uncertainty,
         contract='coastal-derived-uncertainty-m-v1', cap=MAX_FILE_BYTES) if uncertainty else None)
+    return terrain, mask, uncertainty_path
+
+
+def build_terrain(root, document):
+    import numpy as np
+    import rasterio
+    terrain, mask, uncertainty_path = _verified_terrain_paths(root, document)
     with rasterio.open(terrain) as ds, rasterio.open(mask) as support:
         for item in (ds, support):
             check_header(item)
@@ -455,8 +461,6 @@ def render_terrain(mesh,path,style):
 def preview(root, acceptance, *, output_dir, now, style=None, minimum_valid_until=None):
     document = verify(root,acceptance,now=now,minimum_valid_until=minimum_valid_until)
     style = style_controls(style)
-    mesh = build_terrain(root,document)
-    rendered,pixels = render_terrain(mesh,None,style)
     import numpy
     import rasterio
     code_paths = [Path(__file__),Path(vertical.__file__),Path(__file__).parent/'align.py',
@@ -468,10 +472,17 @@ def preview(root, acceptance, *, output_dir, now, style=None, minimum_valid_unti
                  for name in (INPUT,REVIEW,RESULT)},numpy=numpy.__version__,rasterio=rasterio.__version__))
     base,out = output_path(root,output_dir)
     if out.exists():
-        completion = load(base,ref(base,out/'complete.json','coastal-terrain-only-complete-v1'))
-        if completion.get('binding') != binding:
+        # Acceptance binds the declared artifact refs, not the bytes on disk today.
+        # Recheck the derived TIFFs (including the no-sidecars rule) without opening GDAL.
+        _verified_terrain_paths(root, document)
+        completion = load(base,ref(base,out/'complete.json',COMPLETE))
+        if completion.get('schema') != COMPLETE or completion.get('binding') != binding:
             raise ValueError('terrain_only_output_binding_changed')
-        result = load(base,completion['receipt'],contract=RESULT)
+        receipt = completion.get('receipt')
+        if (not isinstance(receipt, dict) or 'sha256' not in receipt
+                or receipt.get('path') != (out.relative_to(base)/'render-receipt.json').as_posix()):
+            raise ValueError('terrain_only_output_artifacts_changed')
+        result = load(base,receipt,contract=RESULT)
         if result.get('render_binding') != binding:
             raise ValueError('terrain_only_output_binding_changed')
         if {a['path'] for a in result['artifacts']} != {(out.relative_to(base)/n).as_posix() for n in ('terrain-mesh.npz','preview.png')}:
@@ -479,6 +490,8 @@ def preview(root, acceptance, *, output_dir, now, style=None, minimum_valid_unti
         for artifact in result['artifacts']:
             resolve(base,artifact,cap=MAX_FILE_BYTES)
         return result
+    mesh = build_terrain(root,document)
+    rendered,pixels = render_terrain(mesh,None,style)
     out.parent.mkdir(parents=True,exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix='.'+out.name+'.terrain-only-',dir=out.parent))
     save_mesh(stage/'terrain-mesh.npz',mesh)
@@ -507,7 +520,7 @@ def preview(root, acceptance, *, output_dir, now, style=None, minimum_valid_unti
     write(stage/'render-receipt.json',result)
     receipt = ref(stage,'render-receipt.json',RESULT)
     receipt['path'] = (out.relative_to(base)/'render-receipt.json').as_posix()
-    write(stage/'complete.json',dict(schema='coastal-terrain-only-complete-v1',binding=binding,receipt=receipt))
+    write(stage/'complete.json',dict(schema=COMPLETE,binding=binding,receipt=receipt))
     sync_directory(stage)
     publish_staging(stage,out)
     return result
