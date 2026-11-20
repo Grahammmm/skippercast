@@ -26,7 +26,7 @@ import {createSwell, swellOverlay} from '../web/map/swell.ts';
 import {WAVE_MODEL} from '../web/map/forecast-grid.ts';
 import {fieldOpacity} from '../web/map/nearshore-paint.ts';
 import {NEARSHORE_STYLE} from '../web/map/nearshore-style.gen.ts';
-import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from '../web/map/style.ts';
+import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE, PLACE_LABELS} from '../web/map/style.ts';
 import {camera, cameraParam, choosePresentation, createStage, drape, terrainCoarsened, terrainFailed, terrainPick, zoomForSpan} from '../web/map/stage.ts';
 import {appView, configureStore, region, setParams, syncFromURL} from '../web/state.ts';
 import {effect, signal} from '@preact/signals';
@@ -395,8 +395,10 @@ test('MSK-2: Chart inserts real fields and contours at their current MapLibre an
   const temperature = {sourceId: 'fixture', kind: 'analysis', analysedAt: when, fetchedAt: when,
     sampleSpacingDeg: 0.1, nativeResolutionDeg: 0.1, points: grid};
   const report = {spatial: {surfaceTemperature: temperature}, sources: [{id: 'fixture', label: 'Fixture', outcome: 'ok', kind: 'analysis'}]};
-  controllers.push(createWaterTemp({...opts, place: () => ({regionId: id}), data: {coastStatus: signal({report: 'ready'}),
-    coastReport: signal({data: report}), setPlace() {}, load() {}}}));
+  const makeWaterTemp = () => createWaterTemp({...opts, place: () => ({regionId: id}), data: {coastStatus: signal({report: 'ready'}),
+    coastReport: signal({data: report}), setPlace() {}, load() {}}});
+  const waterTemp = makeWaterTemp();
+  controllers.push(waterTemp);
 
   const wave = {utc_offset_seconds: 0, hourly_units: {time: 'unixtime', swell_wave_height: 'ft', swell_wave_period: 's', swell_wave_direction: '°'},
     hourly: {time: [time], swell_wave_height: [2], swell_wave_period: [12], swell_wave_direction: [290]}};
@@ -423,17 +425,24 @@ test('MSK-2: Chart inserts real fields and contours at their current MapLibre an
     const actual = ids();
     assert.deepEqual(actual.filter(layer => wanted.includes(layer)), wanted);
   };
-  order('water-temp', 'chlorophyll', 'swell', DEPTH_BOTTOM, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL, MPA_FILL);
+  order('water-temp', 'chlorophyll', 'swell', DEPTH_BOTTOM, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL, PLACE_LABELS, MPA_FILL);
 
-  // The kit slot is last, but the existing Chart appends overlays after the static basemap place symbols.
-  order('boundaries', 'labels-places', DEPTH_LABEL, MPA_FILL);
-  // Without Swell, chlorophyll currently falls back to MPA_FILL rather than DEPTH_BOTTOM.
+  // Place labels are the kit's top slot: the contour labels and every field draw under them, not over.
+  order('boundaries', DEPTH_LABEL, PLACE_LABELS, MPA_FILL);
+  // Without Swell, chlorophyll still goes under the depth contours (before DEPTH_BOTTOM), not before MPA_FILL.
   setParams({layers: 'water-temp,chlorophyll'});
   // Draw chlorophyll anew so the engine has to choose the fallback rather than retain its layer.
   controllers.pop().destroy();
   controllers.push(createChlorophyll({...opts, fetchFn: async url => url.endsWith('/habitat-dynamics.json') ? Response.json(manifest) : new Response(tile)}));
   for (const end = Date.now() + 2000; !ids().includes('chlorophyll') && Date.now() < end;) await tick();
-  order('water-temp', DEPTH_BOTTOM, DEPTH_LABEL, 'chlorophyll', MPA_FILL);
+  order('water-temp', 'chlorophyll', DEPTH_BOTTOM, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL, PLACE_LABELS, MPA_FILL);
+
+  // Arrival order must not matter: Water temperature drawn after chlorophyll still lands under it (kit: water-temp, chlorophyll, swell).
+  controllers.splice(controllers.indexOf(waterTemp), 1);
+  waterTemp.destroy();
+  controllers.push(makeWaterTemp());
+  for (const end = Date.now() + 2000; !ids().includes('water-temp') && Date.now() < end;) await tick();
+  order('water-temp', 'chlorophyll', DEPTH_BOTTOM, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL, PLACE_LABELS, MPA_FILL);
 });
 
 const doc = () => ({hidden: false, addEventListener() {}, removeEventListener() {}});

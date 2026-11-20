@@ -13,6 +13,7 @@ import {
 import {ZOOM_OFFSET} from '../web/map/engine.ts';
 import {DEPTH_CONTOURS_SOURCE} from '../web/map/layers.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
+import {PLACE_LABELS} from '../web/map/style.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
 import {configureStore, region, syncFromURL} from '../web/state.ts';
@@ -54,7 +55,7 @@ function setup(t, {files = {}, script = {}} = {}) {
   return {asked, calls, move};
 }
 const drawnUnderMPA = calls => calls.filter(c => c[0] === 'overlay' && c[2]).length === 1
-  && calls.some(c => c[0] === 'overlay' && c[2] && c[2].join() === IDS.join() && c[3] === MPA_FILL);
+  && calls.some(c => c[0] === 'overlay' && c[2] && c[2].join() === IDS.join() && c[3]?.join() === [PLACE_LABELS, MPA_FILL].join());
 
 test('a thrown read fails; a move before the back-off asks nothing; the first move after it asks once and draws', async t => {
   assert.equal(CONTOUR_RETRY_MS, 60_000);

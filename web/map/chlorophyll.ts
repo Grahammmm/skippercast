@@ -4,9 +4,11 @@ import {layers, region} from '../state.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {chlorophyllFresh, regionalChlorophyll, type ChlorophyllObservation, type RegionalChlorophyll} from './habitat-feed.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {MPA_FILL} from './mpa.ts';
 import {fieldOpacity} from './nearshore-paint.ts';
 import type {ExpressionSpecification} from 'maplibre-gl';
+import {PLACE_LABELS} from './style.ts';
 import {SWELL_LAYER} from './swell.ts';
 import {paintEdits} from './theme-restyle.ts';
 import {readPalette, type Palette} from './palette.ts';
@@ -81,7 +83,7 @@ export function createChlorophyll(o: {engine: ReadonlySignal<Engine | null>; fet
       setRailNote(ID, s.note, s.copy?.note);
       if (e) {
         const cells = s.drawn ? cellsOf(s.drawn) : null;   // one geometry build per observation: source creation and update share it
-        e.setOverlay(ID, s.drawn && cells ? chlorophyllOverlay(s.drawn, palette(), cells) : null, [SWELL_LAYER, MPA_FILL]);
+        e.setOverlay(ID, s.drawn && cells ? chlorophyllOverlay(s.drawn, palette(), cells) : null, [SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
         if (cells) e.setData(ID, cells);
       }
     }),

@@ -15,6 +15,7 @@ import {
 import {ZOOM_OFFSET} from '../web/map/engine.ts';
 import {DEPTH_CONTOURS_SOURCE, layerEntry, sourceLayer} from '../web/map/layers.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
+import {PLACE_LABELS} from '../web/map/style.ts';
 import {NEARSHORE_STYLE} from '../web/map/nearshore-style.gen.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
@@ -201,7 +202,7 @@ test('the Chart layer draws the overview under the protected areas, swaps in the
   await flush(); await flush();
   assert.deepEqual(asked, [depthContoursOverviewURL('morro-bay')]);
   const drawnAt = calls.findIndex(c => c[0] === 'overlay' && c[2]);
-  assert.deepEqual(calls[drawnAt], ['overlay', 'depth-contours', [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL], MPA_FILL]);
+  assert.deepEqual(calls[drawnAt], ['overlay', 'depth-contours', [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL], [PLACE_LABELS, MPA_FILL]]);
   assert.deepEqual(calls[drawnAt + 1], ['data', DEPTH_CONTOURS_SOURCE, OVERVIEW.features.length]);
   assert.equal(contourState.value.status, 'drawn');
   assert.equal(contourState.value.sources.length, 3);

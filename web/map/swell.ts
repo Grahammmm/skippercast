@@ -50,7 +50,7 @@ import {fieldOpacity} from './nearshore-paint.ts';
 import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, nearshoreThemePaint, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
-import {LABEL_FONT} from './style.ts';
+import {LABEL_FONT, PLACE_LABELS} from './style.ts';
 import {surfaceField, type SurfaceField} from './surface-field.js';
 import {paintEdits} from './theme-restyle.ts';
 
@@ -380,7 +380,7 @@ export function createSwell(o: SwellOptions): {
       let painted = ramps(p).swell.join();
       const texture = (ramp: string[]): void => { painted = ramp.join(); e.setImage(SWELL_SOURCE, fieldTexture(f!.field, HEIGHT_SCALE, ramp, v => v[0]!)); };
       e.setOverlay(REGISTRY_ID, f ? {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).swell; if (ramp.join() !== painted) texture(ramp); return overlay.themePaint!(pal); }} : overlay,
-        ['wind-casing', DEPTH_BOTTOM, MPA_FILL]);
+        ['wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
       if (f) {
         texture(ramps(p).swell);
         e.setData(ISOLINE_SOURCE, periodLines(f));

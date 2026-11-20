@@ -30,7 +30,7 @@ import {kitZoom, type NearshoreStyle} from './nearshore-paint.ts';
 import {NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 import {readPalette, sknColor, type Palette} from './palette.ts';
 import {camera} from './stage.ts';
-import {LABEL_FONT, mapControl} from './style.ts';
+import {LABEL_FONT, PLACE_LABELS, mapControl} from './style.ts';
 import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'depth-contours';
@@ -413,11 +413,11 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       const data = l && l.region === id && l.result !== 'none' && l.result.status === 'drawn' ? l.result.data : null;
       if (!data) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
       const visible = data.set === FT_V2 ? contoursAt(data, tier.value) : data;
-      // § 9 draw order: above the water temperature and swell fields, under the protected areas.
+      // § 9 draw order: above the water temperature, chlorophyll and swell fields, under the basemap's place labels (the kit's top slot) and the protected areas.
       if (!drawn || e !== drawnOn || lastSet !== data.set) {
         // A different set is a different file: install it afresh.
         if (drawn && e === drawnOn) e.setOverlay(REGISTRY_ID, null);
-        e.setOverlay(REGISTRY_ID, contoursOverlay(palette(), visible), MPA_FILL);
+        e.setOverlay(REGISTRY_ID, contoursOverlay(palette(), visible), [PLACE_LABELS, MPA_FILL]);
         lastSet = data.set;
       }
       e.setData(DEPTH_CONTOURS_SOURCE, visible as never);
