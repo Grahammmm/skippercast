@@ -21,6 +21,7 @@ export async function pagesVersion(db: D1Database): Promise<string> {
 }
 
 export interface PublicPhoto {id: string; url: string; credit: string | null; width: number | null; height: number | null}
+const PHOTO_CHECK_BATCH = 4;
 
 /**
  * Approved or posted images that GET /media/<id>.jpg will serve: a stripped
@@ -32,11 +33,19 @@ export async function publicPhotos(env: Env, where: string, binds: unknown[], li
       WHERE ${where} AND m.kind='image' AND m.publish_state IN ('approved','posted') ORDER BY m.created_at DESC, m.id LIMIT ?`)
     .bind(...binds, limit * 2).all<{id: string; mime: string; exif_stripped: number; credit: string | null; width: number | null; height: number | null}>()).results;
   const out: PublicPhoto[] = [];
-  for (const row of rows) {
-    if (out.length >= limit) break;
-    let ok = row.mime === 'image/jpeg' && row.exif_stripped === 1;
-    if (!ok && env.ADVISOR_MEDIA) { try { ok = Boolean(await env.ADVISOR_MEDIA.head(derivedKey(row.id))); } catch { ok = false; } }
-    if (ok) out.push({id: row.id, url: `/media/${row.id}.jpg`, credit: row.credit, width: row.width, height: row.height});
+  const media = env.ADVISOR_MEDIA;
+  for (let offset = 0; offset < rows.length && out.length < limit;) {
+    // Don't probe more rows than there are slots left to fill. Promise.all
+    // keeps the query order even when an older photo's HEAD finishes first.
+    const batch = rows.slice(offset, offset + Math.min(PHOTO_CHECK_BATCH, limit - out.length));
+    offset += batch.length;
+    const ready = await Promise.all(batch.map(async row => {
+      if (row.mime === 'image/jpeg' && row.exif_stripped === 1) return true;
+      try { return Boolean(await media?.head(derivedKey(row.id))); } catch { return false; }
+    }));
+    for (const [index, row] of batch.entries()) {
+      if (ready[index]) out.push({id: row.id, url: `/media/${row.id}.jpg`, credit: row.credit, width: row.width, height: row.height});
+    }
   }
   return out;
 }
