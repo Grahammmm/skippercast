@@ -17,5 +17,19 @@
       "legacy": true,
       "status": "active"
     }
+  },
+  "layers_default": "layers-v1.0.0",
+  "layers": {
+    "layers-v1.0.0": {
+      "file": "layers-v1.0.0.json",
+      "sha256": "11d8a2cf6efd6ccda696a353994fb5e823b9aa521bb7214f5a928d8ccdba9e04",
+      "stacking_file": "stacking-v1.0.0.json",
+      "stacking_sha256": "1967e569ff275d9d5504cacf18ceef818cf301caf86e8a25bcaf92b176c9c4c3",
+      "base": "nearshore-v1.0.0",
+      "kit_zip_sha256": "be4754df7b2464e7338a720c68642a971a7aa2e347a0e9f8738e19651b3395bd",
+      "fragment": "generated/maplibre-layers-v1.0.0.json",
+      "fragment_canonical_sha256": "b342f8394e6ef68261c06a9329afe90e6c80c29a9ac0bb918301a85c25609b72",
+      "status": "active"
+    }
   }
 }
