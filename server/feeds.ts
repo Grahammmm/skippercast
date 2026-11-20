@@ -380,7 +380,9 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
         object = whole;
       }
       if (object.range && request.headers.has('Range')) {
-        const {offset = 0, length = object.size - offset} = object.range as {offset?: number; length?: number};
+        const range = object.range;
+        const {offset = 0, length = object.size - offset} = 'suffix' in range
+          ? {offset: Math.max(0, object.size - range.suffix)} : range;
         headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
         headers.set('Content-Length', String(length));
         if (fill) { const filled = fill({size: object.size, range: object.range}).catch(() => {}); if (ctx?.waitUntil) ctx.waitUntil(filled); else await filled; }
