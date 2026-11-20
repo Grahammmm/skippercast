@@ -3,7 +3,7 @@
 // result), uncaught page errors fail the test, and axe checks are recorded.
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {forecastFixture} from './forecast-fixture.ts';
+import {forecastFixture, ForecastFixtureQueryError} from './forecast-fixture.ts';
 import AxeBuilder from '@axe-core/playwright';
 import {test as base, expect, type Page} from '@playwright/test';
 import {stubBoundaryChecks} from './boundary-fixture.ts';
@@ -123,7 +123,14 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
       await route.fulfill({status: 503, json: {error: 'Offline UI test'}});
     });
     const fixtureNow = Date.now();
-    await context.route('**/api/om/**', route => route.fulfill({json: forecastFixture(new URL(route.request().url()), fixtureNow)}));
+    await context.route('**/api/om/**', route => {
+      try {
+        return route.fulfill({json: forecastFixture(new URL(route.request().url()), fixtureNow)});
+      } catch (error) {
+        if (!(error instanceof ForecastFixtureQueryError)) throw error;
+        return route.fulfill({status: 400, json: {error: true, reason: error.message}});
+      }
+    });
     // A stale committed snapshot must not make UI checks depend on today's
     // upstream MPA feed. The real fail-closed checks still run on these polygons.
     await stubBoundaryChecks(context);
