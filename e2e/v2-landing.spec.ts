@@ -632,10 +632,14 @@ const cacheTest = browserTest.extend({
   },
 });
 
-function warmStaticTimings(page: Page) {
-  return page.evaluate(paths => (performance.getEntriesByType('resource') as PerformanceResourceTiming[])
-    .filter(e => paths.some(path => e.name === location.origin + path))
-    .map(e => ({path: new URL(e.name).pathname, transfer: e.transferSize, body: e.encodedBodySize, status: e.responseStatus})), WARM_STATIC);
+async function warmStaticTimings(page: Page) {
+  const urls = WARM_STATIC.map(path => new URL(path, page.url()).href);
+  const read = (expected: string[]) => (performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+    .filter(e => expected.includes(e.name))
+    .map(e => ({path: new URL(e.name).pathname, transfer: e.transferSize, body: e.encodedBodySize, status: e.responseStatus}));
+  // MapLibre can read the shoreline in a dedicated worker, not in the document.
+  const samples = await Promise.all([page.evaluate(read, urls), ...page.workers().map(worker => worker.evaluate(read, urls))]);
+  return samples.flat();
 }
 
 // #622: a request event isn't evidence of cache reuse. Require a cold body and
@@ -665,16 +669,19 @@ cacheTest('the map reads every warmed file at startup, the static ones from the 
     expect(cold.some(e => e.path === path && e.status === 200 && e.body > 0 && e.transfer === overhead + e.body),
       `landing downloaded ${path}`).toBe(true);
   }
-  const forecastRead = page.waitForResponse(response => response.url() === new URL(WARM_FORECAST, page.url()).href && response.ok());
-  await page.locator('.landing-step [data-profile="boat"]').click();
+  const forecastURL = new URL(WARM_FORECAST, page.url()).href;
+  await Promise.all([
+    page.waitForResponse(response => response.url() === forecastURL && response.ok()),
+    page.locator('.landing-step [data-profile="boat"]').click(),
+  ]);
   await expect(page).toHaveURL(/\/map\?/);
-  await forecastRead;
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  let timings: Awaited<ReturnType<typeof warmStaticTimings>> = [];
   await expect.poll(async () => {
-    const timings = await warmStaticTimings(page);
+    timings = await warmStaticTimings(page);
     return WARM_STATIC.filter(path => !timings.some(e => e.path === path));
   }, {timeout: 30_000, message: 'map timings missing for warmed static paths'}).toEqual([]);
-  for (const {path, transfer, body, status} of await warmStaticTimings(page)) {
+  for (const {path, transfer, body, status} of timings) {
     expect(status, `${path} loaded successfully`).toBe(200);
     expect(body, `${path} has measurable body bytes`).toBeGreaterThan(0);
     expect([0, overhead], `${path} reused the cached body (${transfer} bytes transferred)`).toContain(transfer);
