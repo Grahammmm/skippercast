@@ -31,7 +31,7 @@
 import {appendFileSync, readFileSync} from 'node:fs';
 import type {Page} from '@playwright/test';
 import {stubForecast, stubLiveFeeds} from '../scripts/measure_startup.mjs';
-import {forecastFixture} from './forecast-fixture.ts';
+import {sharedForecastPoint} from './forecast-fixture.ts';
 import {expect, test} from './fixtures.ts';
 
 /** Stage 1 of the beta (BETA-GATE.md): Morro Bay & Avila plus the five Central Coast regions SCB-18 promotes with it. */
@@ -103,12 +103,7 @@ async function stubRegion(page: Page, id: string): Promise<void> {
   await page.route('**/api/forecast?*', route => {
     const feed = stubForecast(definition);
     for (const model of Object.values(feed.models) as {data: {latitude: number; longitude: number; hourly: Record<string, unknown>}[]}[]) {
-      model.data = model.data.map(point => {
-        const url = new URL('https://fixture.invalid/forecast');
-        url.search = new URLSearchParams({latitude: String(point.latitude), longitude: String(point.longitude),
-          hourly: Object.keys(point.hourly).filter(key => key !== 'time').join(',')}).toString();
-        return forecastFixture(url) as never;
-      });
+      model.data = model.data.map(point => sharedForecastPoint(point));
     }
     return route.fulfill({json: feed});
   });
