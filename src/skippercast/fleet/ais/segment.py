@@ -209,7 +209,12 @@ def offshore_nm(ports: Sequence[Geofence], lat: float, lon: float) -> float:
 # ---------------------------------------------------------------- positions
 
 def is_suspect(position: AisPosition) -> bool:
-    """True when the report reached the source more than ``LATE_MS`` after its fix, so its minute is uncertain."""
+    """Flag a receipt-minus-fix gap greater than ``LATE_MS``.
+
+    For an independently dated fix, this compares two timestamps. For AISStream,
+    ``ts`` is receipt-derived, so whole-minute delays can go undetected. An
+    unflagged position is not proof that it arrived on time.
+    """
     return position.received_at - position.ts > LATE_MS
 
 
