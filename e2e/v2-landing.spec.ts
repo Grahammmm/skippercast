@@ -16,7 +16,9 @@
 // motion standing still under reduced motion, and the shoreline SVG alone
 // with WebGL disabled.
 import {readFileSync} from 'node:fs';
-import type {Page} from '@playwright/test';
+import {createServer, get} from 'node:http';
+import type {AddressInfo} from 'node:net';
+import {test as browserTest, type Page} from '@playwright/test';
 import {test, expect, checkA11y, LCP_BUDGET_MS} from './fixtures.ts';
 import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
@@ -592,16 +594,66 @@ test('Explore the coast takes the profile step with nothing to warm, and Save-Da
   expect(pageErrors).toEqual([]);
 });
 
-// #622: every file the warm-up fetched is one the map then reads at startup (no wasted bytes), and the static ones are
-// answered by the browser cache (a revalidation or a cache hit, never a second full download).
-test('the map reads every warmed file at startup, the static ones from the browser cache', async ({page, pageErrors, v2}, info) => {
+const WARM_STATIC = ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
+  '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json'];
+const WARM_FORECAST = '/api/forecast?region=morro-bay';
+
+// A private proxy, not Playwright routing (which disables the HTTP cache).
+// Only asset GETs go to the local test server, with its original cache headers
+// and bytes. Neither the browser nor the Worker gets to call a live service.
+const cacheTest = browserTest.extend({
+  proxy: async ({baseURL}, use) => {
+    const origin = new URL(baseURL!).origin;
+    const proxy = createServer((req, res) => {
+      const url = URL.canParse(req.url ?? '') ? new URL(req.url!) : null;
+      if (req.method !== 'GET' || url?.origin !== origin) { res.writeHead(403).end(); return; }
+      if (url.pathname + url.search === WARM_FORECAST) {
+        res.writeHead(200, {'Content-Type': 'application/json', 'Cache-Control': 'no-store'}).end('{}');
+        return;
+      }
+      if (url.pathname !== '/' && url.pathname !== '/map' && !/^\/(assets|regions|data|icons|vendor|tiles|basemap)\//.test(url.pathname)) {
+        res.writeHead(404).end(); return;
+      }
+      const upstream = get(url, {headers: req.headers}, response => {
+        res.writeHead(response.statusCode!, response.headers);
+        response.pipe(res);
+      });
+      upstream.on('error', () => res.destroy());
+      res.on('close', () => upstream.destroy());
+    });
+    proxy.on('connect', (_req, socket) => socket.destroy());
+    await new Promise<void>((resolve, reject) => proxy.once('error', reject).listen(0, '127.0.0.1', resolve));
+    try {
+      // Remove Chromium's implicit loopback bypass too: all HTTP targets go through the allowlist.
+      await use({server: `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`, bypass: '<-loopback>'});
+    } finally {
+      await new Promise<void>(resolve => { proxy.close(() => resolve()); proxy.closeAllConnections(); });
+    }
+  },
+});
+
+async function warmStaticTimings(page: Page) {
+  const urls = WARM_STATIC.map(path => new URL(path, page.url()).href);
+  const read = (expected: string[]) => (performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+    .filter(e => expected.includes(e.name))
+    .map(e => ({path: new URL(e.name).pathname, transfer: e.transferSize, body: e.encodedBodySize, status: e.responseStatus}));
+  // MapLibre can read the shoreline in a dedicated worker, not in the document.
+  const samples = await Promise.all([page.evaluate(read, urls), ...page.workers().map(worker => worker.evaluate(read, urls))]);
+  return samples.flat();
+}
+
+// #622: a request event isn't evidence of cache reuse. Require a cold body and
+// a completed map timing for each path, and reject any second full body.
+cacheTest('the map reads every warmed file at startup, the static ones from the browser cache', async ({page}, info) => {
   test.skip(info.project.name !== 'phone', 'checked once');
-  await stubLiveFeeds(page);
-  await landingFeeds(page);
-  const read = new Set<string>();
-  let onMap = false;
-  page.on('request', r => { const u = new URL(r.url()); if (onMap) read.add(u.pathname + u.search); });
-  await v2.open('landing');
+  const pageErrors: string[] = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
+  await page.addInitScript(() => {
+    sessionStorage.setItem('skippercast-flyover-v1', '1');
+    performance.setResourceTimingBufferSize(1_000);
+  });
+  await page.goto('/?ui=v2');
+  await expect(page).toHaveTitle(/SkipperCast/);
   const input = page.getByLabel('Where are you launching?');
   await input.fill('morro');
   // The input is interactive before the async port directory arrives; Enter
@@ -609,17 +661,31 @@ test('the map reads every warmed file at startup, the static ones from the brows
   await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
   await expect(page.locator('.landing-step [role="status"]')).toHaveText('Morro Bay map files ready.');
-  const list = ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
-    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay'];
-  onMap = true;
-  await page.locator('.landing-step [data-profile="boat"]').click();
+  const cold = await warmStaticTimings(page);
+  // Chromium Resource Timing reports 300 bytes of overhead plus the encoded
+  // body on a full transfer, 300 on revalidation, and zero for a local hit.
+  const overhead = 300;
+  for (const path of WARM_STATIC) {
+    expect(cold.some(e => e.path === path && e.status === 200 && e.body > 0 && e.transfer === overhead + e.body),
+      `landing downloaded ${path}`).toBe(true);
+  }
+  const forecastURL = new URL(WARM_FORECAST, page.url()).href;
+  await Promise.all([
+    page.waitForResponse(response => response.url() === forecastURL && response.ok()),
+    page.locator('.landing-step [data-profile="boat"]').click(),
+  ]);
+  await expect(page).toHaveURL(/\/map\?/);
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
-  await expect.poll(() => list.filter(p => !read.has(p)), {timeout: 30_000, message: 'the map reads each warmed file'}).toEqual([]);
-  // Committed files: the second read moved no full body (a 304 or a cache hit: fewer bytes over the wire than the body).
-  const sizes = await page.evaluate(paths => performance.getEntriesByType('resource').map(e => e as PerformanceResourceTiming)
-    .filter(e => paths.includes(new URL(e.name).pathname)).map(e => ({path: new URL(e.name).pathname, transfer: e.transferSize, body: e.encodedBodySize})),
-  list.filter(p => !p.startsWith('/api/')));
-  for (const s of sizes) expect(s.transfer, `${s.path} came from the cache (${s.transfer} of ${s.body} bytes moved)`).toBeLessThan(s.body);
+  let timings: Awaited<ReturnType<typeof warmStaticTimings>> = [];
+  await expect.poll(async () => {
+    timings = await warmStaticTimings(page);
+    return WARM_STATIC.filter(path => !timings.some(e => e.path === path));
+  }, {timeout: 30_000, message: 'map timings missing for warmed static paths'}).toEqual([]);
+  for (const {path, transfer, body, status} of timings) {
+    expect(status, `${path} loaded successfully`).toBe(200);
+    expect(body, `${path} has measurable body bytes`).toBeGreaterThan(0);
+    expect([0, overhead], `${path} reused the cached body (${transfer} bytes transferred)`).toContain(transfer);
+  }
   expect(pageErrors).toEqual([]);
 });
 
