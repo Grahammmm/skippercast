@@ -16,6 +16,43 @@ CODE_FILES = (SCRIPT, 'scripts/preflight_native_grid.py', 'skippercast.platform.
               'skippercast.platform.contracts', 'skippercast.relief.package')
 MOSAIC = 'mosaic/public'
 
+# Morro Bay's measured 10 m lattice is 130,452,268 cells. Larger regions that
+# exceed this cap need to be split or use a future windowed trace.
+CONTOUR_MAX_CELLS = 160_000_000
+# A 7.68M-cell trace with two contributors and a feathered seam used ~57 B/cell
+# of peak RSS above baseline; round up with at least 25% headroom.
+TRACE_BYTES_PER_CELL = 80
+MEMORY_FRACTION = 0.5
+
+
+def _mem_available():
+    """Return Linux MemAvailable in bytes, or None if it cannot be read."""
+    try:
+        with open('/proc/meminfo', encoding='ascii') as meminfo:
+            for line in meminfo:
+                if line.startswith('MemAvailable:'):
+                    value, unit = line.split()[1:]
+                    kib = int(value)
+                    return kib * 1024 if unit == 'kB' and kib >= 0 else None
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _admit_trace(cells):
+    if cells > CONTOUR_MAX_CELLS:
+        raise ValueError('contour mosaic exceeds the cell budget; use a smaller region window '
+                         f'({cells:,} cells > {CONTOUR_MAX_CELLS:,} cells)')
+    need = cells * TRACE_BYTES_PER_CELL
+    available = _mem_available()
+    if available is None:
+        raise receipts.Held('contour trace cannot determine MemAvailable from /proc/meminfo')
+    if need > MEMORY_FRACTION * available:
+        raise receipts.Held(f'contour trace needs ~{need / 2**30:.2f} GiB, '
+                            f'only {available / 2**30:.2f} GiB available '
+                            f'({MEMORY_FRACTION:.0%} usable for the trace)')
+    return available
+
 
 def producer():
     spec = spec_from_file_location('build_depth_contours', repo_root() / SCRIPT)
@@ -189,8 +226,8 @@ def trace(job):
                 or (crs, block, e.shape) != (c.crs, c.transform, c.shape)
                 or c.dtypes != ('uint16',) or e.dtypes != ('float32',)):
             raise ValueError('mosaic elevation and contributor must share the 10 m projected lattice')
-        if height * width > tool.preflight.MAX_PIXELS:
-            raise ValueError('contour mosaic exceeds the cell budget; use a smaller region window')
+        cells = height * width
+        _admit_trace(cells)
         feather = manifest['seam_feather']['feather_m']
         if not 0 <= feather <= 200:
             raise ValueError('invalid mosaic seam feather')
