@@ -19,6 +19,8 @@ export const LABEL_FONT = 'dm-sans-medium';
  */
 export const GLYPH_VERSION = 'fa6d395935b147f1';
 export const LABEL_MIN_ZOOM = 9;
+/** The basemap's place labels: the nearshore kit's topmost slot, so the kit's overlays are inserted under it (MSK-2). */
+export const PLACE_LABELS = 'labels-places';
 
 /** FE-10's pointer to the current basemap archive, under the page's /feeds/ route. */
 export const BASEMAP_MANIFEST = 'feeds/tiles/basemap/manifest.json';
@@ -135,7 +137,7 @@ export function basemapStyle(palette: Palette, {archive, assets, variant = 'day'
       ...label(ramp(13, 10, 16, 12), {'symbol-placement': 'line'})}),
     day && from('labels-harbor', 'pois', {type: 'symbol', minzoom: 12, filter: ['all', kind('marina'), ['has', 'name']],
       ...label(ramp(12, 11, 16, 13))}),
-    from('labels-places', 'places', {type: 'symbol', minzoom: LABEL_MIN_ZOOM, filter: ['all', kind('locality'), ['has', 'name']],
+    from(PLACE_LABELS, 'places', {type: 'symbol', minzoom: LABEL_MIN_ZOOM, filter: ['all', kind('locality'), ['has', 'name']],
       ...label(ramp(9, 11, 14, 15), {'symbol-sort-key': ['coalesce', ['get', 'min_zoom'], 99]})}),
   ];
   return {

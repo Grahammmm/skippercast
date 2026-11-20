@@ -457,3 +457,116 @@ export const NEARSHORE_STYLE = {
     "no_data": "--skn-map-nodata-ns"
   }
 } as const;
+/** Legend depth chips by look key (baked digest, or a legacy version id); every active or rolling version. */
+export const NEARSHORE_LOOKS = {
+  "c0846138ea6c66d28ccfd9c22102e37015f7516d9566262beb61ff8f104e4409": {
+    "legacy": false,
+    "versions": [
+      "nearshore-v1.0.0"
+    ],
+    "chips": [
+      {
+        "depth_ft": 0,
+        "cssVar": "--skn-depth-ns-0"
+      },
+      {
+        "depth_ft": 10,
+        "cssVar": "--skn-depth-ns-1"
+      },
+      {
+        "depth_ft": 20,
+        "cssVar": "--skn-depth-ns-2"
+      },
+      {
+        "depth_ft": 30,
+        "cssVar": "--skn-depth-ns-3"
+      },
+      {
+        "depth_ft": 45,
+        "cssVar": "--skn-depth-ns-4"
+      },
+      {
+        "depth_ft": 60,
+        "cssVar": "--skn-depth-ns-5"
+      },
+      {
+        "depth_ft": 80,
+        "cssVar": "--skn-depth-ns-6"
+      },
+      {
+        "depth_ft": 100,
+        "cssVar": "--skn-depth-ns-7"
+      },
+      {
+        "depth_ft": 130,
+        "cssVar": "--skn-depth-ns-8"
+      },
+      {
+        "depth_ft": 160,
+        "cssVar": "--skn-depth-ns-9"
+      },
+      {
+        "depth_ft": 200,
+        "cssVar": "--skn-depth-ns-10"
+      },
+      {
+        "depth_ft": 250,
+        "cssVar": "--skn-depth-ns-11"
+      },
+      {
+        "depth_ft": 300,
+        "cssVar": "--skn-depth-ns-12"
+      }
+    ],
+    "plus300": "--skn-depth-ns-13"
+  },
+  "deep-fixed-v1": {
+    "legacy": true,
+    "versions": [
+      "deep-fixed-v1"
+    ],
+    "chips": [
+      {
+        "depth_ft": 0,
+        "cssVar": "--depth-b-0"
+      },
+      {
+        "depth_ft": 10,
+        "cssVar": "--depth-b-1"
+      },
+      {
+        "depth_ft": 20,
+        "cssVar": "--depth-b-2"
+      },
+      {
+        "depth_ft": 33,
+        "cssVar": "--depth-b-3"
+      },
+      {
+        "depth_ft": 50,
+        "cssVar": "--depth-b-4"
+      },
+      {
+        "depth_ft": 66,
+        "cssVar": "--depth-b-5"
+      },
+      {
+        "depth_ft": 100,
+        "cssVar": "--depth-b-6"
+      },
+      {
+        "depth_ft": 150,
+        "cssVar": "--depth-b-7"
+      },
+      {
+        "depth_ft": 200,
+        "cssVar": "--depth-b-8"
+      },
+      {
+        "depth_ft": 300,
+        "cssVar": "--depth-b-9"
+      }
+    ],
+    "plus300": "--depth-b-10"
+  }
+} as const;

@@ -35,7 +35,7 @@ function chart(t) {
     getComputedStyle: () => ({getPropertyValue: key => key.endsWith('opacity') ? '1' : `${root.dataset.theme ?? 'dark'}:${key}`}),
     MutationObserver: class { constructor(cb) { themeChanged = cb; } observe() {} disconnect() { themeChanged = null; } },
   });
-  const errors = [], fetches = [], handles = [], readies = [];
+  const errors = [], fetches = [], handles = [], readies = [], looks = [];
   const seafloor = signal(false), field = signal(false);
   let overlay, before, protocol, breakRange = false;
   const engine = {
@@ -45,7 +45,8 @@ function chart(t) {
   const library = {addProtocol(_, action) { protocol = action; }};
   const start = (region, reply = pointer(region)) => {
     const handle = attachBottomRelief({engine, region, library, page: 'https://chart.test/map',
-      seafloorOn: () => seafloor.value, fieldOn: () => field.value, unavailable: e => errors.push(e.message), ready: () => readies.push(region),
+      seafloorOn: () => seafloor.value, fieldOn: () => field.value, unavailable: e => errors.push(e.message),
+      ready: look => { readies.push(region); looks.push(look); },
       async fetchFn(raw, init) {
         const url = new URL(raw);
         fetches.push([url.pathname, init]);
@@ -63,7 +64,7 @@ function chart(t) {
   };
   t.after(() => { handles.reverse().forEach(h => h.destroy()); Object.assign(globalThis, old); });
   const tile = (url, x = 168) => Promise.resolve().then(() => protocol({url: url.replace('{z}/{x}/{y}', `10/${x}/404`)}, new AbortController()));
-  return {start, tile, errors, fetches, readies, seafloor, field, breakRange: () => { breakRange = true; },
+  return {start, tile, errors, fetches, readies, looks, seafloor, field, breakRange: () => { breakRange = true; },
     theme(value) { root.dataset.theme = value; themeChanged?.(); },
     get overlay() { return overlay; }, get before() { return before; },
     get template() { return Object.values(overlay.sources)[0].tiles[0]; }};
@@ -138,10 +139,16 @@ test('land, parks and coast cover the raster; theme and field paints preserve th
   assert.equal(c.overlay.layers[0].paint['raster-brightness-max'], 0.75);
   assert.equal(c.overlay.layers[0].paint['raster-brightness-min'], 0);
   assert.equal(c.overlay.layers[0].paint['raster-saturation'], -0.8);
-  assert.equal(c.overlay.layers[0].paint['raster-opacity'], 0.6);
+  // MSK-2 (kit overlays.base_desaturation_when_field_on; this replaces the old literal raster-opacity 0.6): a field never
+  // fades the relief, it desaturates it, and Seafloor type's stronger dimming wins while both are on. Believable bugs:
+  // the old fade kept, the field rule overriding Seafloor type, or the desaturation staying after the field goes.
+  assert.equal(c.overlay.layers[0].paint['raster-opacity'], 1);
   c.seafloor.value = false;
-  assert.equal(c.overlay.layers[0].paint['raster-saturation'], 0);
+  assert.equal(c.overlay.layers[0].paint['raster-saturation'], -0.4);
+  assert.equal(c.overlay.layers[0].paint['raster-opacity'], 1);
   assert.equal(c.overlay.layers[0].paint['raster-brightness-max'], 1);
+  c.field.value = false;
+  assert.equal(c.overlay.layers[0].paint['raster-saturation'], 0);
   assert.equal(c.fetches.length, count);
 });
 
@@ -176,5 +183,21 @@ test('a CSUMB-lineage pointer under the G 2026-11-18 basis draws once, with no s
   const drawn = JSON.stringify(c.overlay);
   assert.equal(Object.values(c.overlay.sources)[0].attribution, undefined);
   assert.doesNotMatch(drawn, /csumb|sfml|mbari|attribution|synthetic survey|license|licence/i);
+  assert.deepEqual(c.errors, []);
+});
+
+// MSK-2 contract (STYLE-PIPELINE-DESIGN rev 2 § 6): `ready` hands the legend the look the drawn tiles were baked with. A
+// malformed `style` member still draws the reviewed tiles but reports an unknown look (null), never the default look.
+// Believable bugs: the legend reading the default style instead of the pointer, or a bad member refusing the relief.
+test('ready reports the pointer look: legacy without style, the baked digest with one, null when malformed', async t => {
+  const c = chart(t), style = {baked: 'd'.repeat(64), contours: 'e'.repeat(64), habitat: null, built_with: 'nearshore-v1.0.0'};
+  c.start('legacy');
+  await tick();
+  c.start('styled', {...pointer('styled'), style});
+  await tick();
+  c.start('malformed', {...pointer('malformed'), style: {...style, baked: 'not-a-digest'}});
+  await tick();
+  assert.deepEqual(c.readies, ['legacy', 'styled', 'malformed']);
+  assert.deepEqual(c.looks, ['deep-fixed-v1', 'd'.repeat(64), null]);
   assert.deepEqual(c.errors, []);
 });

@@ -709,7 +709,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1407-15: planning-route row uses existing text/muted glass roles; no paint math, thresholds or backing changed.
   // MAP-SOURCES-PAGE-1: source and credit lines leave the Legend (the Sources page names them); no backing, opacity, token or threshold changed.
   // MB-11 adds the relief ramp, survey key and warning; no text is drawn over a swatch.
-  "legendTsx": "b770216253091828b2f4debb665d40968a078ba8b05e60448b99d37ec51c8718"
+  // MSK-2: the relief depth chips follow the pointer's look (same swatch and app-legend-note roles, one new note row);
+  // no backing, opacity, token or threshold changed.
+  "legendTsx": "e1cf4370d4ef8cd3dd09bdb1db90a1d0aca043df7d70aef9888fcd8f0bd3f29b"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
