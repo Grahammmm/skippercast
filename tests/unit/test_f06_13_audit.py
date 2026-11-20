@@ -15,7 +15,12 @@ def test_direct_datetime_agrees_with_callable_and_epoch_clock():
     assert monotonic(instant) == 30.0
 
 
-@pytest.mark.parametrize("zone", [None, tzinfo()], ids=["no-zone", "no-offset"])
+class NoOffset(tzinfo):
+    def utcoffset(self, dt):
+        return None
+
+
+@pytest.mark.parametrize("zone", [None, NoOffset()], ids=["no-zone", "no-offset"])
 def test_naive_datetimes_are_not_interpreted_as_local_time(zone):
     instant = datetime(2026, 1, 1, tzinfo=zone)
     for clock in (instant, lambda: instant):
