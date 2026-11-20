@@ -5,15 +5,16 @@
                   [--scope public] [--region-config FILE]
                   [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
                   [--basemap PMTILES] [--qa-support TIF] [--qa-fine-proof ZOOM TIF ...]
-    run_region.py <region> --out <OUT> --dry-run  # preview the full chain without stage inputs
+    run_region.py <region> [--out <OUT>] --dry-run  # preview the full chain without stage inputs
 
 Runs ``region.py <stage> --region <region> --out <OUT>`` through the requested stage::
 
-    select mosaic tiles zone digests inventory package contours shots qa envelope
+    select mosaic tiles zone digests inventory contours package shots qa envelope
 
 Normalize separately, per source. Select reads the resulting cache. Package reads the
-inventory and its public producer receipts. Contours supply QA evidence only; they are
-not part of the release. Shots needs a local basemap and performs receipt-bound MB-08
+inventory and its public producer receipts, including the unscoped contours receipt
+for style provenance. Contour files remain QA evidence, not release layers. A held
+contours stage stops the chain before package. Shots needs a local basemap and performs receipt-bound MB-08
 capture. The runner checks ``region.py status --json`` after package and shots: QA uses
 the exact package release hash and the shots stage's own generation, while the envelope
 uses the package generation. No caller-supplied manifest, evidence path for shots, or
@@ -72,7 +73,7 @@ import time
 
 DEFAULT_NORM = '/mnt/agentorange-backup/seafloor-relief-cache/_norm'  # select's --cache default
 SCOPED_STAGES = ('mosaic', 'tiles', 'zone')
-STAGES = ('select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'package', 'contours', 'shots', 'qa', 'envelope')
+STAGES = ('select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'package', 'shots', 'qa', 'envelope')
 STAGE_INPUTS = {'zone': ('coarse', 'water', 'coarse-source'), 'shots': ('basemap',)}
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 HEX64 = re.compile(r'[0-9a-f]{64}')
@@ -195,7 +196,7 @@ def stage_extras(args, out):
         'select': ['--cache', str(args.norm)],
         'package': ['--manifest', str(root / 'inventory/manifest.json'),
                     '--upstream', 'tiles:public', '--upstream', 'digests',
-                    '--upstream', 'zone:public', '--upstream', 'inventory'],
+                    '--upstream', 'zone:public', '--upstream', 'inventory', '--upstream', 'contours'],
         'shots': ['--basemap', args.basemap or '<basemap>'],
         'status': ['--json'],
         'qa': ['--generation', '<generation>', '--release-sha256', '<release-sha256>',
@@ -461,7 +462,19 @@ def say(text):
 
 
 def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap):
+    source_root = Path(__file__).resolve().parents[2] / 'src'
+    if str(source_root) not in sys.path:
+        sys.path.insert(0, str(source_root))
+    from skippercast.relief.render_config import resolve_style
+
     say(f'run_region dry run: region {region}, through {through}, out {out}')
+    try:
+        version, style = resolve_style(region)
+        say(f"tiles style: {version}; B={style.digest('baked') if style is not None else '(legacy)'}")
+    except (OSError, ValueError) as exc:
+        say(f'  REFUSE tiles style: {exc}')
+        if 'tiles' in chain_through(through):
+            missing = [*missing, ('tiles', ('valid render recipe',))]
     say('chain (in order, each as a subprocess under ' + ' '.join(cfg.prefix) + '):')
     for index, (stage, attest) in enumerate(steps_through(through), 1):
         note = f'  # verify {attest}' if attest else ''
@@ -586,8 +599,8 @@ def parse(argv):
     parser = argparse.ArgumentParser(prog='run_region.py', description='Run one region through the relief stage chain, guarded.',
                                      epilog='stages: ' + ' '.join(STAGES))
     parser.add_argument('region', help='region id (a line of regions.tsv)')
-    parser.add_argument('--out', default=os.environ.get('SC_RELIEF_OUT') or None, required=not os.environ.get('SC_RELIEF_OUT'),
-                        help='pipeline output root OUT (default $SC_RELIEF_OUT; must exist)')
+    parser.add_argument('--out', default=os.environ.get('SC_RELIEF_OUT') or None,
+                        help='pipeline output root OUT (default $SC_RELIEF_OUT; required except for dry runs)')
     parser.add_argument('--through', help='last stage to run (required except for a full dry-run preview): '
                         + ', '.join(STAGES))
     parser.add_argument('--norm', help='normalized cache NORM: checked against the private-vault guard and passed '
@@ -630,13 +643,17 @@ def main(argv=None, cfg=None):
                      'once per held source before starting run_region.py')
     if args.through not in STAGES:
         parser.error(f'unknown stage {args.through!r}; stages: {", ".join(STAGES)}')
-    out = Path(os.path.abspath(os.path.expanduser(args.out)))
-    if not out.is_dir():
+    if args.out is None and not args.dry_run:
+        parser.error('the following arguments are required: --out')
+    out = Path(os.path.abspath(os.path.expanduser(args.out))) if args.out is not None else Path('<OUT>')
+    if args.out is not None and not out.is_dir():
         parser.error(f'--out {out} is not an existing directory')
     norm = args.norm
     missing = missing_inputs(args, args.through)
     if missing and not full_preview:
         parser.error('; '.join(f'the chain reaches {stage}, which needs {", ".join(flags)}' for stage, flags in missing))
+    if args.out is None:
+        missing = [('pipeline', ('--out',)), *missing]
     extra = stage_extras(args, out)
     # the very spellings stage_extras forwards (parse fixed them), so guard and child see one path
     inputs = [Path(p) for p in (*(getattr(args, name) for name in PATH_OPTIONS),

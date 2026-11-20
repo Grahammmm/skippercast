@@ -1,9 +1,9 @@
 {
   "counts": {
-    "all_reference_keys": 313,
-    "schema_location_references": 313
+    "all_reference_keys": 318,
+    "schema_location_references": 318
   },
-  "manifest_sha256": "e528bb075880d7394b6da63c0c34c9a402401c785b2c4c25b2bb904f88d81201",
+  "manifest_sha256": "cec9550bed3f6b1e1c2e4113e0ab328ef57139b53a1f6e13ed5c3ecd6b6948ee",
   "oracle": "referencing (python-jsonschema) Registry.crawl + Resolver.lookup, Draft 2020-12 subresources_of; no retrieve",
   "reference_keys_outside_schema_locations": [],
   "references": [
@@ -2301,6 +2301,51 @@
       "source_path": "schemas/regions-index.schema.json",
       "target_path": "schemas/common.schema.json",
       "target_pointer": "/$defs/health_status"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/piers/items/properties/coordinates/items/$ref",
+      "reference": "#/$defs/position",
+      "source_path": "schemas/sc-render-v1.schema.json",
+      "target_path": "schemas/sc-render-v1.schema.json",
+      "target_pointer": "/$defs/position"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/piers/items/properties/id/$ref",
+      "reference": "#/$defs/id",
+      "source_path": "schemas/sc-render-v1.schema.json",
+      "target_path": "schemas/sc-render-v1.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/previews/items/properties/center/$ref",
+      "reference": "#/$defs/position",
+      "source_path": "schemas/sc-render-v1.schema.json",
+      "target_path": "schemas/sc-render-v1.schema.json",
+      "target_pointer": "/$defs/position"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/previews/items/properties/id/$ref",
+      "reference": "#/$defs/id",
+      "source_path": "schemas/sc-render-v1.schema.json",
+      "target_path": "schemas/sc-render-v1.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/region/$ref",
+      "reference": "#/$defs/id",
+      "source_path": "schemas/sc-render-v1.schema.json",
+      "target_path": "schemas/sc-render-v1.schema.json",
+      "target_pointer": "/$defs/id"
     },
     {
       "keyword": "$ref",
