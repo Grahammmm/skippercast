@@ -928,6 +928,8 @@
 "shell.refresh.failed":"No se pudo actualizar; se muestra el resumen anterior",
 "shell.layers":"Capas",
 "shell.brief":"Resumen",
+"shell.sheet.expand":"Expandir {name}",
+"shell.sheet.collapse":"Contraer {name}",
 "shell.fleet":"Flota",
 "shell.todayBrief":"Resumen de hoy",
 "shell.done":"Listo",

@@ -35,7 +35,7 @@ class AllRoutesTests(unittest.TestCase):
             return Response(json.dumps({'data': rows}).encode())
 
         with redirect_stdout(io.StringIO()) as output:
-            status = ops_report.main([], {'CF_ANALYTICS_TOKEN': 'synthetic',
+            status = ops_report.main([], {'ENABLE_ANALYTICS': 'true', 'CF_ANALYTICS_TOKEN': 'synthetic',
                                           'CLOUDFLARE_ACCOUNT_ID': 'synthetic'}, opener=opener)
         self.assertEqual(status, 0)
         text = output.getvalue()

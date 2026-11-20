@@ -517,10 +517,11 @@ const UNAVAILABLE = 'Passkeys are unavailable right now. Try again when you are 
 
 /** Counts the requests for the library and for the options calls that must not happen without it. */
 function watchPasskeyRequests(page: Page) {
-  const seen = {library: 0, loginOptions: 0, addOptions: 0};
+  const seen = {library: 0, registerOptions: 0, loginOptions: 0, addOptions: 0};
   page.on('request', request => {
     const path = new URL(request.url()).pathname;
     if (path === UMD) seen.library += 1;
+    if (path === '/api/auth/register/options') seen.registerOptions += 1;
     if (path === '/api/auth/login/options') seen.loginOptions += 1;
     if (path === '/api/auth/passkeys/options') seen.addOptions += 1;
   });
@@ -563,6 +564,7 @@ test('the signed-out dialog loads the library for its sign-in and Sign in comple
 test('a library that will not load says passkeys are unavailable, makes no auth request, and the next try loads it', async ({page, v2}) => {
   const state = await stubAuth(page, await passkeyFixture(page));
   const seen = watchPasskeyRequests(page);
+  await page.route('**/api/auth/register/options', route => route.fulfill({status: 204}));
   await page.route('**/vendor/simplewebauthn-browser-14.0.0/**', route => route.abort('failed'));   // offline
   await v2.open('app', AREA);
   await page.evaluate(() => { location.hash = '#account'; });
@@ -580,6 +582,7 @@ test('a library that will not load says passkeys are unavailable, makes no auth 
   await page.locator('#account-create').click();
   await expect(page.locator('#account-status')).toHaveText(UNAVAILABLE);
   expect(await page.evaluate(() => typeof (globalThis as {SimpleWebAuthnBrowser?: unknown}).SimpleWebAuthnBrowser), 'the tampered script never ran').toBe('undefined');
+  expect(seen.registerOptions, 'Create sends no registration options request after integrity failure').toBe(0);
   expect(seen.loginOptions).toBe(0);
 
   await page.unroute('**/vendor/simplewebauthn-browser-14.0.0/**');   // back online
@@ -587,6 +590,11 @@ test('a library that will not load says passkeys are unavailable, makes no auth 
   await page.locator('#account-signin').click();
   await reloaded;
   expect(state.verified, 'the retry loaded the real library and signed in').toBe(1);
+
+  // Prove that the zero above is not a blind spot: this POST is fulfilled by the local route.
+  const status = await page.evaluate(async () => (await fetch('/api/auth/register/options', {method: 'POST'})).status);
+  expect(status).toBe(204);
+  expect(seen.registerOptions, 'the observer counts the synthetic registration POST').toBe(1);
 });
 
 test('Add a passkey loads the library when tapped; a failed load says so and a retry adds the passkey', async ({page, pageErrors, v2}) => {

@@ -135,6 +135,8 @@ test('the ranked export runs in v2: best reefs, complete outlines and a download
   const gpx = await download(page);
   expect(gpx).toMatch(/<time>[^<]+<\/time>/);
   expect(gpx.match(/<wpt /g)).toHaveLength(20);
+  // Count waypoints followed by other XML whitespace too, so an extra one cannot go unnoticed.
+  expect(gpx.match(/<wpt\b/g)?.length).toBe(20);
   expect(gpx.match(/<trk>/g)).toHaveLength(20);
   expect(gpx).toContain('<name>01 Reef 90-120ft</name>');
   expect(gpx).toContain('lat="35.43" lon="-121.17"');

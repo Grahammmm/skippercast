@@ -928,6 +928,8 @@
 "shell.refresh.failed":{"en":"Refresh failed; showing the previous brief"},
 "shell.layers":{"en":"Layers"},
 "shell.brief":{"en":"Brief"},
+"shell.sheet.expand":{"en":"Expand {name}"},
+"shell.sheet.collapse":{"en":"Collapse {name}"},
 "shell.fleet":{"en":"Fleet"},
 "shell.todayBrief":{"en":"Today's brief"},
 "shell.done":{"en":"Done"},

@@ -1139,7 +1139,7 @@ test('conditions_named_region_once: the phone Conditions view has one Conditions
   const {narrow, setLanguage} = await load();
   const none = {getItem: () => null, setItem() {}};
   try {
-    for (const [lang, word] of [['en', 'Conditions'], ['es', 'Condiciones']]) {
+    for (const [lang, word, handleName] of [['en', 'Conditions', 'Expand Conditions'], ['es', 'Condiciones', 'Expandir Condiciones']]) {
       setLanguage(lang, {storage: none, doc: null});
       const html = await renderMobile(`${ORIGIN}?region=morro-bay&view=conditions`);
       const names = landmarkReport(html).names;
@@ -1147,7 +1147,7 @@ test('conditions_named_region_once: the phone Conditions view has one Conditions
       assert.match(html, new RegExp(`<section class="ui-sheet app-sheet" data-detent="[a-z]+" role="group" aria-label="${word}">`), `${lang}: the sheet is a named group`);
       assert.match(html, new RegExp(`<section class="app-conditions" aria-labelledby="app-conditions-title"><header class="app-conditions-head"><h2 id="app-conditions-title">${word}</h2>`), `${lang}: the labelled section and its heading stay`);
       assert.match(html, /class="app-conditions-chart" role="region" aria-label="[^"]+"/, `${lang}: the chart keeps its own region`);
-      assert.match(html, /aria-label="(Expand|Collapse) /, `${lang}: the handle keeps its name`);
+      assert.match(html, new RegExp(`<button type="button" class="ui-sheet-handle" aria-label="${handleName}"`), `${lang}: the handle has its full localized name`);
     }
     // Brief and Conditions sheets alike are named groups.
     setLanguage('en', {storage: none, doc: null});
