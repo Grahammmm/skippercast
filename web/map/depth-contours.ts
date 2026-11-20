@@ -61,7 +61,9 @@ const V2_INTERVALS = [
   {minzoom: V2_FINE, depths_ft: [5, 15, 25], native_max_cell_m: V2_NATIVE_CELL},
 ];
 const V2_START = new Map(V2_INTERVALS.flatMap(row => row.depths_ft.map(depth => [depth, row.minzoom] as const)));
-const V2_ZOOMS = [18, V2_FINE, V2_NATIVE, 13, 11, 8];
+// Above the last detail tier the camera only magnifies the same projection,
+// including the survey edges and unresolved areas.
+const V2_ZOOMS = [V2_FINE, V2_NATIVE, 13, 11, 8];
 const KINDS = ['contour', 'survey-edge', 'unresolved-area'];
 /** seafloor_ec.py PROVENANCE_CLASSES and UNRESOLVED_REASONS. */
 const PROVENANCE = ['measured', 'filled', 'verified'];
@@ -220,7 +222,7 @@ function validV2Feature(p: Json, cell: unknown): boolean {
 }
 
 const visibleV2 = (p: Json, zoom: number): boolean =>
-  zoom < 18 && zoom >= (p.minzoom as number) && (p.maxzoom === undefined || zoom < (p.maxzoom as number));
+  zoom >= (p.minzoom as number) && (p.maxzoom === undefined || zoom < (p.maxzoom as number));
 function contoursAt(data: ContourCollection, zoom: number, phone: boolean): ContourCollection {
   // One projection for paint, labels and picking. Only rerun at a zoom tier or
   // viewport breakpoint, not on every pan or fractional camera change.
