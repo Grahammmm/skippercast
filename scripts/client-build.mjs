@@ -3,7 +3,7 @@
 // 1. Vite (vite.config.mjs) bundles every page in dist/*.html with its modules
 //    and stylesheets into <out>/assets/NAME.<10 hex>.{js,css} and writes
 //    <out>/.vite/manifest.json.
-// 2. Static files are copied unchanged: data/, regions/, vendor/, downloads/,
+// 2. Static files are copied unchanged: data/, regions/, vendor/, non-GPX downloads/,
 //    tiles/, icons, the web manifest, and sw.js (STABLE: a service worker's
 //    URL is its identity, and the pages register '/sw.js').
 // 3. Pages get <meta name="skippercast-build"> and are renamed
@@ -75,6 +75,8 @@ async function keepStatic(src, from) {
   if (BUNDLED_ADVISOR_SOURCES.has(rel)) return false;
   // A link can expose a whole private directory without naming a raw artifact.
   if ((await lstat(from)).isSymbolicLink()) throw Error(`refusing to publish ${rel}: symbolic link`);
+  // SCA-091: don't ship stale local copies left by an older checkout or generator.
+  if (rel.startsWith('downloads/') && /\.gpx$/i.test(rel)) return false;
   return true;
 }
 
