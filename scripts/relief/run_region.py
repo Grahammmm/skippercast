@@ -3,6 +3,7 @@
 
     run_region.py <region> --out <OUT> --through <stage> [--norm <NORM>]
                   [--scope public] [--region-config FILE]
+                  [--census FILE --census-sha256 HEX]
                   [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
                   [--basemap PMTILES] [--qa-support TIF] [--qa-fine-proof ZOOM TIF ...]
     run_region.py <region> [--out <OUT>] --dry-run  # preview the full chain without stage inputs
@@ -11,8 +12,10 @@ Runs ``region.py <stage> --region <region> --out <OUT>`` through the requested s
 
     select mosaic tiles zone digests inventory contours nearshore_vectors package shots qa envelope
 
-Normalize separately, per source. Select reads the resulting cache. Package reads the
-inventory and its public producer receipts, including the unscoped contours receipt
+With --census, census-bind runs before select. Normalize separately, per source. Select reads
+the resulting cache. Zone fills omitted coarse and water paths from done stage receipts;
+when using stage coarse it defaults the source ID to the family in the receipted coarse.json.
+Package reads the inventory and its public producer receipts, including the unscoped contours receipt
 for style provenance. Contour files remain QA evidence, not release layers. A held
 contours stage stops the chain before package. Shots needs a local basemap and performs receipt-bound MB-08
 capture. The runner checks ``region.py status --json`` after package and shots: QA uses
@@ -75,12 +78,12 @@ DEFAULT_NORM = '/mnt/agentorange-backup/seafloor-relief-cache/_norm'  # select's
 SCOPED_STAGES = ('mosaic', 'tiles', 'zone', 'nearshore_vectors')
 STAGES = ('select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'nearshore_vectors',
           'package', 'shots', 'qa', 'envelope')
-STAGE_INPUTS = {'zone': ('coarse', 'water', 'coarse-source'), 'shots': ('basemap',)}
+ZONE_STAGE_INPUTS = {'--coarse': 'coarse', '--water': 'water', '--coarse-source': 'coarse'}
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 HEX64 = re.compile(r'[0-9a-f]{64}')
 LOCK_NAME = '.run_region.lock'
 # file-valued options: fixed once by parse() so the guard and the stage see the same spelling
-PATH_OPTIONS = ('region_config', 'coarse', 'water', 'basemap', 'qa_support')
+PATH_OPTIONS = ('region_config', 'coarse', 'water', 'basemap', 'qa_support', 'census')
 GB = 10 ** 9
 STOP_FILE_NAMES = ('LOCAL-STOP', 'UNITFEED-STOP')
 
@@ -182,7 +185,9 @@ def stage_command(cfg, stage, region, out, extra=None):
             *(extra or {}).get(stage, ())]
 
 
-def steps_through(through):
+def steps_through(through, extra):
+    if 'census-bind' in extra:
+        yield 'census-bind', None
     for stage in chain_through(through):
         yield stage, None
         if stage in ('package', 'shots'):
@@ -206,6 +211,8 @@ def stage_extras(args, out):
                '--shots', str(root / 'shots/<shots-generation>/shots.json')],
         'envelope': ['--generation', '<generation>'],
     }
+    if args.census:
+        extra['census-bind'] = ['--from', args.census, '--sha256', args.census_sha256]
     for stage in SCOPED_STAGES:
         extra[stage] = ['--scope', args.scope]
     if args.region_config:
@@ -224,11 +231,51 @@ def stage_extras(args, out):
 def missing_inputs(args, through):
     """``[(stage, [flag, ...])]`` for every stage of the chain whose required inputs were not given."""
     rows = []
-    for stage in chain_through(through):
-        names = [name for name in STAGE_INPUTS.get(stage, ()) if not getattr(args, name.replace('-', '_'))]
-        if names:
-            rows.append((stage, [f'--{name}' for name in names]))
+    chain = chain_through(through)
+    if 'zone' in chain and args.coarse and not args.coarse_source:
+        rows.append(('zone', ['--coarse-source']))
+    if 'shots' in chain and not args.basemap:
+        rows.append(('shots', ['--basemap']))
     return rows
+
+
+def bind_zone_inputs(cfg, out, region, zone):
+    """Fill only omitted options from verified producer outputs, just before zone."""
+    flags = zone[::2]
+    if '--coarse' in flags and '--water' in flags:
+        return
+
+    from skippercast.relief import receipts
+
+    receipt_region = receipts.Region(out, region)
+
+    def outputs(stage, *names):
+        verdict = receipts.check(receipt_region, stage)
+        if not verdict.done or verdict.receipt is None:
+            raise ValueError(f'{stage} is not done ({verdict.state}: {verdict.reason})')
+        for name in names:
+            paths = [receipt_region.resolve(item['path']) for item in verdict.receipt['outputs']
+                     if Path(item['path']).name == name]
+            if len(paths) != 1:
+                raise ValueError(f'{stage} receipt must name one {name} output')
+            if under(paths[0], cfg.forbidden_root):
+                raise ValueError(f'{stage} output {name} is under {cfg.forbidden_root}')
+            yield str(paths[0])
+
+    if '--coarse' not in flags:
+        if '--coarse-source' in flags:
+            coarse, = outputs('coarse', 'coarse-3310.tif')
+        else:
+            coarse, report = outputs('coarse', 'coarse-3310.tif', 'coarse.json')
+            doc = json.loads(Path(report).read_bytes())
+            family = doc.get('family') if isinstance(doc, dict) else None
+            if not isinstance(family, str) or not family.strip():
+                raise ValueError('coarse.json has no family')
+            zone += ['--coarse-source', family]
+        zone += ['--coarse', coarse]
+    if '--water' not in flags:
+        water, = outputs('water', 'water.geojson')
+        zone += ['--water', water]
 
 
 def attested_generation(raw, region, stage):
@@ -477,8 +524,24 @@ def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap):
         say(f'  REFUSE tiles style: {exc}')
         if 'tiles' in chain_through(through):
             missing = [*missing, ('tiles', ('valid render recipe',))]
+    if 'census-bind' in extra:
+        say('inputs for census-bind: --census (option), --census-sha256 (option)')
+    if 'zone' in chain_through(through):
+        zone = extra['zone']
+        flags = zone[::2]
+        sources = []
+        for flag, producer in ZONE_STAGE_INPUTS.items():
+            if flag in flags:
+                sources.append(f'{flag} (option)')
+            elif flag == '--coarse-source' and '--coarse' in flags:
+                sources.append(f'{flag} (missing option)')
+            else:
+                sources.append(f'{flag} (stage {producer})')
+                label = 'family' if flag == '--coarse-source' else 'output'
+                zone += [flag, f'<{producer} {label}>']
+        say('inputs for zone: ' + ', '.join(sources))
     say('chain (in order, each as a subprocess under ' + ' '.join(cfg.prefix) + '):')
-    for index, (stage, attest) in enumerate(steps_through(through), 1):
+    for index, (stage, attest) in enumerate(steps_through(through, extra), 1):
         note = f'  # verify {attest}' if attest else ''
         say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, extra))}{note}')
     say('not run: ' + ', '.join(STAGES[STAGES.index(through) + 1:]) if through != STAGES[-1] else 'not run: (none)')
@@ -529,7 +592,8 @@ def run_chain(cfg, region, out, norm, through, extra, inputs, basemap):
         return code
     problems = refusal(cfg, out, norm, inputs, basemap)  # before any lock, so a refused run leaves no file behind
     if problems:
-        say('run_region: refused before ' + STAGES[0] + ': ' + '; '.join(problems))
+        first = 'census-bind' if 'census-bind' in extra else STAGES[0]
+        say(f'run_region: refused before {first}: ' + '; '.join(problems))
         return EXIT_REFUSED
     try:
         slot = acquire_slot(cfg)  # the atomic box-wide cap; the /proc scan above is only a second check
@@ -555,7 +619,7 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
         say(f'run_region: refused: region {region} already has a run (lock {lock_path(out, region)})')
         return EXIT_RUNNING
     try:
-        for stage, attest in steps_through(through):
+        for stage, attest in steps_through(through, extra):
             problems = refusal(cfg, out, norm, inputs, basemap)
             if problems:
                 say(f'run_region: refused before {stage}: ' + '; '.join(problems))
@@ -564,6 +628,12 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
                 code, detail = cap
                 say(f'run_region: refused before {stage}: {detail}')
                 return code
+            if stage == 'zone':
+                try:
+                    bind_zone_inputs(cfg, out, region, extra['zone'])
+                except (OSError, ValueError) as exc:
+                    say(f'run_region: refused before zone: {exc}')
+                    return EXIT_REFUSED
             command = stage_command(cfg, stage, region, out, extra)
             label = f'status for {attest}' if attest else stage
             say(f'run_region: stage {label}: ' + ' '.join(command))
@@ -614,12 +684,16 @@ def parse(argv):
     parser.add_argument('--qa-fine-proof', nargs=2, action='append', metavar=('ZOOM', 'PATH'),
                         help='qa option: fine-support raster for zoom 16 or 17 (z16/z17 also accepted; qa receives 16/17); repeat per zoom')
     parser.add_argument('--region-config', help='region config file for select, mosaic, tiles and zone (default: regions/<id>/region.json)')
-    parser.add_argument('--coarse', help='zone input: EPSG:3310 coarse elevation TIFF (needed when the chain reaches zone)')
-    parser.add_argument('--water', help='zone input: reviewed WGS84 ocean-water GeoJSON (needed when the chain reaches zone)')
-    parser.add_argument('--coarse-source', help='zone input: provenance id of --coarse (needed when the chain reaches zone)')
+    parser.add_argument('--census', help='local census to bind before select')
+    parser.add_argument('--census-sha256', help='expected SHA-256 of --census (required with --census)')
+    parser.add_argument('--coarse', help='zone input: EPSG:3310 elevation TIFF (defaults to done coarse output)')
+    parser.add_argument('--water', help='zone input: WGS84 ocean-water GeoJSON (defaults to done water output)')
+    parser.add_argument('--coarse-source', help='zone source ID (required with --coarse; otherwise defaults to the coarse family)')
     parser.add_argument('--coarse-date', help='zone input: optional date of --coarse')
     parser.add_argument('--dry-run', action='store_true', help='print the chain and the guard state; run nothing')
     args = parser.parse_args(argv)
+    if bool(args.census) != bool(args.census_sha256):
+        parser.error('--census and --census-sha256 must be given together')
     args.norm = effective_norm(args.norm)  # resolved once: guarded and forwarded as the very same path
     # every file input is likewise fixed once here: the spelling the guard resolves is the spelling forwarded
     for name in PATH_OPTIONS:
@@ -670,4 +744,6 @@ def main(argv=None, cfg=None):
 
 
 if __name__ == '__main__':
+    # Prefer this checkout, as region.py does, for receipt verification.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src'))
     sys.exit(main())

@@ -169,6 +169,8 @@ const FLOAT_INVALID = 'The float plan has a problem. Fix it or clear it before d
 const ROUTE_CHANGED = 'Plan or boundary check changed while routing. Try again.';
 const ROUTE_HOUR = 36 * 3600_000;
 const FLOAT_CHANGED = 'The float plan changed while the notes were being prepared. Download the notes again.';
+/** dist/trip-export.js's own refusal for contour tracks past their source review (`today > review_expires`, UTC day). */
+const CONTOURS_LAPSED = 'Depth contours cannot be exported: source review expired or undated. Turn off depth contour tracks or reload the region.';
 const STORAGE_OFF = 'Browser storage is unavailable. Keep this page open until you download your plan.';
 const RANKED_LAYERS: Layers = {waypoints: true, outlines: true, alignments: false, exclusions: false};
 const SPOT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -693,14 +695,19 @@ export function createPlanner(deps: PlannerDeps) {
     } finally { if (attempt === routeAttempt) routing.value = false; }
   }
   const preparing = signal(false);
-  let prepared: {file: File; key: string; at: number; hash?: string} | null = null, pending: Promise<void> | null = null, disposed = false, attempted = '';
+  // `contours`: the review_expires day of the contour file the bytes were built with ('' when undated); absent without contour tracks.
+  let prepared: {file: File; key: string; at: number; hash?: string; contours?: string} | null = null, pending: Promise<void> | null = null, disposed = false, attempted = '';
   const fileKey = (): string => JSON.stringify([draft.value, tick.value, allowResearch.value, contourTracks.value, contourFile.value, filtersDirty.value, restorePending.value, launch.value, activeRegion.value]);
+  const contourReview = (): {contours?: string} => {
+    const file = contourFile.peek(), expires = contourTracks.peek() && file && 'collection' in file && file.collection ? (file.collection as {provenance?: {review_expires?: unknown}}).provenance?.review_expires ?? '' : null;
+    return expires === null ? {} : {contours: typeof expires === 'string' ? expires : ''};
+  };
   function prepare(): Promise<void> {
     if (pending) return pending;
-    const key = fileKey(); attempted = key; preparing.value = true; prepared = null;
+    const key = fileKey(), review = contourReview(); attempted = key; preparing.value = true; prepared = null;
     // A result for a key that has since changed is dropped and its key forgotten, so a plan that returns to it is prepared again.
     const stale = (): boolean => { if (disposed || key === fileKey()) return disposed; if (attempted === key) attempted = ''; return true; };
-    pending = exportFile('gpx').then(file => { if (!stale()) prepared = {file, key, at: now().getTime(), hash: canonical?.publication.export_sha256}; })
+    pending = exportFile('gpx').then(file => { if (!stale()) prepared = {file, key, at: now().getTime(), hash: canonical?.publication.export_sha256, ...review}; })
       .catch(error => { if (!stale()) actionStatus.value = (error as Error).message; })
       .finally(() => { pending = null; preparing.value = false; });
     return pending;
@@ -725,9 +732,14 @@ export function createPlanner(deps: PlannerDeps) {
       prepared = null;
       return prepare().then(() => { if (prepared) actionStatus.value = 'File ready — tap Share again'; });
     }
-    const file = prepared.file;
+    // The plan key does not change at UTC midnight: contour tracks prepared before their review lapsed are discarded, not handed over after it.
+    const c = prepared.contours, file = prepared.file;
+    const contoursLapsed = (): boolean => c !== undefined && !(/^\d{4}-\d{2}-\d{2}$/.test(c) && now().toISOString().slice(0, 10) <= c);
+    const refuseLapsed = (): void => { if (prepared?.file === file) prepared = null; actionStatus.value = CONTOURS_LAPSED; };
+    if (contoursLapsed()) { refuseLapsed(); return Promise.resolve(); }
     const fallback = (error: unknown): void => {
       if ((error as Error).name === 'AbortError') { actionStatus.value = 'Share cancelled. Your plan is retained.'; return; }
+      if (contoursLapsed()) { refuseLapsed(); return; }
       save(file); actionStatus.value = `This browser could not open the share sheet, so the file was downloaded: ${file.name}.`;
     };
     try {
