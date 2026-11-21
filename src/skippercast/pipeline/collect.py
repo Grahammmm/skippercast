@@ -189,9 +189,20 @@ def source(ident, name, kind, url, max_age, loader, now, previous=None, client_f
             result.pop(key, None)
         result.update(status="failed", data=None)
         result["issue"] = f"{type(error).__name__}: {str(error)[:220]}"
-        if previous and previous.get("data"):
-            result.update(status="retained", data=previous["data"], last_success_at=previous.get("last_success_at"),
-                          data_retrieved_at=previous.get("data_retrieved_at"))
+        prior = previous or {}
+        old = prior.get("data")
+        if kind == "grid" and ident == "chlorophyll":
+            # The daily chlorophyll fallback keeps the prior sample only while its observation
+            # time is inside this product's window (not its retrieval time). An expired, missing
+            # or unreadable sample stays failed with no data; the historical success is kept.
+            if prior.get("last_success_at"):
+                result["last_success_at"] = prior["last_success_at"]
+            age = age_hours(old.get("sample_at") or old.get("issued_at"), now) if isinstance(old, dict) else None
+            if age is None or age < -1 or age > max_age:
+                old = None
+        if old:
+            result.update(status="retained", data=old, last_success_at=prior.get("last_success_at"),
+                          data_retrieved_at=prior.get("data_retrieved_at"))
     result["requests"] = client.requests
     return result
 
