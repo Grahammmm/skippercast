@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic offshore lattice west of Morro Bay. These are not real marks or a recorded track. -->
+<gpx version="1.1" creator="SkipperCast test fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="35.20000" lon="-121.20000"><name>M001</name></wpt>
+  <wpt lat="35.20000" lon="-121.18000"><name>M002</name></wpt>
+  <wpt lat="35.20000" lon="-121.16000"><name>M003</name></wpt>
+  <wpt lat="35.20000" lon="-121.14000"><name>M004</name></wpt>
+  <wpt lat="35.20000" lon="-121.12000"><name>M005</name></wpt>
+  <wpt lat="35.20000" lon="-121.10000"><name>M006</name></wpt>
+  <wpt lat="35.20000" lon="-121.08000"><name>M007</name></wpt>
+  <wpt lat="35.20000" lon="-121.06000"><name>M008</name></wpt>
+  <wpt lat="35.20000" lon="-121.04000"><name>M009</name></wpt>
+  <wpt lat="35.20000" lon="-121.02000"><name>M010</name></wpt>
+  <wpt lat="35.22000" lon="-121.02000"><name>M011</name></wpt>
+  <wpt lat="35.22000" lon="-121.04000"><name>M012</name></wpt>
+  <wpt lat="35.22000" lon="-121.06000"><name>M013</name></wpt>
+  <wpt lat="35.22000" lon="-121.08000"><name>M014</name></wpt>
+  <wpt lat="35.22000" lon="-121.10000"><name>M015</name><desc>Synthetic note for M015</desc></wpt>
+  <wpt lat="35.22000" lon="-121.12000"><name>M016</name></wpt>
+  <wpt lat="35.22000" lon="-121.14000"><name>M017</name></wpt>
+  <wpt lat="35.22000" lon="-121.16000"><name>M018</name></wpt>
+  <wpt lat="35.22000" lon="-121.18000"><name>M019</name></wpt>
+  <wpt lat="35.22000" lon="-121.20000"><name>M020</name></wpt>
+  <wpt lat="35.24000" lon="-121.20000"><name>M021</name></wpt>
+  <wpt lat="35.24000" lon="-121.18000"><name>M022</name></wpt>
+  <wpt lat="35.24000" lon="-121.16000"><name>M023</name></wpt>
+  <wpt lat="35.24000" lon="-121.14000"><name>M024</name></wpt>
+  <wpt lat="35.24000" lon="-121.12000"><name>M025</name></wpt>
+  <wpt lat="35.24000" lon="-121.10000"><name>M026</name></wpt>
+  <wpt lat="35.24000" lon="-121.08000"><name>M027</name></wpt>
+  <wpt lat="35.24000" lon="-121.06000"><name>M028</name></wpt>
+  <wpt lat="35.24000" lon="-121.04000"><name>M029</name></wpt>
+  <wpt lat="35.24000" lon="-121.02000"><name>M030</name><desc>Synthetic note for M030</desc></wpt>
+  <wpt lat="35.26000" lon="-121.02000"><name>M031</name></wpt>
+  <wpt lat="35.26000" lon="-121.04000"><name>M032</name></wpt>
+  <wpt lat="35.26000" lon="-121.06000"><name>M033</name></wpt>
+  <wpt lat="35.26000" lon="-121.08000"><name>M034</name></wpt>
+  <wpt lat="35.26000" lon="-121.10000"><name>M035</name></wpt>
+  <wpt lat="35.26000" lon="-121.12000"><name>M036</name></wpt>
+  <wpt lat="35.26000" lon="-121.14000"><name>M037</name></wpt>
+  <wpt lat="35.26000" lon="-121.16000"><name>M038</name></wpt>
+  <wpt lat="35.26000" lon="-121.18000"><name>M039</name></wpt>
+  <wpt lat="35.26000" lon="-121.20000"><name>M040</name></wpt>
+  <wpt lat="35.28000" lon="-121.20000"><name>M041</name></wpt>
+  <wpt lat="35.28000" lon="-121.18000"><name>M042</name></wpt>
+  <wpt lat="35.28000" lon="-121.16000"><name>M043</name></wpt>
+  <wpt lat="35.28000" lon="-121.14000"><name>M044</name></wpt>
+  <wpt lat="35.28000" lon="-121.12000"><name>M045</name><desc>Synthetic note for M045</desc></wpt>
+  <wpt lat="35.28000" lon="-121.10000"><name>M046</name></wpt>
+  <wpt lat="35.28000" lon="-121.08000"><name>M047</name></wpt>
+  <wpt lat="35.28000" lon="-121.06000"><name>M048</name></wpt>
+  <wpt lat="35.28000" lon="-121.04000"><name>M049</name></wpt>
+  <wpt lat="35.28000" lon="-121.02000"><name>M050</name></wpt>
+  <wpt lat="35.30000" lon="-121.02000"><name>M051</name></wpt>
+  <wpt lat="35.30000" lon="-121.04000"><name>M052</name></wpt>
+  <wpt lat="35.30000" lon="-121.06000"><name>M053</name></wpt>
+  <wpt lat="35.30000" lon="-121.08000"><name>M054</name></wpt>
+  <wpt lat="35.30000" lon="-121.10000"><name>M055</name></wpt>
+  <wpt lat="35.30000" lon="-121.12000"><name>M056</name></wpt>
+  <wpt lat="35.30000" lon="-121.14000"><name>M057</name></wpt>
+  <wpt lat="35.30000" lon="-121.16000"><name>M058</name></wpt>
+  <wpt lat="35.30000" lon="-121.18000"><name>M059</name></wpt>
+  <wpt lat="35.30000" lon="-121.20000"><name>M060</name><desc>Synthetic note for M060</desc></wpt>
+  <wpt lat="35.32000" lon="-121.20000"><name>M061</name></wpt>
+  <wpt lat="35.32000" lon="-121.18000"><name>M062</name></wpt>
+  <wpt lat="35.32000" lon="-121.16000"><name>M063</name></wpt>
+  <wpt lat="35.32000" lon="-121.14000"><name>M064</name></wpt>
+  <wpt lat="35.32000" lon="-121.12000"><name>M065</name></wpt>
+  <wpt lat="35.32000" lon="-121.10000"><name>M066</name></wpt>
+  <wpt lat="35.32000" lon="-121.08000"><name>M067</name></wpt>
+  <wpt lat="35.32000" lon="-121.06000"><name>M068</name></wpt>
+  <wpt lat="35.32000" lon="-121.04000"><name>M069</name></wpt>
+  <wpt lat="35.32000" lon="-121.02000"><name>M070</name></wpt>
+  <wpt lat="35.34000" lon="-121.02000"><name>M071</name></wpt>
+  <wpt lat="35.34000" lon="-121.04000"><name>M072</name></wpt>
+  <wpt lat="35.34000" lon="-121.06000"><name>M073</name></wpt>
+  <wpt lat="35.34000" lon="-121.08000"><name>M074</name></wpt>
+  <wpt lat="35.34000" lon="-121.10000"><name>M075</name><desc>Synthetic note for M075</desc></wpt>
+  <wpt lat="35.34000" lon="-121.12000"><name>M076</name></wpt>
+  <wpt lat="35.34000" lon="-121.14000"><name>M077</name></wpt>
+  <wpt lat="35.34000" lon="-121.16000"><name>M078</name></wpt>
+  <wpt lat="35.34000" lon="-121.18000"><name>M079</name></wpt>
+  <wpt lat="35.34000" lon="-121.20000"><name>M080</name></wpt>
+  <wpt lat="35.36000" lon="-121.20000"><name>M081</name></wpt>
+  <wpt lat="35.36000" lon="-121.18000"><name>M082</name></wpt>
+  <wpt lat="35.36000" lon="-121.16000"><name>M083</name></wpt>
+  <wpt lat="35.36000" lon="-121.14000"><name>M084</name></wpt>
+  <wpt lat="35.36000" lon="-121.12000"><name>M085</name></wpt>
+  <wpt lat="35.36000" lon="-121.10000"><name>M086</name></wpt>
+  <wpt lat="35.36000" lon="-121.08000"><name>M087</name></wpt>
+  <wpt lat="35.36000" lon="-121.06000"><name>M088</name></wpt>
+  <wpt lat="35.36000" lon="-121.04000"><name>M089</name></wpt>
+  <wpt lat="35.36000" lon="-121.02000"><name>M090</name><desc>Synthetic note for M090</desc></wpt>
+  <wpt lat="35.38000" lon="-121.02000"><name>M091</name></wpt>
+  <wpt lat="35.38000" lon="-121.04000"><name>M092</name></wpt>
+  <wpt lat="35.38000" lon="-121.06000"><name>M093</name></wpt>
+  <wpt lat="35.38000" lon="-121.08000"><name>M094</name></wpt>
+  <wpt lat="35.38000" lon="-121.10000"><name>M095</name></wpt>
+  <wpt lat="35.38000" lon="-121.12000"><name>M096</name></wpt>
+  <wpt lat="35.38000" lon="-121.14000"><name>M097</name></wpt>
+  <wpt lat="35.38000" lon="-121.16000"><name>M098</name></wpt>
+  <wpt lat="35.38000" lon="-121.18000"><name>M099</name></wpt>
+  <wpt lat="35.38000" lon="-121.20000"><name>M100</name></wpt>
+  <wpt lat="35.40000" lon="-121.20000"><name>M101</name></wpt>
+  <wpt lat="35.40000" lon="-121.18000"><name>M102</name></wpt>
+  <wpt lat="35.40000" lon="-121.16000"><name>M103</name></wpt>
+  <wpt lat="35.40000" lon="-121.14000"><name>M104</name></wpt>
+  <wpt lat="35.40000" lon="-121.12000"><name>M105</name><desc>Synthetic note for M105</desc></wpt>
+  <wpt lat="35.40000" lon="-121.10000"><name>M106</name></wpt>
+  <wpt lat="35.40000" lon="-121.08000"><name>M107</name></wpt>
+  <wpt lat="35.40000" lon="-121.06000"><name>M108</name></wpt>
+  <wpt lat="35.40000" lon="-121.04000"><name>M109</name></wpt>
+  <wpt lat="35.40000" lon="-121.02000"><name>M110</name></wpt>
+  <wpt lat="35.42000" lon="-121.02000"><name>M111</name></wpt>
+  <wpt lat="35.42000" lon="-121.04000"><name>M112</name></wpt>
+  <wpt lat="35.42000" lon="-121.06000"><name>M113</name></wpt>
+  <wpt lat="35.42000" lon="-121.08000"><name>M114</name></wpt>
+  <wpt lat="35.42000" lon="-121.10000"><name>M115</name></wpt>
+  <wpt lat="35.42000" lon="-121.12000"><name>M116</name></wpt>
+  <wpt lat="35.42000" lon="-121.14000"><name>M117</name></wpt>
+  <wpt lat="35.42000" lon="-121.16000"><name>M118</name></wpt>
+  <wpt lat="35.42000" lon="-121.18000"><name>M119</name></wpt>
+  <wpt lat="35.42000" lon="-121.20000"><name>M120</name><desc>Synthetic note for M120</desc></wpt>
+  <wpt lat="35.44000" lon="-121.20000"><name>M121</name></wpt>
+  <wpt lat="35.44000" lon="-121.18000"><name>M122</name></wpt>
+  <wpt lat="35.44000" lon="-121.16000"><name>M123</name></wpt>
+  <wpt lat="35.44000" lon="-121.14000"><name>M124</name></wpt>
+  <wpt lat="35.44000" lon="-121.12000"><name>M125</name></wpt>
+  <wpt lat="35.44000" lon="-121.10000"><name>M126</name></wpt>
+  <wpt lat="35.44000" lon="-121.08000"><name>M127</name></wpt>
+  <wpt lat="35.44000" lon="-121.06000"><name>M128</name></wpt>
+  <wpt lat="35.44000" lon="-121.04000"><name>M129</name></wpt>
+  <wpt lat="35.44000" lon="-121.02000"><name>M130</name></wpt>
+  <wpt lat="35.46000" lon="-121.02000"><name>M131</name></wpt>
+  <wpt lat="35.46000" lon="-121.04000"><name>M132</name></wpt>
+  <wpt lat="35.46000" lon="-121.06000"><name>M133</name></wpt>
+  <wpt lat="35.46000" lon="-121.08000"><name>M134</name></wpt>
+  <wpt lat="35.46000" lon="-121.10000"><name>M135</name><desc>Synthetic note for M135</desc></wpt>
+  <wpt lat="35.46000" lon="-121.12000"><name>M136</name></wpt>
+  <wpt lat="35.46000" lon="-121.14000"><name>M137</name></wpt>
+  <wpt lat="35.46000" lon="-121.16000"><name>M138</name></wpt>
+  <wpt lat="35.46000" lon="-121.18000"><name>M139</name></wpt>
+  <wpt lat="35.46000" lon="-121.20000"><name>M140</name></wpt>
+  <wpt lat="35.48000" lon="-121.20000"><name>M141</name></wpt>
+  <wpt lat="35.48000" lon="-121.18000"><name>M142</name></wpt>
+  <wpt lat="35.48000" lon="-121.16000"><name>M143</name></wpt>
+  <wpt lat="35.48000" lon="-121.14000"><name>M144</name></wpt>
+  <wpt lat="35.48000" lon="-121.12000"><name>M145</name></wpt>
+  <wpt lat="35.48000" lon="-121.10000"><name>M146</name></wpt>
+  <wpt lat="35.48000" lon="-121.08000"><name>M147</name></wpt>
+  <wpt lat="35.48000" lon="-121.06000"><name>M148</name></wpt>
+  <wpt lat="35.48000" lon="-121.04000"><name>M149</name></wpt>
+  <wpt lat="35.48000" lon="-121.02000"><name>M150</name><desc>Synthetic note for M150</desc></wpt>
+  <trk>
+    <trkseg>
+      <trkpt lat="35.20500" lon="-121.19500"/>
+      <trkpt lat="35.20600" lon="-121.19500"/>
+      <trkpt lat="35.20700" lon="-121.19500"/>
+      <trkpt lat="35.20800" lon="-121.19500"/>
+      <trkpt lat="35.20900" lon="-121.19500"/>
+      <trkpt lat="35.21000" lon="-121.19500"/>
+      <trkpt lat="35.21100" lon="-121.19500"/>
+      <trkpt lat="35.21200" lon="-121.19500"/>
+      <trkpt lat="35.21300" lon="-121.19500"/>
+      <trkpt lat="35.21400" lon="-121.19500"/>
+      <trkpt lat="35.21500" lon="-121.19500"/>
+      <trkpt lat="35.21600" lon="-121.19500"/>
+    </trkseg>
+  </trk>
+</gpx>
