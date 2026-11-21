@@ -310,6 +310,8 @@ test('prefers-reduced-motion never auto-plays: the button steps one hour per pre
   test.skip(isMobile, 'the step button is the desktop dock\'s');
   await page.emulateMedia({reducedMotion: 'reduce'});
   const start = horizonStart();
+  // Keep the requested first hour inside the horizon even if navigation crosses an hour.
+  await page.clock.setFixedTime(new Date(start));
   await v2.open('app', {region: 'morro-bay', hour: hourParam(start)});
   await expect(page.getByRole('button', {name: 'Play'})).toHaveCount(0);
   await page.getByRole('button', {name: 'Next hour'}).click();
