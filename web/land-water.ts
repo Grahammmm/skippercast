@@ -48,11 +48,14 @@ const record = (v: unknown): Record<string, unknown> | null => v && typeof v ===
 /** One tile's run-length cells ("w564m12...") as GRID² characters, or null when malformed. */
 export function decodeCells(runs: unknown, size: number): string | null {
   if (typeof runs !== 'string') return null;
+  const run = /([wlm])(\d+)/y; // Match only at the current offset; never skip junk.
   let out = '';
-  for (const m of runs.matchAll(/([wlm])(\d+)|(.)/g)) {
-    if (m[3] !== undefined) return null;
-    out += m[1]!.repeat(Number(m[2]));
-    if (out.length > size) return null;
+  while (run.lastIndex < runs.length) {
+    const m = run.exec(runs);
+    if (!m) return null;
+    const count = Number(m[2]);
+    if (!Number.isSafeInteger(count) || count <= 0 || count > size - out.length) return null;
+    out += m[1]!.repeat(count);
   }
   return out.length === size ? out : null;
 }
