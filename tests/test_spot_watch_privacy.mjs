@@ -12,7 +12,7 @@ function forbiddenTokens(source) {
   const code = source.replace(/("(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`)|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*/g,
     (_match, quoted) => quoted ?? ' ');
   // Bare, from, and literal dynamic imports (plus TypeScript's import = require form).
-  const imports = /\bimport\s*(?:\(\s*|[\w$\s,*{}]+?\bfrom\s*|[\w$]+\s*=\s*require\s*\(\s*)?(['"])([^'"\r\n]*)\1/g;
+  const imports = /\bimport\s*(?:\(\s*|[\w$\s,*{}]+?\bfrom\s*|[\w$]+\s*=\s*require\s*\(\s*)?(['"`])((?:(?!\1)[^\r\n])*)\1/g;
   for (const [, , path] of code.matchAll(imports)) {
     for (const token of ['routes/', 'analytics', 'telemetry']) {
       if (path.includes(token)) hits.add(token);
@@ -46,6 +46,7 @@ test('C1: all spot-watch modules pass the source privacy scan', () => {
     ['XMLHttpRequest', 'new XMLHttpRequest();'],
     ['routes/', "import {\n  read\n} from './routes/spots.ts';"],
     ['analytics', 'import "./analytics.ts";'],
+    ['analytics', 'await import(`../analytics.ts`);'],
     ['telemetry', "await import('../telemetry.ts');"],
   ]) {
     assert.throws(() => assertPrivateSource('spot-watch-sample.ts', source), {
