@@ -287,7 +287,8 @@ test('play steps hours, stops at the end of the horizon and pauses when the page
   await page.getByRole('button', {name: 'Play'}).click();
   await expect(page.getByRole('button', {name: 'Pause'})).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', {name: 'Play'})).toBeVisible({timeout: 10_000});
-  expect(Date.parse(urlHour(page)!), 'stopped on the horizon\'s last hour').toBeGreaterThanOrEqual(end);
+  // Playback can stop on the preview before its debounced hour reaches the URL.
+  await expect.poll(() => Date.parse(urlHour(page)!), {message: 'stopped on the horizon\'s last hour'}).toBeGreaterThanOrEqual(end);
   await page.waitForTimeout(1500);
   expect(Date.parse(urlHour(page)!)).toBeLessThanOrEqual(end);
 
