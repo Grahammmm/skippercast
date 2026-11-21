@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check configured release bounds, not shoreline geometry or live tiles."""
+"""Check release bounds and catalog state in this checkout, not deployed tiles."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ import sys
 from itertools import combinations
 from pathlib import Path
 from typing import TypedDict
+
+from skippercast.relief.package import decode_document, validate_schema
 
 ROOT = Path(__file__).resolve().parents[2]
 ISLANDS = ('channel-islands-north', 'outer-islands-borderland')
@@ -93,18 +95,54 @@ def coverage(regions: Regions) -> dict:
     }
 
 
+def _relief_state(path: Path, region_id: str, schema: dict) -> str:
+    try:
+        pointer = decode_document(path.read_bytes())
+        validate_schema(pointer, schema)
+    except FileNotFoundError:
+        return 'none'
+    except (OSError, ValueError):
+        return 'invalid'
+    return pointer['generation'][:12] if pointer['region'] == region_id else 'invalid'
+
+
+def region_rows(root: Path, regions: Regions) -> list[dict[str, str]]:
+    """Project catalog state for every release ID, independent of bounds coverage."""
+    relief_dir = root / 'catalog/relief'
+    contours_dir = root / 'catalog/depth-contours'
+    schema = decode_document((relief_dir / 'pointer.schema.json').read_bytes())
+    return [
+        {
+            'id': region_id,
+            'relief': _relief_state(relief_dir / f'{region_id}.json', region_id, schema),
+            'contours': 'present' if (contours_dir / f'{region_id}.geojson').is_file() else 'none',
+        }
+        for region_id in sorted(regions['release'])
+    ]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
-    parser.add_argument('--json', action='store_true', help='print machine-readable JSON')
+    formats = parser.add_mutually_exclusive_group()
+    formats.add_argument('--json', action='store_true', help='print machine-readable JSON')
+    formats.add_argument('--markdown', action='store_true', help='print the catalog state table in Markdown')
     args = parser.parse_args(argv)
     try:
-        report = coverage(load_regions(ROOT))
+        regions = load_regions(ROOT)
+        report = coverage(regions)
+        if args.json or args.markdown:
+            report['regions'] = region_rows(ROOT, regions)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print(f'Coast coverage could not be checked: {exc}', file=sys.stderr)
         return 1
 
     if args.json:
         print(json.dumps(report, indent=2))
+    elif args.markdown:
+        print('| Region | Relief | Contours |')
+        print('| --- | --- | --- |')
+        for row in report['regions']:
+            print(f'| {row["id"]} | {row["relief"]} | {row["contours"]} |')
     else:
         print('Check      | Region(s) / island           | Result')
         for low, high in report['gaps']:
