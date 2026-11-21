@@ -355,7 +355,7 @@ def test_source_edge_across_tile_boundary_uses_actual_paint(tmp_path):
         ds.write(np.tile(np.repeat([1, 2], 256), (256, 1)).astype('uint16'), 1)
     with rasterio.open(elevation) as depth, rasterio.open(contributor) as owner:
         metrics, failures = qa._raster_metrics(archive, dict(bounds=bounds, minzoom=z, maxzoom=z), bounds, depth, owner, {})
-    assert failures == ['seam_delta_lstar']
+    assert failures == ['seam_excess']
     assert metrics['seam_delta_lstar']['edge_pairs'] == 256
     assert metrics['seam_delta_lstar']['max'] > 20
 
@@ -378,3 +378,87 @@ def test_paint_on_a_tile_the_evidence_does_not_cover_fails(tmp_path):
         metrics, failures = qa._raster_metrics(archive, dict(bounds=bounds, minzoom=z, maxzoom=z), bounds, depth, owner, {})
     assert 'painted_without_land_evidence' in failures
     assert metrics['painted_without_land_evidence'] == 256 ** 2 and metrics['land_pixels'] == 0
+
+
+@pytest.fixture
+def measure_seam(tmp_path):
+    def measure(*, texture=False):
+        z, x, y = 13, 1345, 3232
+        grid = qa._tile_grid(z, x, y)
+        bounds = transform_bounds('EPSG:3857', 'EPSG:4326', *array_bounds(256, 256, grid))
+        release = dict(bounds=bounds, minzoom=z, maxzoom=z)
+        depth = np.full((1, 256, 256), -12, dtype='float32')
+        codes = np.ones_like(depth, dtype='uint16')
+        codes[:, :, 128:] = 2
+        rgba = np.full((256, 256, 4), 255, dtype='uint8')
+        rgba[:, :, :3] = 100
+        # Both surveys have the same alternating 0.5 m slope/colour profile.
+        depth[:, 128:224, :] = -8
+        depth[:, 128:224, ::2] = -7.5
+        rgba[128:224, ::2, :3] = 140
+        # A shoreline crosses the source boundary in the last rows.
+        depth[:, 224:, :128], depth[:, 224:, 128:] = -1, 1
+        rgba[224:, 128:, :3] = 200
+        if texture:
+            rgba[:128, 128::2, :3] = 160  # only source 2, in flat water
+        archive = tmp_path / 'relief.pmtiles'
+        tiles.write_pmtiles(archive, {(z, x, y): tiles.encode_png(rgba)}, metadata={}, **release,
+                            center=(z, bounds[0], bounds[1]))
+        elevation, contributor = tmp_path / 'elev.tif', tmp_path / 'contributor.tif'
+        raster(elevation, grid, depth, -9999)
+        raster(contributor, grid, codes, 0)
+        with rasterio.open(elevation) as elev, rasterio.open(contributor) as owner:
+            return qa._raster_metrics(archive, release, bounds, elev, owner, {})
+    return measure
+
+
+def test_seam_excess_ignores_terrain_steps(measure_seam):
+    # The old all-pairs max rejected a terrain signal also present off seam.
+    metrics, failures = measure_seam()
+    assert failures == []
+    assert metrics['seam_delta_lstar_max'] > 3
+    seam = metrics['seam_excess']
+    assert seam['actual'] == seam['expected'] == 96
+    assert seam['ungated']['straddles_zero']['count'] == 32
+    assert seam['ungated']['steep_step']['count'] == 32
+    assert len(seam['top_ungated']) == 32  # straddle and steep overlap, no duplicate pair
+    assert seam['top_ungated'][0]['endpoints'] == [[13, 1345, 3232, 224, 127],
+                                                  [13, 1345, 3232, 224, 128]]
+
+
+def test_seam_excess_detects_texture_step(measure_seam):
+    # Even with some same-source texture in the baseline, a concentrated flat-water seam fails.
+    metrics, failures = measure_seam(texture=True)
+    assert failures == ['seam_excess']
+    flat = next(b for b in metrics['seam_excess']['bins'] if b['seam_pairs'] == 128)
+    assert flat['actual'] == 128 and 0 < flat['expected'] < 64
+
+
+def test_seam_bin_edges():
+    # Exact cut points enter the higher bin; zero depth, 2 m steps and missing depth are not gated.
+    low = np.array([-92, -91.44, -30, -10, -3, -3, -2, -.5, np.nan])
+    high = np.array([-92, -91.44, -29.75, -9.5, -2, -1, 0, .5, np.nan])
+    counts = qa._seam_bin_counts(low, high, np.array([3, 4, 4, 4, 4, 4, 4, 4, 4]))
+    assert np.flatnonzero(counts[:, 0]).tolist() == [0, 4, 9, 14, 19]
+    assert counts[[0, 4, 9, 14, 19]].tolist() == [[1, 0], [1, 1], [1, 1], [1, 1], [1, 1]]
+
+
+@pytest.mark.parametrize(('pairs', 'actual', 'same_over', 'other_expected', 'failed', 'failed_bin'), [
+    (100, 25, 0, 0, False, False),     # no baseline; exactly the floor
+    (100, 26, 0, 0, True, False),
+    (100, 50, 20, 0, False, False),    # E=20; exactly the aggregate limit
+    (100, 51, 20, 0, True, False),
+    (999, 176, 10, 100, False, False),  # diluted aggregate; small bin is not gated
+    (1000, 175, 10, 100, False, False),  # E=100; exactly the local limit
+    (1000, 176, 10, 100, True, True),
+])
+def test_seam_excess_thresholds(pairs, actual, same_over, other_expected, failed, failed_bin):
+    # A global-only guard would miss a concentrated excess; strict > preserves equality at each limit.
+    seam, same = np.zeros((20, 2), dtype=int), np.zeros((20, 2), dtype=int)
+    seam[0], seam[1] = (pairs, actual), (other_expected, 0)
+    same[0], same[1] = (100 if same_over else 0, same_over), (100, 100)
+    report, excess = qa._seam_excess(seam, same)
+    assert report['actual'] == actual
+    assert report['expected'] == pytest.approx(pairs * same_over / 100 + other_expected)
+    assert report['bins'][0]['failed'] is failed_bin
+    assert excess is failed
