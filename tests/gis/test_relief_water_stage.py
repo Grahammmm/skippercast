@@ -134,7 +134,7 @@ def _expected(inputs):
 
 
 @pytest.mark.parametrize('coast,close_m,accuracies', [
-    pytest.param('18', 18.0, [4.31, 18.0], id='C1: north-B parity, maximum HOR_ACC 18 gives the reviewed CLOSE_M'),
+    pytest.param('18', water.CLOSE_M, [4.31, 18.0], id='C1: north-B parity, maximum HOR_ACC 18 gives the reviewed CLOSE_M'),
     pytest.param('12', 12.0, [4.31, 12.0], id='C1: close_m is the decoded maximum HOR_ACC, not a fixed 18'),
 ])
 def test_C1_receipt_and_outputs(held, monkeypatch, capsys, coast, close_m, accuracies):
@@ -145,7 +145,8 @@ def test_C1_receipt_and_outputs(held, monkeypatch, capsys, coast, close_m, accur
     monkeypatch.setattr(socket.socket, 'connect', offline)
     monkeypatch.setattr(socket, 'getaddrinfo', offline)
     held.write(_default_tiles(coast))
-    # The reviewed builder's constants (build_water.py:67): the rule's north-B instance and the connectivity radius.
+    # The reviewed builder's constants (build_water.py:67, sha256 5b17edd6...): the rule's north-B instance and the
+    # connectivity radius, pinned here so neither is re-typed silently.
     assert (water.CLOSE_M, water.CONNECT_M) == (18.0, 250.0)
     assert _run(held) == 0
     receipt = _receipt(held.region)
@@ -163,7 +164,7 @@ def test_C1_receipt_and_outputs(held, monkeypatch, capsys, coast, close_m, accur
     assert json.loads(geojson.read_bytes()) == json.loads(json.dumps(water.to_geojson(expected_water, _REGION)))
     assert json.loads(report_path.read_bytes()) == {
         'region': _REGION, 'region_bounds_wgs84': _BOUNDS, 'frame_wgs84': _BOUNDS,
-        'params': {'close_m': close_m, 'connect_m': 250.0}, 'hor_acc_values_m': accuracies,
+        'close_m': close_m, 'connect_m': 250.0, 'hor_acc_values_m': accuracies,
         'unavailable_tiles': [_WEST], 'report': expected_report,
         'inputs': {'manifest_sha256': _sha(held.manifest),
                    'tiles': [{'tile': name, 'sha256': _sha(held.tile_path(name))} for name in (_EAST, _DECOY)]},
@@ -185,17 +186,13 @@ def _assert_failed(inputs, error):
                  id='C1: refuse another region config'),
     pytest.param('manifest', 'ValueError: unreadable shoreline manifest: JSONDecodeError: '
                              'Expecting value: line 1 column 1 (char 0)', id='C1: refuse an unreadable manifest'),
-    pytest.param('empty', 'ValueError: no shoreline lines in the frame of region synthetic-coast',
-                 id='C1: refuse a frame without shoreline'),
 ])
 def test_C1_refusals(held, case, error):
-    """C1: A wrong region, unreadable custody or empty shoreline must not produce an ocean."""
+    """C1: A wrong region or unreadable custody must not produce an ocean."""
     if case == 'region':
         held.write_config({'id': 'other-region', 'bounds': _BOUNDS})
-    elif case == 'manifest':
-        held.manifest.write_bytes(b'not json')
     else:
-        held.write({_WEST: None, _EAST: []})
+        held.manifest.write_bytes(b'not json')
     assert _run(held) == 1
     _assert_failed(held, error)
 
@@ -271,12 +268,20 @@ def test_C1_unusable_accuracy(held, capsys, accuracy, reason):
     _assert_held(held, reason, capsys)
 
 
-def test_C2_no_west_connected_ocean(held, capsys):
-    """C2: A shoreline 8 m inside the west frame edge leaves no seaward component to keep."""
-    held.write(dict(_default_tiles(), **{_WEST: [_line(_WEST, '18', (-119.9999, 38.06), (-119.9999, 37.997))]}))
+@pytest.mark.parametrize('tiles,reason,inputs', [
+    pytest.param({_WEST: [_line(_WEST, '18', (-119.9999, 38.06), (-119.9999, 37.997))]},
+                 'expected exactly one component at the west-frame seed', (_WEST, _EAST, _DECOY),
+                 id='C2: a shoreline 8 m inside the west edge leaves no west-connected ocean'),
+    pytest.param({_EAST: [_ISLAND]}, 'ocean still reaches the east frame after connectivity cuts', (_EAST, _DECOY),
+                 id='C2: hold, not crash, when the ocean leaks to the inland east edge'),
+    pytest.param({_EAST: []}, 'no shoreline lines in the frame of region synthetic-coast', (_EAST, _DECOY),
+                 id='C2: hold a frame without shoreline'),
+])
+def test_C2_no_usable_ocean(held, capsys, tiles, reason, inputs):
+    """C2: When the opening yields no single seaward ocean, the stage holds with ocean_polygon's own reason."""
+    held.write(dict(_default_tiles(), **tiles))
     assert _run(held) == 4
-    _assert_held(held, 'opening at 18.0 m leaves no west-connected ocean in region synthetic-coast', capsys,
-                 (_WEST, _EAST, _DECOY))
+    _assert_held(held, reason, capsys, inputs)
 
 
 def test_C2_unlisted_displacement(held, capsys, monkeypatch):

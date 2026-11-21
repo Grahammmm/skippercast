@@ -26,7 +26,6 @@ _QUAD_SEGS = 8
 _FRAME_GRID = 100_000
 _FRAME_SEGMENT_DEG = 0.005
 _OUTPUT_GRID = 0.000001
-_NO_WEST_SEED = "expected exactly one component at the west-frame seed"
 
 # Reviewed north-B builder (scratch/sc-map-goal/north-b-inputs/water/build_water.py:67,
 # sha256 5b17edd6b5e48d8617d754dd8af157cefef4cf8e864026a6fb909ad8ac338a00). Its rule is
@@ -83,7 +82,7 @@ def _west_part(geometry, seed):
     parts = [p for p in shapely.get_parts(geometry) if isinstance(p, Polygon) and not p.is_empty]
     west = [i for i, p in enumerate(parts) if p.distance(seed) < 1e-6]
     if len(west) != 1:
-        raise ValueError(_NO_WEST_SEED)
+        raise ValueError("expected exactly one component at the west-frame seed")
     return parts.pop(west[0]), parts
 
 
@@ -329,22 +328,19 @@ def build(ctx, out_dir):
     lines = [(line, accuracy) for feature, accuracy in zip(published['features'], accuracies)
              for line in map(LineString, shoreline.feature_lines(feature['geometry'])) if line.length]
     if not lines:
-        raise ValueError(f'no shoreline lines in the frame of region {region_id}')
+        raise receipts.Held(f'no shoreline lines in the frame of region {region_id}')
     close_m = max(accuracy for _, accuracy in lines)
     if close_m > CONNECT_M:
         raise receipts.Held(f'maximum stated HOR_ACC {close_m} m exceeds connect_m {CONNECT_M} m')
     try:
         water, report = ocean_polygon(lines, frame, close_m=close_m, connect_m=CONNECT_M)
-    except ValueError as exc:
-        if str(exc) != _NO_WEST_SEED:
-            raise
-        raise receipts.Held(f'opening at {close_m} m leaves no west-connected ocean in region {region_id}') from None
+    except ValueError as exc:  # For example no west-connected ocean, or an east leak after the cuts.
+        raise receipts.Held(str(exc)) from None
 
-    params = {'close_m': close_m, 'connect_m': CONNECT_M}
     (out_dir / 'water.geojson').write_bytes(receipts.canonical(to_geojson(water, region_id)) + b'\n')
     (out_dir / 'water.json').write_bytes(receipts.canonical({
-        'region': region_id, 'region_bounds_wgs84': bounds, 'frame_wgs84': list(frame), 'params': params,
-        'hor_acc_values_m': sorted(set(accuracies)),
+        'region': region_id, 'region_bounds_wgs84': bounds, 'frame_wgs84': list(frame),
+        'close_m': close_m, 'connect_m': CONNECT_M, 'hor_acc_values_m': sorted(set(accuracies)),
         'unavailable_tiles': collection['provenance']['unavailable_tiles'],
         'report': report, 'inputs': {'manifest_sha256': manifest_sha, 'tiles': pins},
     }) + b'\n')
@@ -353,4 +349,4 @@ def build(ctx, out_dir):
         # The runner keeps out_dir, with water.json and its report, as the held attempt's failed_dir.
         raise receipts.Held(f"{len(beyond)} boundary samples lie beyond {report['displacement_bound_m']} m "
                             f"of the shoreline and are not at a listed cut")
-    return params
+    return {'close_m': close_m, 'connect_m': CONNECT_M}
