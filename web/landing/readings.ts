@@ -9,6 +9,7 @@
 // itself, "backup for" the primary, never under the primary's name.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
+import {compass} from '../compass.ts';
 import {num, t, type Language} from '../i18n.ts';
 import {sharedFetch} from '../shared-fetch.ts';
 import {sharedStation, sourceStation, stationText} from '../station-label.ts';
@@ -54,9 +55,7 @@ const time = (value: unknown): number => typeof value === 'string' && /(?:Z|[+-]
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
 /** English keeps toFixed's trailing zero; Spanish uses its comma and at most one decimal. */
 const oneDecimal = (n: number, lang: Language): string => lang === 'es' ? num(Number(n.toFixed(1)), lang, 1) : n.toFixed(1);
-const POINTS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-/** 16-point compass name for degrees true. */
-export const compass = (deg: number): string => POINTS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]!;
+export {compass} from '../compass.ts';
 
 /** "about 56 nm WNW of Morro Bay harbor" for NDBC `station`, or null when the region lacks either position. SC0707-05: `lang` words it; the harbor's name stays as published. */
 export function fromHarbor(region: RegionStations, station: string | undefined, lang: Language = 'en'): string | null {
