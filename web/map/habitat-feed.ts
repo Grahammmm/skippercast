@@ -463,3 +463,34 @@ export async function regionalCurrents(regionId: string, o: ReadOptions): Promis
     return error instanceof NetworkReadError ? {state: 'error', network: true} : {state: 'error'};
   }
 }
+
+export const SSH_LAYER_ID = 'wcofs-ssh';
+
+export type RegionalSsh =
+  | {readonly state: 'none'}
+  | {readonly state: 'error'; readonly network?: true}
+  | {readonly state: 'listed'; readonly validAt: readonly string[]; readonly layerStatus: string}
+  | {readonly state: 'ready'; readonly product: string; readonly issuedAt: string; readonly resolution: readonly [number, number];
+    readonly maxAgeMs: number; readonly frames: readonly {readonly validAt: string;
+      readonly cells: readonly {readonly lat: number; readonly lon: number; readonly sshCm: number}[]}[]};
+
+/** Read the region's sea-surface heights with the same forecast gate as `regionalCurrents`. */
+export async function regionalSsh(regionId: string, o: ReadOptions): Promise<RegionalSsh> {
+  try {
+    const found = await manifestLayer(regionId, o, data => layerOf(data, regionId, SSH_LAYER_ID, 'forecast', ['ssh_cm']));
+    if (typeof found === 'string') return {state: found};
+    const {layer, manifestURL, get} = found, times = populated(layer), issuedAt = instant(layer.raw.issued_at);
+    const validAt = times.map(t => new Date(t * 1000).toISOString());
+    if (!loads(layer) || !times.length || !issuedAt || !(o.now.getTime() - Date.parse(issuedAt) < layer.maxAgeMs) || !layer.fetchedAt || layer.raw.surface_only !== true)
+      return {state: 'listed', validAt, layerStatus: layer.status};
+    const rows = await allRows(get, manifestURL, regionId, layer, o.signal), index = layer.fields.indexOf('ssh_cm');
+    const frames = times.map((time, i) => ({validAt: validAt[i]!, cells: (rows.get(time) ?? []).flatMap(r => {
+      const sshCm = r[index];
+      return numeric(sshCm) && sshCm >= -2000 && sshCm <= 2000 ? [{lat: r[0] as number, lon: r[1] as number, sshCm}] : [];
+    })}));
+    return {state: 'ready', product: layer.product, issuedAt, resolution: layer.resolution, maxAgeMs: layer.maxAgeMs, frames};
+  } catch (error) {
+    if (o.signal?.aborted) throw error;
+    return error instanceof NetworkReadError ? {state: 'error', network: true} : {state: 'error'};
+  }
+}
