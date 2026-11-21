@@ -421,6 +421,7 @@ def geometry_points(geometry):
     return [pt for ring in rings for pt in ring]
 
 
+UNKNOWN_SUPPORT = 2
 MEASURED_SUPPORT = 3  # support raster class for a measured (not interpolated/unknown) native cell
 
 
@@ -476,7 +477,44 @@ def line_parts(geometry):
             yield from line_parts(part)
 
 
-def _v3_block_lines(grid, window, levels_by_tier, cell, *, support, provenance, positive_down, core):
+def _v3_shoal_safe(original, short, unknown, depth, level, tf, lonlat):
+    """Keep a shortcut only if it cannot move a raw unknown-support shoal across the line."""
+    from shapely import intersects_xy, transform
+    from shapely.ops import polygonize
+
+    x0, y0, x1, y1 = original.bounds
+    sx0, sy0, sx1, sy1 = short.bounds
+    # Restrict centre indices to the joint projected bounds plus one cell.
+    centres = tf @ Affine.translation(0.5, 0.5)
+    to_index = ~centres
+    cell = tf.a
+    left, top = to_index @ (min(x0, sx0) - cell, max(y1, sy1) + cell)
+    right, bottom = to_index @ (max(x1, sx1) + cell, min(y0, sy0) - cell)
+    col0, row0 = max(0, int(np.ceil(left))), max(0, int(np.ceil(top)))
+    cols = slice(col0, int(np.floor(right)) + 1)
+    rows = slice(row0, int(np.floor(bottom)) + 1)
+    rr, cc = np.nonzero(unknown[rows, cols] & (depth[rows, cols] < level))
+    orig_ll = transform(original, lonlat.transform, interleaved=False)
+    short_ll = transform(short, lonlat.transform, interleaved=False)
+    # The caller pairs parts before simplifying, including parts cut at a
+    # block seam. They must keep their endpoints (including a ring's start).
+    if (short_ll.geom_type != 'LineString' or short_ll.is_empty
+            or (orig_ll.coords[0], orig_ll.coords[-1]) != (short_ll.coords[0], short_ll.coords[-1])):
+        return original
+    if not rr.size:
+        return short
+
+    x, y = lonlat.transform(*(centres @ (cc + col0, rr + row0)))
+    # Compare before the lon/lat clip: clipping can open the faces between
+    # the two lines and make a shoal on the inside of the clip undetectable.
+    if intersects_xy(short_ll, x, y).any() or any(
+            intersects_xy(face, x, y).any() for face in polygonize(unary_union([orig_ll, short_ll]))):
+        return original
+    return short
+
+
+def _v3_block_lines(grid, window, levels_by_tier, pier_index, cell, *, support, provenance, positive_down,
+                    core, lonlat):
     """Trace a bounded read, returning projected lines owned by its core."""
     from scipy.ndimage import gaussian_filter, minimum_filter
     from shapely.geometry import box
@@ -485,16 +523,21 @@ def _v3_block_lines(grid, window, levels_by_tier, cell, *, support, provenance, 
     values = grid.read(1, window=window, masked=True).astype('float64').filled(np.nan)
     if positive_down:
         values = -values
-    valid = np.isfinite(values) & (values < 0) & (values >= -3000)
+    water = np.isfinite(values) & (values < 0) & (values >= -3000)
     if provenance is not None:
-        valid &= provenance.read(1, window=window, masked=True).filled(PAD) == ec.CODES['measured']
+        water &= provenance.read(1, window=window, masked=True).filled(PAD) == ec.CODES['measured']
+    measured = usable = water
+    unknown = None
     if support is not None:
-        valid &= support.read(1, window=window, masked=True).filled(0) == MEASURED_SUPPORT
+        classes = support.read(1, window=window, masked=True).filled(0)
+        measured = water & (classes == MEASURED_SUPPORT)
+        unknown = water & (classes == UNKNOWN_SUPPORT)
+        if unknown.any():
+            usable = measured | unknown
+        else:
+            usable, unknown = measured, None
     depth = -values * dc.FEET_PER_M
-    squares = valid[:-1, :-1] & valid[1:, :-1] & valid[:-1, 1:] & valid[1:, 1:]
-    if not squares.any():
-        return
-    footprint = polygons(squares, tf @ Affine.translation(0.5, 0.5))
+    footprints = {}
     clip = None
     if core is not None:
         left, bottom, right, top = rasterio.windows.bounds(core, grid.transform)
@@ -502,8 +545,19 @@ def _v3_block_lines(grid, window, levels_by_tier, cell, *, support, provenance, 
         # edges, but keep crossing endpoints to join to the adjacent core.
         clip = box(left, bottom, right, top), LineString([(left, bottom), (right, bottom), (right, top)])
     for i, (sigma, radius, levels) in enumerate(levels_by_tier):
+        pier = i == pier_index
+        valid = measured if pier else usable
+        key = pier and unknown is not None  # Both tiers share a footprint if there are no unknown cells.
+        if key not in footprints:
+            squares = valid[:-1, :-1] & valid[:-1, 1:] & valid[1:, :-1] & valid[1:, 1:]
+            footprints[key] = polygons(squares, tf @ Affine.translation(0.5, 0.5)) if squares.any() else None
+        footprint = footprints[key]
+        if footprint is None:
+            continue
         interior = minimum_filter(valid, size=2 * radius + 1, mode='constant', cval=False)
         smooth = gaussian_filter(np.where(valid, depth, 0), sigma, radius=radius)
+        if not pier and unknown is not None:
+            np.minimum(smooth, depth, out=smooth, where=unknown)
         rows = np.where(valid, np.where(interior, smooth, depth), None).tolist()
         for level, lines in dc.trace(rows, levels).items():
             pieces = []
@@ -518,7 +572,10 @@ def _v3_block_lines(grid, window, levels_by_tier, cell, *, support, provenance, 
                     raw = raw.intersection(clip[0]).difference(clip[1])
                 for original in line_parts(raw):
                     short = original.simplify(min(cell, CONTOUR_TOLERANCE_M))
-                    pieces.append(short if footprint.covers(short) else original)
+                    safe = short if footprint.covers(short) else original
+                    if not pier and unknown is not None and safe is not original:
+                        safe = _v3_shoal_safe(original, safe, unknown, depth, level, tf, lonlat)
+                    pieces.append(safe)
             if pieces:
                 yield (i, level), pieces
 
@@ -581,11 +638,14 @@ def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=
             yield from windows(col, row, end_col, mid)
             yield from windows(col, mid, end_col, end_row)
 
+    lonlat = Transformer.from_crs(crs, 'EPSG:4326', always_xy=True)
+    pier_index = next((i for i, (tier, _) in enumerate(tiers) if tier['name'] == view['pier_view']['contours_tier']), None)
+
     def trace(window, core):
         if window.width * window.height > cap:
             raise ValueError(refusal)
-        return _v3_block_lines(grid, window, levels_by_tier, cell, support=support, provenance=provenance,
-                               positive_down=positive_down, core=core)
+        return _v3_block_lines(grid, window, levels_by_tier, pier_index, cell, support=support, provenance=provenance,
+                               positive_down=positive_down, core=core, lonlat=lonlat)
 
     if blocked:
         runs = {}
@@ -596,7 +656,6 @@ def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=
     else:
         groups = trace(whole, None)
 
-    lonlat = Transformer.from_crs(crs, 'EPSG:4326', always_xy=True)
     clip_ll = box(*region['bounds'])
     for (i, level), lines in groups:
         tier, stop = tiers[i]
@@ -622,7 +681,8 @@ def v3_collection(region, view, features, sources, omitted):
             'provenance': {'region_id': region['id'], 'bounds': region['bounds'], 'units': 'ft', 'set': dc.FT_V3,
                            'contours': view.digest('contours'), 'shelf_limit_ft': dc.V2_SHELF_LIMIT_FT,
                            'features': len(features), 'sources': sources, 'sources_omitted': omitted,
-                           'method': 'Marching squares on Gaussian-smoothed native water cells; no resampling.',
+                           'method': ('Marching squares on Gaussian-smoothed native water cells (measured or unknown '
+                                      'support; unknown-support cells never drawn deeper than their own value); no resampling.'),
                            'limitations': 'Estimated display contours. Not for navigation. No datum conversion.'}}
 
 

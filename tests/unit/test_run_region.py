@@ -13,6 +13,7 @@ import sys
 
 import pytest
 
+from skippercast.relief import receipts
 from tests._support import ROOT
 
 
@@ -164,7 +165,7 @@ def test_scoped_stages_get_scope_config_and_zone_inputs_only(box):
 
 
 @pytest.mark.parametrize('drop, through', [
-    ('--coarse', 'zone'), ('--water', 'zone'), ('--coarse-source', 'zone'), ('--basemap', 'envelope'),
+    ('--coarse-source', 'zone'), ('--basemap', 'envelope'),
 ])
 def test_chain_reaching_a_stage_without_its_inputs_is_a_usage_error_before_any_stage(box, drop, through):
     # Contract: missing stage inputs are caught before running the expensive earlier stages.
@@ -173,6 +174,115 @@ def test_chain_reaching_a_stage_without_its_inputs_is_a_usage_error_before_any_s
     with pytest.raises(SystemExit) as stop:
         RR.main(['morro-bay', '--out', str(box.out), '--through', through, *args], box.cfg)
     assert stop.value.code == 2 and box.ran() == [] and box.out_tree() == []
+
+
+@pytest.mark.parametrize('code, stages', [(0, ['census-bind', 'select']), (4, ['census-bind'])],
+                         ids=['C1: bind precedes select', 'C1: bind refusal stops select'])
+def test_c1_census_bind_first(box, capsys, code, stages):
+    # C1: putting bind after select would let select use the old census even on refusal.
+    box.codes({'census-bind': code})
+    assert box.run('--census', 'census.json', '--census-sha256', GEN, through='select') == code
+    common = ['--region', 'morro-bay', '--out', str(box.out)]
+    assert box.calls() == [
+        [stage, *common, *(['--from', os.path.join(os.getcwd(), 'census.json'), '--sha256', GEN]
+                           if stage == 'census-bind' else ['--cache', RR.DEFAULT_NORM])]
+        for stage in stages
+    ]
+    if code:
+        assert capsys.readouterr().out.splitlines()[-1] == 'run_region: STOPPED at census-bind: exit 4'
+
+
+@pytest.mark.parametrize('args', [('--census', 'census.json'), ('--census-sha256', GEN)],
+                         ids=['C1: missing digest', 'C1: missing file'])
+def test_c1_census_pair_required(box, capsys, args):
+    # C1: an incomplete pair must neither launch an unpinned bind nor silently run select alone.
+    with pytest.raises(SystemExit) as stop:
+        box.run(*args, through='select')
+    assert stop.value.code == 2 and box.calls() == [] and box.out_tree() == []
+    assert capsys.readouterr().err.splitlines()[-1] == (
+        'run_region.py: error: --census and --census-sha256 must be given together')
+
+
+def test_c1_census_is_guarded_before_first_stage(box, capsys):
+    # C1: the new path must not bypass the existing private-root guard.
+    vault = box.root / 'vault'
+    box.cfg.forbidden_root = str(vault)
+    census = vault / 'census.json'
+    assert box.run('--census', str(census), '--census-sha256', GEN, through='select') == 3
+    assert box.calls() == [] and box.out_tree() == []
+    assert capsys.readouterr().out == f'run_region: refused before census-bind: input-path: {census} is under {vault}\n'
+
+
+def seed_zone_receipt(box, stage, files, *, held=False):
+    # Use producer-shaped, hash-bound output rows but never run either GIS producer.
+    region = receipts.Region(box.out, 'morro-bay')
+    outputs = []
+    for name, data in files.items():
+        path = region.dir / 'fixture-products' / stage / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        outputs.append({'path': region.record(path), 'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)})
+    receipts.write_json_atomic(region.receipt_path(stage), {
+        'schema': receipts.SCHEMA, 'region': region.id, 'stage': stage, 'scope': None,
+        'status': 'held' if held else 'ok', 'held_reason': 'fixture held', 'generation': GEN,
+        'attempt': 1, 'upstream': [], 'outputs': outputs,
+    })
+
+
+COARSE_FILES = {'coarse-3310.tif': b'synthetic coarse', 'coarse.json': b'{"family":"fixture-family"}'}
+WATER_FILES = {'water.geojson': b'synthetic water'}
+
+
+@pytest.mark.parametrize('options, zone_tail', [
+    ([], ['--coarse-source', 'fixture-family', '--coarse', '{coarse}', '--water', '{water}']),
+    (ZONE_ARGS[:2] + ZONE_ARGS[4:], ZONE_ARGS[:2] + ZONE_ARGS[4:] + ['--water', '{water}']),
+    (ZONE_ARGS[2:4], ZONE_ARGS[2:4] + ['--coarse-source', 'fixture-family', '--coarse', '{coarse}']),
+    (ZONE_ARGS[4:], ZONE_ARGS[4:] + ['--coarse', '{coarse}', '--water', '{water}']),
+    (ZONE_ARGS, ZONE_ARGS),
+], ids=['C2: both receipts', 'C2: explicit coarse wins', 'C2: explicit water wins',
+        'C2: explicit source wins', 'C2: all explicit wins'])
+def test_c2_zone_binds_only_omitted_options(box, options, zone_tail):
+    # C2: guessed paths, dropping the family, or clobbering an explicit option break the exact zone argv.
+    seed_zone_receipt(box, 'coarse', COARSE_FILES)
+    seed_zone_receipt(box, 'water', WATER_FILES)
+    assert RR.main(['morro-bay', '--out', str(box.out), '--through', 'zone', *options], box.cfg) == 0
+    products = box.out / 'morro-bay' / 'fixture-products'
+    paths = {'coarse': products / 'coarse/coarse-3310.tif', 'water': products / 'water/water.geojson'}
+    assert box.ran() == ['select', 'mosaic', 'tiles', 'zone']
+    assert box.calls()[-1] == ['zone', '--region', 'morro-bay', '--out', str(box.out), '--scope', 'public',
+                              *(arg.format(**paths) for arg in zone_tail)]
+
+
+@pytest.mark.parametrize('stage, state, reason', [
+    ('coarse', 'missing', 'coarse is not done (missing: no receipt)'),
+    ('water', 'missing', 'water is not done (missing: no receipt)'),
+    ('coarse', 'held', 'coarse is not done (held: fixture held)'),
+    ('water', 'held', 'water is not done (held: fixture held)'),
+    ('water', 'changed', 'water is not done (unproved: output changed: fixture-products/water/water.geojson)'),
+    ('water', 'unnamed', 'water receipt must name one water.geojson output'),
+    ('coarse', 'no-family', 'coarse.json has no family'),
+    ('water', 'forbidden', 'water output water.geojson is under {vault}'),
+], ids=['C2: coarse missing', 'C2: water missing', 'C2: coarse held', 'C2: water held',
+        'C2: water changed after receipt', 'C2: missing named output', 'C2: missing family', 'C2: forbidden output'])
+def test_c2_zone_refuses_unusable_stage_inputs(box, capsys, stage, state, reason):
+    # C2: a receipt or output on disk is not enough; no zone process may open an unusable input.
+    vault = box.out / 'morro-bay/fixture-products/water'
+    for producer, files in [('coarse', COARSE_FILES), ('water', WATER_FILES)]:
+        if producer != stage:
+            seed_zone_receipt(box, producer, files)
+        elif state != 'missing':
+            if state == 'unnamed':
+                files = {'water.json': b'{}'}
+            elif state == 'no-family':
+                files = {**files, 'coarse.json': b'{}'}
+            seed_zone_receipt(box, stage, files, held=state == 'held')
+    if state == 'changed':
+        (vault / 'water.geojson').write_bytes(b'synthetic WATER')
+    if state == 'forbidden':
+        box.cfg.forbidden_root = str(vault)
+    assert RR.main(['morro-bay', '--out', str(box.out), '--through', 'zone'], box.cfg) == 3
+    assert box.ran() == ['select', 'mosaic', 'tiles']
+    assert capsys.readouterr().out.splitlines()[-1] == f'run_region: refused before zone: {reason.format(vault=vault)}'
 
 
 def test_normalize_reports_separate_per_source_step(box, capsys):
@@ -662,19 +772,28 @@ def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
     assert box.ran() == [] and box.out_tree() == [] and not box.slots.exists()
 
 
-@pytest.mark.parametrize('partial', [[], ['--coarse', '/in/coarse.tif']], ids=['bare', 'partial-zone-inputs'])
-def test_i_dry_run_without_through_previews_full_chain_only(box, capsys, partial):
-    # Contract: the bare dry run prints all ten stages without launching or writing. Bugs caught:
-    # requiring --through/zone inputs for that preview or crashing while formatting partial inputs.
+@pytest.mark.parametrize('partial, census, input_lines', [
+    ([], False, ['inputs for zone: --coarse (stage coarse), --water (stage water), --coarse-source (stage coarse)']),
+    (ZONE_ARGS[:2], False, ['inputs for zone: --coarse (option), --water (stage water), --coarse-source (missing option)']),
+    (ZONE_ARGS[2:4], True, ['inputs for census-bind: --census (option), --census-sha256 (option)',
+                            'inputs for zone: --coarse (stage coarse), --water (option), --coarse-source (stage coarse)']),
+    (ZONE_ARGS, False, ['inputs for zone: --coarse (option), --water (option), --coarse-source (option)']),
+], ids=['C3: bare preview', 'C3: incomplete explicit coarse', 'C3: mixed sources with census', 'C3: explicit inputs'])
+def test_c3_dry_run_without_through_previews_full_chain_only(box, capsys, partial, census, input_lines):
+    # C3: a preview must not mistake receipt-backed inputs for missing options or launch a bind.
     args = ['morro-bay', '--out', str(box.out), *partial]
+    if census:
+        args += ['--census', '/in/census.json', '--census-sha256', GEN]
     assert RR.main([*args, '--dry-run'], box.cfg) == 0
     text = capsys.readouterr().out
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
-    assert [line.split()[3] for line in lines] == STAGE_ORDER
-    package_command = lines[STAGE_ORDER.index('package')]
+    assert [line.split()[3] for line in lines] == (['census-bind'] if census else []) + STAGE_ORDER
+    package_command = lines[STAGE_ORDER.index('package') + int(census)]
     assert package_command.endswith('--upstream contours')
     assert re.search(r'tiles style: nearshore-v1\.0\.0; B=[0-9a-f]{64}', text)
-    assert 'REFUSE zone inputs' in text and 'REFUSE shots inputs' in text and 'a real run would be refused' in text
+    assert [line for line in text.splitlines() if line.startswith('inputs for ')] == input_lines
+    assert ('REFUSE zone inputs' in text) == (partial == ZONE_ARGS[:2])
+    assert 'REFUSE shots inputs' in text and 'a real run would be refused' in text
     assert '--generation <generation>' in text and '--release-sha256 <release-sha256>' in text
     with pytest.raises(SystemExit) as stop:
         RR.main(args, box.cfg)

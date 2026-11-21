@@ -6,14 +6,49 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
+from pyproj import Transformer
 import rasterio
 from rasterio.transform import from_origin
 from rasterio.vrt import WarpedVRT
-from rasterio.windows import Window
+from rasterio.windows import Window, bounds
 from shapely.geometry import box, shape
+from shapely.ops import transform
 
 from skippercast.seafloor import habitat, habitat_tiles as tiled
 from tests.gis.test_seafloor_habitat import fixture, RULES
+
+
+def _large_reef_fixture(root):
+    width, height = 5000, 4200
+    affine = from_origin(0, 8400, 2, 2)
+    intact = Window(960, 960, 128, 128)  # Cross column and row 1024.
+    split = Window(1984, 1472, 128, 128)  # Cross column 2048, far from the intact block.
+    gap = Window(2046, split.row_off, 4, split.height)
+    # Alternate shallow squares with the background depth so positive BPI
+    # cannot create a raised fringe in the surrounding flat bottom.
+    reef = np.full((128, 128), 50, dtype='float32')
+    rows, cols = np.indices((126, 126))
+    reef[1:-1, 1:-1] -= 8 * ((rows // 2 + cols // 2) % 2)
+    broken = reef.copy()
+    offset = gap.col_off - split.col_off
+    broken[:, offset:offset + gap.width] = np.nan
+    path = root/'reefs.tif'
+    with rasterio.open(path, 'w', driver='GTiff', width=width, height=height, count=1,
+                       dtype='float32', crs='EPSG:3310', transform=affine,
+                       tiled=True, compress='lzw', nodata=np.nan) as target:
+        for (ys, xs), _, _ in tiled.windows((height, width)):
+            target.write(np.full((ys.stop-ys.start, xs.stop-xs.start), 50, 'float32'), 1,
+                         window=Window(xs.start, ys.start, xs.stop-xs.start, ys.stop-ys.start))
+        target.write(reef, 1, window=intact)
+        target.write(broken, 1, window=split)
+    source = {'path': path, 'geometry': box(0, 0, 10000, 8400),
+              'row': {'id': 'large-native', 'resolution_m': 2, 'year': 2008, 'vertical_datum': 'unknown'}}
+    # The selected cells cover both patches; opposite corners keep the entire
+    # 21-megapixel window in scope, just as in the flat-bottom test.
+    cells = [{'id': f'3310:{col}:{row}', 'tier': 1, 'source_id': 'large-native'}
+             for col, row in [(0, 0), (39, 33), (7, 24), (7, 25), (7, 26),
+                              (8, 24), (8, 25), (8, 26), (15, 20), (15, 21), (16, 20), (16, 21)]]
+    return source, cells, tuple(box(*bounds(w, affine)) for w in (intact, split, gap))
 
 
 class TiledHabitatTests(unittest.TestCase):
@@ -115,6 +150,43 @@ class TiledHabitatTests(unittest.TestCase):
             self.assertEqual(method['method'], 'native-disk-backed-tiles-v1')
             self.assertEqual(result['features'], [])  # genuinely flat measured bottom
             self.assertEqual(list((root/'var/seafloor/scratch').iterdir()), [])
+
+    def test_C1_C2_C3_C4_large_native_reefs_join_at_seams_but_not_across_nodata(self):
+        """C1: Exercise a real 21-megapixel window with both seam cases."""
+        project = Transformer.from_crs(4326, 3310, always_xy=True).transform
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, cells, (intact, split, stripe) = _large_reef_fixture(root)
+            result = habitat.build_candidates([source], cells, {}, RULES, {'id': 'large', 'region': 'fixture'}, root=root)
+
+            with self.subTest('C1: Native window size and bounded tiled reads'):
+                self.assertEqual([(p['method'], p['window_pixels'], p['max_read_pixels'] < 1_300_000)
+                                  for p in result['processing']], [('native-disk-backed-tiles-v1', 21_000_000, True)])
+            geometries = [transform(project, shape(f['geometry'])) for f in result['features']]
+            with self.subTest('C2: The four tile cores return one whole reef'):
+                # Missing edge unions must fail even if their total area still matches.
+                whole = [geom for geom in geometries if geom.intersects(intact)]
+                self.assertEqual(len(whole), 1, result['thresholds'])
+                reef, = whole
+                inner = intact.buffer(-2, join_style='mitre')
+                outer = intact.buffer(2, join_style='mitre')
+                # Allow one 2 m cell ring but do not let missing and excess area cancel.
+                self.assertEqual((reef.geom_type, reef.contains(intact.centroid),
+                                  inner.area <= reef.area <= outer.area,
+                                  reef.symmetric_difference(intact).area <= outer.area - intact.area),
+                                 ('Polygon', True, True, True))
+            with self.subTest('C3: The four-pixel nodata stripe leaves one patch on each side'):
+                # Compare the entire remainder: extra candidates on the flat bottom fail too.
+                left, bottom, right, top = split.bounds
+                gap_left, _, gap_right, _ = stripe.bounds
+                left_point = box(left, bottom, gap_left, top).centroid
+                right_point = box(gap_right, bottom, right, top).centroid
+                self.assertEqual(sorted((geom.contains(left_point), geom.contains(right_point),
+                                         geom.relate_pattern(stripe, 'F**F*****'))
+                                        for geom in geometries if not geom.intersects(intact)),
+                                 [(False, True, True), (True, False, True)], result['thresholds'])
+            with self.subTest('C4: Disk-backed processing leaves no scratch files'):
+                self.assertEqual(list((root/'var/seafloor/scratch').iterdir()), [])
 
     def test_scratch_arrays_close_after_interrupted_processing(self):
         with tempfile.TemporaryDirectory() as directory:
