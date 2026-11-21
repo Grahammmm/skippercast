@@ -161,7 +161,10 @@ def test_upstream_must_be_current_and_done(tmp_path, kind, reason):
         ref.update(stage='mosaic', scope='public')
     doc = record(region, 'mosaic', scope='public', upstream=[ref])
     row = rollout.region_status(region)
-    assert (row['stage'], row['state'], row['generation']) == ('mosaic.public', 'stale', doc['generation'])
+    if kind == 'bad-name':
+        assert (row['stage'], row['state'], row['generation']) == ('mosaic.public', 'invalid', None)
+    else:
+        assert (row['stage'], row['state'], row['generation']) == ('mosaic.public', 'stale', doc['generation'])
     assert reason in row['reason']
 
 
