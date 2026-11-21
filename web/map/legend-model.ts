@@ -197,3 +197,61 @@ export function contourCopy(set: ContourSet | undefined): ContourCopy {
     legend: [ids.legend[0], ids.legend[1]], plannerLabel: ids.plannerLabel, plannerText: ids.plannerText,
     notForNavigation: NOT_FOR_NAVIGATION_ID};
 }
+
+// ── Kit layer rows (MSKL-3) ──────────────────────────────────────────────────────
+// The shared states every kit layer's legend row can be in (layer kit §7, stacking P1). Ids only; Legend.tsx resolves them:
+//   legend.skl.noData    "{layer}: no data yet"              no authorized live source; draws nothing, never auto-enables
+//   legend.skl.withheld  "Withheld: {reason} · data {time}"  live data past its kit §7 limit; draws nothing
+//   legend.skl.stale     "Readings keep their own times · last {time}"  stations/tides: kept, labelled stale
+//   legend.skl.dated     "Data date: {date}"                 dated data prints the live data's own date (never a token's)
+//   legend.skl.replaced  "Replaced by {layer}"               P1: another layer took the colour field (or P3/P4/P5 slot)
+
+export type KitRowState =
+  | {kind: 'drawn'}
+  | {kind: 'no-data'}
+  | {kind: 'withheld'; reason: string; dataTime: string}
+  | {kind: 'stale'; dataTime: string}
+  | {kind: 'dated'; date: string}
+  | {kind: 'replaced'; by: string};
+export type KitRow = {
+  labelId: string;
+  /** The state line, or null for a plain drawn row. */
+  noteId: string | null;
+  vars: Record<string, string>;
+  /** For `replaced`: the replacing layer's label id, resolved into `{layer}`. */
+  byLabelId?: string;
+  /** Whether the layer draws anything on the map in this state. */
+  draws: boolean;
+};
+
+export const kitLabelId = (id: string): string => `layer.skl.${id}.label`;
+
+import {dataState, type KitModuleState} from './kit-layers/no-data.ts';
+import type {StackedLayer} from './stacking.ts';
+
+/** Only a positive drawing result is called drawn; missing/unknown metadata never is. */
+export function liveKitRow(state: KitModuleState | undefined, stack: StackedLayer | undefined): KitRowState {
+  const status = dataState(state);
+  if (status === 'no-data') return {kind: 'no-data'};
+  if (state?.kind === 'withheld') return state;
+  if (stack?.status === 'replaced' && stack.replacedBy) return {kind: 'replaced', by: stack.replacedBy};
+  if (stack?.status !== 'drawn' || !stack.reps.length) return {kind: 'no-data'};
+  if (state?.kind === 'stale' || state?.kind === 'dated') return state;
+  return {kind: 'drawn'};
+}
+
+/** A kit layer's legend row for `state`. Throws on a withheld/stale/dated row without its time: a date is never invented. */
+export function kitRow(id: string, state: KitRowState): KitRow {
+  const labelId = kitLabelId(id), need = (value: string, what: string) => {
+    if (!value.trim()) throw new RangeError(`${id}: a ${state.kind} row needs its ${what}`);
+    return value;
+  };
+  switch (state.kind) {
+    case 'drawn': return {labelId, noteId: null, vars: {}, draws: true};
+    case 'no-data': return {labelId, noteId: 'legend.skl.noData', vars: {}, draws: false};
+    case 'withheld': return {labelId, noteId: 'legend.skl.withheld', vars: {reason: need(state.reason, 'reason'), time: need(state.dataTime, 'data time')}, draws: false};
+    case 'stale': return {labelId, noteId: 'legend.skl.stale', vars: {time: need(state.dataTime, 'data time')}, draws: true};
+    case 'dated': return {labelId, noteId: 'legend.skl.dated', vars: {date: need(state.date, 'date')}, draws: true};
+    case 'replaced': return {labelId, noteId: 'legend.skl.replaced', vars: {}, byLabelId: kitLabelId(need(state.by, 'replacing layer')), draws: false};
+  }
+}

@@ -24,14 +24,13 @@ import {region} from '../state.ts';
 import {chartFileListed, chartFilesPending} from '../chart-files.ts';
 import type {ChartMark} from './coastline.ts';
 import {ZOOM_OFFSET, type Engine, type Overlay} from './engine.ts';
-import {DEPTH_CONTOURS_SOURCE, layerEntry} from './layers.ts';
-import {MPA_FILL} from './mpa.ts';
+import {DEPTH_CONTOURS_SOURCE, layerEntry, zBefore} from './layers.ts';
 import {kitZoom, type NearshoreStyle} from './nearshore-paint.ts';
 import {CONTOUR_TIERS, NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 import {reliefLook} from './relief-data.ts';
 import {readPalette, sknColor, type Palette} from './palette.ts';
 import {camera} from './stage.ts';
-import {LABEL_FONT, PLACE_LABELS, mapControl} from './style.ts';
+import {LABEL_FONT, mapControl} from './style.ts';
 import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'depth-contours';
@@ -456,11 +455,11 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       if (!data) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
       // No pier vector layer is delivered in this batch, so no pier window qualifies.
       const visible = data.set ? contoursAt(data, tier.value) : data;
-      // § 9 draw order: above the water temperature, chlorophyll and swell fields, under the basemap's place labels (the kit's top slot) and the protected areas.
+      // MSKL-3 kit z_order (layers.ts zBefore): above the colour fields, veils and radar, under polygons, isolines, flow, arrows, routes, points and the place labels.
       if (!drawn || e !== drawnOn || lastSet !== data.set) {
         // A different set is a different file: install it afresh.
         if (drawn && e === drawnOn) e.setOverlay(REGISTRY_ID, null);
-        e.setOverlay(REGISTRY_ID, contoursOverlay(palette(), visible), [PLACE_LABELS, MPA_FILL]);
+        e.setOverlay(REGISTRY_ID, contoursOverlay(palette(), visible), zBefore(DEPTH_BOTTOM));
         lastSet = data.set;
       }
       e.setData(DEPTH_CONTOURS_SOURCE, visible as never);

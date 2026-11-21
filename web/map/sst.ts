@@ -36,23 +36,19 @@ import type {Report} from '../../packages/coast/src/types.ts';
 import {day, hour, layers} from '../state.ts';
 import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
-import {CONTRAST_LAYER} from './contrast.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {isolines, mercatorDisplay, sampleDisplay, textureSize, type Corners} from './field.ts';
-import {layerEntry, setRailNote} from './layers.ts';
+import {layerEntry, setRailNote, zBefore} from './layers.ts';
 import {SST_MAX_AGE_H, SST_ZOOM} from './layers-style.gen.ts';
-import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {COAST_NOT_SAVED, COAST_OFFLINE_COPY, NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY, watchOffline} from './offline.ts';
 import {pair, sp, type StatusCopy} from './status-copy.ts';
-import {MPA_FILL} from './mpa.ts';
 import {kitMinZoom} from './nearshore-paint.ts';
 import {NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {camera, shownPresentation, terrainHour} from './stage.ts';
 import {sstBandLayers, sstBandModel, sstBandPixels, sstRamp, SST_BAND_SOURCE} from './sst-bands.ts';
-import {LABEL_FONT, PLACE_LABELS} from './style.ts';
+import {LABEL_FONT} from './style.ts';
 import {surfaceField, temperatureRange, type SurfaceField} from './surface-field.js';
-import {SWELL_LAYER} from './swell.ts';
 import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'water-temp' as const;
@@ -368,7 +364,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       if (!e) return;
       if (!a) { bandState.value = null; e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      // § 9 order: under Temp contrast, else swell, wind, depth contours, or protected areas.
+      // MSKL-3: the lowest colour field of the kit z_order (layers.ts zBefore): under Temp contrast, chlorophyll, swell and every slot above.
       const overlay = waterTempOverlay(p);
       let paintedKey = '', edgeKey = '';
       raster = imageGrid(a.field);
@@ -397,7 +393,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
         }
       };
       e.setOverlay(REGISTRY_ID, {...overlay, themePaint: (pal: Palette) => { restyleBands?.(pal); return overlay.themePaint!(pal); }},
-        [CONTRAST_LAYER, 'chlorophyll', SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
+        zBefore(REGISTRY_ID));
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
       painted = a.sst;
     }),

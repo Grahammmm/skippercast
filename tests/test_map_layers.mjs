@@ -6,8 +6,13 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import util from 'node:util';
 import {existsSync, readFileSync} from 'node:fs';
+import {registerHooks} from 'node:module';
+import {resolve} from 'node:path';
 import test from 'node:test';
+import {fileURLToPath, pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
 import {RAIL_IDS} from '../web/profile.ts';
+import * as registry from '../web/map/layers.ts';
 import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, NEARSHORE_DRAW_ORDER, attributionFor, reliefWanted, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
 import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
 import {groundsOverlay} from '../web/map/charter-grounds.ts';
@@ -32,6 +37,8 @@ import {appView, configureStore, region, setParams, syncFromURL} from '../web/st
 import {effect, signal} from '@preact/signals';
 import {publishedChartFiles} from '../web/chart-files.ts';
 import {settlePicks} from './helpers/pick-settle.mjs';
+import {fieldOpacity as stackOpacity, resolveStack} from '../web/map/stacking.ts';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -44,10 +51,11 @@ const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'wat
   'clouds', 'reach', 'planning-route', 'marks', 'selection', 'trip-ranked', 'saved-spots', 'stations', 'coastline'];
 
 test('the registry is in § 9 draw order and every entry declares its presentations, time and basis', () => {
-  assert.deepEqual(LAYERS.map(e => e.id), DESIGN_ORDER);
+  assert.deepEqual(LAYERS.filter(e => !e.kit).map(e => e.id), DESIGN_ORDER);
   const design = readFileSync(new URL('../docs/plans/front-end/design.md', import.meta.url), 'utf8');
   assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours,\s+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,\s+shore runs,\s+seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), reach ring, planning route \(the trip dialog\'s preview, memory only\), marks, selection, ranked trip spots, private saved spots, station pins, coastline glow\./, 'the design states the order this test pins');
   for (const e of LAYERS) {
+    if (e.kit) continue; // Registry/rail stub contract is covered by test_rail_kit_stubs.
     assert.ok(e.presentations.length > 0 && e.presentations.every(p => p === 'chart' || p === 'terrain'), `${e.id} presentations`);
     assert.ok(e.time.length > 0 && e.time.every(t => ['static', 'hour', 'observed'].includes(t)), `${e.id} time`);
     assert.match(e.basis, /^[A-Z].+\.$/, `${e.id} basis is one sentence`);
@@ -228,6 +236,7 @@ function library() {
     addSource(id, source) { this.options.style.sources[id] = source; this.getSource(id).updateImage = () => {}; }
     removeSource(id) { delete this.options.style.sources[id]; delete this.sources[id]; }
     setLayoutProperty(id, name, value) { this.visibility[id] = value; (this.layoutCalls ??= []).push([id, value]); }
+    setPaintProperty(id, name, value) { ((this.paint ??= {})[id] ??= {})[name] = value; }
     getSource(id) { return this.loaded && this.options.style.sources[id] ? this.sources[id] ??= {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
     queryRenderedFeatures(point, options) { const {layers} = options ?? point; return fake.features.filter(f => layers.includes(f.layer.id)); }
     resize() {}
@@ -467,7 +476,7 @@ function serveDist(url) {
   return existsSync(file) ? new Response(readFileSync(file)) : {ok: false, status: 404, json: async () => ({})};
 }
 
-function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette, flyoverGate, idleReady} = {}) {
+function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette, flyoverGate, idleReady, layers} = {}) {
   const fake = library(), land = terrain();
   const host = {dataset: {}};
   const fetches = [];
@@ -478,9 +487,138 @@ function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}
   };
   terrainFailed.value = false; chartFailed.value = false; chartMark.value = null; unavailable.value = [];
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land.module, center: () => [35.37, -120.86], doc: doc(), viewDelay: 0,
-    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0, flyoverGate, idleReady})]});
+    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0, flyoverGate, idleReady, layers})]});
   return {fake, land, host, stage, fetches};
 }
+
+// Delayed or simultaneous mounts must obey selection order, not overlay arrival order.
+test('live Chart keeps the replaced SST layer installed and restores it when swell switches off', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&presentation=chart&layers=water-temp`);
+  const layer = engine => {
+    const dispose = effect(() => {
+      const e = engine.value;
+      e?.setOverlay('swell', swellOverlay(sentinel));
+      e?.setOverlay('water-temp', waterTempOverlay(sentinel));
+    });
+    return {destroy: dispose};
+  };
+  const {stage, fake} = chartStage({layers: [layer]});
+  t.after(() => stage.destroy());
+  await tick(); await tick();
+  const [map] = fake.maps;
+  map.fire('style.load');
+  syncFromURL(`${PAGE}?region=morro-bay&presentation=chart&layers=water-temp,swell`);
+  assert.equal(map.visibility['water-temp'], 'none');
+  assert.ok(map.getLayer('water-temp'));
+  assert.equal(map.visibility.swell, 'visible');
+  assert.equal(registry.chartStack.value.find(row => row.id === 'sst-fill').replacedBy, 'waves-swell');
+  syncFromURL(`${PAGE}?region=morro-bay&presentation=chart&layers=water-temp`);
+  assert.equal(map.visibility.swell, 'none');
+  assert.equal(map.visibility['water-temp'], 'visible');
+  camera.value = {...camera.value, zoom: 13};
+  assert.equal(map.visibility['water-temp-contours'], 'visible');
+  assert.equal(map.paint['water-temp']['raster-opacity'], stackOpacity(resolveStack([{id: 'sst-fill'}], 13)));
+});
+
+let reliefBinding;
+async function loadReliefBinding() {
+  if (reliefBinding) return reliefBinding;
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const {outputFiles: [bundle]} = await build({
+    stdin: {resolveDir: root, loader: 'ts', contents: `
+      export {watchBottomRelief} from './web/app/MapStage.tsx';
+      export {fieldValues} from './web/map/bottom-relief.ts';`},
+    bundle: true, format: 'esm', platform: 'node', write: false, jsx: 'automatic', jsxImportSource: 'preact',
+    plugins: [{name: 'relief-binding', setup(b) {
+      // Share the live Chart fixture's signals across the TSX bundle boundary.
+      b.onResolve({filter: /(?:^|\/)(?:chart|layers|stage|state)\.ts$/}, a => ({path: pathToFileURL(resolve(a.resolveDir, a.path)).href, external: true}));
+      b.onResolve({filter: /^@preact\/signals$/}, () => ({path: import.meta.resolve('@preact/signals'), external: true}));
+      b.onLoad({filter: /\/web\/app\/MapStage\.tsx$/}, a => ({contents: `${readFileSync(a.path, 'utf8')}\nexport {watchBottomRelief};`, loader: 'tsx'}));
+      b.onResolve({filter: /\/bottom-relief\.ts$/}, () => ({path: 'bottom-relief', namespace: 'relief-fixture'}));
+      // Observe the actual binding reactively as bottom-relief does, without regional archives or paint fixtures.
+      b.onLoad({filter: /.*/, namespace: 'relief-fixture'}, () => ({resolveDir: root, contents: `
+        import {computed, effect} from '@preact/signals';
+        export const fieldValues = [];
+        export function attachBottomRelief({fieldOn}) {
+          const enabled = computed(fieldOn);
+          return {destroy: effect(() => {fieldValues.push(enabled.value);})};
+        }`}));
+    }}, ...rendererPlugins],
+  });
+  reliefBinding = await import(`data:text/javascript;base64,${Buffer.from(bundle.text).toString('base64')}`);
+  return reliefBinding;
+}
+
+const reliefPage = selected => `${PAGE}?region=morro-bay&presentation=chart&layers=${selected}`;
+async function chartWithReliefBinding(t, selected, initialOverlay) {
+  const {watchBottomRelief, fieldValues} = await loadReliefBinding();
+  fieldValues.length = 0;
+  browser(reliefPage(selected));
+  t.mock.method(console, 'warn', () => {});
+  let engine;
+  const {stage, fake} = chartStage({layers: [eng => {
+    const destroy = effect(() => {
+      engine = eng.value;
+      if (engine && initialOverlay) engine.setOverlay(selected, initialOverlay(sentinel));
+    });
+    const relief = watchBottomRelief(eng);
+    return {destroy() { relief.destroy(); destroy(); }};
+  }]});
+  t.after(() => stage.destroy());
+  await tick(); await tick();
+  const [map] = fake.maps;
+  assert.ok(map, 'the Chart mounted');
+  map.fire('style.load');
+  assert.ok(fieldValues.length, 'MapStage attached the reactive relief binding');
+  return {engine, fieldValues, map};
+}
+
+// Selection alone misses other drawn fields and falsely desaturates under selected, undrawn SST.
+test('relief field binding: swell alone desaturates when drawn', async t => {
+  const {fieldValues, map} = await chartWithReliefBinding(t, 'swell', swellOverlay);
+  assert.equal(map.visibility.swell, 'visible');
+  assert.equal(fieldValues.at(-1), true);
+});
+
+test('relief field binding: selected SST without data does not desaturate', async t => {
+  const {fieldValues, map} = await chartWithReliefBinding(t, 'water-temp');
+  assert.equal(registry.chartStack.value.find(row => row.id === 'sst-fill').status, 'no-data');
+  assert.equal(map.getLayer('water-temp'), undefined);
+  assert.equal(fieldValues.at(-1), false);
+});
+
+// The last field can stop drawing before the rail selection changes; neither that removal nor deselection may leave paint stale.
+test('relief field binding: removing the last drawn SST restores saturation reactively', async t => {
+  const {engine, fieldValues, map} = await chartWithReliefBinding(t, 'water-temp', waterTempOverlay);
+  assert.equal(map.visibility['water-temp'], 'visible');
+  assert.equal(fieldValues.at(-1), true);
+  engine.setOverlay('water-temp', null);
+  assert.equal(map.getLayer('water-temp'), undefined);
+  const afterRemoval = fieldValues.at(-1);
+  engine.setOverlay('water-temp', waterTempOverlay(sentinel));
+  assert.equal(fieldValues.at(-1), true, 'SST desaturates again when it resumes drawing');
+  syncFromURL(reliefPage('none'));
+  assert.equal(map.visibility['water-temp'], 'none');
+  assert.equal(fieldValues.at(-1), false, 'deselection leaves relief saturated');
+  assert.equal(afterRemoval, false, 'stopping the draw restores saturation even before deselection');
+});
+
+test('relief field binding: an unavailable stacking chunk preserves the legacy selection rule', async t => {
+  const chartUrl = new URL('../web/map/chart.ts', import.meta.url).href;
+  const hooks = registerHooks({resolve(specifier, context, next) {
+    if (specifier === './stacking.ts' && context.parentURL === chartUrl) {
+      return {url: 'data:text/javascript,throw new Error("fixture stacking chunk unavailable")', shortCircuit: true};
+    }
+    return next(specifier, context);
+  }});
+  t.after(() => hooks.deregister());
+  const {fieldValues} = await chartWithReliefBinding(t, 'water-temp');
+  assert.deepEqual(registry.chartStack.value, [], 'there is no resolved stack');
+  assert.equal(fieldValues.at(-1), true);
+  syncFromURL(reliefPage('swell'));
+  assert.equal(fieldValues.at(-1), false);
+});
 
 test('the Chart mounts on its first view with the basemap and coastline, and follows the shared camera both ways', async t => {
   t.mock.method(console, 'warn', () => {});

@@ -712,7 +712,11 @@ export const SURFACE_SOURCE_SHA256 = {
   // MB-11 adds the relief ramp, survey key and warning; no text is drawn over a swatch.
   // MSK-2: the relief depth chips follow the pointer's look (same swatch and app-legend-note roles, one new note row);
   // no backing, opacity, token or threshold changed.
-  "legendTsx": "e1cf4370d4ef8cd3dd09bdb1db90a1d0aca043df7d70aef9888fcd8f0bd3f29b"
+  // MSKL-3 adds kit-layer rows ("<layer>: no data yet") using the existing app-legend-plain/app-legend-note text roles, with no swatch;
+  // no backing, opacity, token or threshold changed.
+  // MSKL-3 fix round: the kit rows read live state (no data yet, withheld, stale, dated, replaced by, drawn) in the same
+  // app-legend-plain/app-legend-note roles; a replaced field hides its own row. No backing, opacity, token or threshold changed.
+  "legendTsx": "7dc2e083fe909d727607359cd2c46d23ce08058f452c1e0ff3cf60a6d0a53387"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

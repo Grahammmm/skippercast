@@ -10,7 +10,7 @@ import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {signal} from '@preact/signals';
 import {parseForecast} from '../web/map/forecast-grid.ts';
 import {createWind, windGeometry, windOverlay, windPoints, windState, windStatus, WIND_MODEL} from '../web/map/wind.ts';
-import {layerEntry, railLayers, sourceLayer} from '../web/map/layers.ts';
+import {layerEntry, railLayers, sourceLayer, zBefore} from '../web/map/layers.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 
@@ -100,7 +100,9 @@ test('live layer replaces hour, expires without interaction, hides on region/off
   const s = createWind({engine, zone: () => TZ, page: () => location.href, palette: () => palette, now: () => new Date(clock),
     fetchFn: async () => ({ok: !fail, json: async () => feed()})});
   t.after(() => s.destroy()); await flush();
-  assert.deepEqual(e.before, ['depth-contours-unresolved-fill', 'mpa-fill'], 'wind inserts below depth contours, else MPAs');
+  // MSKL-3: the kit's arrow/barb slot (z8) is above the depth contours (z4) and isolines, under routes, points and labels.
+  assert.deepEqual(e.before, zBefore('wind-casing'), 'wind inserts at its kit z_order slot');
+  assert.ok(!e.before.includes('depth-contours-unresolved-fill') && e.before.includes('labels-places'), 'over the depth contours, under the place labels');
   assert.equal(e.data['wind-labels'].features[0].properties.label, '12 kt');
   engine.value = null; assert.equal(e.overlay, null);
   engine.value = e; assert.ok(e.overlay, 'same engine remount restores the frame');

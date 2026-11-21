@@ -41,6 +41,7 @@
 // Depth contours (CI6-13) are always on, Chart only: while they draw, their row keys
 // the contour and the dashed survey edge and names each survey, its date and datum;
 // withheld or failed contours say so, and a region without any shows no row.
+// MSKL-3: a switched-on kit layer with no live source yet (web/map/kit-layers) reads "<layer>: no data yet", with no key.
 import {Button, IconButton} from '../ui/Button.tsx';
 import {current, grade, layers, profile, region, species} from '../state.ts';
 import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
@@ -55,8 +56,9 @@ import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} from '../map/fleet.ts';
 import {currentsState} from '../map/currents.ts';
 import {contourState} from '../map/depth-contours.ts';
-import {chartOnly, drawsIn, layerCopy, layerEntry} from '../map/layers.ts';
-import {contourCopy, lookDepthKey, nearshoreRows, surveyDetailChips, SURVEY_DETAIL_TITLE_ID} from '../map/legend-model.ts';
+import {chartOnly, chartStack, drawsIn, layerCopy, layerEntry, LAYERS, selectedKitLayers} from '../map/layers.ts';
+import {contourCopy, kitRow, liveKitRow, lookDepthKey, nearshoreRows, surveyDetailChips, SURVEY_DETAIL_TITLE_ID} from '../map/legend-model.ts';
+import type {KitModuleState} from '../map/kit-layers/no-data.ts';
 import {reliefDrawn, reliefFeatures, reliefLook, reliefSurveyView} from './MapStage.tsx';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CDFW_MPA_PAGE, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
@@ -424,6 +426,40 @@ const PlainRow = ({id, label, reason}: {id: string; label: string; reason: strin
   <li class="app-legend-plain">{label}<p class="app-legend-note" data-reason={id}>{reason}</p></li>
 );
 
+function kitState(id: string): KitModuleState | undefined {
+  const module = LAYERS.find(entry => entry.id === id)?.kit;
+  if (module) return module.state;
+  if (id === 'sst-fill') {
+    const state = waterTempState.value;
+    if (state.drawn) return {kind: 'dated', date: state.drawn.sst?.analysedAt ?? ''};
+    const part = state.copy?.note?.find(p => typeof p !== 'string' && p.id === 'map.status.common.staleNote');
+    const date = typeof part === 'object' ? part.vars?.date : undefined;
+    if (date && typeof date === 'object' && 'day' in date && typeof date.day === 'string') {
+      return {kind: 'withheld', reason: statusText(state.reason, state.copy?.reason, language.value).text, dataTime: date.day};
+    }
+    return undefined;
+  }
+  if (id === 'chlorophyll') {
+    const observation = chlorophyllState.value.drawn;
+    return observation ? {kind: 'dated', date: observation.sampleAt} : undefined;
+  }
+  if (id === 'stations' && stationState.value.pins.some(pin => pin.stale)) return undefined; // No single data clock for the pin set.
+  return chartStack.value.some(row => row.id === id && (row.status === 'drawn' || row.status === 'replaced')) ? {kind: 'ready'} : undefined;
+}
+
+function KitRows({on}: {on: readonly string[]}) {
+  const lang = language.value;
+  return <>{selectedKitLayers(on, current.value !== 'off').map(id => {
+    const stack = chartStack.value.find(r => r.id === id);
+    if (!stack && !LAYERS.some(entry => entry.id === id && entry.kit)) return null;
+    const state = liveKitRow(kitState(id), stack), row = kitRow(id, state), label = t(row.labelId as StringId, lang);
+    const layer = row.byLabelId ? t(row.byLabelId as StringId, lang) : label;
+    return <li key={id} class="app-legend-plain" data-kit={id} data-state={state.kind}>{row.noteId === 'legend.skl.noData' ? null : label}
+      {row.noteId ? <p class="app-legend-note" data-kit-reason={id}>{t(row.noteId as StringId, lang, {...row.vars, layer})}</p> : null}
+    </li>;
+  })}</>;
+}
+
 /** The Shore runs row: says that runs awaiting their first owner review are left off the Chart, never as expired or current. */
 function ShoreRow() {
   const lang = language.value, note = shownPresentation.value === 'chart' ? unreviewedNote(shoreState.value.unreviewed) : '';
@@ -477,15 +513,22 @@ function legendRow(e: ReturnType<typeof railEntries>[number], shown: ReturnType<
     : <PlainRow key={e.id} id={e.id} label={e.label} reason={t('rail.notDrawn', lang)} />;
 }
 
+const layerRegistryStub = (id: string) => LAYERS.some(e => e.id === id && e.kit);
+const replacedControl = (id: string) => {
+  const ids = selectedKitLayers([id], id === 'currents');
+  return ids.length === 1 && chartStack.value.some(r => r.id === ids[0] && r.status === 'replaced');
+};
+
 export function Legend() {
   const shown = shownPresentation.value, lang = language.value;
-  const on = railEntries(lang).filter(e => railOn(e.id, layers.value, current.value));
+  const on = railEntries(lang).filter(e => railOn(e.id, layers.value, current.value) && !layerRegistryStub(e.id));
   return (
     <section class="app-legend" aria-label={t('legend.title', lang)}>
       <span class="ui-eyebrow">{t('legend.title', lang)}</span>
       <ul>
         <ReliefRow />
-        {on.map(e => <Fragment key={e.id}>{legendRow(e, shown, lang)}{drawsIn(e.id, shown) ? <Cadence id={e.id} lang={lang} /> : null}</Fragment>)}
+        {on.map(e => <Fragment key={e.id}>{shown === 'chart' && replacedControl(e.id) ? null : legendRow(e, shown, lang)}{drawsIn(e.id, shown) ? <Cadence id={e.id} lang={lang} /> : null}</Fragment>)}
+        {shown === 'chart' ? <KitRows on={layers.value} /> : null}
         <PreviewLegendRows />
         <PlanningRouteRow />
         <RankedRow />

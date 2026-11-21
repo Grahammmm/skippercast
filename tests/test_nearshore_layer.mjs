@@ -16,14 +16,16 @@ import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {chartMark} from '../web/map/chart.ts';
 import {WAVE_MODEL} from '../web/map/forecast-grid.ts';
 import {createEngine} from '../web/map/engine.ts';
-import {DEPTH_BOTTOM} from '../web/map/depth-contours.ts';
+import {zBefore} from '../web/map/layers.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
-import {PLACE_LABELS} from '../web/map/style.ts';
 import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringMark, ringRadius, ringSummary} from '../web/map/nearshore.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {ISOLINE_LABELS, ISOLINE_LAYER, ISOLINE_SOURCE, STROKE_CASING, STROKE_LAYER, STROKE_SOURCE, SWELL_LAYER, SWELL_SOURCE, createSwell, nearshoreState, swellOverlay} from '../web/map/swell.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 import {settlePicks} from './helpers/pick-settle.mjs';
+
+// MSKL-3: the swell field draws in the kit z_order's colour-field slot (layers.ts zBefore), under the depth contours and every slot above.
+const SWELL_BEFORE = zBefore(SWELL_LAYER);
 
 const PAGE = 'https://s.test/map', TZ = 'America/Los_Angeles', HOUR = 3_600_000, MIN = 60_000;
 const NOW = new Date('2026-10-09T18:00:00Z'), AT = new Date('2026-10-09T20:00:00Z'), AT_PARAM = '2026-10-09T20:00Z';
@@ -170,7 +172,7 @@ test('with a grid, unbound Swell matches no-place engine calls and keeps only th
   const body = withGrid();
   const before = await swell(t, {body});
   assert.deepEqual(before.e.calls.slice(-4), [
-    ['overlay', FIELD, ['wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]], ['image', SWELL_SOURCE],
+    ['overlay', FIELD, SWELL_BEFORE], ['image', SWELL_SOURCE],
     ['data', ISOLINE_SOURCE, undefined], ['data', STROKE_SOURCE, undefined],
   ], 'the synthetic grid really draws');
   before.s.destroy();
@@ -191,7 +193,7 @@ test('in a binding the rings draw above the field, follow the hour, leave with t
   const reportSignal = signal({data: report()}), binding = signal({areaId: 'central', localAreaId: 'morro-bay'});
   const {s, e, asked} = await swell(t, {place: () => ({regionId: 'morro-bay'}), data: {coastReport: reportSignal, coastBinding: binding}, clock: () => new Date(clock)});
   assert.deepEqual(asked, [['place', 'morro-bay'], ['load', 'report']], 'the report is asked for while Swell is on');
-  assert.deepEqual(e.calls.at(-2), ['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], ['wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]], 'without a grid, the rings alone');
+  assert.deepEqual(e.calls.at(-2), ['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], SWELL_BEFORE], 'without a grid, the rings alone');
   assert.deepEqual(e.calls.at(-1), ['data', NEARSHORE_SOURCE, ['SL345', 'SL400']]);
   assert.deepEqual(swellOverlay(sentinel, {rings: true}).layers.map(l => l.id), [...FIELD, NEARSHORE_HIT, NEARSHORE_LAYER], 'with a grid, above the field');
   const ring = swellOverlay(sentinel, {rings: true}).layers.at(-1);
@@ -203,7 +205,7 @@ test('in a binding the rings draw above the field, follow the hour, leave with t
 
   e.calls.length = 0;
   setParams({hour: '2026-10-09T23:00Z'});
-  assert.deepEqual(e.calls, [['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], ['wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]], ['data', NEARSHORE_SOURCE, ['SL345', 'SL400']]], 'a new hour, new rings at once');
+  assert.deepEqual(e.calls, [['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], SWELL_BEFORE], ['data', NEARSHORE_SOURCE, ['SL345', 'SL400']]], 'a new hour, new rings at once');
   assert.equal(nearshoreState.value.rings[0].waveFt.toFixed(1), '4.1');
   assert.equal(chartMark.value, null, 'the card of the previous hour goes');
 

@@ -218,8 +218,8 @@ test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) 
     : ['nav[aria-label="Views"] a[data-view="fleet"]', '[aria-label="Profile"] button:last-child', 'label:has-text("Target") select', 'label:has-text("Area") select',
       '.ui-rail-item:last-child .ui-rail-toggle', 'input[aria-label="Hour"]', 'button[aria-label="Play"]'];
   const reached = new Set<string>();
-  // #616 added the verdict basis and the Details summary to the brief column, before the rail in tab order.
-  for (let i = 0; i < 96 && reached.size < wanted.length; i++) {
+  // The expanded layer rail adds controls before the timeline in tab order.
+  for (let i = 0; i < 192 && reached.size < wanted.length; i++) {
     await page.keyboard.press('Tab');
     for (const selector of wanted) if (!reached.has(selector) && await page.locator(selector).evaluate(el => el === document.activeElement)) reached.add(selector);
   }

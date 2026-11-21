@@ -42,15 +42,13 @@ import type {Engine, Overlay} from './engine.ts';
 import {fieldTexture, isolines} from './field.ts';
 import {WAVE_MODEL, loadForecast, swellPoints, type SwellPartition, type WaveForecast} from './forecast-grid.ts';
 import {forecastTime} from './frames.ts';
-import {layerEntry, setRailNote} from './layers.ts';
+import {layerEntry, setRailNote, zBefore} from './layers.ts';
 import {pair, sp, type StatusCopy, type StatusPart} from './status-copy.ts';
-import {DEPTH_BOTTOM} from './depth-contours.ts';
-import {MPA_FILL} from './mpa.ts';
 import {fieldOpacity} from './nearshore-paint.ts';
 import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, nearshoreThemePaint, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
-import {LABEL_FONT, PLACE_LABELS} from './style.ts';
+import {LABEL_FONT} from './style.ts';
 import {surfaceField, type SurfaceField} from './surface-field.js';
 import {paintEdits} from './theme-restyle.ts';
 
@@ -367,20 +365,20 @@ export function createSwell(o: SwellOptions): {
       if ((r?.key ?? '') !== drawnRingKey) withdraw('nearshore');
       drawnFieldKey = f?.key ?? ''; drawnRingKey = r?.key ?? '';
       // A field arriving under rings already drawn would add its layers above them (the engine adds
-      // only missing layers, under MPA_FILL): redraw the overlay whole so the rings stay on top.
+      // only missing layers, under the protected areas): redraw the overlay whole so the rings stay on top.
       const shape = `${f ? 'field' : ''}+${r ? 'rings' : ''}`;
       if (e === drawnOn && drawnShape === '+rings' && shape === 'field+rings') e.setOverlay(REGISTRY_ID, null);
       drawnKey = key; drawnShape = shape; drawnOn = e;
       if (!f && !r) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      // § 9 order: under wind, else depth contours, else protected areas.
+      // MSKL-3: the colour-field slot of the kit z_order (layers.ts zBefore): under the depth contours and every slot above.
       const overlay = swellOverlay(p, {field: !!f, rings: !!r});
       // The texture is pixels in an image source, not a paint: a live theme switch repaints it from the same field with the new ramp
       // (setImage sends no request and setData is not used); layer paints follow through the overlay's `themePaint`.
       let painted = ramps(p).swell.join();
       const texture = (ramp: string[]): void => { painted = ramp.join(); e.setImage(SWELL_SOURCE, fieldTexture(f!.field, HEIGHT_SCALE, ramp, v => v[0]!)); };
       e.setOverlay(REGISTRY_ID, f ? {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).swell; if (ramp.join() !== painted) texture(ramp); return overlay.themePaint!(pal); }} : overlay,
-        ['wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
+        zBefore(SWELL_LAYER));
       if (f) {
         texture(ramps(p).swell);
         e.setData(ISOLINE_SOURCE, periodLines(f));
