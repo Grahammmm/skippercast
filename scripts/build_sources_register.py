@@ -6,8 +6,9 @@ The page section ``id="data-sources"`` is built from the reviewed source registe
 * the catalogue and its display contract come from ``catalog/sources.json`` through
   ``skippercast.platform.contracts.load_catalogs`` (so an invalid ``public_display`` fails here too);
 * what is live comes from the non-draft ``regions/*/region.json`` bindings, the runtime service scan in
-  ``tests/contract/test_commercial_sources.py`` (``published_regions``, ``asset_sources``, ``usages``), and reviewed
-  ``catalog/relief/*.json`` pointers; the collected layers and usage scan must agree or generation fails;
+  ``tests/contract/test_commercial_sources.py`` (``published_regions``, ``asset_sources``, ``usages``), reviewed
+  ``catalog/relief/*.json`` pointers, and ``catalog/depth-contours/*.geojson`` provenance; the collected layers and
+  usage scan must agree or generation fails;
 * credits are ``rights.attribution`` verbatim, plus the canonical ``CSUMB_CREDIT`` once, only while a listed source is CSUMB's.
 
 Held rows. A row whose catalogue ``needs`` include an id in ``HELD_NEEDS`` (kelp, until KELP-3) is never listed, live or
@@ -50,6 +51,7 @@ END = '<!-- END GENERATED data-sources -->'
 INSERT_BEFORE = '<h2>Current official checks</h2>'
 INDENT = '      '
 DEPTH_SHADING = 'Depth shading'
+DEPTH_CONTOURS = 'Depth contours'
 
 # Services the app calls that have no catalogue row (tests/contract/test_commercial_sources.py RUNTIME_SERVICES).
 # Name, agency, a public page and the credit printed for it. The OpenStreetMap credit points at the page's own "Map and
@@ -189,6 +191,22 @@ def _relief_pointers(root):
         yield pointer['region'], dict.fromkeys((entry['id'] for entry in pointer['sources']), '')
 
 
+def _contour_sources(root):
+    for path in sorted((root / 'catalog/depth-contours').glob('*.geojson')):
+        try:
+            collection = relief_package.decode_document(path.read_bytes())
+            provenance = collection['provenance']
+            region_id = provenance['region_id']
+            ids = [entry['source_id'] for entry in provenance['sources']]
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            raise RegisterError(f'{path.name}: invalid contour provenance: {error}') from error
+        if region_id != path.stem or not ids or any(not isinstance(ident, str) or not ident for ident in ids):
+            raise RegisterError(f'{path.name}: invalid contour region or source IDs')
+        if 'publication_held' in collection or 'publication_held' in provenance:
+            raise RegisterError(f'{path.name}: depth contours are held')
+        yield region_id, dict.fromkeys(ids, '')
+
+
 def collect(root=ROOT):
     """Everything the page shows, as plain data. Raises RegisterError when the live views disagree."""
     root = Path(root)
@@ -232,30 +250,32 @@ def collect(root=ROOT):
                                           'status': region['status'], 'layers': layers}
         runtime = {ident for label, ident in found if label.startswith('runtime:')}
 
-    relief_usage = set()
-    for region_id, members in _relief_pointers(root):
-        if region_id not in live_regions:
-            config = root / 'regions' / region_id / 'region.json'
-            if not config.is_file():
-                ids = ', '.join(map(repr, members))
-                raise RegisterError(f'{region_id}: no region config for depth shading sources {ids}')
-            # A reviewed pointer credits only its own layer, not any other draft assets.
-            region = json.loads(config.read_text(encoding='utf-8'))
-            live_regions[region_id] = {'id': region_id, 'name': region.get('name') or region_id,
-                                       'status': region['status'], 'layers': {}}
-        for ident in members:
-            if ident not in sources:
-                raise RegisterError(f'{region_id}: depth shading has unknown source {ident!r}')
-            if not listed(sources[ident], live=True):
-                raise RegisterError(f'{region_id}: depth shading has unlistable source {ident!r}')
-            relief_usage.add((region_id, ident))
-        live_regions[region_id]['layers'].setdefault(DEPTH_SHADING, {}).update(members)
+    depth_inputs = ((DEPTH_SHADING, _relief_pointers(root)), (DEPTH_CONTOURS, _contour_sources(root)))
+    depth_usage = set()
+    for layer, inputs in depth_inputs:
+        for region_id, members in inputs:
+            if region_id not in live_regions:
+                config = root / 'regions' / region_id / 'region.json'
+                if not config.is_file():
+                    ids = ', '.join(map(repr, members))
+                    raise RegisterError(f'{region_id}: no region config for {layer.lower()} sources {ids}')
+                # These files credit only their own layers, not any other draft assets.
+                region = json.loads(config.read_text(encoding='utf-8'))
+                live_regions[region_id] = {'id': region_id, 'name': region.get('name') or region_id,
+                                           'status': region['status'], 'layers': {}}
+            for ident in members:
+                if ident not in sources:
+                    raise RegisterError(f'{region_id}: {layer.lower()} has unknown source {ident!r}')
+                if not listed(sources[ident], live=True):
+                    raise RegisterError(f'{region_id}: {layer.lower()} has unlistable source {ident!r}')
+                depth_usage.add((region_id, layer, ident))
+            live_regions[region_id]['layers'].setdefault(layer, {}).update(members)
 
     expected = {ident for _, ident in found}
-    relief_layers = {(region_id, ident) for region_id, region in live_regions.items()
-                     for ident in region['layers'].get(DEPTH_SHADING, {})}
-    # Keep relief usage regional and separate: a pointer must not hide a mismatch on an ordinary asset.
-    drift = ((region_ids | runtime) ^ expected) | {ident for _, ident in relief_layers ^ relief_usage}
+    depth_layers = {(region_id, layer, ident) for region_id, region in live_regions.items()
+                    for layer, _ in depth_inputs for ident in region['layers'].get(layer, {})}
+    # Depth usage is separate: an imported layer must not hide a mismatch on an ordinary asset.
+    drift = ((region_ids | runtime) ^ expected) | {ident for _, _, ident in depth_layers ^ depth_usage}
     if drift:
         raise RegisterError('live usage disagrees with tests/contract/test_commercial_sources.py usages(): '
                             + ', '.join(sorted(drift)))
@@ -335,11 +355,11 @@ def render(data):
         for layer, members in sorted(region['layers'].items()):
             ids = [i for i in members if show(i)]
             if ids:
-                layers[layer] = ids if layer == DEPTH_SHADING else _by_name(ids, sources)
+                layers[layer] = ids if layer in (DEPTH_SHADING, DEPTH_CONTOURS) else _by_name(ids, sources)
         if not layers:
             continue
         label = region['name'] + (f" ({region['status']} region)" if region['status'] != 'active' else '')
-        out.append(f"{h}<h4 id=\"data-sources-region-{_esc(region['id'])}\">{_esc(label)}</h4>")
+        out.append(f"{h}<h4 id=\"region-{_esc(region['id'])}\">{_esc(label)}</h4>")
         for layer, ids in layers.items():
             out.append(f'{h}<h5>{_esc(layer)}</h5>')
             out.append(_list(_entry(i, sources, needs, region['layers'][layer][i]) for i in ids))
