@@ -31,7 +31,7 @@ STATUSES = {'usgs-point-buchon': 'approved', 'usgs-morro-bay': 'approved',
             'noaa-bag': 'approved', 'csumb-cambria': 'restricted'}
 PINS = {
     # Wave 2B appends private, unbound entries; the four recipes' inputs are unchanged.
-    'catalog/sources.json': 'b3e5bca74df78dcda5a53249e804ca46cda6db8860bf59866ee1d3bc8063ac18',
+    'catalog/sources.json': '7843a5b82b361d61adceec93246d0648bf48cc18209d440721f731da3155ed4c',
     'catalog/coastal-sectors.json': 'bb876ebb25357c91e02d4984b2f353e88be86560a9fb87b15ac0573b416f2378',
     'research/scripts/build_coast_prefetch_plan.py': 'dfcee06d7f92f5030fdbcfd1bfadfadf2245b99b61949e366304f9d88f880c92',
     'src/skippercast/coastal/prefetch.py': '90c4c360c254d66e00c168d3c9117a79caf3667f3c2d552342188dec1217f185',
