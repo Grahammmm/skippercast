@@ -327,7 +327,8 @@ def _public_display_allowed(source):
 
 def _require_not_held(collection, region):
     features = collection.get('features') or []
-    parts = [collection, collection.get('provenance') or {}, *features, *(f.get('properties') or {} for f in features)]
+    parts = [collection, collection.get('provenance') or {}, *features,
+             *(f.get('properties') for f in features if isinstance(f, dict))]
     if any(isinstance(part, dict) and 'publication_held' in part for part in parts):
         raise _ContoursHeld(f"Depth contours for {region['id']} are held and cannot be published")
 
@@ -372,6 +373,76 @@ def check_selected_contours(collection, region, sources, selected, *, view=None)
             source.get('publication_allowed') is False and not owner_display_cleared(rights)
         ):
             raise ValueError(f"Depth contour source {ident} is not cleared for public display")
+
+
+def _is_reviewed_pointer(pointer, region_id):
+    return (isinstance(pointer, dict) and pointer.get('schema') == 'sc-relief-pointer/1'
+            and pointer.get('status') == 'reviewed' and pointer.get('private') is False
+            and pointer.get('region') == region_id and isinstance(pointer.get('sources'), list))
+
+
+def _read_reviewed_pointer(root, region_id):
+    try:
+        pointer = read_json(Path(root) / 'catalog/relief' / f'{region_id}.json')
+    except (OSError, ValueError):
+        return None
+    return pointer if _is_reviewed_pointer(pointer, region_id) else None
+
+
+def _is_modern_contour(provenance):
+    return isinstance(provenance, dict) and provenance.get('set') in (FT_V2, FT_V3)
+
+
+def _pointer_source_ids(pointer):
+    return {row['id'] for row in pointer['sources']
+            if isinstance(row, dict) and isinstance(row.get('id'), str)}
+
+
+def _eligible_selected_source(source):
+    # Keep in step with the relief selector's public_refusal(selected=True).
+    if not isinstance(source, dict):
+        return False
+    needs, rights = source.get('needs'), source.get('rights')
+    return (isinstance(needs, (list, tuple)) and 'bathymetry' in needs
+            and isinstance(rights, dict) and rights.get('public_display') == 'allowed'
+            and (owner_display_cleared(rights) or (source.get('review_status') == 'approved'
+                                                   and source.get('publication_allowed') is not False)))
+
+
+def _selected_source_ids(provenance, region_id):
+    omitted = provenance.get('sources_omitted')
+    if not isinstance(omitted, list) or any(not isinstance(row, dict) for row in omitted):
+        raise ValueError(f"Selected depth contours for {region_id} must state sources_omitted as a list of objects")
+    listed = provenance.get('sources', [])
+    if not isinstance(listed, list) or any(not isinstance(row, dict) for row in listed):
+        raise ValueError(f"Selected depth contours for {region_id} must state sources as a list of objects")
+    ids = set()
+    for row in listed + omitted:
+        ident = row.get('source_id')
+        if not isinstance(ident, str) or not ident:
+            raise ValueError(f"Invalid depth contour source ID {ident!r} for {region_id}")
+        ids.add(ident)
+    return ids
+
+
+def check_catalog_contours(collection, region, sources, pointer):
+    """Check a catalog import; return the derived source set, or None for strict static imports."""
+    region_id = region['id']
+    try:
+        provenance = collection.get('provenance')
+        if not (_is_reviewed_pointer(pointer, region_id) and _is_modern_contour(provenance)):
+            check_contours(collection, region, sources)
+            return None
+        _require_not_held(collection, region)
+        selected = _selected_source_ids(provenance, region_id)
+        release_ids = _pointer_source_ids(pointer)
+        for ident in sorted(selected):
+            if ident not in release_ids or not _eligible_selected_source(sources.get(ident)):
+                raise ValueError(f"Depth contour source {ident} is not eligible for the reviewed relief release of {region_id}")
+        check_selected_contours(collection, region, sources, selected)
+        return selected
+    except (AttributeError, KeyError, TypeError) as error:
+        raise ValueError(f"Malformed depth contour import for {region_id}: {error}") from error
 
 
 def held_sources(collection, sources):
@@ -568,8 +639,8 @@ def review_expires(collection, sources):
     return (min(reviewed) + timedelta(days=SOURCE_REVIEW_DAYS)).isoformat()
 
 
-def _uses_withdrawn_source(path, region, sources):
-    # Check the previous generation's source IDs, not the incoming import's or the informational omitted list.
+def _uses_withdrawn_source(path, region, sources, pointer=None):
+    # Check the previous generation's source IDs, not the incoming import's.
     try:
         previous = read_json(path)
     except (FileNotFoundError, ValueError):
@@ -577,12 +648,20 @@ def _uses_withdrawn_source(path, region, sources):
     provenance = previous.get('provenance') if isinstance(previous, dict) else None
     if not isinstance(provenance, dict) or provenance.get('region_id') != region['id']:
         return False
-    bound = set(region.get('source_bindings', {}).get('bathymetry', []))
-    for entry in provenance.get('sources', []):
-        ident = str(entry.get('source_id'))
-        source = sources.get(ident) or {}
-        if not _bound_bathymetry(ident, source, bound, {'approved'}) or not _public_display_allowed(source):
-            return True
+    try:
+        if pointer is not None and _is_modern_contour(provenance):
+            release_ids = _pointer_source_ids(pointer)
+            return any(ident not in release_ids or not _eligible_selected_source(sources.get(ident))
+                       for ident in _selected_source_ids(provenance, region['id']))
+        # Static omissions are informational; only listed bindings can be withdrawn.
+        bound = set(region.get('source_bindings', {}).get('bathymetry', []))
+        for entry in provenance.get('sources', []):
+            ident = str(entry.get('source_id'))
+            source = sources.get(ident) or {}
+            if not _bound_bathymetry(ident, source, bound, {'approved'}) or not _public_display_allowed(source):
+                return True
+    except (ValueError, AttributeError, KeyError, TypeError):
+        return False  # A malformed prior artifact cannot establish a withdrawn source.
     return False
 
 
@@ -603,7 +682,7 @@ def publish_depth_contours(root, region, output, sources):
     """Check both byte budgets before replacing the contour pair in `output`.
 
     Both forms carry `review_expires`, the date the Chart withholds them from (the layer's age limit), and
-    `sources_omitted`, the region's bound surveys the file does not draw, with their catalog review_status.
+    `sources_omitted`, the bound surveys (or selected families) not drawn, with their catalog review_status.
     Returns the published paths (full, overview), or None and removes both files if the import is absent.
     On refusal, keep the old pair unless the import is explicitly held or the old layer uses a withdrawn source.
     """
@@ -613,25 +692,34 @@ def publish_depth_contours(root, region, output, sources):
         full.unlink(missing_ok=True)
         overview.unlink(missing_ok=True)
         return None
+    collection = None
+    pointer = _read_reviewed_pointer(root, region['id'])
     try:
         collection = read_json(source)
-        check_contours(collection, region, sources)
+        selected = check_catalog_contours(collection, region, sources, pointer)
         # Append stamped keys in fixed order, regardless of where they appeared in the catalog provenance.
         stamped = ('review_expires', 'review_days', 'sources_omitted')
         provenance = collection['provenance']
+        listed = [s['source_id'] for s in provenance['sources']]
         collection = {**collection, 'provenance': {
             **{k: v for k, v in provenance.items() if k not in stamped},
             'review_expires': review_expires(collection, sources),
             'review_days': SOURCE_REVIEW_DAYS,
-            'sources_omitted': omitted_sources(region, sources, [s['source_id'] for s in provenance['sources']]),
+            'sources_omitted': (omitted_sources(region, sources, listed) if selected is None
+                                else omitted_selected_sources(selected, sources, listed)),
         }}
         light = overview_contours(collection)
-        check_contours(light, region, sources)
+        check_catalog_contours(light, region, sources, pointer)
         _stage_and_replace(full, overview, collection, light, region['id'])
-    except ValueError as error:
-        if isinstance(error, _ContoursHeld) or any(_uses_withdrawn_source(path, region, sources) for path in (full, overview)):
+    except (ValueError, AttributeError, KeyError, TypeError) as error:
+        provenance = collection.get('provenance') if isinstance(collection, dict) else None
+        release = pointer if _is_modern_contour(provenance) else None
+        if isinstance(error, _ContoursHeld) or any(
+                _uses_withdrawn_source(path, region, sources, release) for path in (full, overview)):
             full.unlink(missing_ok=True)
             overview.unlink(missing_ok=True)
+        if not isinstance(error, ValueError):
+            raise ValueError(f"Malformed depth contour import for {region['id']}: {error}") from error
         raise
     return f"regions/{region['id']}/depth-contours.geojson", f"regions/{region['id']}/depth-contours-overview.geojson"
 
