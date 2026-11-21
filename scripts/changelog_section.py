@@ -73,8 +73,10 @@ def tagged_changelog(tag):
         except (subprocess.CalledProcessError, OSError) as exc:
             raise LookupError(error) from exc
 
-    commit = git_read(f'Tag {tag} does not resolve to a commit',
-                      'rev-parse', '--verify', '--end-of-options', f'refs/tags/{tag}^{{commit}}').strip().decode('ascii')
+    error = f'Tag {tag} does not resolve to a commit'
+    # Require the literal ref before using revision syntax to peel its object.
+    oid = git_read(error, 'show-ref', '--verify', '--hash', '--', f'refs/tags/{tag}').strip().decode('ascii')
+    commit = git_read(error, 'rev-parse', '--verify', '--end-of-options', f'{oid}^{{commit}}').strip().decode('ascii')
 
     def blob(path):
         data = git_read(f'Cannot read {path} at tag {tag}', 'cat-file', 'blob', f'{commit}:{path}')
