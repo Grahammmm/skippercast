@@ -13,8 +13,11 @@ from tests._support import ROOT
 from tests.unit.test_relief_rebuild_plan import write_style_tree
 
 
+# Spell out the full report rather than deriving the expectation from the CLI.
+# Nearshore vectors are reported too, but do not count as a heavy rebuild.
 KEYS = ('select', 'mosaic.public', 'tiles.public', 'zone.public', 'digests',
-        'inventory', 'contours', 'package', 'shots', 'qa', 'envelope', 'nearshore_vectors.public')
+        'inventory', 'contours', 'package', 'shots', 'qa', 'envelope',
+        'nearshore_vectors.public')
 STAMP = '1' * 64
 
 
