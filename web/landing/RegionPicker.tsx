@@ -1,8 +1,16 @@
 import {useId, useState} from 'preact/hooks';
 import pickerStyles from '../region-picker.css?url';
-import {language, t, type StringId} from '../i18n.ts';
+import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
 import {Button} from '../ui/Button.tsx';
 import {COVERAGE_LAYERS, coverageNeedsRecheck, coverageRegionURL, coverageStatusId, lifecycleId, snapshot} from '../region-coverage.ts';
+
+export function coverageDay(checkedAt: string, lang: Language): string {
+  const checked = Date.parse(checkedAt);
+  if (!Number.isFinite(checked)) return checkedAt.slice(0, 10);
+  return new Intl.DateTimeFormat(localeOf(lang), {
+    timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+  }).format(checked);
+}
 
 export function RegionPicker({href = location.href, now = Date.now()}: {href?: string; now?: number} = {}) {
   const initial = new URL(href).searchParams.get('region');
@@ -15,7 +23,7 @@ export function RegionPicker({href = location.href, now = Date.now()}: {href?: s
     <select id={id} value={row.id} onChange={event => setSelected(event.currentTarget.value)} aria-describedby={`${id}-snapshot`}>
       {snapshot.regions.map(r => <option key={r.id} value={r.id}>{r.name} — {t(lifecycleId(r), lang)}</option>)}
     </select>
-    <p id={`${id}-snapshot`}>{t('regions.snapshot', lang, {date: snapshot.checked_at.slice(0, 10)})}</p>
+    <p id={`${id}-snapshot`}>{t('regions.snapshot', lang, {date: coverageDay(snapshot.checked_at, lang)})}</p>
     {coverageNeedsRecheck(now) ? <p role="status">{t('regions.stale', lang)}</p> : null}
     <div aria-live="polite" aria-atomic="true" data-coverage-region={row.id}>
       <h3 lang="en">{row.name}</h3>
