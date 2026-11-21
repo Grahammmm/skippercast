@@ -74,11 +74,21 @@ def section(page, anchor):
 
 # ---- the committed page and the generator's modes -------------------------------------------------------------------
 
-def test_committed_page_is_a_fresh_build_and_rerun_changes_nothing():
-    """Contract: dist/sources.html equals the generator's output. Bug caught: the catalogue or a region binding changed and the page was not regenerated."""
+def test_c3_committed_page_is_fresh_and_credits_morro_contours(capsys):
+    """C3: A stale page or a generator that drops the live contour layer leaves Morro without its credits."""
     current, fresh, _ = bsr.build(ROOT)
     assert current == fresh
     assert bsr.splice(fresh, bsr.render(bsr.collect(ROOT))[0]) == fresh  # second run: same bytes
+    morro = re.search(r'<h4 id="region-morro-bay">.*?</h4>(.*?)(?=<h[34]\b)', current, re.S)
+    assert morro is not None
+    contours, = re.findall(r'<h5>Depth contours</h5>\s*<ul>(.*?)</ul>', morro[1], re.S)
+    assert re.findall(r'<strong>([^<]+)</strong>', contours) == [
+        'Point Buchon bathymetry and seafloor character',
+        'Morro Bay bathymetry and seafloor character',
+        'Point Estero bathymetry and seafloor character',
+    ]
+    assert bsr.main(['--check', '--root', str(ROOT)]) == 0
+    assert capsys.readouterr().err == ''
 
 
 def test_check_mode_fails_on_stale_content_and_write_mode_repairs_it(tmp_path, capsys):
@@ -133,7 +143,7 @@ def test_a_newly_used_source_moves_from_eligible_to_the_live_region_layer(tmp_pa
     """Contract: use is read from non-draft region bindings. Bug caught: the register lists by catalogue only, so a newly bound source stays 'not yet used'."""
     unused, _ = generated(tmp_path, [row(BOUND_SOURCE, 'Protected areas source')], [region('r1', 'Region One')])
     assert '<strong>Protected areas source</strong>' in section(unused, 'data-sources-eligible')
-    assert 'data-sources-region-r1' not in unused
+    assert 'id="region-r1"' not in unused
     used, summary = generated(tmp_path, [row(BOUND_SOURCE, 'Protected areas source')], [region('r1', 'Region One', bound=True)])
     live = section(used, 'data-sources-live')
     assert 'Region One' in live and '<h5>Protected areas</h5>' in live and '<strong>Protected areas source</strong>' in live
@@ -273,7 +283,7 @@ def test_c1_depth_shading_lists_unique_catalogue_sources_in_pointer_order(tmp_pa
     _, fresh, summary = bsr.build(root)
     assert bsr.collect(root)['regions'][1]['layers'] == {'Depth shading': {'z-grid': '', 'a-grid': ''}}
     live = section(fresh, 'data-sources-live')
-    assert re.findall(r'<h4 id="data-sources-region-([^"]+)">([^<]+)</h4>', live) == [('r1', 'Region One')]
+    assert re.findall(r'<h4 id="region-([^"]+)">([^<]+)</h4>', live) == [('r1', 'Region One')]
     assert re.findall(r'<h5>([^<]+)</h5>', live) == ['Depth shading']
     assert re.findall(r'<strong>([^<]+)</strong>.*?Credit: ([^<]+?) · <a ', live, re.S) == [
         ('Z grid', 'Survey &amp; agency'), ('A grid', 'Credit for a-grid'),
@@ -289,7 +299,7 @@ def test_c1_reviewed_pointer_does_not_list_a_draft_regions_other_assets(tmp_path
     add_relief_pointer(root)
     _, fresh, summary = bsr.build(root)
     live = section(fresh, 'data-sources-live')
-    assert re.findall(r'<h4 id="data-sources-region-([^"]+)">([^<]+)</h4>', live) == [('r1', 'Region One (draft region)')]
+    assert re.findall(r'<h4 id="region-([^"]+)">([^<]+)</h4>', live) == [('r1', 'Region One (draft region)')]
     assert re.findall(r'<h5>([^<]+)</h5>', live) == ['Depth shading']
     assert re.findall(r'<strong>([^<]+)</strong>', live) == ['Source synthetic-grid']
     assert summary == {'listed_live': 1, 'eligible_unused': 1, 'withheld_live': 0}
@@ -367,6 +377,87 @@ def test_c3_pointer_usage_counts_without_masking_a_runtime_mismatch(tmp_path, mo
         assert summary == {'listed_live': 2, 'eligible_unused': 0, 'withheld_live': 0}
         live = section(fresh, 'data-sources-live')
         assert re.findall(r'<strong>([^<]+)</strong>', live) == ['Source synthetic-grid', 'OpenStreetMap standard tiles']
+
+
+def add_contours(root, ids=('contour-grid',), *, region_id='r1'):
+    path = root / 'catalog/depth-contours' / f'{region_id}.geojson'
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(json.dumps({
+        'type': 'FeatureCollection', 'features': [],
+        'provenance': {'region_id': region_id, 'sources': [
+            {'source_id': ident, 'name': 'Contour-only name', 'attribution': 'Contour-only credit',
+             'url': 'https://example.org/contour-only', 'survey_date': 'Contour-only date'} for ident in ids
+        ]},
+    }))
+    return path
+
+
+def test_c1_contour_provenance_credits_only_its_catalogue_members(tmp_path):
+    """C1: Reading the relief schema, using bindings instead of provenance, or rendering file credits all miscredit the layer."""
+    rows = [row('z-grid', display=None), row('a-grid'), row('shade-grid')]
+    root = make_root(tmp_path, rows, [region('r1', 'Region One'), region('r2', 'Region Two')])
+    add_contours(root, ('z-grid', 'a-grid', 'z-grid'))
+    add_relief_pointer(root, ('shade-grid',))
+    assert {r['id']: r['layers'] for r in bsr.collect(root)['regions']} == {
+        'r1': {'Depth contours': {'z-grid': '', 'a-grid': ''}, 'Depth shading': {'shade-grid': ''}},
+        'r2': {},
+    }
+    _, page, summary = bsr.build(root)
+    live = section(page, 'data-sources-live')
+    assert re.findall(r'<h5>([^<]+)</h5>', live) == ['Depth contours', 'Depth shading']
+    assert re.findall(r'<strong>([^<]+)</strong>.*?Credit: ([^<]+?) · <a ', live, re.S) == [
+        ('Source z-grid', 'Credit for z-grid'), ('Source a-grid', 'Credit for a-grid'),
+        ('Source shade-grid', 'Credit for shade-grid'),
+    ]
+    assert 'Contour-only' not in page and 'contour-only' not in page
+    assert summary == {'listed_live': 3, 'eligible_unused': 0, 'withheld_live': 0}
+
+
+@pytest.mark.parametrize('ident, rows, problem', [
+    pytest.param('osm-tiles', [], 'unknown', id='C1: runtime-only id'),
+    pytest.param('contour-grid', [row('contour-grid', display='private')], 'unlistable', id='C1: private id'),
+    pytest.param('contour-grid', [row('contour-grid', needs=['kelp'])], 'unlistable', id='C1: held id'),
+])
+def test_c1_uncreditable_contour_sources_fail_generation(tmp_path, ident, rows, problem):
+    """C1: Unknown and unlistable IDs must not get fallback credits or disappear silently."""
+    root = make_root(tmp_path, rows, [region('r1', 'Region One')])
+    add_contours(root, (ident,))
+    with pytest.raises(bsr.RegisterError) as caught:
+        bsr.build(root)
+    assert type(caught.value) is bsr.RegisterError
+    assert str(caught.value) == f'r1: depth contours has {problem} source {ident!r}'
+
+
+@pytest.mark.parametrize('provenance, problem', [
+    pytest.param({'region': 'r1', 'sources': [{'id': 'contour-grid'}]}, 'invalid contour provenance',
+                 id='C1: relief shape is not contour provenance'),
+    pytest.param({'region_id': 'r2', 'sources': [{'source_id': 'contour-grid'}]}, 'invalid contour region or source IDs',
+                 id='C1: wrong region'),
+    pytest.param({'region_id': 'r1', 'sources': []}, 'invalid contour region or source IDs', id='C1: empty source list'),
+    pytest.param({'region_id': 'r1', 'sources': [{'source_id': 'contour-grid'}], 'publication_held': True},
+                 'depth contours are held', id='C1: held contour file'),
+])
+def test_c1_invalid_contour_provenance_fails_generation(tmp_path, provenance, problem):
+    """C1: A misbound, unusable or explicitly held file must not be treated as live credits."""
+    root = make_root(tmp_path, [row('contour-grid')], [region('r1', 'Region One'), region('r2', 'Region Two')])
+    path = add_contours(root)
+    path.write_text(json.dumps({'type': 'FeatureCollection', 'features': [], 'provenance': provenance}))
+    with pytest.raises(bsr.RegisterError, match=f'r1\\.geojson: {problem}') as caught:
+        bsr.build(root)
+    assert type(caught.value) is bsr.RegisterError
+
+
+def test_c2_region_anchors_are_unique_and_stable_under_name_changes(tmp_path):
+    """C2: An anchor based on the title or layer would change on rename or collide for two regions with the same title."""
+    rows = [row(BOUND_SOURCE), row('contour-grid')]
+    root = make_root(tmp_path, rows, [region('r1', 'Shared name', bound=True), region('r2', 'Shared name')])
+    add_contours(root, region_id='r2')
+    for names in [('Shared name', 'Shared name'), ('New name', 'Shared name')]:
+        _, page, _ = bsr.build(root)
+        assert re.findall(r'<h4 id="(region-[^"]+)">([^<]+)</h4>', page) == list(zip(('region-r1', 'region-r2'), names))
+        ids = re.findall(r'\bid="([^"]+)"', page)
+        assert len(ids) == len(set(ids))
+        (root / 'regions/r1/region.json').write_text(json.dumps(region('r1', 'New name', bound=True)))
 
 
 # ---- drift guards on the real repository ----------------------------------------------------------------------------

@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "shelter-cove-north-mendocino",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "shelter-cove-open-ocean-boat-launch-z13", "center": [-124.07704, 40.02667], "size_m": 4000, "zoom": 13},
+    {"id": "shelter-cove-outer-z15", "center": [-124.16, 40.025], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}

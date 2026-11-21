@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "point-reyes-pigeon",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "pillar-point-harbor-z13", "center": [-122.482167, 37.5025], "size_m": 4000, "zoom": 13},
+    {"id": "reyes-south-z15", "center": [-123.02, 37.87], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}
