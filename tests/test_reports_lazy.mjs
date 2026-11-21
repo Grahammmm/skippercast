@@ -54,8 +54,8 @@ class Element {
   }
   setAttribute(name, value) { this.attrs[name] = String(value); }
   removeAttribute(name) { delete this.attrs[name]; }
-  addEventListener() {}
-  removeEventListener() {}
+  addEventListener(type, listener) { (this.listeners ??= {})[type] = listener; }
+  removeEventListener(type) { delete this.listeners?.[type]; }
 }
 
 function mountFixture(t) {
@@ -72,7 +72,10 @@ function mountFixture(t) {
     finally { globalThis.document = document; }
   });
   const tree = ({localName, attrs, childNodes, data}) => data ?? [localName, attrs, childNodes.map(tree)];
-  return {draw, output: () => host.childNodes.map(tree)};
+  return {draw, output: () => host.childNodes.map(tree), clickRetry: () => {
+    const button = host.childNodes[0].childNodes[1];
+    return act(() => button.listeners.click.call(button, {type: 'click', target: button}));
+  }};
 }
 
 const pending = [['article', {class: 'app-reports'}, []]];
@@ -119,6 +122,24 @@ test('C2: a rejected import reaches the existing Guard with the original error',
   assert.deepEqual(output(), [['div', {class: 'ui-guard', role: 'status', 'data-guard': 'reports'}, [
     ['p', {}, ['This part could not load. The rest of the page still works.']], ['button', {type: 'button'}, ['Try again']],
   ]]]);
+});
+
+test('a Guard retry reloads a rejected Reports import and renders the recovered view', async t => {
+  const {draw, output, clickRetry} = mountFixture(t);
+  const first = Promise.withResolvers();
+  const second = Promise.withResolvers();
+  let attempts = 0;
+  const load = t.mock.fn(() => ++attempts === 1 ? first.promise : second.promise);
+  const Lazy = createLazyReports(load);
+  t.mock.method(console, 'error', () => {});
+  await draw(h(Guard, {name: 'reports'}, h(Lazy, {now: NOW})));
+  await act(async () => first.reject(new Error('transient chunk error')));
+  assert.equal(output()[0][1]['data-guard'], 'reports');
+  await clickRetry();
+  assert.equal(load.mock.callCount(), 2);
+  assert.deepEqual(output(), pending);
+  await act(async () => second.resolve({Reports: FixtureReports}));
+  assert.deepEqual(output(), [['article', {class: 'app-reports'}, ['2026-11-21T19:00:00.000Z']]]);
 });
 
 test('C3: the built app reaches Reports dynamically, not in its startup imports closure', async t => {
