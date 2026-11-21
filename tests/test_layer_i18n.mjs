@@ -123,8 +123,9 @@ test('rail_es_chart_terrain_and_language_switch', async t => {
   const enRail = rail(m, 'en'), enLegend = legend(m, 'en');
   const esRail = rail(m, 'es'), esLegend = legend(m, 'es');
   assert.match(esRail, /aria-label="Capas"/);
-  for (const label of ['Fondo marino', 'Corrientes', 'Temperatura del agua', 'Flota chárter', 'Nubes']) assert.match(esRail, new RegExp(`ui-rail-label">${label}<`), label);
-  assert.match(esRail, /aria-label="Fondo marino: fundamento"|Fondo marino: fundamento/);
+  for (const label of ['Tipo de fondo marino', 'Corrientes', 'Temperatura del agua', 'Puntos y actividad chárter', 'Nubes']) assert.match(esRail, new RegExp(`ui-rail-label">${label}<`), label);
+  assert.match(esRail, /Tipo de fondo marino: fundamento/);
+  assert.match(esRail, /Capas del mapa/);
   assert.match(esRail, /Fuente/);
   assert.match(esRail, /Base/);
   assert.match(esRail, /Nocturno/);

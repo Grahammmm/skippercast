@@ -172,7 +172,7 @@ test('the first terrain choice mounts the renderer once with the store\'s state;
     currentLayer: 'hfr-6', species: 'rockfish-reef', depthLimit: 60, location: {latitude: 35.37, longitude: -120.86, span: spanForZoom(HOME_ZOOM - ENTRY_ZOOM_DROP), bearing: 0, pitch: ENTRY_PITCH},
     hour: new Date('2026-10-06T03:00:00Z'), perspective: '3d', habitat: 'reef:r1', visible: true,
   });
-  assert.deepEqual(fake.calls.filter(([name]) => name !== 'setRelief'), [], 'the initial state is not sent twice');
+  assert.deepEqual(fake.calls.filter(([name]) => name !== 'setRelief'), [['setHabitatVisible', false]], 'D5 hides Seafloor at startup; other initial state is not sent twice');
   assert.equal(terrainBlocked.value, null, 'nothing blocks the terrain here');
 
   setParams({profile: 'boat'});
