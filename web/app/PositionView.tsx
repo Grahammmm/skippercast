@@ -1,7 +1,7 @@
 // SC-GPSOFFLINE-1: the position check's words. Pure: props in, markup out, so the tests render it and no state, storage or request lives here.
 // Phone first: large type, one answer line, the distance and the accuracy under it, and the official-rules link always last.
 import {Button} from '../ui/Button.tsx';
-import {t, type Language} from '../i18n.ts';
+import {localeOf, t, type Language} from '../i18n.ts';
 import {FT_PER_M, M_PER_NMI} from '../units.ts';
 import {PLANNING_MARGIN_M} from '../../dist/geo-screen.js';
 import type {Clock, PackState, PositionResult} from '../position-check.ts';
@@ -12,12 +12,21 @@ export const OFFICIAL_RULES_URL = 'https://wildlife.ca.gov/Conservation/Marine/M
 export type PositionState = {phase: 'idle'} | {phase: 'reading'} | {phase: 'done'; result: PositionResult};
 
 /** "85 m (279 ft)" under a kilometre; "1.3 nmi (2.4 km)" above. Whole numbers for metres and feet. */
-export function distanceText(metres: number): string {
+export function distanceText(metres: number, lang: Language = 'en'): string {
   if (metres < 1000) return `${Math.round(metres)} m (${Math.round(metres * FT_PER_M)} ft)`;
-  return `${(metres / M_PER_NMI).toFixed(1)} nmi (${(metres / 1000).toFixed(1)} km)`;
+  const distance = `${(metres / M_PER_NMI).toFixed(1)} nmi (${(metres / 1000).toFixed(1)} km)`;
+  return lang === 'es' ? distance.replaceAll('.', ',') : distance;
 }
 
-const day = (iso: string | null, lang: Language): string => iso && Number.isFinite(Date.parse(iso)) ? iso.slice(0, 10) : t('trip.pos.unknownDate', lang);
+function day(iso: string | null, lang: Language): string {
+  const date = new Date(iso ?? '');
+  const dateOnly = iso !== null && /^\d{4}-\d{2}-\d{2}$/.test(iso);
+  if (!Number.isFinite(date.getTime()) || (dateOnly && date.toISOString().slice(0, 10) !== iso)) return t('trip.pos.unknownDate', lang);
+  // A date-only value has no instant to convert; format its UTC day as written.
+  return new Intl.DateTimeFormat(localeOf(lang), {
+    timeZone: dateOnly ? 'UTC' : 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+  }).format(date);
+}
 
 /** The datasets a boundary screen can be missing, named for the angler (a literal key each, so the string checks see them). */
 function layerNames(ids: readonly string[], lang: Language): string {
@@ -60,15 +69,15 @@ export function PositionView({state, pack, onCheck, lang}: {state: PositionState
         {checked && headline ? <>
           <p class="pos-verdict" data-where={checked.where}>{headline}</p>
           {checked.where === 'inside' ? <p class="pos-line">{t('trip.pos.onBoundary', lang)}</p>
-            : checked.distanceM !== null ? <p class="pos-line">{t(checked.missing.length ? 'trip.pos.distanceScoped' : 'trip.pos.distance', lang, {distance: distanceText(checked.distanceM)})}</p>
-            : <p class="pos-line">{t('trip.pos.distanceFar', lang, {distance: distanceText(20000)})}</p>}
-          <p class="pos-line">{checked.fix.accuracyM === null ? t('trip.pos.accuracyUnknown', lang) : t('trip.pos.accuracy', lang, {distance: distanceText(checked.fix.accuracyM)})}</p>
+            : checked.distanceM !== null ? <p class="pos-line">{t(checked.missing.length ? 'trip.pos.distanceScoped' : 'trip.pos.distance', lang, {distance: distanceText(checked.distanceM, lang)})}</p>
+            : <p class="pos-line">{t('trip.pos.distanceFar', lang, {distance: distanceText(20000, lang)})}</p>}
+          <p class="pos-line">{checked.fix.accuracyM === null ? t('trip.pos.accuracyUnknown', lang) : t('trip.pos.accuracy', lang, {distance: distanceText(checked.fix.accuracyM, lang)})}</p>
           {checked.lowAccuracy ? <p class="pos-warn">{t('trip.pos.lowAccuracy', lang)}</p> : null}
           {checked.missing.length ? <p class="pos-warn">{t('trip.pos.incompleteNear', lang, {layers: layerNames(checked.missing, lang)})}</p> : null}
           {clockNote(checked.clock, checked.checkedAt, lang)}
-          <p class="pos-small">{t('trip.pos.margin', lang, {distance: distanceText(PLANNING_MARGIN_M)})}</p>
+          <p class="pos-small">{t('trip.pos.margin', lang, {distance: distanceText(PLANNING_MARGIN_M, lang)})}</p>
         </> : null}
-        {fix && !checked ? <p class="pos-line">{fix.accuracyM === null ? t('trip.pos.accuracyUnknown', lang) : t('trip.pos.accuracy', lang, {distance: distanceText(fix.accuracyM)})}</p> : null}
+        {fix && !checked ? <p class="pos-line">{fix.accuracyM === null ? t('trip.pos.accuracyUnknown', lang) : t('trip.pos.accuracy', lang, {distance: distanceText(fix.accuracyM, lang)})}</p> : null}
       </div>
       <p class="pos-official">{t('trip.pos.official', lang)} <a href={OFFICIAL_RULES_URL} target="_blank" rel="noopener noreferrer">{t('trip.pos.officialLink', lang)}</a></p>
     </section>
