@@ -44,9 +44,19 @@ class Unreadable(Exception):
     """An input that cannot be read or has the wrong shape; the message holds file and key only."""
 
 
+def _unique_members(pairs):
+    """Reject duplicate members in each object before they collapse into a dict."""
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError('duplicate JSON member')
+        obj[key] = value
+    return obj
+
+
 def _read(path):
     try:
-        return json.loads(path.read_text(encoding='utf-8'))
+        return json.loads(path.read_text(encoding='utf-8'), object_pairs_hook=_unique_members)
     except (OSError, UnicodeDecodeError, ValueError, RecursionError):
         raise Unreadable(f'{path.name}: unreadable JSON') from None
 
