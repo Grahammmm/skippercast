@@ -327,7 +327,8 @@ def _public_display_allowed(source):
 
 def _require_not_held(collection, region):
     features = collection.get('features') or []
-    parts = [collection, collection.get('provenance') or {}, *features, *(f.get('properties') or {} for f in features)]
+    parts = [collection, collection.get('provenance') or {}, *features,
+             *(f.get('properties') for f in features if isinstance(f, dict))]
     if any(isinstance(part, dict) and 'publication_held' in part for part in parts):
         raise _ContoursHeld(f"Depth contours for {region['id']} are held and cannot be published")
 

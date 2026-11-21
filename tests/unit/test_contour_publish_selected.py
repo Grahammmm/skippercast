@@ -239,6 +239,20 @@ def test_hold_wins_before_selected_shape_or_release_refusal(catalog):
     assert not any(path.exists() for path in catalog.outputs)
 
 
+@pytest.mark.parametrize('malformed', [None, 'invalid', {'properties': 'invalid'}])
+@pytest.mark.parametrize('hold_at', ['feature', 'properties'])
+def test_hold_wins_over_malformed_feature_and_withdraws_pair(catalog, malformed, hold_at):
+    value = catalog.collection(SELECTED[:1], SELECTED)
+    _write(catalog.pointer_path, _pointer(catalog.region['id'], SELECTED))
+    catalog.assert_pair(value)
+    held = value['features'][0]
+    (held if hold_at == 'feature' else held['properties'])['publication_held'] = True
+    value['features'].insert(0, malformed)
+    with pytest.raises(dc._ContoursHeld, match='synthetic-bay are held'):
+        catalog.publish(value)
+    assert not any(path.exists() for path in catalog.outputs)
+
+
 @pytest.mark.parametrize('withdrawal', [None, 'clearance', 'release', 'omitted', 'static-incoming', 'no-pointer'])
 def test_refusal_checks_previous_pair_under_the_current_mode(catalog, monkeypatch, withdrawal):
     # An unrelated refusal must preserve eligible candidate bytes, not reinterpret them as static.
