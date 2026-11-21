@@ -1,7 +1,10 @@
 """Runtime checks for the coast coverage report (C1–C3)."""
 
 import json
+import shutil
 import socket
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -83,7 +86,6 @@ def config_files(monkeypatch, tmp_path):
     read_text_from_disk = Path.read_text
 
     def read_text(path, **kwargs):
-        # The schema validator may read its installed, local metaschemas.
         if not path.is_relative_to(tmp_path):
             return read_text_from_disk(path, **kwargs)
         name = path.relative_to(tmp_path).as_posix()
@@ -132,6 +134,55 @@ def pointer():
             {'id': 'fixture', 'resolution_m': 5, 'tiles': 1},
         ]}},
     }
+
+
+@pytest.fixture
+def run_standalone(config_files, tmp_path):
+    script = Path('scripts/relief/coast_coverage.py')
+    (tmp_path / script).parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / script, tmp_path / script)
+    for name, value in config_files.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(value), encoding='utf-8')
+
+    def run(*flags):
+        # Ignore environment paths and site-packages (including editable installs).
+        return subprocess.run([sys.executable, '-E', '-S', str(script), *flags],
+                              cwd=tmp_path, capture_output=True, text=True, timeout=10)
+
+    return run
+
+
+@pytest.mark.parametrize(('flags', 'expected'), [
+    pytest.param(['--help'], 'usage: coast_coverage.py', id='help'),
+    pytest.param([], 'Configured coast coverage: OK', id='no-flags'),
+])
+def test_C2_direct_script_without_install(run_standalone, flags, expected):
+    """An eager package import must not break direct help or the legacy check."""
+    result = run_standalone(*flags)
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ''
+    assert expected in result.stdout
+
+
+def test_C2_standalone_pointer_validation_without_jsonschema(run_standalone, catalog_files, pointer):
+    """Optional extras must not silence valid pointers or bypass nested schema checks."""
+    relief, _ = catalog_files
+    path = relief / 'umbrella.json'
+    path.write_text(json.dumps(pointer), encoding='utf-8')
+    markdown = run_standalone('--markdown')
+    assert markdown.returncode == 0, markdown.stderr
+    assert '| umbrella | 0123456789ab | none |' in markdown.stdout
+
+    # A nested violation still has a plausible generation and matching region.
+    pointer['sources'][0]['rights']['public_display'] = 'denied'
+    path.write_text(json.dumps(pointer), encoding='utf-8')
+    report = run_standalone('--json')
+    assert report.returncode == 0, report.stderr
+    assert json.loads(report.stdout)['regions'] == [
+        {'id': 'umbrella', 'relief': 'invalid', 'contours': 'none'},
+    ]
 
 
 def test_C2_table_success(config_files, capsys):
@@ -234,6 +285,9 @@ def test_C1_markdown_covers_every_release_region(config_files, catalog_files, po
 
 @pytest.mark.parametrize('defect', [
     pytest.param('schema', id='C2: reject a private pointer even with a valid generation'),
+    pytest.param('false-as-number', id='C2: numeric zero is not JSON false'),
+    pytest.param('extra-field', id='C2: reject unevaluated top-level fields'),
+    pytest.param('duplicate-field', id='C2: reject duplicate members even if the final value is public'),
     pytest.param('malformed', id='C2: report malformed JSON as invalid'),
     pytest.param('wrong-region', id='C2: do not credit a pointer for another region'),
     pytest.param('directory', id='C2: report an unreadable pointer as invalid'),
@@ -244,12 +298,19 @@ def test_C2_invalid_pointer_is_not_live(catalog_files, pointer, capsys, defect):
     path = relief / 'umbrella.json'
     if defect == 'schema':
         pointer['private'] = True
+    elif defect == 'false-as-number':
+        pointer['private'] = 0
+    elif defect == 'extra-field':
+        pointer['unexpected'] = True
     elif defect == 'wrong-region':
         pointer['region'] = 'crescent-city'
     if defect == 'directory':
         path.mkdir()
     else:
-        path.write_text('{' if defect == 'malformed' else json.dumps(pointer), encoding='utf-8')
+        body = json.dumps(pointer)
+        if defect == 'duplicate-field':
+            body = '{"private": true, ' + body[1:]
+        path.write_text('{' if defect == 'malformed' else body, encoding='utf-8')
     (contours / 'umbrella.geojson').write_text('{"type":"FeatureCollection","features":[]}', encoding='utf-8')
 
     assert coast.main(['--json']) == 0
