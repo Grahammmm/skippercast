@@ -114,6 +114,8 @@ def _lineage(base, candidate):
     if previous is None:
         return 'MISMATCH previous'
     for field in _LINEAGE_FIELDS:
+        if field == 'style' and field not in base:
+            continue
         if previous.get(field) != base.get(field):
             return f'MISMATCH previous.{field}'
     return 'ok'

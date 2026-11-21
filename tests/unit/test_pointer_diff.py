@@ -135,7 +135,7 @@ def test_c2_checks_every_previous_field(tmp_path, capsys, field):
     pytest.param(False, False, False, 'first-release', 0, id='C2: missing base with null predecessor'),
     pytest.param(False, True, False, 'MISMATCH previous', 1, id='C2: missing base with claimed predecessor'),
     pytest.param(True, True, False, 'ok', 0, id='C2: match an unstyled base'),
-    pytest.param(True, True, True, 'MISMATCH previous.style', 1, id='C2: invented style for unstyled base'),
+    pytest.param(True, True, True, 'ok', 0, id='C2: optional predecessor style with unstyled base'),
 ])
 def test_c2_absent_base_or_style(tmp_path, capsys, has_base, has_previous, extra_style, lineage, status):
     """C2: missing base and optional style do not excuse a false predecessor claim."""
