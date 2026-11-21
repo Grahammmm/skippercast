@@ -6,6 +6,7 @@
 // time dock does, so the map's hour moves with it. The surface-current choice
 // is the Currents rail entry's own control (`?current=`), not a copy.
 import {useEffect, useId, useState} from 'preact/hooks';
+import type {Series} from '../../../packages/coast/src/charts/series.ts';
 import type {Alert} from '../../../packages/coast/src/types.ts';
 import {alertTimeSpan} from '../../alert-time.ts';
 import {daylightText} from '../../conditions-daylight.ts';
@@ -21,6 +22,8 @@ import {language, localeOf, num, t, type Language} from '../../i18n.ts';
 import {profile, region, species} from '../../state.ts';
 import {regionPlace} from '../../map/currents.ts';
 import {loadRegs, regsData} from '../../regs.ts';
+import {units, type Units} from '../../unit-choice.ts';
+import {fToC, M_PER_FT, WIND_SPEED} from '../../units.ts';
 import {SeasonStrip} from '../SeasonStrip.tsx';
 import {PortAlert} from '../PortAlert.tsx';
 import {regionInfo, zone} from '../App.tsx';
@@ -54,11 +57,45 @@ const timeText = (iso: string, tz: string, withDay = false, lang: Language = 'en
 /** The selected hour's weekday: English keeps the dock's own short name, another language formats it in the region zone. */
 const dayName = (at: number | string, tz: string, lang: Language): string =>
   lang === 'en' ? localParts(new Date(at), tz).weekday : new Intl.DateTimeFormat(localeOf(lang), {timeZone: tz, weekday: 'long'}).format(new Date(at));
+
+/** Convert only the display rows; the hourly table still takes the source tide in feet. */
+function displayRows(rows: Series[], {temp, wind, height}: Units): Series[] {
+  return rows.map(row => {
+    let unit: string, convert: (value: number) => number;
+    if (row.unit === '°F' && temp === 'C') {
+      unit = '°C';
+      convert = fToC;
+    } else if (row.unit === 'kt' && wind !== 'kt') {
+      const {label, factor} = WIND_SPEED[wind];
+      unit = label;
+      convert = value => value * factor;
+    } else if (row.unit === 'ft' && height === 'm') {
+      unit = 'm';
+      convert = value => value * M_PER_FT;
+    } else return row;
+
+    return {
+      ...row, unit,
+      points: row.points.map(p => typeof p.value === 'number' ? {...p, value: convert(p.value)} : p),
+      ...(typeof row.min === 'number' ? {min: convert(row.min)} : {}),
+      ...(typeof row.max === 'number' ? {max: convert(row.max)} : {}),
+    };
+  });
+}
+
 const value = (v: number | null, unit: string, lang: Language = 'en') => {
   if (v === null) return '—';
+  if (unit === '°C' || unit === 'm') return `${fixed(v, 1, lang)} ${unit}`;
   const digits = unit === 'ft' ? 1 : 0;
   return `${lang === 'en' ? Number(v.toFixed(digits)) : num(Number(v.toFixed(digits)), lang, digits)} ${unit}`;
 };
+
+function tideHeight(heightFt: number, datum: string | null, height: Units['height'], lang: Language) {
+  if (!datum) return null;
+  const feet = ` · ${fixed(heightFt, 1, lang)} ft ${datum}`;
+  if (height === 'ft') return feet;
+  return <><span class="app-screen-height">{` · ${fixed(heightFt * M_PER_FT, 1, lang)} m ${datum}`}</span><span class="app-print-height">{feet}</span></>;
+}
 
 /** SC2252-07: one marine alert, its published event linked to the source, its span in the region zone and its headline as the description. */
 function AlertLine({alert, tz, lang}: {alert: Alert; tz: string; lang: Language}) {
@@ -70,7 +107,7 @@ function AlertLine({alert, tz, lang}: {alert: Alert; tz: string; lang: Language}
 export function Conditions({now = new Date()}: {now?: Date} = {}) {
   useForecast();
   useCoastReport();
-  const lang = language.value, copy = conditionsCopy(lang);
+  const lang = language.value, copy = conditionsCopy(lang), choice = units.value;
   const rulesRegion = regionInfo.value?.id === region.value ? regionInfo.value.rules ?? null : null;
   useEffect(() => { if (rulesRegion && regsData.peek()?.region !== rulesRegion.id) void loadRegs(rulesRegion); }, [rulesRegion]);
   const rules = regsData.value?.region === rulesRegion?.id ? regsData.value?.data : null;
@@ -80,7 +117,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
   const report = coastReport.value?.data ?? null, binding = coastBinding.value;
   const span = conditionsSpan(now);
   const local = report && binding ? coastRows(report, binding.areaId, now) : {rows: [], site: null};
-  const rows = copy.rows(conditionsRows(forecastRows(forecast, family, span.start), local.rows));
+  const rows = displayRows(copy.rows(conditionsRows(forecastRows(forecast, family, span.start), local.rows)), choice);
   const brief = currentBrief(now);
   const clocks = sourceClocks(forecast, family, report && binding ? report : null, local.site);
   const notes = PROFILE_TABLE[profile.value], disagree = forecast ? disagreements(forecast, now, tz) : [];
@@ -109,7 +146,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
       <h3 class="ui-eyebrow">{t('conditions.tides', lang)}</h3>
       {brief?.tideEvents.length ? (
         <ul class="app-conditions-tides">
-          {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'conditions.tide.high' : 'conditions.tide.low', lang)} <span class="ui-mono">{timeText(e.at, tz, false, lang)}{brief.tideDatum ? ` · ${fixed(e.heightFt, 1, lang)} ft ${brief.tideDatum}` : null}</span></li>)}
+          {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'conditions.tide.high' : 'conditions.tide.low', lang)} <span class="ui-mono">{timeText(e.at, tz, false, lang)}{tideHeight(e.heightFt, brief.tideDatum, choice.height, lang)}</span></li>)}
         </ul>
       ) : <p class="app-empty">{t('conditions.tide.none', lang, {day: dayName(state.at, tz, lang) || t('conditions.tide.day', lang)})}</p>}
       <p class="app-conditions-daylight">{daylightText(brief?.date === state.day ? brief : currentBrief(now, selected), state.day, tz, lang)}</p>
