@@ -6,7 +6,7 @@ import {readFileSync, readdirSync} from 'node:fs';
 import test from 'node:test';
 import {LAYERS_STYLE} from '../web/map/layers-style.gen.ts';
 import {KIT_LAYER_IDS, STACKING, draftStack, mayAutoEnable, presetInput, presetStack, resolveStack, stopsAt} from '../web/map/stacking.ts';
-import {KIT_LAYERS, LAYERS, NO_DATA_YET, SKL_SLOT_LAYERS, Z_ORDER_ANCHORS, Z_SLOTS, kitLayer, zBefore} from '../web/map/layers.ts';
+import {KIT_LAYERS, LAYERS, NO_DATA_YET, chartRep, SKL_SLOT_LAYERS, Z_ORDER_ANCHORS, Z_SLOTS, kitLayer, zBefore} from '../web/map/layers.ts';
 import {KIT_LAYER_MODULES} from '../web/map/kit-layers/index.ts';
 import {kitRow} from '../web/map/legend-model.ts';
 
@@ -281,4 +281,24 @@ test('zBefore: higher layers only, nearest first; chlorophyll under contours, fr
   }
   assert.deepEqual(zBefore('labels'), ['mpa-fill']);
   assert.throws(() => zBefore('no-such-layer'));
+});
+
+// Contract (P1, live Chart): Temp contrast's cells are a polygon colour field, so Water temp and Temp contrast never both draw a
+// field, whichever was switched on last; the loser's field goes, SST breaks keeps its fronts isolines. Bug: the contrast cells are
+// classed as isolines, so both fields stay visible.
+test('P1 live: Water temp and Temp contrast share the one field slot in either switch-on order', () => {
+  assert.equal(chartRep('sst-contrast', 'sst-contrast'), 'fill');
+  assert.equal(chartRep('sst-fronts', 'sst-fronts-band'), 'isolines');
+  const avail = {'sst-fill': ['fill'], 'sst-breaks': ['fill', 'isolines']};
+  const live = order => resolveStack(order.map(id => ({id, available: avail[id]})), LO);
+  const contrastLast = live(['sst-fill', 'sst-breaks']);
+  assert.equal(row(contrastLast, 'sst-fill').status, 'replaced');
+  assert.equal(row(contrastLast, 'sst-fill').replacedBy, 'sst-breaks');
+  assert.deepEqual(repsOf(contrastLast, 'sst-breaks'), ['fill', 'isolines']);
+  assert.equal(row(contrastLast, 'sst-breaks').opacity.fill, STYLE['sst-breaks'].glow.opacity);
+  const waterLast = live(['sst-breaks', 'sst-fill']);
+  assert.deepEqual(repsOf(waterLast, 'sst-fill'), ['fill']);
+  assert.equal(row(waterLast, 'sst-breaks').status, 'drawn');
+  assert.deepEqual(repsOf(waterLast, 'sst-breaks'), ['isolines']);
+  for (const s of [contrastLast, waterLast]) { assert.equal(s.counts.color_field, STACKING.caps.color_field); assert.deepEqual(s.violations, []); }
 });

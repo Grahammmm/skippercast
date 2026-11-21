@@ -355,7 +355,8 @@ export function chartRep(owner: string, id: string): Rep | 'band-edge' | undefin
     case 'water-temp': return id === 'water-temp' ? 'fill' : id === 'skl-sst-band-edge' ? 'band-edge' : 'auto isotherms';
     case 'swell': return id === 'swell' || id.startsWith('swell-period') ? 'fill' : id.startsWith('swell-direction') ? 'arrows' : undefined;
     case 'wind': return 'barbs';
-    case 'sst-contrast': case 'sst-fronts': return 'isolines';
+    case 'sst-contrast': return 'fill';  // a polygon colour field (contrast.ts), so it competes for the one field slot (P1)
+    case 'sst-fronts': return 'isolines';
     case 'chlorophyll': return 'fill';
     case 'clouds': return 'veil';
     case 'stations': return 'chips';

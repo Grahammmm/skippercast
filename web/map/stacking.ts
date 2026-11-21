@@ -25,6 +25,7 @@ interface StyleLayer {
   readonly others?: {readonly hide_with_color_field?: boolean};
   readonly band_edge?: {readonly hide_when_any_on?: readonly string[]};
   readonly isotherms?: unknown;
+  readonly glow?: {readonly opacity?: number};
   readonly representations?: Readonly<Record<string, readonly string[]>>;
 }
 interface Stacking {
@@ -60,6 +61,12 @@ const PARTS: Partial<Record<KitLayerId, readonly Rep[]>> = {
   'subsurface-temp': ['fill', 'isotherms'], 'marine-zones-mpas': ['zones', 'mpas'], 'kelp-habitat': ['kelp', 'shore'], 'ais-fleet': ['hatch'],
   tides: ['pin'], stations: ['chips'], places: ['ramps', 'piers'], 'spots-marks': ['badges', 'dots'], 'routes-tracks': ['route', 'track'],
 };
+/**
+ * SST breaks' live Temp contrast cells are a colour field (the kit's `glow`, in the colour-field slot) beside its isolines (fronts),
+ * so a Chart that offers `fill` for it makes it compete under P1; losing the field it keeps its isolines (the kit tokens give it no
+ * `fill_taken_by_other_layer`). Solo, the kit row stays isolines only.
+ */
+const FILL_LOSER_KEEPS: Partial<Record<KitLayerId, readonly Rep[]>> = {'sst-breaks': ['isolines']};
 const BY_SLOT: Readonly<Record<string, readonly Rep[]>> = {color_field: ['fill'], isolines: ['isolines'], veil: ['veil'], radar: ['radar'], ribbon: ['ribbon']};
 /** Parts a preset or the user may leave out; every other part is decided by P1–P6. */
 export const OPTIONAL_PARTS: Readonly<Partial<Record<KitLayerId, readonly Rep[]>>> = Object.freeze({'kelp-habitat': ['shore'], places: ['piers'], 'routes-tracks': ['track'], 'marine-zones-mpas': ['zones']});
@@ -159,7 +166,7 @@ export function resolveStack(input: readonly StackInput[], zoom: number): Stack 
   const fills = drawn().filter(r => r.reps.includes('fill'));
   const owners = fills.slice(-STACKING.caps.color_field), owner = owners.at(-1);
   for (const row of fills) if (!owners.includes(row)) {
-    const fallback = LAYERS[row.id]!.representations?.fill_taken_by_other_layer as readonly Rep[] | undefined;
+    const fallback = (LAYERS[row.id]!.representations?.fill_taken_by_other_layer as readonly Rep[] | undefined) ?? FILL_LOSER_KEEPS[row.id];
     lose(row, rep => rep !== 'fill' && !!fallback?.includes(rep), owner!.id);
   }
 
@@ -208,8 +215,8 @@ function finish(rows: readonly StackedLayer[] | Row[], zoom: number): Stack {
   const radar = drawnRows.some(r => r.reps.includes('radar'));
   for (const row of drawnRows) {
     const layer = LAYERS[row.id]!, o: Record<string, number> = {};
-    const fillStops = (layer.fill?.opacity ?? layer.opacity) as Stops;
-    if (row.reps.includes('fill')) o.fill = stopsAt(fillStops, zoom);
+    const fillStops = (layer.fill?.opacity ?? layer.opacity) as Stops | undefined;
+    if (row.reps.includes('fill')) o.fill = fillStops ? stopsAt(fillStops, zoom) : layer.glow!.opacity!;
     if (row.reps.includes('radar')) o.radar = stopsAt(layer.opacity as Stops, zoom);
     if (row.reps.includes('veil')) {
       o.veil = row.id === 'clouds'
