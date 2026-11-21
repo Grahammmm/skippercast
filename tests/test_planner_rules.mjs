@@ -209,7 +209,7 @@ test('reef_missing_rules_one_notice_two_links: no registry groups the two unconf
         assert.equal((out.match(/app-mark-regs-badge/g) ?? []).length, 1, lang);
         assert.equal(t.split(m.t('planRules.check', lang)).length - 1, 1, `${lang}: one caution`);
         assert.equal((out.match(/class="export-note"/g) ?? []).length, 2, `${lang}: one freshness line and the one legal note`);
-        assert.match(out, /<strong>lingcod, rockfish<\/strong>/);
+        assert.match(out, /<strong>Lingcod, Reef rockfish<\/strong>/);
         assert.equal(hrefs(out).length, 2, lang);
         assert.doesNotMatch(out, /data-status="open"/);
       }

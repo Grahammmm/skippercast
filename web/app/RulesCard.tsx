@@ -6,6 +6,7 @@ import {useEffect} from 'preact/hooks';
 import {PROFILE_TABLE} from '../profile.ts';
 import {markData} from '../map/marks.ts';
 import {areaPageOnly, freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, speciesPage, verifiedText, type RulesRegion} from '../regs.ts';
+import {rulesTargetName} from '../rules-target-name.ts';
 import {language, t} from '../i18n.ts';
 import {profile, species} from '../state.ts';
 import {zone} from './region-info.ts';
@@ -25,7 +26,7 @@ export function RulesLine({mark}: {mark: Mark}) {
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, data = loaded?.region === region.id ? loaded.data : null;
   const at = dockState(new Date(), zone()).at, day = dateTimeFormat('en-CA', zone(), {year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
   const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region, lang), page = speciesPage(data, target, region, lang), fresh = freshnessLabel(data, target, state, region, Date.now(), lang);
-  const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target, wording = lang === 'es' ? 'en' : undefined;
+  const name = rulesTargetName(target, state.profile?.name, lang), wording = lang === 'es' ? 'en' : undefined;
   const cell = (label: string, values: readonly string[]) => values.length ? <div><dt>{label}</dt>{values.map(v => <dd key={v} class="ui-mono" lang={wording}>{v}</dd>)}</div> : null;
   return (
     <div class="app-mark-regs" role="group" aria-label={t('rules.glance', lang, {name})}>
