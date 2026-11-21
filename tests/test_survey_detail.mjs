@@ -14,10 +14,10 @@ const decode = value => decodeSurveyDetail('test-coast', value, reviewed);
 // An interpolated 1 m grid also stays estimated, and compiled never gets a measured tier.
 test('the MB-09 per-cell tier governs copy, not the nominal resolution', () => {
   const examples = [
-    [{tier: 'estimated', grid_m: 1, source: 'Test interpolation'}, 'estimated (1 m grid, Test interpolation)'],
-    [{tier: 'estimated', grid_m: 2, source: 'Test survey'}, 'estimated (2 m grid, Test survey)'],
+    [{tier: 'estimated', grid_m: 1, source: 'Test interpolation'}, 'estimated (1 m grid)'],
+    [{tier: 'estimated', grid_m: 2, source: 'Test survey'}, 'estimated (2 m grid)'],
     [{tier: '2m', grid_m: 2, source: 'Test survey'}, '2 m'],
-    [{tier: 'estimated', grid_m: 4, source: 'Test compiled', grid_tier: '4-16m-compiled'}, 'estimated (4 m grid, Test compiled)'],
+    [{tier: 'estimated', grid_m: 4, source: 'Test compiled', grid_tier: '4-16m-compiled'}, 'estimated (4 m grid)'],
     [{tier: '1m-measured', grid_m: 1, source: 'Test survey'}, '1 m measured'],
   ];
   assert.deepEqual(decode(document(examples.map(([p]) => feature({...p, sources: [p.grid_tier ? 'test-compiled' : 'test-survey']}))))
