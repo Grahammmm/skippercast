@@ -63,6 +63,8 @@ export function parseResponse(data: ExternalJSON): LookupResult {
   if (start < 0 || end <= start) throw Error('lookup returned no specification');
   let raw: ExternalJSON;
   try { raw = JSON.parse(text.slice(start, end + 1)); } catch { throw Error('lookup returned unreadable specification'); }
+  // Burn rate is manual-only. Omitting it from the boat also excludes its estimated flag below.
+  delete raw.burn_gph;
   const boat = normalizeBoat(raw);
   if (!boat.loa_ft) throw Error('lookup could not find this boat');
   const sources: {url: string; title: string}[] = [];

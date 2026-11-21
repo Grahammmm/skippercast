@@ -3,11 +3,9 @@
   python scripts/pytest_report.py pytest-survey.xml --title "Survey science" --strict-skips
 
 prints a Markdown table (tests per layer, outcomes, time, slowest tests) to stdout;
-CI appends it to $GITHUB_STEP_SUMMARY. With --strict-skips it exits 1 when any test
-was skipped for a reason not in ALLOWED_SKIPS. The survey-science job installs every
-package the suite uses, so the only legitimate skips left are tests that re-derive a
-receipt from private, gitignored caches (var/, original survey archives) that exist
-only on the maintainer's machine; each has a committed-output twin that does run.
+CI appends it to $GITHUB_STEP_SUMMARY. With --strict-skips it exits 1 for skips
+outside ALLOWED_SKIPS and the exact HISTORICAL_REPLAY_SKIPS pairs. The latter are
+read-only replays of private local evidence; their portable checks still run in CI.
 
 An expected failure (pytest writes <skipped type="pytest.xfail">) is not a skip: it is its
 own counted outcome, "xfailed", and --strict-skips ignores it. Only that exact type counts;
@@ -53,6 +51,15 @@ ALLOWED_SKIPS = frozenset({
     'run after fetching the pinned original ROV release',
 })
 
+# SCA-110: private history is not provisioned in CI. LedgerReadCost, BlockRule and
+# SelectBlockMode exercise the corresponding behaviors with portable inputs.
+HISTORICAL_REPLAY_SKIPS = {
+    ('tests.unit.test_coastal_managed_output_overlap.PreservedAttempt5Ledger'
+     '::test_attempt5_ledger_is_accepted_unchanged'): 'Preserved attempt-5 coastal ledger absent',
+    ('tests.unit.test_coastal_four128_block_selection.RealReceiptOnThisMachine'
+     '::test_rule_over_the_real_candidate_table'): 'Historical four128 pre-scan receipt absent',
+}
+
 LAYERS = (('research.tests.gis.', 'claims (gis)'), ('research.tests.', 'claims'),
           ('tests.unit.', 'unit'), ('tests.contract.', 'contract'),
           ('tests.integration.', 'integration'), ('tests.gis.', 'gis'))
@@ -91,6 +98,11 @@ def cases(paths):
                    'outcome': outcome, 'reason': reason, 'time': time or 0.0, 'time_unreadable': time is None}
 
 
+def historical_replay_absent(row):
+    return (row['outcome'] == 'skipped' and row['id'] in HISTORICAL_REPLAY_SKIPS
+            and row['reason'] == HISTORICAL_REPLAY_SKIPS[row['id']])
+
+
 def report(rows, title, slowest=10):
     by_layer = Counter(row['layer'] for row in rows)
     outcomes = Counter(row['outcome'] for row in rows)
@@ -107,13 +119,17 @@ def report(rows, title, slowest=10):
                          f"| {sum(r['time'] for r in layer_rows):.1f} |")
     unreadable = sum(bool(row.get('time_unreadable')) for row in rows)
     lines += ['', f'{unreadable} test time(s) unreadable; counted as 0 s'] if unreadable else []
+    absent = [f"- {row['reason']} (`{row['id']}`)" for row in rows if historical_replay_absent(row)]
+    if absent:
+        lines += ['', 'Historical replays not run:', '', *absent]
     lines += ['', f'Slowest {slowest}:', '']
     lines += [f"- {row['time']:.2f} s `{row['id']}`" for row in sorted(rows, key=lambda r: -r['time'])[:slowest]]
     return '\n'.join(lines) + '\n'
 
 
 def unexpected_skips(rows, allowed=ALLOWED_SKIPS):
-    return [row for row in rows if row['outcome'] == 'skipped' and row['reason'] not in allowed]
+    return [row for row in rows if row['outcome'] == 'skipped'
+            and row['reason'] not in allowed and not historical_replay_absent(row)]
 
 
 def _receipt_ok(run):
@@ -210,7 +226,7 @@ def main(argv=None):
                         help='applicable required job name (repeat for every required job)')
     parser.add_argument('--title', default='Python tests')
     parser.add_argument('--strict-skips', action='store_true',
-                        help='exit 1 if a test was skipped for a reason not in ALLOWED_SKIPS '
+                        help='exit 1 for skips outside the private-cache allowlists '
                              '(expected failures, counted as xfailed, are not skips)')
     args = parser.parse_args(argv)
     if args.required_job and not args.ci_runs:
