@@ -21,7 +21,7 @@ type FootprintProperties = {tier: Tier; grid_m?: number; source?: string; source
 function surveyDetailText(p: Record<string, unknown>): string | null {
   if (p.tier === 'none') return 'No survey';
   if (!finite(p.grid_m) || p.grid_m <= 0 || !text(p.source)) return null;
-  if (p.tier === 'estimated') return `estimated (${p.grid_m} m grid, ${p.source})`;
+  if (p.tier === 'estimated') return `estimated (${p.grid_m} m grid)`;
   return measured(p.tier) && p.grid_m <= maximumGrid[p.tier] ? measuredLabel[p.tier] : null;
 }
 
@@ -137,7 +137,7 @@ export function surveyDetailLayers(source: string, id: string, pattern: string, 
     {id: `${id}-outline`, source, type: 'line',
       paint: {'line-color': p.mapSurveyInk, 'line-width': 1.4, 'line-dasharray': [4, 3]}},
     {id: `${id}-label`, source, type: 'symbol',
-      layout: {'text-field': ['case', ['==', tier, 'estimated'], 'estimated', ['get', 'label']],
+      layout: {'text-field': ['get', 'label'],
         'text-font': [LABEL_FONT], 'text-size': 11},
       paint: {'text-color': p.mapSurveyInk, 'text-halo-color': p.mapSurveyHalo, 'text-halo-width': 1.4}},
   ];
