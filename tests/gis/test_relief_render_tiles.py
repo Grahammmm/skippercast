@@ -1,6 +1,7 @@
 """Synthetic controls for the R5a nearshore raster boundary (no region data)."""
 import json
 import runpy
+import warnings
 
 import pytest
 
@@ -109,3 +110,45 @@ def test_render_certified_zoom_requires_every_core_cell_and_never_opens_substrat
         assert metadata[0][zoom]['tiles'] > 0 and metadata[0][zoom]['omitted_uncertified'] == 0
         assert metadata[1][zoom]['tiles'] < metadata[0][zoom]['tiles']
         assert metadata[1][zoom]['omitted_uncertified'] > 0
+
+
+def test_native_paint_stays_inside_mosaic_land_mask(tmp_path):
+    # Native water can straddle a coarser mosaic shoreline. Native alpha alone
+    # must not let that water paint over mosaic land or missing evidence.
+    np = pytest.importorskip('numpy')
+    rio = pytest.importorskip('rasterio')
+    pytest.importorskip('scipy')
+    from rasterio.errors import NotGeoreferencedWarning
+    from rasterio.io import MemoryFile
+    from rasterio.warp import Resampling, reproject, transform_bounds
+    from skippercast.relief import qa
+    from skippercast.seafloor.rough_first import read_tiles
+
+    mosaic = np.full((30, 30), -10, dtype='float32')
+    mosaic[:, :12] = 5
+    bg = _grid(rio, tmp_path / 'mosaic.tif', mosaic, (0, 300), 10)
+    native = _grid(rio, tmp_path / 'native.tif', np.full((420, 420), -1, dtype='float32'), (-60, 360), 1)
+    row = dict(id='synthetic', resolution_m=1, path=str(native), max_zoom=15)
+    bounds = transform_bounds('EPSG:3310', 'EPSG:4326', 5, 5, 295, 295, densify_pts=21)
+    tiles._render(bg, tmp_path / 'native.json', [row], bounds, tmp_path, 'synthetic', style.load().view('baked'))
+
+    water_paint = {14: 0, 15: 0}
+    land_paint = missing_paint = 0
+    archive = read_tiles((tmp_path / 'relief.pmtiles').read_bytes())
+    with rio.open(bg) as source:
+        for (z, x, y), blob in archive.items():
+            if z not in water_paint:
+                continue
+            with warnings.catch_warnings(), MemoryFile(blob, ext='.png') as memory:
+                warnings.simplefilter('ignore', NotGeoreferencedWarning)
+                with memory.open(driver='PNG') as image:
+                    opaque = image.dataset_mask() != 0
+            evidence = np.full(opaque.shape, np.nan, dtype='float32')
+            reproject(rio.band(source, 1), evidence, dst_transform=qa._tile_grid(z, x, y),
+                      dst_crs='EPSG:3857', dst_nodata=np.nan, resampling=Resampling.nearest, tolerance=0)
+            finite = np.isfinite(evidence)
+            land_paint += np.count_nonzero(opaque & finite & (evidence > 3))
+            missing_paint += np.count_nonzero(opaque & ~finite)
+            water_paint[z] += np.count_nonzero(opaque & finite & (evidence <= 3))
+    assert land_paint == missing_paint == 0, (land_paint, missing_paint, water_paint)
+    assert water_paint[14] > 0 and water_paint[15] > 0, water_paint

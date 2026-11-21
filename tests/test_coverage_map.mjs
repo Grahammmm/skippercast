@@ -22,18 +22,27 @@ const pointer = id => ({
 });
 
 // Model only the DOM boundary of the page: installing markup creates the row
-// labels, and setting their text updates what the reader sees without replacing links.
+// labels, and updating their contents leaves each surrounding row intact.
 function listHost() {
   let html = '', labels = [];
   return {
     set innerHTML(value) {
       html = value;
       labels = [...html.matchAll(/<span data-depth-region="([^"]+)">([^<]*)<\/span>/g)]
-        .map(([, id, textContent]) => ({dataset: {depthRegion: id}, textContent}));
+        .map(([, id, initial]) => {
+          let contents = initial;
+          return {
+            dataset: {depthRegion: id},
+            set textContent(value) { contents = value; },
+            get textContent() { return contents.replace(/<[^>]+>/g, ''); },
+            set innerHTML(value) { contents = value; },
+            get innerHTML() { return contents; },
+          };
+        });
     },
     get innerHTML() {
       let i = 0;
-      return html.replace(/(<span data-depth-region="[^"]+">)[^<]*/g, (_, open) => open + labels[i++].textContent);
+      return html.replace(/(<span data-depth-region="[^"]+">)[^<]*/g, (_, open) => open + labels[i++].innerHTML);
     },
     querySelectorAll: selector => selector === '[data-depth-region]' ? labels : [],
     states: () => labels.map(label => [label.dataset.depthRegion, label.textContent]),
@@ -162,7 +171,7 @@ test('page uses the public index and handles network and HTTP failures in the co
 });
 
 // A forgotten catalogue projection or fall-through to English breaks the translated row states.
-test('C1: Spanish Coverage localizes both depth states without renaming regions', async ({mock}) => {
+test('C1: Spanish Coverage localizes the Sources link and keeps region names', async ({mock}) => {
   const page = readFileSync(new URL('../dist/coverage.html', import.meta.url), 'utf8');
   const heading = {textContent: 'Coverage', getAttribute: () => page.match(/<h1 data-i18n="([^"]+)"/)?.[1]};
   const {doc, svg, list} = await loadPage(mock, 'spanish', async url => {
@@ -177,11 +186,12 @@ test('C1: Spanish Coverage localizes both depth states without renaming regions'
   assert.match(list.innerHTML, /Point Reyes — Vista previa \(revisión incompleta; consulta el aviso\)/);
   assert.match(list.innerHTML, /Regiones que no se pudieron dibujar: 1/);
   assert.match(renderList(coverageModel(null), 'es'), /No se pudo leer la lista de regiones/);
-  assert.deepEqual(list.states(), [['point-reyes', 'Mapa de profundidad: disponible'], ['other', 'Mapa de profundidad: aún no disponible']]);
+  assert.deepEqual(list.states(), [['point-reyes', 'Mapa de profundidad: disponible — Fuentes'], ['other', 'Mapa de profundidad: aún no disponible']]);
+  assert.deepEqual(hrefs(list.innerHTML), ['/map?region=point-reyes', '/sources#region-point-reyes', '/map?region=other']);
 });
 
 // A 200 response alone is not readiness; transport and JSON exceptions also need a final state.
-test('C1: English Coverage labels only decoder-ready pointers live', async ({mock}) => {
+test('C1: English Coverage links only decoder-ready pointers to their credits', async ({mock}) => {
   const cases = {
     ready: () => json(pointer('ready')),
     missing: () => new Response(null, {status: 404}),
@@ -201,21 +211,23 @@ test('C1: English Coverage labels only decoder-ready pointers live', async ({moc
     if (url === '/regions/index.json') return json({regions: ids.map(id => region(id, bounds))});
     return cases[url.match(/^\/catalog\/relief\/([a-z]+)\.json$/)?.[1]]();
   });
-  assert.deepEqual(list.states(), [['ready', 'Depth map: live'], ...ids.slice(1).map(id => [id, 'Depth map: not yet'])]);
+  assert.deepEqual(list.states(), [['ready', 'Depth map: live — Sources'], ...ids.slice(1).map(id => [id, 'Depth map: not yet'])]);
+  assert.deepEqual(hrefs(list.innerHTML), ['/map?region=ready', '/sources#region-ready', ...ids.slice(1).map(id => `/map?region=${id}`)]);
 });
 
 // Hold the first fetch open: a sequential or all-or-nothing implementation stalls the other label.
-test('C2: render before parallel GETs, deduplicate regions and request no archives', async ({mock}) => {
+test('C2: render before parallel GETs and make no additional requests for credits', async ({mock}) => {
   const first = Promise.withResolvers(), list = listHost(), requests = [];
   const {svg} = await loadPage(mock, 'parallel', async (url, options) => {
+    requests.push([url, options?.method ?? 'GET', options?.redirect, hrefs(list.innerHTML)]);
     if (url === '/regions/index.json') return json({regions: [
       region('north', bounds), region('south', bounds), region('north', bounds), region('retired', bounds, {status: 'retired'})]});
-    requests.push([url, options?.method ?? 'GET', options?.redirect, hrefs(list.innerHTML)]);
     if (url === '/catalog/relief/north.json') return first.promise;
     throw new TypeError('offline');
   }, {list});
   const links = ['/map?region=north', '/map?region=south', '/map?region=north'];
   const expected = [
+    ['/regions/index.json', 'GET', undefined, []],
     ['/catalog/relief/north.json', 'GET', 'error', links],
     ['/catalog/relief/south.json', 'GET', 'error', links],
   ];
@@ -225,15 +237,15 @@ test('C2: render before parallel GETs, deduplicate regions and request no archiv
   first.resolve(json(pointer('north')));
   await tick();
   assert.deepEqual(requests, expected);
-  assert.deepEqual(list.states(), [['north', 'Depth map: live'], ['south', 'Depth map: not yet'], ['north', 'Depth map: live']]);
-  assert.deepEqual(hrefs(list.innerHTML), links);
+  assert.deepEqual(list.states(), [['north', 'Depth map: live — Sources'], ['south', 'Depth map: not yet'], ['north', 'Depth map: live — Sources']]);
+  assert.deepEqual(hrefs(list.innerHTML), ['/map?region=north', '/sources#region-north', '/map?region=south', '/map?region=north', '/sources#region-north']);
 });
 
 // A valid pointer carries attribution; rendering that payload instead of just its state leaks it here.
-test('C3: Coverage shows availability without source names or IDs', async ({mock}) => {
+test('C2: Coverage shows a generic credits link without source names or IDs', async ({mock}) => {
   const {svg, list} = await loadPage(mock, 'no-sources', async url => url === '/regions/index.json'
     ? json({regions: [region('port', bounds)]}) : json(pointer('port')));
-  assert.equal(list.innerHTML, '<ul><li><a href="/map?region=port">port — Preview (not fully reviewed; see its banner)</a> — <span data-depth-region="port">Depth map: live</span></li></ul>');
+  assert.equal(list.innerHTML, '<ul><li><a href="/map?region=port">port — Preview (not fully reviewed; see its banner)</a> — <span data-depth-region="port">Depth map: live — <a href="/sources#region-port">Sources</a></span></li></ul>');
   assert.doesNotMatch(svg, /Fictional Survey Institute|fixture-survey/);
 });
 
