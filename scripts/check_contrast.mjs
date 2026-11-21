@@ -714,7 +714,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // no backing, opacity, token or threshold changed.
   // MSKL-3 adds kit-layer rows ("<layer>: no data yet") using the existing app-legend-plain/app-legend-note text roles, with no swatch;
   // no backing, opacity, token or threshold changed.
-  "legendTsx": "f39add6e8d43a87b166f8e54dbd6a20355ffcb2328e949f1c2801c155d2a34ea"
+  // MSKL-3 fix round: the kit rows read live state (no data yet, withheld, stale, dated, replaced by, drawn) in the same
+  // app-legend-plain/app-legend-note roles; a replaced field hides its own row. No backing, opacity, token or threshold changed.
+  "legendTsx": "7dc2e083fe909d727607359cd2c46d23ce08058f452c1e0ff3cf60a6d0a53387"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

@@ -90,7 +90,8 @@ test('layer_copy_all_ids_and_english_metadata', async () => {
   assert.equal(m.chartOnly('es'), 'Solo en la Carta');
   assert.deepEqual(m.railEntries(), m.RAIL_ENTRIES);
   assert.deepEqual(m.railEntries('es').map(e => e.id), m.RAIL_ENTRIES.map(e => e.id), 'order and ids never depend on the language');
-  assert.deepEqual(m.railEntries('es').map(e => e.label), ['Fondo marino', 'Corrientes', 'Temperatura del agua', 'Contraste de temperatura', 'Frentes de temperatura', 'Clorofila', 'Oleaje y viento', 'Estaciones', 'Flota chárter', 'Nubes']);
+  assert.deepEqual(m.railEntries('es').map(e => e.label), ['Fondo marino', 'Corrientes', 'Temperatura del agua', 'Contraste de temperatura', 'Frentes de temperatura', 'Clorofila', 'Oleaje y viento', 'Estaciones', 'Flota chárter', 'Nubes',
+    'Claridad del agua', 'Altura de la superficie del mar', 'Afloramiento', 'Temperatura bajo la superficie', 'Salinidad', 'Hielo marino', 'Presión', 'Radar de lluvia', 'Visibilidad y niebla']);
   const swell = m.railEntries('es').find(e => e.id === 'swell').basis;
   assert.equal(swell, `${m.layerCopy('swell', 'es').basis} ${m.layerCopy('wind', 'es').basis}`);
   assert.equal(m.railEntries('es').find(e => e.id === 'fleet').basis, 'Zonas chárter y esfuerzo AIS comercial de 2024; la actividad se infiere del movimiento.');

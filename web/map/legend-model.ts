@@ -226,6 +226,20 @@ export type KitRow = {
 
 export const kitLabelId = (id: string): string => `layer.skl.${id}.label`;
 
+import {dataState, type KitModuleState} from './kit-layers/no-data.ts';
+import type {StackedLayer} from './stacking.ts';
+
+/** Only a positive drawing result is called drawn; missing/unknown metadata never is. */
+export function liveKitRow(state: KitModuleState | undefined, stack: StackedLayer | undefined): KitRowState {
+  const status = dataState(state);
+  if (status === 'no-data') return {kind: 'no-data'};
+  if (state?.kind === 'withheld') return state;
+  if (stack?.status === 'replaced' && stack.replacedBy) return {kind: 'replaced', by: stack.replacedBy};
+  if (stack?.status !== 'drawn' || !stack.reps.length) return {kind: 'no-data'};
+  if (state?.kind === 'stale' || state?.kind === 'dated') return state;
+  return {kind: 'drawn'};
+}
+
 /** A kit layer's legend row for `state`. Throws on a withheld/stale/dated row without its time: a date is never invented. */
 export function kitRow(id: string, state: KitRowState): KitRow {
   const labelId = kitLabelId(id), need = (value: string, what: string) => {

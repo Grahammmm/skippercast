@@ -151,7 +151,7 @@ def copy_generator(tmp_path):
     paths = [GEN, "src/skippercast/__init__.py", "src/skippercast/style/__init__.py", RELEASE,
              "style/index.json", "style/groups.json", "web/tokens.css",
              "web/map/nearshore-style.gen.ts", "packages/coast/src/palette.ts",
-             "scripts/style/layers_fragment.py", LAYERS, STACKING, FRAGMENT, "web/map/layers-style.gen.ts"]
+             "scripts/style/layers_fragment.py", LAYERS, STACKING, FRAGMENT, "web/map/layers-style.gen.ts", "web/map/layers-stacking.gen.ts"]
     for name in paths:
         dest = tmp_path / name
         dest.parent.mkdir(parents=True, exist_ok=True)

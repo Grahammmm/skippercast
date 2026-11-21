@@ -120,7 +120,7 @@ test('P4: one veil (latest wins), the cloud veil cap under a field or radar, sea
 });
 
 // Contract P5: at most two isoline sets, the latest two; the second set is dashed; SST's auto isotherms (from
-// isolines_from_zoom) count as one set and take only a free slot. Bug: three sets draw, or auto isotherms push a third.
+// isolines_from_zoom) reserve one set. Bug: three sets draw, or automatic isotherms disappear behind two explicit sets.
 test('P5: two isoline sets at most (latest), the second dashed; SST auto isotherms count as one set', () => {
   const three = resolveStack(on('ssh', 'pressure', 'sst-breaks'), LO);
   assert.equal(row(three, 'ssh').status, 'replaced');
@@ -134,7 +134,9 @@ test('P5: two isoline sets at most (latest), the second dashed; SST auto isother
   assert.ok(!repsOf(resolveStack(on('sst-fill'), LO), 'sst-fill').includes('auto isotherms'));
   assert.ok(!repsOf(resolveStack(on('sst-fill', 'sst-breaks'), HI), 'sst-fill').includes('auto isotherms'));
   const full = resolveStack(on('sst-fill', 'ssh', 'pressure'), HI);
-  assert.ok(!repsOf(full, 'sst-fill').includes('auto isotherms'));
+  assert.ok(repsOf(full, 'sst-fill').includes('auto isotherms'));
+  assert.equal(row(full, 'ssh').status, 'replaced');
+  assert.equal(row(full, 'ssh').replacedBy, 'pressure');
   assert.equal(full.counts.isolines, STACKING.caps.isolines);
   const withOne = resolveStack(on('sst-fill', 'ssh'), HI);
   assert.equal(withOne.counts.isolines, 2);
@@ -185,7 +187,7 @@ test('the no-data stubs: one per NO_DATA_YET layer, no overlay, never auto-enabl
   assert.deepEqual(Object.keys(KIT_LAYER_MODULES).sort(), [...NO_DATA_YET].sort());
   for (const [id, m] of Object.entries(KIT_LAYER_MODULES)) {
     assert.equal(m.id, id);
-    assert.equal(m.state, 'no-data');
+    assert.deepEqual(m.state, {kind: 'no-data'});
     assert.equal(m.autoEnable, false);
     assert.equal(m.overlay(), null);
   }

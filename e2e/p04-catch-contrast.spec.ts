@@ -434,7 +434,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MSK-1: only tokensCss source digest/comment changed in the checker; no contrast logic changed.
   // MSK-2: only the legendTsx surface hash and its comment changed; contrast() untouched. Rebound from the final bytes.
   // MSKL-1: only the tokensCss surface hash and applicability comment changed; contrast() and all gates are unchanged.
-  "scripts/check_contrast.mjs": "70b848ad2b0bc66cbee97525ad67c3f81673cc100cb89c9c2d097fd22019323a",
+  // MSKL-3 (with its fix round): only the legendTsx surface hash and its comments changed; contrast() and all gates unchanged. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "7e74bfaaa5587edbfc7afa9c4c9adcebe10bb4612b393e176b79b944dfb6f926",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // SCA-479: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.

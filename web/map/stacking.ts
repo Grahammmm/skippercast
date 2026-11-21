@@ -6,14 +6,13 @@
 //
 // Design choices the kit text leaves open (low risk, reversible; recorded in the MSKL-3 commit):
 // - "Latest wins" is used wherever a cap would otherwise be exceeded (P1 fill, P4 veil, P5 explicit isoline sets), as P1 states.
-// - SST fill's automatic isotherms only take an isoline slot that no switched-on isoline layer uses, and they draw only while
-//   SST breaks (the same lines) is not drawing ("with SST fill on and BREAKS off").
+// - SST fill's automatic isotherms reserve one isoline slot while SST breaks (the same lines) is not drawing.
 // - A layer with no data yet, or withheld for age, draws nothing and so takes part in no rule (its row says why).
 // - A preset or the user may leave out an optional part of a layer (kelp-habitat's shore lines, `OPTIONAL_PARTS`); a part a
 //   P-rule governs (fills, flow, arrows, dots) is never optional: the rules decide it.
 //
 // Erasable syntax only: tests/test_stacking.mjs and scripts/style/export_cases/_stacking.mjs import it by type stripping.
-import {LAYERS_STYLE} from './layers-style.gen.ts';
+import {SKL_LAYERS, SKL_STACKING} from './layers-stacking.gen.ts';
 
 type Stops = readonly (readonly [number, number])[];
 interface StyleLayer {
@@ -39,10 +38,10 @@ interface Stacking {
   readonly presets: Readonly<Record<string, {readonly view: string; readonly zoom: number; readonly layers: readonly {readonly layer: string; readonly as: readonly string[]}[]}>>;
 }
 
-const LAYERS = LAYERS_STYLE.layers as unknown as Readonly<Record<string, StyleLayer>>;
-export const STACKING = LAYERS_STYLE.stacking as unknown as Stacking;
+const LAYERS = SKL_LAYERS as unknown as Readonly<Record<string, StyleLayer>>;
+export const STACKING = SKL_STACKING as unknown as Stacking;
 
-export type KitLayerId = keyof typeof LAYERS_STYLE.layers;
+export type KitLayerId = keyof typeof SKL_LAYERS;
 /** The 24 kit layers in the kit's own order (01 sst-fill … 24 ais-fleet). */
 export const KIT_LAYER_IDS = Object.freeze(Object.keys(LAYERS) as KitLayerId[]);
 export type CapClass = 'color_field' | 'veil' | 'isolines' | 'particles' | 'arrows_barbs';
@@ -80,6 +79,8 @@ export type KitDataState = 'ready' | 'stale' | 'dated' | 'no-data' | 'withheld';
 export interface StackInput {
   readonly id: KitLayerId;
   readonly state?: KitDataState;
+  /** Live implementations need not support every representation in the kit. */
+  readonly available?: readonly Rep[];
   /** Optional parts left out (only `OPTIONAL_PARTS` are honoured). */
   readonly without?: readonly Rep[];
 }
@@ -145,8 +146,8 @@ interface Row {id: KitLayerId; status: StackStatus; reps: Rep[]; replacedBy?: Ki
 
 /** P1–P6 over the switched-on layers (oldest first). */
 export function resolveStack(input: readonly StackInput[], zoom: number): Stack {
-  const rows: Row[] = input.map(({id, state, without}) => drawable(state)
-    ? {id, status: 'drawn', reps: soloReps(id).filter(r => !optionalOff(id, without, r)), opacity: {}}
+  const rows: Row[] = input.map(({id, state, without, available}) => drawable(state)
+    ? {id, status: 'drawn', reps: (available ?? soloReps(id)).filter(r => !optionalOff(id, without, r)), opacity: {}}
     : {id, status: state as StackStatus, reps: [], opacity: {}});
   const drawn = () => rows.filter(r => r.status === 'drawn');
   const lose = (row: Row, keep: (rep: Rep) => boolean, by: KitLayerId) => {
@@ -178,14 +179,15 @@ export function resolveStack(input: readonly StackInput[], zoom: number): Stack 
   const veilOwners = veils.slice(-STACKING.caps.veil);
   for (const row of veils) if (!veilOwners.includes(row)) lose(row, rep => rep !== 'veil', veilOwners.at(-1)!.id);
 
-  // P5-isolines: at most `caps.isolines` sets, the latest switched on; SST fill's auto isotherms take a free slot only.
+  // P5: reserve the automatic SST set when breaks are not among the winning explicit sets.
   const isLine = (rep: Rep) => rep === 'isolines' || rep === 'isotherms';
   const sets = drawn().filter(r => r.reps.some(isLine));
-  const kept = sets.slice(-STACKING.caps.isolines);
-  for (const row of sets) if (!kept.includes(row)) lose(row, rep => !isLine(rep), kept.at(-1)!.id);
   const sst = drawn().find(r => r.id === 'sst-fill' && r.reps.includes('fill'));
-  const breaksDrawn = drawn().some(r => r.id === 'sst-breaks');
-  if (sst && !breaksDrawn && zoom >= STACKING.isolines_from_zoom && kept.length < STACKING.caps.isolines) sst.reps.push('auto isotherms');
+  const candidates = sets.slice(-STACKING.caps.isolines);
+  const auto = !!sst && zoom >= STACKING.isolines_from_zoom && !candidates.some(r => r.id === 'sst-breaks');
+  const kept = auto ? sets.slice(-(STACKING.caps.isolines - 1)) : candidates;
+  for (const row of sets) if (!kept.includes(row)) lose(row, rep => !isLine(rep), kept.at(-1)?.id ?? sst!.id);
+  if (sst && auto) sst.reps.push('auto isotherms');
   const lineRows = drawn().filter(r => r.reps.some(rep => CLASS[rep] === 'isolines'));
   if (lineRows.length > 1) lineRows.at(-1)!.dashed = true;
 

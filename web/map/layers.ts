@@ -19,8 +19,9 @@ import type {ChartMark} from './coastline.ts';
 import type {Palette, PaletteKey} from './palette.ts';
 import type {StatusPart} from './status-copy.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
-// Types only: the stacking engine (and the generated layer tokens it reads) stays out of the app's first load.
-import type {KitLayerId} from './stacking.ts';
+import type {KitLayerId, Rep, StackedLayer} from './stacking.ts';
+import type {Engine, Overlay} from './engine.ts';
+import {KIT_LAYER_MODULES} from './kit-layers/index.ts';
 import {t, type Language, type StringId} from '../i18n.ts';
 
 /** Where a layer draws: the MapLibre Chart, the packages/coast terrain (2D and 3D), or both. */
@@ -28,7 +29,7 @@ export type LayerPresentation = 'chart' | 'terrain';
 /** `static` never changes with the clock; `hour` follows the dock's forecast hour; `observed` shows real frames only. */
 export type TimeBehaviour = 'static' | 'hour' | 'observed';
 /** A rail entry, a base (one at a time, under the fields), or always drawn where its gate allows. */
-export type LayerControl = RailId | 'base' | 'always';
+export type LayerControl = RailId | KitLayerId | 'base' | 'always';
 export interface LegendRow {readonly label: string; readonly swatch?: PaletteKey}
 /** Palette keys the terrain's overlays accept (packages/coast COAST_OVERLAY_COLORS). */
 export type OverlayRole = CoastOverlayColor & PaletteKey;
@@ -63,6 +64,7 @@ export interface LayerEntry {
   readonly gate?: string;
   /** The dev-plan task that draws it. */
   readonly task: string;
+  readonly kit?: (typeof KIT_LAYER_MODULES)[string];
   /** Its drape on the terrain, for an entry whose presentations include `terrain` and that the registry drapes (FE-82). */
   readonly terrain?: TerrainDrape;
 }
@@ -158,7 +160,7 @@ export function zBefore(layer: string): string[] {
  * and their legend row says "no data yet". Copy: `layer.skl.<id>.label`.
  */
 export interface KitLayerRow {readonly id: KitLayerId; readonly appIds: readonly string[]; readonly noData: boolean; readonly labelId: StringId}
-export const NO_DATA_YET: readonly KitLayerId[] = Object.freeze(['kd490', 'ssh', 'upwelling', 'subsurface-temp', 'salinity', 'sea-ice', 'pressure', 'precip-radar', 'visibility-fog']);
+export const NO_DATA_YET: readonly KitLayerId[] = Object.freeze(Object.values(KIT_LAYER_MODULES).map(m => m.id));
 /**
  * DATA-LIVE-9 (E2E-16): who may ask for the relief overlay. Everyone, signed out included, on the Chart in the coast view
  * while the base map works; there is deliberately no admin or preview input. The pointer then decides: no `ready`
@@ -304,6 +306,11 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
     attribution: t('layer.attr.stations', 'en'), basis: copy('stations', 'basis', lang), task: 'CI6-18'}),
   entry({id: 'coastline', label: copy('coastline', 'label', lang), control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
     basis: copy('coastline', 'basis', lang), task: 'FE-11'}),
+  ...Object.values(KIT_LAYER_MODULES).map(kit => {
+    const label = copy(`skl.${kit.id}`, 'label', lang);
+    return entry({id: kit.id, control: kit.id, kit, label, presentations: ['chart'],
+      basis: t('legend.skl.noData', lang, {layer: label}), task: 'MSKL-3'});
+  }),
 ]);
 
 /** A registry sentence or label from the catalogue (layer.<id>.label | basis | legend<N>). */
@@ -330,6 +337,47 @@ export const KIT_LAYERS: readonly KitLayerRow[] = Object.freeze((Object.keys(KIT
 })));
 /** The kit row for `id`, or null when `id` is not a kit layer. */
 export const kitLayer = (id: string): KitLayerRow | null => KIT_LAYERS.find(k => k.id === id) ?? null;
+
+/** Switched-on order, independent of the order in which controllers finish loading. */
+export function selectedKitLayers(on: readonly string[], currentsOn: boolean): KitLayerId[] {
+  const controls = currentsOn ? on.includes('currents') ? on : [...on, 'currents'] : on.filter(id => id !== 'currents');
+  return [...new Set(controls.flatMap(control => KIT_LAYERS.filter(k => k.id === control && k.noData
+    || k.appIds.some(id => railLayers(control as LayerControl).some(e => e.id === id))).map(k => k.id)))];
+}
+
+export const chartStack = signal<readonly StackedLayer[]>([]);
+export const overlayKitId = (id: string) => kitLayer(id)?.noData ? kitLayer(id)?.id : KIT_LAYERS.find(k => k.appIds.includes(id))?.id;
+
+/** The parts actually implemented by the live Chart, not the kit's future wind fill or particles. */
+export function chartRep(owner: string, id: string): Rep | 'band-edge' | undefined {
+  switch (owner) {
+    case 'water-temp': return id === 'water-temp' ? 'fill' : id === 'skl-sst-band-edge' ? 'band-edge' : 'auto isotherms';
+    case 'swell': return id === 'swell' || id.startsWith('swell-period') ? 'fill' : id.startsWith('swell-direction') ? 'arrows' : undefined;
+    case 'wind': return 'barbs';
+    case 'sst-contrast': case 'sst-fronts': return 'isolines';
+    case 'chlorophyll': return 'fill';
+    case 'clouds': return 'veil';
+    case 'stations': return 'chips';
+    case 'commercial-ais': return 'hatch';
+    default: return undefined;
+  }
+}
+
+export function applyChartStack(engine: Engine, overlays: ReadonlyMap<string, Overlay>, rows: readonly StackedLayer[]): void {
+  for (const [owner, overlay] of overlays) {
+    const id = overlayKitId(owner), row = rows.find(r => r.id === id);
+    for (const layer of overlay.layers) {
+      const rep = chartRep(owner, layer.id);
+      if (!rep && !kitLayer(owner)?.noData) continue;
+      const visible = !!row && row.status === 'drawn' && (rep === 'band-edge' ? row.bandEdges
+        : rep === undefined || row.reps.includes(rep));
+      engine.setVisible(layer.id, !!visible && layer.layout?.visibility !== 'none');
+      if (visible && rep === 'fill' && row.opacity.fill !== undefined && (layer.type === 'raster' || layer.type === 'fill')) {
+        engine.setPaint(layer.id, `${layer.type}-opacity`, row.opacity.fill);
+      }
+    }
+  }
+}
 
 /** The registry entry for `id`; throws on an unknown id so a typo cannot hide a layer. */
 export function layerEntry(id: string): LayerEntry {

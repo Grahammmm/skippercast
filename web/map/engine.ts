@@ -101,6 +101,7 @@ export interface Engine {
   setCamera(camera: EngineCamera): void;
   /** Show or hide a style layer; before the style has loaded, the latest call per layer waits for it. */
   setVisible(layerId: string, visible: boolean): void;
+  setPaint(layerId: string, property: string, value: unknown): void;
   /** Replace a GeoJSON source's data; before the style has loaded, the latest data per source waits for it. */
   setData(sourceId: string, data: SourceData): void;
   /** How many features of `layerId` are drawn in view now (labels count once placed). */
@@ -301,6 +302,10 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     visible: Map<string, boolean>; data: Map<string, SourceData>;
     overlays: Map<string, {overlay: Overlay | null; before?: string | readonly string[]}>; opacity: Map<string, number>; images: Map<string, FieldTexture>;
   } | null = {visible: new Map(), data: new Map(), overlays: new Map(), opacity: new Map(), images: new Map()};
+  const stackPaint = new Map<string, Map<string, unknown>>();
+  const applyStackPaint = (id: string) => {
+    if (map.getLayer(id)) stackPaint.get(id)?.forEach((value, property) => restylable.setPaintProperty(id, property, value));
+  };
   const themeRoot = !options.still && typeof document !== 'undefined' ? document.documentElement : undefined;
   let paintedTheme = themeRoot?.dataset.theme;
   const restylable: Restylable = {
@@ -316,6 +321,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   const applyTheme = (): void => {
     if (!themeRoot || early || destroyed || themeRoot.dataset.theme === paintedTheme) return;
     restyle(restylable, readPalette(), [{themePaint: basemapThemePaint}, ...overlays.values()]);
+    stackPaint.forEach((_paint, id) => applyStackPaint(id));
     paintedTheme = themeRoot.dataset.theme;
   };
   // The effective choice lives on the root, including OS changes while Auto is selected.
@@ -345,6 +351,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     const under = ([] as string[]).concat(before ?? []).find(id => map.getLayer(id));
     for (const l of next.layers) if (!map.getLayer(l.id)) map.addLayer(l, under);
     if (palette && overlay?.themePaint) restyle(restylable, palette, [{themePaint: overlay.themePaint.bind(overlay)}]);
+    for (const {id} of next.layers) applyStackPaint(id);
     if (old?.control !== overlay?.control) {
       removeControl(layer);
       const element = overlay?.control;
@@ -417,6 +424,13 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     setVisible(layerId, visible) {
       if (early && !map.getLayer(layerId)) early.visible.set(layerId, visible);
       else { early?.visible.delete(layerId); show(layerId, visible); }
+    },
+    setPaint(layerId, property, value) {
+      let properties = stackPaint.get(layerId);
+      if (!properties) stackPaint.set(layerId, properties = new Map());
+      if (properties.get(property) === value) return;
+      properties.set(property, value);
+      if (map.getLayer(layerId)) restylable.setPaintProperty(layerId, property, value);
     },
     setData(sourceId, data) {
       if (early && !map.getSource(sourceId)) early.data.set(sourceId, data);

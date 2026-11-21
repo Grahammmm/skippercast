@@ -324,7 +324,12 @@ def layer_projections(directory, index):
     if actual != entry["fragment_canonical_sha256"]:
         raise ValueError(f"{version}: fragment canonical sha256 mismatch (got {actual})")
     text = json.dumps(doc, indent=2, ensure_ascii=False, allow_nan=False, default=dict) + "\n"
-    return css, ts, text
+    # MSKL-3: the live stacking engine reads only these two tables. A module of their own keeps the kit's metadata (and its
+    # base-token file path) out of the client, and keeps the Chart's lazy engine chunk out of the palette's first-load module.
+    stacking = (f"// {header}\n"
+                f"export const SKL_LAYERS = {pretty(web['layers'])} as const;\n"
+                f"export const SKL_STACKING = {pretty(web['stacking'])} as const;\n")
+    return css, ts, text, stacking
 
 
 def generate(root, check):
@@ -358,12 +363,13 @@ def generate(root, check):
         raise ValueError("expected a single plain :root block in web/tokens.css")
     insert = roots[0].end() - 1
     coast_source = without_block(coast_path.read_bytes().decode(), "// skn:begin ", "// skn:end")
-    layers_css, layers_ts, fragment_text = layer_projections(directory, index)
+    layers_css, layers_ts, fragment_text, stacking_ts = layer_projections(directory, index)
     outputs = {
         css_path: css_source[:insert] + css + layers_css + css_source[insert:],
         coast_path: coast_source + coast,
         root / "web/map/nearshore-style.gen.ts": ts,
         root / "web/map/layers-style.gen.ts": layers_ts,
+        root / "web/map/layers-stacking.gen.ts": stacking_ts,
         directory / index["layers"][index["layers_default"]]["fragment"]: fragment_text,
     }
     if not check:
