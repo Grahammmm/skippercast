@@ -6,7 +6,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {FT_PER_M, KT_PER_MS, M_PER_FT, M_PER_NMI} from '../web/units.ts';
 import {airportReading, buoyReading} from '../dist/live-conditions.js';
-import {buoyReadings} from '../web/landing/readings.ts';
+import {buoyReadings, loadReadout, tideReading} from '../web/landing/readings.ts';
+import {prepareCatalogue, t} from '../web/i18n.ts';
+import {units} from '../web/unit-choice.ts';
+await prepareCatalogue('es');
 
 test('units: exact definitions', () => {
   assert.equal(M_PER_FT, 0.3048);
@@ -36,18 +39,48 @@ const feed = wspd => ({schema_version: 1, region_id: 'morro-bay', generated_at: 
   offshore: source('46028', {WSPD: 'm/s', GST: 'm/s'}, {WSPD: wspd, GST: 10.3}),
   'diablo-spectrum': source('46215', {SwH: 'm'}, {SwH: 1.52}),
 }});
-const shown = f => Object.fromEntries(buoyReadings(f, {}, NOW).map(r => [r.id, [r.reading, r.unit, r.detail]]));
+const defaults = {temp: 'F', wind: 'kt', height: 'ft'}, metric = {temp: 'C', wind: 'kmh', height: 'm'}, mph = {...defaults, wind: 'mph'};
+const full = feed(7.7), tide = {data: [{t: '2026-10-07 19:00', v: '-0.8'}, {t: '2026-10-07 19:40', v: '-0.47'}]};
+full.sources.diablo = source('46215', {WTMP: 'degC'}, {WTMP: 15.44});
+const read = (lang, ...u) => [...buoyReadings(full, {}, NOW, lang, ...u), tideReading(tide, '9412110', 'Port', NOW, 'Caveat.', lang, ...u)];
 
-test('units: buoyReadings shows the strings main showed (7.7 m/s, gust 10.3 m/s, swell 1.52 m)', () => {
-  const r = shown(feed(7.7));
-  assert.deepEqual(r.wind, ['15', 'kt', 'gusts 20']);
-  assert.deepEqual(r.swell, ['5.0', 'ft', undefined]);
+const expected = (lang, [wind, gust, speed, swell, water, temp, level, height] = lang === 'es' ? ['15', 'ráfagas de 20', 'kt', '5', '60', '°F', '-0,5', 'ft'] : ['15', 'gusts 20', 'kt', '5.0', '60', '°F', '-0.5', 'ft']) => {
+  const es = lang === 'es', buoy = {station: es ? 'la boya x' : 'the x buoy', rule: t('landing.basis.rule.limit', lang, {h: 2}), same: ''};
+  return [
+    {id: 'wind', label: es ? 'Viento' : 'Wind', reading: wind, unit: speed, detail: gust, source: 'NDBC 46028 · 20 min', stale: false, basis: t('landing.basis.wind', lang, buoy)},
+    {id: 'swell', label: es ? 'Oleaje' : 'Swell', reading: swell, unit: height, detail: undefined, source: 'NDBC 46215 · 20 min', stale: false, basis: t('landing.basis.swell', lang, buoy)},
+    {id: 'water', label: es ? 'Agua' : 'Water', reading: water, unit: temp, source: 'NDBC 46215 · 20 min', stale: false, basis: t('landing.basis.water', lang, buoy)},
+    {id: 'tide', label: es ? 'Marea' : 'Tide', reading: level, unit: height, detail: es ? 'subiendo' : 'rising', source: 'NOAA 9412110 · 20 min', stale: false, basis: t('landing.basis.tide', lang, {station: 'Port', h: 1, note: ' Caveat.'})},
+  ];
+};
+const metricEN = ['28', 'gusts 37', 'km/h', '1.5', '15.4', '°C', '-0.1', 'm'];
+test('C1: one shared preference snapshot per load, even when the choice changes', async ({mock}) => {
+  const peek = mock.method(units, 'peek', () => metric), info = {name: 'Port', stations: {tide_name: 'Port', tide_note: 'Caveat.'}};
+  const fetch = async url => { if (url.endsWith('/region.json')) { peek.mock.mockImplementation(() => defaults); return Response.json(info); } return Response.json(url.startsWith('/feeds/') ? full : tide); };
+  assert.deepEqual(await loadReadout(fetch, 'fixture', () => NOW), {readings: expected('en', metricEN), feed: {age: '20 min', stale: false}, place: 'Port'});
+  assert.equal(peek.mock.callCount(), 1);
+  peek.mock.mockImplementation(() => metric); assert.deepEqual(read('en'), expected('en', metricEN));
 });
-
-test('units: a missing wind speed still reads No reading', () => {
-  const r = shown(feed(null));
-  assert.deepEqual(r.wind, ['No reading', undefined, undefined]);
-  assert.deepEqual(r.swell, ['5.0', 'ft', undefined]);
+test('C2: mph is rounded after conversion and leaves the other tiles as before', () => {
+  const f = structuredClone(full); Object.assign(f.sources.offshore.data.observations[0], {WSPD: 7.9, GST: 9.56});
+  assert.deepEqual([...buoyReadings(f, {}, NOW, 'en', mph), tideReading(tide, '9412110', 'Port', NOW, 'Caveat.', 'en', mph)], expected('en', ['18', 'gusts 21', 'mph', '5.0', '60', '°F', '-0.5', 'ft']));
+});
+test('C3: metric readout rounds swell and negative tide in metres', () => assert.deepEqual(read('en', metric), expected('en', metricEN)));
+test('C4: Celsius keeps the brief tiles’ precision and the Spanish decimal comma', () =>
+  assert.deepEqual(read('es', metric), expected('es', ['28', 'ráfagas de 37', 'km/h', '1,5', '15,4', '°C', '-0,1', 'm'])));
+test('C5: absent, explicit default and bad JSON keep the default bytes in both languages', async context => {
+  const prior = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  context.after(() => prior ? Object.defineProperty(globalThis, 'localStorage', prior) : delete globalThis.localStorage);
+  Object.defineProperty(globalThis, 'localStorage', {configurable: true, value: {getItem: key => key === 'skippercast-units-v1' ? '{bad' : null}});
+  const bad = (await import('../web/unit-choice.ts?bad-json')).units.peek();
+  for (const lang of ['en', 'es']) for (const args of [[], [defaults], [bad]]) assert.deepEqual(read(lang, ...args), expected(lang));
+});
+test('C5: missing readings never gain units or lose their unavailable state', () => {
+  const empty = feed(null); empty.sources.diablo = source('46215', {WTMP: 'degC'}, {}); empty.sources['diablo-spectrum'].data.observations = [];
+  for (const lang of ['en', 'es']) for (const u of [defaults, mph, metric]) {
+    const es = lang === 'es', missing = expected(lang).map(({unit, ...r}) => ({...r, reading: es ? 'Sin lectura' : 'No reading', stale: true, source: r.source.replace('20 min', es ? 'no disponible' : 'unavailable'), ...('detail' in r && {detail: undefined})}));
+    assert.deepEqual([...buoyReadings(empty, {}, NOW, lang, u), tideReading(null, '9412110', 'Port', NOW, 'Caveat.', lang, u)], missing);
+  }
 });
 
 // RF1949-1: dist/live-conditions.js and dist/bite-evidence.js take their factors from
