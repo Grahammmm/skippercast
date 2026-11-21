@@ -733,11 +733,13 @@ export function createPlanner(deps: PlannerDeps) {
       return prepare().then(() => { if (prepared) actionStatus.value = 'File ready — tap Share again'; });
     }
     // The plan key does not change at UTC midnight: contour tracks prepared before their review lapsed are discarded, not handed over after it.
-    const c = prepared.contours;
-    if (c !== undefined && !(/^\d{4}-\d{2}-\d{2}$/.test(c) && now().toISOString().slice(0, 10) <= c)) { prepared = null; actionStatus.value = CONTOURS_LAPSED; return Promise.resolve(); }
-    const file = prepared.file;
+    const c = prepared.contours, file = prepared.file;
+    const contoursLapsed = (): boolean => c !== undefined && !(/^\d{4}-\d{2}-\d{2}$/.test(c) && now().toISOString().slice(0, 10) <= c);
+    const refuseLapsed = (): void => { if (prepared?.file === file) prepared = null; actionStatus.value = CONTOURS_LAPSED; };
+    if (contoursLapsed()) { refuseLapsed(); return Promise.resolve(); }
     const fallback = (error: unknown): void => {
       if ((error as Error).name === 'AbortError') { actionStatus.value = 'Share cancelled. Your plan is retained.'; return; }
+      if (contoursLapsed()) { refuseLapsed(); return; }
       save(file); actionStatus.value = `This browser could not open the share sheet, so the file was downloaded: ${file.name}.`;
     };
     try {

@@ -218,6 +218,27 @@ test('contour tracks prepared at 23:59:59Z are refused at 00:00:00Z with the exp
   assert.match(exporter, /source review expired or undated/);
 });
 
+test('a share rejection after review expiry cannot download the captured contour GPX', async () => {
+  const oldDoc = globalThis.document, oldNav = Object.getOwnPropertyDescriptor(globalThis, 'navigator'), oldTimeout = globalThis.setTimeout;
+  let saves = 0, rejectShare, clock = new Date('2099-12-31T23:59:59Z');
+  globalThis.document = {createElement: () => ({click() { saves++; }, remove() {}}), body: {append() {}}};
+  globalThis.setTimeout = (fn, ms, ...args) => ms === 60000 ? {unref() {}} : oldTimeout(fn, ms, ...args);
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {canShare: () => true, share: () => new Promise((_, reject) => { rejectShare = reject; })}});
+  const p = make({loadPorts: source({ports: [P1]}), loadContours: source({collection: CONTOURS}), now: () => clock});
+  try {
+    p.setResearch(true); p.toggleSpot('old-1', true); p.setContourTracks(true);
+    await settle(); await settle();
+    assert.equal(p.summary.value.ok, true, p.summary.value.message);
+    const delivery = p.deliver('share');
+    assert.equal(typeof rejectShare, 'function');
+    clock = new Date('2100-01-01T00:00:00Z');
+    rejectShare(new Error('share failed'));
+    await delivery;
+    assert.equal(saves, 0);
+    assert.match(p.actionStatus.value, /source review expired or undated/);
+  } finally { p.dispose(); globalThis.document = oldDoc; globalThis.setTimeout = oldTimeout; if (oldNav) Object.defineProperty(globalThis, 'navigator', oldNav); else delete globalThis.navigator; }
+});
+
 test('same-day delivery, tracks off and a region without contours still hand over the prepared file across midnight', async () => {
   const same = await handoff({collection: CONTOURS}, '2099-12-31T23:59:00Z', '2099-12-31T23:59:59Z');
   assert.equal(same.saves + same.shares, 2, same.status);
