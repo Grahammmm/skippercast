@@ -241,6 +241,8 @@ def navigation_sample_cells(data, expected_sha, bathy, character):
 
 
 def audit(bathy_zip, class_zip, fetcher=fetch):
+    bathy_path, bathy_hash = original_tiff(bathy_zip, "bathy")
+    class_path, class_hash = original_tiff(class_zip, "character")
     by_id, query, catalog_sha = catalog(fetcher)
     source = {name: archive_page(name, fetcher) for name in SURVEYS}
     probes = {name: parse_gsf_probe(fetcher(PROBES[name]["url"]), PROBES[name]["sha256"])
@@ -268,7 +270,7 @@ def audit(bathy_zip, class_zip, fetcher=fetch):
     counts = {name: {"nominal_usgs_200_300ft_hard_flat_cell_centers_in_catalog_polygon": 0,
                      "nominal_usgs_200_300ft_hard_rugose_cell_centers_in_catalog_polygon": 0}
               for name in SURVEYS}
-    with rasterio.open(original_tiff(bathy_zip)) as bathy, rasterio.open(original_tiff(class_zip)) as character:
+    with rasterio.open(bathy_path) as bathy, rasterio.open(class_path) as character:
         if (bathy.shape != character.shape or bathy.transform != character.transform
                 or str(bathy.crs) != "EPSG:32610"):
             raise ValueError("USGS Point Buchon original pair alignment changed")
@@ -297,8 +299,8 @@ def audit(bathy_zip, class_zip, fetcher=fetch):
                        for name in SURVEYS}
     return {"schema_version": 1, "scope": "point-buchon-2007-ncei-multibeam-acquisition-lead",
             "catalog_query_url": query, "catalog_geometry_sha256": catalog_sha,
-            "usgs_original_bathymetry_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
-            "usgs_original_character_sha256": "0a9579783e5318bfee0ebef8ede112f32c5a2202272338ae9eb1fd9e96df8bc1",
+            "usgs_original_bathymetry_sha256": bathy_hash,
+            "usgs_original_character_sha256": class_hash,
             "surveys": [{"survey_id": name, "ncei_id": spec["ncei_id"],
                          "catalog_feature_ids": sorted(spec["ids"]), **source[name], **counts[name]}
                         for name, spec in SURVEYS.items()],

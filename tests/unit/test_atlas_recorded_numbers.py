@@ -101,8 +101,12 @@ class RecordedNumbers(unittest.TestCase):
     def test_valid_measurements_and_range_boundaries_stay_compatible(self):
         summary = validate(copy.deepcopy(self.base))
         self.assertEqual(summary["targets"], len(self.base["targets"]))
-        validate(self.make("targets", "native_center_depth_ft", 200))
-        validate(self.make("targets", "native_center_depth_ft", 0.5))
+        for depth in (200, 0.5):
+            data = copy.deepcopy(self.base)
+            row = data["targets"][0]
+            row["recorded_validation"].update(dict.fromkeys(TARGET_KEYS, depth))
+            row.update(center_depth_ft=depth, neighborhood_depth_ft=[depth, depth])
+            validate(data)
         for section in ("areas", "drifts"):
             validate(self.make(section, "maximum_ft", 195))
         ranges = (

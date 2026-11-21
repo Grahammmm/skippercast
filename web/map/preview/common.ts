@@ -19,6 +19,9 @@ export const utc = (iso: string): string => {
   return `${text.slice(0, 16).replace('T', ' ')} UTC`;
 };
 
+export const isPositiveFiniteHours = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0;
+
 /** Usable when the time parses, is not in the future (5 min of clock slack) and is within `limitHours`. */
 export const freshWithin = (iso: unknown, limitHours: number, now: Date): iso is string =>
   typeof iso === 'string' && Number.isFinite(Date.parse(iso)) && hoursOld(iso, now) >= -5 / 60 && hoursOld(iso, now) <= limitHours;

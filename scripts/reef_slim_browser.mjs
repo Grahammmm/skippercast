@@ -8,13 +8,10 @@
 import {createServer} from 'node:http';
 import {readFileSync, writeFileSync, existsSync} from 'node:fs';
 import {extname, join, normalize} from 'node:path';
-import {fileURLToPath} from 'node:url';
-import {chromium} from '@playwright/test';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i > 0 ? process.argv[i + 1] : d; };
-const DATA = process.argv[2], RUNS = +arg('runs', '3'), OUT = arg('out', '');
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const EXE = process.env.PW_CHROMIUM || `${process.env.HOME}/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome`;
 const PROFILES = {
   phone: {context: {viewport: {width: 412, height: 915}, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true}, cpu: 4,
     net: {offline: false, latency: 150, downloadThroughput: 1.6 * 1024 * 1024 / 8, uploadThroughput: 750 * 1024 / 8}},
@@ -22,24 +19,22 @@ const PROFILES = {
   desktop: {context: {viewport: {width: 1350, height: 940}, deviceScaleFactor: 1}, cpu: 1, net: null},
 };
 const TYPES = {'.js': 'text/javascript', '.html': 'text/html', '.json': 'application/json'};
-const manifest = readFileSync(join(DATA, 'manifest.json'));
-const served = {requests: []};
-const server = createServer((req, res) => {
-  const path = decodeURIComponent(req.url.split('?')[0]);
-  served.requests.push(path);
-  if (path === '/blank.html') { res.setHeader('content-type', 'text/html'); return res.end('<!doctype html><title>x</title>'); }
-  if (path.startsWith('/feeds/tiles/seafloor/manifest-')) { res.setHeader('content-type', 'application/json'); res.setHeader('cache-control', 'no-store'); return res.end(manifest); }
-  if (path.startsWith('/feeds/tiles/seafloor/regions/')) {
-    const file = join(DATA, path.split('/').at(-1));
-    if (!existsSync(file)) { res.statusCode = 404; return res.end(); }
-    res.setHeader('content-type', 'application/gzip'); res.setHeader('cache-control', 'no-store'); return res.end(readFileSync(file));
-  }
-  const file = normalize(join(ROOT, path));
-  if (!file.startsWith(join(ROOT, 'dist')) || !existsSync(file)) { res.statusCode = 404; return res.end(); }
-  res.setHeader('content-type', TYPES[extname(file)] || 'application/octet-stream'); res.end(readFileSync(file));
-});
-await new Promise(r => server.listen(0, '127.0.0.1', r));
-const base = `http://127.0.0.1:${server.address().port}`;
+function fixtureServer(data) {
+  const manifest = readFileSync(join(data, 'manifest.json'));
+  return createServer((req, res) => {
+    const path = decodeURIComponent(req.url.split('?')[0]);
+    if (path === '/blank.html') { res.setHeader('content-type', 'text/html'); return res.end('<!doctype html><title>x</title>'); }
+    if (path.startsWith('/feeds/tiles/seafloor/manifest-')) { res.setHeader('content-type', 'application/json'); res.setHeader('cache-control', 'no-store'); return res.end(manifest); }
+    if (path.startsWith('/feeds/tiles/seafloor/regions/')) {
+      const file = join(data, path.split('/').at(-1));
+      if (!existsSync(file)) { res.statusCode = 404; return res.end(); }
+      res.setHeader('content-type', 'application/gzip'); res.setHeader('cache-control', 'no-store'); return res.end(readFileSync(file));
+    }
+    const file = normalize(join(ROOT, path));
+    if (!file.startsWith(join(ROOT, 'dist')) || !existsSync(file)) { res.statusCode = 404; return res.end(); }
+    res.setHeader('content-type', TYPES[extname(file)] || 'application/octet-stream'); res.end(readFileSync(file));
+  });
+}
 
 const inPage = async slim => {
   const lags = [], long = [];
@@ -61,30 +56,76 @@ const inPage = async slim => {
     longestMs: Math.round(Math.max(0, ...long)), maxTimerLagMs: Math.round(Math.max(0, ...lags)), files};
 };
 
-const browser = await chromium.launch({executablePath: EXE, headless: true});
-const results = [];
-for (const [name, p] of Object.entries(PROFILES)) {
-  for (const variant of ['full', 'slim']) {
-    for (let run = 1; run <= RUNS; run++) {
-      const context = await browser.newContext(p.context);
-      const page = await context.newPage();
-      const cdp = await context.newCDPSession(page);
-      await page.goto(`${base}/blank.html`);
-      if (p.cpu > 1) await cdp.send('Emulation.setCPUThrottlingRate', {rate: p.cpu});
-      if (p.net) await cdp.send('Network.emulateNetworkConditions', p.net);
-      const r = await page.evaluate(`(${inPage.toString()})(${variant === 'slim'})`);
-      results.push({profile: name, variant, run, ...r});
-      console.log(JSON.stringify({profile: name, variant, run, ...r}));
-      await context.close();
-    }
+/** Playwright's evaluate has no timeout. The caller closes the context even after a deadline. */
+export async function captureReefRun(page, variant, timeout = 180_000) {
+  let timer;
+  try {
+    return await Promise.race([
+      page.evaluate(`(${inPage.toString()})(${variant === 'slim'})`),
+      new Promise(resolve => { timer = setTimeout(() => resolve({outcome: 'timeout', usedSlim: null}), timeout); }),
+    ]);
+  } finally {
+    clearTimeout(timer);
   }
 }
-await browser.close(); server.close();
+
 const med = a => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
-console.log('\nmedians');
-for (const name of Object.keys(PROFILES)) for (const variant of ['full', 'slim']) {
-  const rs = results.filter(r => r.profile === name && r.variant === variant);
-  console.log(name, variant, JSON.stringify({outcomes: [...new Set(rs.map(r => r.outcome))], load_ms: med(rs.map(r => r.load_ms)), longTaskMs: med(rs.map(r => r.longTaskMs)),
-    longestMs: med(rs.map(r => r.longestMs)), maxTimerLagMs: med(rs.map(r => r.maxTimerLagMs)), transfer: rs[0].files.map(f => `${f.file}:${f.transfer}`).join(',')}));
+
+/** Summarize one profile/variant cohort without borrowing a fallback or a failed load. */
+export function summariseReefRuns(runs, variant) {
+  const good = runs.filter(r => r.outcome === 'ok' && r.usedSlim === (variant === 'slim'));
+  const counts = {comparable: good.length > 0, included: good.length, excluded: runs.length - good.length};
+  if (!counts.comparable) return {...counts, load_ms: null};
+  return {...counts, load_ms: med(good.map(r => r.load_ms)), longTaskMs: med(good.map(r => r.longTaskMs)),
+    longestMs: med(good.map(r => r.longestMs)), maxTimerLagMs: med(good.map(r => r.maxTimerLagMs)),
+    transfer: good[0].files.map(f => `${f.file}:${f.transfer}`).join(',')};
 }
-if (OUT) writeFileSync(OUT, JSON.stringify(results, null, 1));
+
+async function main() {
+  const data = process.argv[2], runs = +arg('runs', '3'), out = arg('out', '');
+  const executablePath = process.env.PW_CHROMIUM || `${process.env.HOME}/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome`;
+  const {chromium} = await import('@playwright/test');
+  const server = fixtureServer(data);
+  let browser;
+  const results = [];
+  try {
+    await new Promise(r => server.listen(0, '127.0.0.1', r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    browser = await chromium.launch({executablePath, headless: true});
+    for (const [profile, p] of Object.entries(PROFILES)) for (const variant of ['full', 'slim']) {
+      for (let run = 1; run <= runs; run++) {
+        const context = await browser.newContext(p.context);
+        let capture;
+        try {
+          const page = await context.newPage();
+          const cdp = await context.newCDPSession(page);
+          await page.goto(`${base}/blank.html`);
+          if (p.cpu > 1) await cdp.send('Emulation.setCPUThrottlingRate', {rate: p.cpu});
+          if (p.net) await cdp.send('Network.emulateNetworkConditions', p.net);
+          capture = await captureReefRun(page, variant);
+        } catch (error) {
+          capture = {outcome: error.name === 'TimeoutError' ? 'timeout' : 'error', error: String(error.message || error), usedSlim: null};
+        } finally {
+          await context.close();
+        }
+        const result = {profile, variant, run, ...capture};
+        results.push(result);
+        console.log(JSON.stringify(result));
+      }
+    }
+  } finally {
+    server.close();
+    await browser?.close();
+  }
+  console.log('\nmedians (successful matching runs only)');
+  for (const profile of Object.keys(PROFILES)) for (const variant of ['full', 'slim']) {
+    const summary = summariseReefRuns(results.filter(r => r.profile === profile && r.variant === variant), variant);
+    if (!summary.comparable) process.exitCode = 1;
+    console.log(profile, variant, summary.comparable ? 'comparable' : 'inconclusive', JSON.stringify(summary));
+  }
+  if (out) writeFileSync(out, JSON.stringify(results, null, 1));
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
+  main().catch(error => { console.error(error); process.exitCode = 1; });
+}

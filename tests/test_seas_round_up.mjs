@@ -21,9 +21,9 @@ const seasText = sea => { const v = boatVerdict(brief, forecast(sea), NOW, TZ); 
 function advisor(lo, hi) {
   const t = [1790600400, 1790604000], one = (k, u, v) => ({[k]: {u, v}});
   const model = parts => ({data: [{hourly_units: {time: 'unixtime', ...Object.fromEntries(Object.entries(parts).map(([k, p]) => [k, p.u]))}, hourly: {time: t, ...Object.fromEntries(Object.entries(parts).map(([k, p]) => [k, p.v]))}}]});
-  const feed = {region_id: 'synthetic-coast', forecast: {models: {
+  const feed = {region_id: 'synthetic-coast', forecast: {requested_points: [['central', 35.37, -120.9]], models: {
     gfs_global: model(one('wind_speed_10m', 'kn', [4.6, 5.4])), ncep_gfswave016: model({...one('wave_height', 'ft', [lo, hi]), ...one('swell_wave_height', 'ft', [2.4, 3.6])}), ecmwf_ifs025: {data: []}, ecmwf_wam: {data: []}}}};
-  return windowConditions(feed, {id: 'synthetic-coast', timezone: 'America/Los_Angeles', forecast_points: [{id: 'central'}], marine_zones: {coastal: 'PZZ645'}}, 'central', '2026-09-28');
+  return windowConditions(feed, {id: 'synthetic-coast', timezone: 'America/Los_Angeles', forecast_points: [{id: 'central', latitude: 35.37, longitude: -120.9}], marine_zones: {coastal: 'PZZ645'}}, 'central', '2026-09-28');
 }
 
 test('1 4.0026 ft: the brief says 4.1 ft and the advisor upper is 5', () => {

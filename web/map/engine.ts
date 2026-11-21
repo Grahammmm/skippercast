@@ -2,7 +2,7 @@
 // § 3, § 3A.2): the PMTiles protocol and the worker URL registered once, a
 // north-up map (no rotation or pitch by any gesture or key; only the first-view
 // flyover, #646, tilts and turns it and always returns it north up and flat), a nautical scale,
-// zoom buttons, the attribution control, resize with its host, and error
+// zoom buttons, the one "Sources" link (G 2026-11-18: no source text on the map), resize with its host, and error
 // routing: a failing source marks only the registry layer that owns it
 // (web/map/layers.ts), so one broken feed never blanks the chart.
 //
@@ -15,10 +15,12 @@ import {sourceLayer} from './layers.ts';
 import type {FieldTexture} from './field.ts';
 import type {ArchiveReader} from './seafloor.ts';
 import {BASEMAP_SOURCE} from './style.ts';
+import {readPalette} from './palette.ts';
+import {basemapThemePaint, restyle, type Provider, type Restylable} from './theme-restyle.ts';
 
 /** What web/map/maplibre.js provides: the ESM build, its worker's URL, the PMTiles protocol and its archive reader. */
 export interface MapLibraryModule {
-  readonly lib: Pick<typeof MapLibre, 'Map' | 'NavigationControl' | 'ScaleControl' | 'AttributionControl' | 'setWorkerUrl' | 'addProtocol'>;
+  readonly lib: Pick<typeof MapLibre, 'Map' | 'NavigationControl' | 'ScaleControl' | 'setWorkerUrl' | 'addProtocol'>;
   readonly workerUrl: string;
   readonly Protocol: new () => {tile: MapLibre.AddProtocolAction};
   /** Reads archives the Chart decodes itself (the seafloor publication, web/map/seafloor.ts). */
@@ -53,11 +55,9 @@ export interface EngineOptions {
   pickLayers?: readonly string[];
   /** Run-time layers asked before `pickLayers` (FE-27's nearshore rings, which draw under the protected areas); read at each click. */
   pickFirst?: () => readonly string[];
-  /** Credit always shown (the basemap's): MapLibre lists a tiled source's own credit only if it was drawn when its metadata arrived. */
-  attribution?: string;
   /** The map has settled and drawn every tile in view (MapLibre `idle`). */
   onIdle?(): void;
-  /** A still backdrop (the landing's night map, FE-25): no gesture, key, control or label fade; the page credits the basemap itself. */
+  /** A still backdrop (the landing's night map, FE-25): no gesture, key, control or label fade; no corner link either: the page carries the footer's Sources link. */
   still?: boolean;
 }
 
@@ -86,9 +86,13 @@ export interface MapView {
 }
 
 /** A registry layer's sources and MapLibre layers added after the style (FE-22's cloud frames). */
-export interface Overlay {
+export interface Overlay extends Provider {
   readonly sources: Readonly<Record<string, MapLibre.SourceSpecification>>;
   readonly layers: readonly MapLibre.LayerSpecification[];
+  readonly pattern?: {readonly id: string; readonly image: ImageData; readonly pixelRatio: number};
+  readonly control?: HTMLElement;
+  /** Open-water fallback, after the existing Chart pick and its waypoint handling. */
+  readonly inspect?: {readonly layer: string; show(properties: Record<string, unknown>): void};
   /** RF1935-3: the first source error removes this overlay's layers and sources and is reported once; nothing re-adds the same object. */
   readonly stopOnError?: boolean;
 }
@@ -101,6 +105,8 @@ export interface Engine {
   setData(sourceId: string, data: SourceData): void;
   /** How many features of `layerId` are drawn in view now (labels count once placed). */
   rendered(layerId: string): number;
+  /** Unique scalar values of this property from features intersecting the rendered viewport. */
+  renderedValues(layerId: string, property: string): ReadonlySet<string>;
   readonly view: MapView;
   /**
    * Draw registry layer `layer`'s overlay under map layer `before`, or under the first drawn layer of
@@ -138,9 +144,24 @@ export function prepareLibrary(module: MapLibraryModule): void {
   prepared.add(module.lib);
 }
 
-/** Folds a compact attribution that MapLibre opened (BL-SC-1): the credits stay in the DOM behind its toggle. A no-op when collapsed or expanded. */
-export function collapseAttribution(container: Element): void {
-  if (container.classList.contains('maplibregl-compact-show')) { container.classList.remove('maplibregl-compact-show'); container.removeAttribute('open'); }
+/** Where the map's one Sources link goes: the generated list of every data source (dist/sources.html, scripts/build_sources_register.py). */
+export const SOURCES_HREF = '/sources#data-sources';
+
+/**
+ * The map's only source-related chrome (MAP-SOURCES-PAGE-1, G 2026-11-18): a small link to the Sources page.
+ * It replaces MapLibre's attribution control, so no source, survey or credit text is drawn on the map;
+ * the sources themselves are listed on /sources. It is a plain control object so MapLibre owns its place in the corner.
+ */
+export class SourcesLinkControl {
+  private container: HTMLElement | null = null;
+  onAdd(): HTMLElement {
+    const div = document.createElement('div'), link = document.createElement('a');
+    div.className = 'maplibregl-ctrl map-sources-link';
+    link.href = SOURCES_HREF; link.textContent = 'Sources'; link.setAttribute('data-sources-link', '');
+    div.append(link);
+    return this.container = div;
+  }
+  onRemove(): void { this.container?.remove(); this.container = null; }
 }
 
 /** The Map constructor's options: north up, no pitch, `?view=` zoom range, the stage's own accessible name; a still map takes no input. */
@@ -166,17 +187,17 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   if (!options.still) {
     map.addControl(new lib.NavigationControl({showCompass: false}), 'bottom-right');
     map.addControl(new lib.ScaleControl({unit: 'nautical', maxWidth: 120}), 'bottom-right');
-    // BL-SC-1: MapLibre's own rule makes the credits compact at ≤ 640 px; it opens them whenever they turn compact, so fold them once then.
-    const attribution = new lib.AttributionControl(options.attribution ? {customAttribution: options.attribution} : {});
-    map.addControl(attribution, 'bottom-right');
-    let wasCompact = false;
-    const fold = () => { const el = attribution._container; if (el && !wasCompact) collapseAttribution(el); wasCompact = !!el?.classList.contains('maplibregl-compact'); };
-    fold();
-    for (const type of ['resize', 'styledata', 'sourcedata'] as const) map.on(type, fold);
+    map.addControl(new SourcesLinkControl(), 'bottom-right');
   }
 
   // The overlays drawn now, by registry layer (FE-22), so their source errors route to that layer.
   const overlays = new Map<string, Overlay>();
+  const patternIds = new Map<string, readonly string[]>();
+  const controls = new Map<string, MapLibre.IControl>();
+  function removeControl(layer: string): void {
+    const control = controls.get(layer);
+    if (control) { map.removeControl(control); controls.delete(layer); }
+  }
   const overlayOf = (sourceId: string | undefined): string | null =>
     sourceId === undefined ? null : [...overlays].find(([, o]) => sourceId in o.sources)?.[0] ?? null;
 
@@ -189,6 +210,8 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     failed.add(overlay);
     for (const l of overlay.layers) if (map.getLayer(l.id)) map.removeLayer(l.id);
     for (const id of Object.keys(overlay.sources)) { if (map.getSource(id)) map.removeSource(id); retired.add(id); }
+    removePatterns(layer);
+    removeControl(layer);
     overlays.delete(layer);
   }
 
@@ -242,6 +265,14 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       const query = (ids: readonly string[]) => { const layers = ids.filter(id => map.getLayer(id)); return layers.length ? map.queryRenderedFeatures(event.point, {layers})[0] : undefined; };
       const feature = query(options.pickFirst?.() ?? []) ?? query(options.pickLayers ?? []);
       const layer = feature?.layer.id ?? null, properties = feature ? feature.properties as Record<string, unknown> : null;
+      let inspect: (() => void) | undefined;
+      if (!feature) for (const [owner, {inspect: candidate}] of overlays) {
+        const hit = candidate && query([candidate.layer]);
+        if (hit) {
+          inspect = () => { if (overlays.get(owner)?.inspect === candidate) candidate.show(hit.properties); };
+          break;
+        }
+      }
       const at = event.lngLat ? {lon: event.lngLat.lng, lat: event.lngLat.lat} : null;
       // A pickContext that answers null means picking is closed (Chart hidden, or not the shown view): it never accepts a pick, at the click or at dispatch.
       const gated = !!options.pickContext, context = options.pickContext?.();
@@ -251,6 +282,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
         const now = options.pickContext?.();
         if (destroyed || moving || (gated && now === null) || now !== context) return;
         pick(layer, properties, at);
+        if (inspect && options.pickContext?.() === context) inspect();
       }, PICK_SETTLE_MS);
     });
   }
@@ -269,6 +301,31 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     visible: Map<string, boolean>; data: Map<string, SourceData>;
     overlays: Map<string, {overlay: Overlay | null; before?: string | readonly string[]}>; opacity: Map<string, number>; images: Map<string, FieldTexture>;
   } | null = {visible: new Map(), data: new Map(), overlays: new Map(), opacity: new Map(), images: new Map()};
+  const themeRoot = !options.still && typeof document !== 'undefined' ? document.documentElement : undefined;
+  let paintedTheme = themeRoot?.dataset.theme;
+  const restylable: Restylable = {
+    hasLayer: id => !!map.getLayer(id),
+    setPaintProperty: (id, property, value) => {
+      // The structural provider keeps this property/value pair independent of MapLibre's types.
+      map.setPaintProperty(id, property as Parameters<MapLibre.Map['setPaintProperty']>[1], value as Parameters<MapLibre.Map['setPaintProperty']>[2]);
+    },
+    hasImage: id => map.hasImage(id),
+    updateImage: (id, image) => { map.updateImage(id, image); },
+    addImage: (id, image, config) => { map.addImage(id, image, config); },
+  };
+  const applyTheme = (): void => {
+    if (!themeRoot || early || destroyed || themeRoot.dataset.theme === paintedTheme) return;
+    restyle(restylable, readPalette(), [{themePaint: basemapThemePaint}, ...overlays.values()]);
+    paintedTheme = themeRoot.dataset.theme;
+  };
+  // The effective choice lives on the root, including OS changes while Auto is selected.
+  const themeObserver = themeRoot && typeof MutationObserver === 'function' ? new MutationObserver(applyTheme) : null;
+  if (themeRoot) themeObserver?.observe(themeRoot, {attributes: true, attributeFilter: ['data-theme']});
+
+  function removePatterns(layer: string, keep: readonly string[] = []): void {
+    for (const id of patternIds.get(layer) ?? []) if (!keep.includes(id) && map.hasImage(id)) map.removeImage(id);
+    if (keep.length) patternIds.set(layer, keep); else patternIds.delete(layer);
+  }
   const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
   const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
   const draw = (layer: string, overlay: Overlay | null, before?: string | readonly string[]): void => {
@@ -276,10 +333,27 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     for (const id of Object.keys(overlay?.sources ?? {})) retired.delete(id);
     const old = overlays.get(layer), next = overlay ?? {sources: {}, layers: []};
     for (const l of old?.layers ?? []) if (!next.layers.some(n => n.id === l.id) && map.getLayer(l.id)) map.removeLayer(l.id);
+    // Read at installation, not when a region request (or a deferred overlay) started.
+    const palette = themeRoot && (overlay?.themePaint || overlay?.themePatterns) ? readPalette() : undefined;
+    const themed = palette ? overlay?.themePatterns?.(palette) ?? [] : [];
+    const pattern = overlay?.pattern;
+    removePatterns(layer, [...pattern ? [pattern.id] : [], ...themed.map(({id}) => id)]);
+    if (pattern && !map.hasImage(pattern.id)) map.addImage(pattern.id, pattern.image, {pixelRatio: pattern.pixelRatio});
+    if (palette && themed.length) restyle(restylable, palette, [{themePatterns: () => themed}]);
     for (const id of Object.keys(old?.sources ?? {})) if (!(id in next.sources) && map.getSource(id)) map.removeSource(id);
     for (const [id, source] of Object.entries(next.sources)) if (!map.getSource(id)) map.addSource(id, source);
     const under = ([] as string[]).concat(before ?? []).find(id => map.getLayer(id));
     for (const l of next.layers) if (!map.getLayer(l.id)) map.addLayer(l, under);
+    if (palette && overlay?.themePaint) restyle(restylable, palette, [{themePaint: overlay.themePaint.bind(overlay)}]);
+    if (old?.control !== overlay?.control) {
+      removeControl(layer);
+      const element = overlay?.control;
+      if (element) {
+        const control = {onAdd: () => element, onRemove: () => element.remove()};
+        map.addControl(control, 'top-right');
+        controls.set(layer, control);
+      }
+    }
     if (overlay) overlays.set(layer, overlay); else overlays.delete(layer);
   };
   const fade = (layerId: string, opacity: number): void => { if (map.getLayer(layerId)) map.setPaintProperty(layerId, 'raster-opacity', opacity); };
@@ -287,14 +361,21 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     const image = typeof ImageData === 'function' ? new ImageData(t.data, t.width, t.height) : t as unknown as ImageData;
     (map.getSource(sourceId) as MapLibre.ImageSource | undefined)?.updateImage({image, coordinates: t.coordinates});
   };
+  // The queue being flushed by `style.load`, so a texture an overlay writes while it is installed (its `themePaint`
+  // repainting for a theme that changed before the style loaded) replaces the older queued one rather than being overwritten by it.
+  let flushing: {images: Map<string, FieldTexture>} | null = null;
   map.on('style.load', () => {
     const pending = early;
     early = null;
-    pending?.overlays.forEach(({overlay, before}, layer) => draw(layer, overlay, before));
-    pending?.visible.forEach((visible, layerId) => show(layerId, visible));
-    pending?.data.forEach((data, sourceId) => fill(sourceId, data));
-    pending?.opacity.forEach((opacity, layerId) => fade(layerId, opacity));
-    pending?.images.forEach((texture, sourceId) => paint(sourceId, texture));
+    flushing = pending;
+    try {
+      applyTheme();
+      pending?.overlays.forEach(({overlay, before}, layer) => draw(layer, overlay, before));
+      pending?.visible.forEach((visible, layerId) => show(layerId, visible));
+      pending?.data.forEach((data, sourceId) => fill(sourceId, data));
+      pending?.opacity.forEach((opacity, layerId) => fade(layerId, opacity));
+      pending?.images.forEach((texture, sourceId) => paint(sourceId, texture));
+    } finally { flushing = null; }
   });
 
   // The flyover (#646): max pitch rises only while it flies; each leg starts at the last one's moveend.
@@ -342,6 +423,14 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       else { early?.data.delete(sourceId); fill(sourceId, data); }
     },
     rendered: layerId => map.getLayer(layerId) ? map.queryRenderedFeatures({layers: [layerId]}).length : 0,
+    renderedValues(layerId, property) {
+      const values = new Set<string>();
+      if (map.getLayer(layerId)) for (const feature of map.queryRenderedFeatures({layers: [layerId]})) {
+        const value = feature.properties[property];
+        if (typeof value === 'string') values.add(value);
+      }
+      return values;
+    },
     view: {
       container: () => map.getCanvasContainer(),
       size: () => ({width: host.clientWidth, height: host.clientHeight}),
@@ -362,8 +451,8 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     },
     setImage(sourceId, texture) {
       if (early && !map.getSource(sourceId)) early.images.set(sourceId, texture);
-      else { early?.images.delete(sourceId); paint(sourceId, texture); }
+      else { early?.images.delete(sourceId); flushing?.images.delete(sourceId); paint(sourceId, texture); }
     },
-    destroy() { destroyed = true; cancelPick(); retired.clear(); flight?.(); resize?.disconnect(); map.remove(); },
+    destroy() { destroyed = true; cancelPick(); retired.clear(); flight?.(); resize?.disconnect(); themeObserver?.disconnect(); map.remove(); },
   };
 }

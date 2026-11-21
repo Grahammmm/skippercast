@@ -49,6 +49,23 @@ export function checkMapContours(css, spec = V2) {
   return {failures, rows};
 }
 
+// MB-20: the existing conditions overlays draw lines and particles straight on --map-water; WCAG 1.4.11 graphics 3:1 in both themes.
+export const OVERLAY_MIN = 3;
+export const OVERLAY_PAIRS = [['flow', 'wind and current particles'], ['flow-fast', 'fast wind and current particles'], ['mpa-line', 'protected-area outline and label']]
+  .map(([fg, use]) => [fg, 'map-water', use]);
+export function checkOverlayLines(css, spec = V2) {
+  const failures = [], rows = [];
+  for (const [name, tokens] of Object.entries(themes(css, spec))) {
+    for (const [fg, bg, use] of OVERLAY_PAIRS) {
+      if (!tokens[fg] || !tokens[bg]) { failures.push(`${name}: --${fg} or --${bg} is not a hex colour token`); continue; }
+      const ratio = contrast(tokens[fg], tokens[bg]);
+      rows.push(`${name.padEnd(5)} --${fg} on --${bg}: ${ratio.toFixed(2)}:1 (${use}, minimum ${OVERLAY_MIN}:1)`);
+      if (ratio < OVERLAY_MIN) failures.push(`${name}: --${fg} ${tokens[fg]} on --${bg} ${tokens[bg]} is ${ratio.toFixed(2)}:1, below ${OVERLAY_MIN}:1 (${use})`);
+    }
+  }
+  return {failures, rows};
+}
+
 // UXFIX-04: input and select borders are non-text UI, held to WCAG 1.4.11 (3:1), not the 4.5:1 text floor.
 export const NON_TEXT_MIN = 3;
 export const NON_TEXT_PAIRS = ['panel', 'panel-2'].map(bg => ['line-strong', bg, 'input and select border']);
@@ -610,10 +627,15 @@ export const SURFACE_SOURCE_SHA256 = {
   // BF-wcag only adds min-height (24 px target floor) to .text-link, .history-provenance a and .sheet-links a; no paint changed.
   // SC1722-08 only raises the History chart scroller's focus ring to 2 px and adds one .history-measurement-note > summary focus ring; no unfocused paint changed.
   // UXFIX-12 only moves the .chart-overflow:focus-visible ring out of a media block (same 2 px ring, now at all widths); no unfocused paint changed.
-  "panelCss": "4558cd4edb0be1827ef6c00523a05b1c8eae84b0d0d81a93c33d5e12e4c66fa9",
+  // SCA-317: the History disclosure gains a 24 px minimum target height; no paint changes.
+  "panelCss": "8eaf2e7f806030b9c760c2c04cd9e3e232f9e4c56d196fdae005ee6607382e9a",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
-  // MB-05 recolours light map-only roles, reduces habitat fill opacity and adds contour/no-survey tokens; chrome text, panel and legend-glass paint stay unchanged.
-  "tokensCss": "5532bc9452b85f33e202b215ca36b4acd7b4fb8aac2727adf9f5235570cec7fa",
+  // MB-05 recolours light map-only roles, reduces habitat fill opacity and adds contour/no-survey tokens; MB-20 only adds light-theme flow, MPA, swell and contrast colours; chrome text, panel and legend-glass paint stay unchanged.
+  // MB-14 only adds the 3D sky, horizon and fog tokens in both themes; no existing token, chrome text, panel or legend-glass paint changes.
+  // MB-11 adds Ramp B and native legend paint roles only.
+  // MSK-1: only unused --skn-* declarations were added; existing surface paint is unchanged.
+  // MSKL-1: only the additive --skl-* block was inserted; removing it recovers every previous CSS byte. Surface paint is unchanged.
+  "tokensCss": "ea900e4864cf82b5dcac7876ec9c0d8a31dd3ede3f24eae8ab5718b75045cbd0",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
@@ -656,7 +678,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // no colour, opacity, backing or text role changed and the cited line numbers above are unmoved. Rebound from the final bytes.
   // MAIN-RED-5: pointer-event routing only; no paint, backing, opacity or text role changes.
   // MAIN-RED-7: one landscape-phone (max-height: 500px) sheet-footer link spacing rule (margin, side padding, min-width); no colour, opacity, backing or text role changed. Rebound from the final bytes.
-  "appCss": "ea47a308ed3ed26a56558714894a22425f65244a647fc22916e9e73bdbb92591",
+  // MB-11 changes the native legend glass and keys; both native text roles below use its new backing.
+  "appCss": "6cfd414b3a2e127db5e2545a424428bd9ee67b79e14553462f2e9f47bf43235f",
+  // SCA-479: app.css drops only the earlier of two byte-identical phone account-trigger blocks (five lines, after the skip-link rules); the cited legend lines and every contrast role are unchanged. Rebound from the final bytes.
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
   // no legend paint, backing or text role changed and the cited line numbers above are unmoved.
@@ -684,7 +708,11 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1352-07 shows the evidence layers' status lines (charter grounds, commercial AIS, temperature fronts) and the fronts basis in the page's language through the same Status wrapper (copy only, no paint); the same note text roles stay, and two lines were added above the cited rows.
   // SCFEAT-FRESH-1 adds an "Updates: cadence" line under each drawn layer row and the protected-areas row, using the existing app-legend-note text role (copy only); no backing, opacity, token or threshold changed.
   // SC1407-15: planning-route row uses existing text/muted glass roles; no paint math, thresholds or backing changed.
-  "legendTsx": "045a0f55859fc8aace47ab6b23a6ee7fed0736d41e13ee3835bc1f1215f24ce9"
+  // MAP-SOURCES-PAGE-1: source and credit lines leave the Legend (the Sources page names them); no backing, opacity, token or threshold changed.
+  // MB-11 adds the relief ramp, survey key and warning; no text is drawn over a swatch.
+  // MSK-2: the relief depth chips follow the pointer's look (same swatch and app-legend-note roles, one new note row);
+  // no backing, opacity, token or threshold changed.
+  "legendTsx": "e1cf4370d4ef8cd3dd09bdb1db90a1d0aca043df7d70aef9888fcd8f0bd3f29b"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
@@ -696,17 +724,20 @@ export function checkSurfaceSource(sources) {
     }
     const bridgeBody = sources.bridgeCss.replace(/\/\*[\s\S]*?\*\//g, '').match(/\{([^}]*)\}/)[1];
     const roles = Object.fromEntries([...bridgeBody.matchAll(/--coast-([a-z0-9-]+):\s*([^;]+);/g)].map(m => [m[1], m[2]]));
-    for (const [theme, tokens] of Object.entries(themes(sources.tokensCss, FILES['web/tokens.css']))) {
+    for (const [theme, tokens] of Object.entries(rawThemes(sources.tokensCss))) {
       const resolve = role => resolveRgba(roles[role], tokens);
       const panel = resolve('panel'), glass = resolve('panel-glass'), sheen = resolve('sheen');
-      const nativeGlass = resolveRgba('color-mix(in srgb, var(--panel) 92%, transparent)', tokens);
+      // MB-11 changes the native panel backing. Ramp and survey chips are
+      // decorative swatches beside (never beneath) their labels. The new title,
+      // button and bold keys use text; absent classes and the warning use muted.
+      const nativeGlass = resolveRgba('var(--map-legend-panel)', tokens);
       for (const [id, role, surface, alphaRange, backingMin, backingMax, binding] of [
         ['legend-title', 'text', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:807-824; bridge:21,26'],
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,173,213,227; Legend.tsx:394'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:173,194,242; Legend.tsx:111,245,394'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css .app-legend / .app-relief-chips strong'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css .app-legend-note / .app-relief-chips > span'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,
@@ -765,6 +796,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const contours = checkMapContours(readFileSync(new URL('web/tokens.css', root), 'utf8'));
     if (process.argv.includes('--verbose')) console.log(contours.rows.map(r => `web/tokens.css: ${r}`).join('\n'));
     if (contours.failures.length) { failed = true; console.error(`Contour ink check failed in web/tokens.css:\n  ${contours.failures.join('\n  ')}`); }
+    const overlays = checkOverlayLines(readFileSync(new URL('web/tokens.css', root), 'utf8'));
+    if (process.argv.includes('--verbose')) console.log(overlays.rows.map(r => `web/tokens.css: ${r}`).join('\n'));
+    if (overlays.failures.length) { failed = true; console.error(`Overlay line check failed in web/tokens.css:\n  ${overlays.failures.join('\n  ')}`); }
   }
   if (!named.length) {
     const {failures, rows} = checkBridge(readFileSync(new URL(BRIDGE, root), 'utf8'), readFileSync(new URL('web/tokens.css', root), 'utf8'));

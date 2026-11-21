@@ -143,11 +143,13 @@ def graph(world, tmp_path, monkeypatch):
 def test_real_multiwindow_run_converts_per_window_and_validates_full_graph(graph):
     g = graph
     run_doc = g.v2.run
-    # Original PC9 v1 bytes, IDs, job IDs and zero-based sequence are untouched.
+    # Original PC9 native bytes, IDs, job IDs and zero-based sequence are untouched.
     for path, raw in g.v1_bytes.items():
         assert (g.w.root / path).read_bytes() == raw
     legacy = json.loads(g.v1_bytes['plans/pilot01/runs/run-00.json'])
-    assert legacy['schema'] == 'coast-run-summary-v1' and legacy['sequence'] == 0
+    # SCA-358: the live writer emits native v3 (run-scoped store counts); legacy v1 conversion is fixture-covered.
+    assert legacy['schema'] == 'coast-run-summary-v3' and legacy['sequence'] == 0
+    assert legacy['store_status']['schema'] == 'coastal-coordinator-scope-v1'
     assert run_doc['sequence'] == 0 and run_doc['continuation_of'] is None
     assert [w['root_job_id'] for w in legacy['windows']] == legacy['enqueued_job_ids']
     # Two complete windows: two producer records, each with its own Ref/SHA; no aggregate.

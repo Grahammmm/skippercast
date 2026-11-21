@@ -169,6 +169,73 @@ def _intersects(a, b):
                for other in br for r, s in zip(other, other[1:]))
 
 
+# EPSG:26911 (NAD83 / UTM zone 11N), the reviewed native CRS used by the
+# qualified-subset compiler. EPSG method 9807, GRS80 ellipsoid, with the
+# same zero-offset WGS84 to NAD83 operation (EPSG:1188). Keep the regional
+# validator usable in core builds that do not install the optional GIS stack.
+_FLATTENING = 1 / 298.257222101
+_ECCENTRICITY = math.sqrt(_FLATTENING * (2 - _FLATTENING))
+_N = _FLATTENING / (2 - _FLATTENING)
+_UTM_SCALE = .9996 * 6378137 / (1 + _N) * (1 + _N**2 / 4 + _N**4 / 64)
+_UTM_COEFFICIENTS = (
+    _N / 2 - 2 * _N**2 / 3 + 5 * _N**3 / 16 + 41 * _N**4 / 180,
+    13 * _N**2 / 48 - 3 * _N**3 / 5 + 557 * _N**4 / 1440,
+    61 * _N**3 / 240 - 103 * _N**4 / 140,
+    49561 * _N**4 / 161280,
+)
+
+
+def _utm11(lon, lat):
+    # Bound the projection to the regional inputs (including adjacent-zone
+    # closure edges); do not extrapolate to global or antimeridian geometry.
+    _require(-126 <= lon <= -108 and 20 <= lat <= 50,
+             "Closure clearance geometry is outside the supported regional projection")
+    phi, delta = math.radians(lat), math.radians(lon + 117)
+    q = math.asinh(math.tan(phi)) - _ECCENTRICITY * math.atanh(_ECCENTRICITY * math.sin(phi))
+    beta = math.atan(math.sinh(q))
+    eta = math.atanh(math.cos(beta) * math.sin(delta))
+    xi = math.atan2(math.sinh(q), math.cos(delta))
+    east = eta + sum(h * math.cos(2 * j * xi) * math.sinh(2 * j * eta)
+                     for j, h in enumerate(_UTM_COEFFICIENTS, 1))
+    north = xi + sum(h * math.sin(2 * j * xi) * math.cosh(2 * j * eta)
+                     for j, h in enumerate(_UTM_COEFFICIENTS, 1))
+    return 500_000 + _UTM_SCALE * east, _UTM_SCALE * north
+
+
+def _metric_polygons(polygons):
+    # As in the compiler, project every vertex and join with straight edges.
+    return [[[_utm11(*point) for point in ring] for ring in polygon] for polygon in polygons]
+
+
+def _point_segment_distance(point, a, b):
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    x, y = point[0] - a[0], point[1] - a[1]
+    length_squared = dx * dx + dy * dy
+    if not length_squared:
+        return math.hypot(x, y)
+    along = min(1, max(0, (x * dx + y * dy) / length_squared))
+    return math.hypot(x - along * dx, y - along * dy)
+
+
+def _edges(polygons):
+    return [(a, b) for polygon in polygons for ring in polygon for a, b in zip(ring, ring[1:])]
+
+
+def _below_clearance(footprint, closure, minimum):
+    ax, ay, az, aw = _bounds(footprint)
+    bx, by, bz, bw = _bounds(closure)
+    if math.hypot(max(0, bx - az, ax - bz), max(0, by - aw, ay - bw)) >= minimum:
+        return False
+    if _intersects(footprint, closure):
+        return True  # Projected straight edges can differ from the geographic edges.
+    # Disjoint straight segments reach their minimum at an endpoint of at
+    # least one of the two segments. Include edges of holes and every part.
+    closure_edges = _edges(closure)
+    return any(min(_point_segment_distance(a, c, d), _point_segment_distance(b, c, d),
+                   _point_segment_distance(c, a, b), _point_segment_distance(d, a, b)) < minimum
+               for a, b in _edges(footprint) for c, d in closure_edges)
+
+
 def _within_bounds(polygons, bounds):
     west, south, east, north = bounds
     a, b, c, d = _bounds(polygons)
@@ -318,6 +385,7 @@ def _validate(region, atlas, root, *, bottom_index=None):
                  and receipt.get("source_url") == data.get("source_url"), "Incomplete or wrong-region closure receipt")
         _timestamp(data["checked_at"])  # Provenance, never an assertion of current clearance.
         closed.extend(_polygons(f["geometry"]) for f in data["features"])
+    metric_closures = [_metric_polygons(closure) for closure in closed]
     for key in ("targets", "areas", "drifts"):
         _require(fragment[key] == atlas[key], "Published target/area/drift geometry differs from the qualified subset")
     _require(fragment["drifts"] == [], "This qualification method does not authorize drift lines")
@@ -331,6 +399,7 @@ def _validate(region, atlas, root, *, bottom_index=None):
     for target_id, target in targets.items():
         _require(re.fullmatch(re.escape(prefix) + r"-[a-f0-9]{10}", target_id), "Target identity differs from reviewed prefix")
         spec = specs[target["source_id"]]
+        _require(spec.get("horizontal_crs") == "EPSG:26911", "Unsupported reviewed closure clearance CRS")
         _qualification(target, config)
         _require(all(target.get(key) is True for key in ("depth_qualified", "fishing_target", "fishing_export"))
                  and target.get("vertical_datum") == "MLLW" and target.get("drift_id") is None
@@ -354,6 +423,9 @@ def _validate(region, atlas, root, *, bottom_index=None):
                  and _within_bounds(polygons, catalog[target["source_id"].lower()]["bounds"]),
                  "Target footprint or center escapes its reviewed geographic extent")
         _require(not any(_intersects(polygons, closure) for closure in closed), "Qualified footprint intersects a protected or excluded area")
+        metric_footprint = _metric_polygons(polygons)
+        _require(not any(_below_clearance(metric_footprint, closure, config["closure_clearance_m"])
+                         for closure in metric_closures), "Qualified footprint is below the reviewed closure clearance")
         used_areas.add(expected_area)
         record = views["views"][target_id]
         _require(record == index["views"].get(target_id) and record.get("status") == "surveyed"

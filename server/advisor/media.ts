@@ -756,14 +756,12 @@ export async function awaitingDerived(db: D1Database, mediaJson: string | null):
 }
 
 /**
- * Ask the job for a graphic (later tasks: the daily post, Stories, the weekly
- * roundup). Writes job_state advisor.graphic.<id> as pending (a rerun with the
- * same id renders again) and dispatches the job. `out_key` must be
+ * Prepare the pending graphic write so a caller can batch it with its post.
+ * A rerun with the same id renders again. `out_key` must be
  * advisor/posts/<post_id>/<name>.jpg; `data` is the template's input (at most
  * 16 KB of JSON); `media_ids` (at most 10) are photos the layout uses.
  */
-export async function requestGraphic(env: Env, id: string, request: GraphicRequest, now: number | Date = Date.now(), deps: DispatchDeps = {}): Promise<DispatchOutcome> {
-  if (!env.DB) throw Error('storage unavailable');
+export function prepareGraphicRequest(db: D1Database, id: string, request: GraphicRequest, now: number | Date): D1PreparedStatement {
   if (!ID.test(id)) throw Error('invalid graphic id');
   if (!(GRAPHIC_KINDS as readonly string[]).includes(request.kind)) throw Error('invalid graphic kind');
   if (!GRAPHIC_KEY.test(request.out_key)) throw Error('invalid graphic out_key');
@@ -773,8 +771,14 @@ export async function requestGraphic(env: Env, id: string, request: GraphicReque
   if (!request.data || typeof request.data !== 'object' || Array.isArray(request.data) || data.length > MAX_GRAPHIC_DATA) throw Error('invalid graphic data');
   const at = new Date(nowMs(now)).toISOString();
   const state: GraphicState = {kind: request.kind, ...(mediaIds.length ? {media_ids: mediaIds} : {}), data: request.data, out_key: request.out_key, status: 'pending', requested_at: at};
-  await env.DB.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
-    .bind(GRAPHIC_PREFIX + id, JSON.stringify(state), at).run();
+  return db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+    .bind(GRAPHIC_PREFIX + id, JSON.stringify(state), at);
+}
+
+/** Persist a graphic request, then dispatch the media job. */
+export async function requestGraphic(env: Env, id: string, request: GraphicRequest, now: number | Date = Date.now(), deps: DispatchDeps = {}): Promise<DispatchOutcome> {
+  if (!env.DB) throw Error('storage unavailable');
+  await prepareGraphicRequest(env.DB, id, request, now).run();
   return requestMediaJob(env, now, deps);
 }
 

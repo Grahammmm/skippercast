@@ -9,7 +9,7 @@ noaa_chlorophyll.py) for one sector box and writes, under `var/chlorophyll/<sect
 (gitignored, never part of a public build):
 
     chlorophyll.png    web-mercator RGBA image of the box, "NASA ocean-colour rainbow" (style 4)
-    chlorophyll.json   data time, bounds, cell counts, dataset path, resolution and the labels
+    chlorophyll.json   data time, PNG digest, bounds, cell counts, dataset path, resolution and labels
     source.json        the raw receipt (every cell, gaps as null) so the image can be rebuilt offline
 
 Style 4 of the map style study (layers.py chlr(4), G pick 2026-11-06): matplotlib `turbo` on a log
@@ -19,12 +19,16 @@ neighbouring valid cells (normalised convolution), so the picture shows the real
 finer one. Other sectors plug in by adding a box to SECTORS. NOT FOR NAVIGATION: research preview.
 """
 import argparse
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+import fcntl
+import hashlib
 import json
 import math
 import numbers
+import os
 from pathlib import Path
 import sys
+from tempfile import TemporaryDirectory
 import urllib.request
 
 import numpy as np
@@ -167,37 +171,84 @@ class Client:
         return body if as_binary else body.decode('utf-8')
 
 
+def _install_build(out, files):
+    """Stage on the same filesystem and roll back replacements on install failure."""
+    out.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(prefix='.build-', dir=out) as tmp:
+        stage = Path(tmp)
+        for name, data in files.items():
+            (stage / name).write_bytes(data)
+
+        # Serialize builders while taking backups and replacing the fixed preview paths.
+        fd = os.open(out, os.O_RDONLY)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            previous = stage / 'previous'
+            previous.mkdir()
+            for name in files:
+                try:
+                    os.link(out / name, previous / name)
+                except FileNotFoundError:
+                    pass  # first build
+
+            installed = []
+            try:
+                for name in files:
+                    (stage / name).replace(out / name)
+                    installed.append(name)
+            except OSError:
+                for name in reversed(installed):
+                    backup = previous / name
+                    if backup.exists():
+                        backup.replace(out / name)
+                    else:
+                        (out / name).unlink()
+                raise
+        finally:
+            os.close(fd)
+
+
 def build(sector, output=DEFAULT_OUTPUT, receipt=None, px_m=400.0, log=print):
     bounds = SECTORS[sector]
     render_size(bounds, px_m)
     out = Path(output) / sector
-    out.mkdir(parents=True, exist_ok=True)
     if receipt:
         result = json.loads(Path(receipt).read_text())
     else:
         from skippercast.pipeline import noaa_chlorophyll
         result = noaa_chlorophyll.fetch(Client(), {'longitude': [bounds[0], bounds[2]], 'latitude': [bounds[1], bounds[3]]})
-        (out / 'source.json').write_text(json.dumps(result, separators=(',', ':')))
+    sample_at = result.get('sample_at') if isinstance(result, dict) else None
+    if not isinstance(sample_at, str):
+        raise ValueError('sample_at must be an ISO timestamp with a UTC offset')
+    sample = datetime.fromisoformat(sample_at)
+    if sample.utcoffset() is None:
+        raise ValueError('sample_at must include a UTC offset')
     lats, lons, values = grid_from_result(result)
     rgba = render(lats, lons, values, bounds, px_m)
-    (out / 'chlorophyll.png').write_bytes(encode_png(rgba))
-    sample = datetime.fromisoformat(result['sample_at'].replace('Z', '+00:00'))
+    png = encode_png(rgba)
+    built = datetime.now(timezone.utc)
     finite = values[np.isfinite(values)]
     meta = {
-        'sector': sector, 'bounds': list(bounds), 'sample_at': result['sample_at'],
-        'built_at': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z'),
-        'age_hours_at_build': round((datetime.now(timezone.utc) - sample).total_seconds() / 3600, 1),
+        'sector': sector, 'bounds': list(bounds), 'sample_at': sample_at,
+        'built_at': built.isoformat(timespec='seconds').replace('+00:00', 'Z'),
+        'age_hours_at_build': round((built - sample).total_seconds() / 3600, 1),
         'max_age_hours': 96, 'dataset': result.get('dataset'), 'title': result.get('title'),
         'license': result.get('license'), 'units': 'mg m-3', 'native_resolution_degrees': result.get('native_resolution_degrees'),
         'valid_cells': int(finite.size), 'total_cells': int(values.size),
         'min': float(finite.min()) if finite.size else None, 'max': float(finite.max()) if finite.size else None,
         'median': float(np.median(finite)) if finite.size else None,
-        'image': {'width': int(rgba.shape[1]), 'height': int(rgba.shape[0]), 'pixel_m': px_m, 'projection': 'web-mercator'},
+        'image': {'width': int(rgba.shape[1]), 'height': int(rgba.shape[0]), 'pixel_m': px_m,
+                  'projection': 'web-mercator', 'sha256': hashlib.sha256(png).hexdigest()},
         'style': {'id': 'chlorophyll-4', 'ramp': 'turbo', 'scale': 'log10', 'vmin': VMIN, 'vmax': VMAX, 'opacity': OPACITY,
                   'legend': legend_stops()},
         'label': LABEL, 'query_url': result.get('query_url'),
     }
-    (out / 'chlorophyll.json').write_text(json.dumps(meta, indent=1))
+    files = {}
+    if not receipt:
+        files['source.json'] = json.dumps(result, separators=(',', ':')).encode('utf-8')
+    files['chlorophyll.png'] = png
+    files['chlorophyll.json'] = json.dumps(meta, indent=1).encode('utf-8')
+    _install_build(out, files)
     log(f"{sector}: sample {meta['sample_at']}, {meta['valid_cells']}/{meta['total_cells']} valid cells, image {rgba.shape[1]}x{rgba.shape[0]}")
     return meta
 

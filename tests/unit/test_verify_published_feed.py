@@ -37,11 +37,14 @@ class VerifyTests(unittest.TestCase):
         self.assertEqual(sleeps, [2, 2])
 
     def test_stale_public_copy_fails_after_all_attempts(self):
-        site, sleeps = FakeSite(OLD), []
+        site, sleeps = FakeSite(OLD, OLD, OLD, NEW), []
         ok, message = verify(URL, '42', attempts=3, delay=1, fetch=site, sleep=sleeps.append)
         self.assertFalse(ok)
         self.assertIn("run_id is '41', expected '42'", message)
-        self.assertEqual((len(site.urls), sleeps), (3, [1, 1]))
+        # Distinct verifier URLs do not make the same stale public body acceptable.
+        self.assertEqual((len(site.urls), len(set(site.urls)), sleeps), (3, 3, [1, 1]))
+        ok, message = verify(URL, '42', attempts=1, fetch=site, sleep=sleeps.append)
+        self.assertTrue(ok, message)
 
     def test_earlier_cycle_of_the_same_run_is_not_enough(self):
         earlier = {**NEW, 'published_at': '2026-09-28T11:37:40Z'}
@@ -54,12 +57,9 @@ class VerifyTests(unittest.TestCase):
         self.assertFalse(check({'completed_at': 'x'}, '42')[0])
         self.assertFalse(check([], '42')[0])
 
-    def test_requests_bypass_caches(self):
+    def test_verify_token_preserves_existing_query(self):
         self.assertEqual(bust(URL, '42-1'), URL + '?verify=42-1')
         self.assertEqual(bust(URL + '?a=1', 'x'), URL + '?a=1&verify=x')
-        site = FakeSite(OLD, NEW)
-        verify(URL, '42', attempts=2, delay=0, fetch=site, sleep=lambda s: None)
-        self.assertEqual(len(set(site.urls)), 2)
 
     def test_command_line_exit_status(self):
         from unittest.mock import patch

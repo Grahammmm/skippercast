@@ -8,6 +8,17 @@ import {test, expect} from './fixtures.ts';
 const PAGE = '/ports/morro-bay';
 
 const MESSAGE = 'e2e injected telemetry error';
+const EXPECTED_PAGE_ERROR = `Error: ${MESSAGE}`;
+
+async function consumeInjectedErrors(pageErrors: string[], count: number) {
+  await expect.poll(() => pageErrors.filter(error => error === EXPECTED_PAGE_ERROR).length).toBe(count);
+  // Leave unrelated errors in the shared store for the automatic teardown check.
+  for (let i = 0; i < count; i++) {
+    const index = pageErrors.indexOf(EXPECTED_PAGE_ERROR);
+    if (index === -1) break;
+    pageErrors.splice(index, 1);
+  }
+}
 
 test('an injected uncaught error produces one beacon; the port page view is a funnel step', async ({page, pageErrors}) => {
   const beacons: string[] = [], statuses: number[] = [];
@@ -16,8 +27,7 @@ test('an injected uncaught error produces one beacon; the port page view is a fu
   expect((await page.goto(PAGE))?.status()).toBe(200);
   // The same error twice: the client deduplicates it.
   await page.evaluate(message => { for (let i = 0; i < 2; i++) setTimeout(() => { throw new Error(message); }); }, MESSAGE);
-  await expect.poll(() => pageErrors.length).toBe(2);
-  pageErrors.splice(0);   // expected here; the fixture fails on any other uncaught error
+  await consumeInjectedErrors(pageErrors, 2);
   // Hiding the page flushes the batch, as leaving it would.
   await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pagehide')));
   await expect.poll(() => beacons.filter(body => body.includes(MESSAGE)).length).toBe(1);
@@ -43,8 +53,7 @@ test('Global Privacy Control sends nothing', async ({page, pageErrors}) => {
   page.on('request', request => { if (new URL(request.url()).pathname === '/api/telemetry') beacons.push(request.postData() || ''); });
   expect((await page.goto(PAGE))?.status()).toBe(200);
   await page.evaluate(message => setTimeout(() => { throw new Error(message); }), MESSAGE);
-  await expect.poll(() => pageErrors.length).toBe(1);
-  pageErrors.splice(0);
+  await consumeInjectedErrors(pageErrors, 1);
   await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pagehide')));
   await page.waitForTimeout(500);
   expect(beacons).toEqual([]);

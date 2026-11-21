@@ -67,6 +67,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 import sqlite3
 import sys
 import time
@@ -118,6 +119,26 @@ class WorkerError(RuntimeError):
     pass
 
 
+_JOB_ENDPOINTS = frozenset({"activity", "heartbeat", "labels", "snapshot", "watch"})
+
+
+def _label_refusal(error: HTTPError) -> str:
+    """Keep the label importer's actionable reason and row ordinal, never its raw detail."""
+    try:
+        raw = json.loads(error.read(512))
+    except (ValueError, OSError):
+        return "http_error"
+    message = raw.get("error") if isinstance(raw, dict) else None
+    if isinstance(message, str):
+        match = re.match(r"labels\[([0-9]{1,3})\]: ", message)
+        if match and int(match[1]) < 200:  # Worker label limit; this is an ordinal, not a registry ID
+            detail = message[match.end():]
+            reason = ("overlap" if detail.startswith("overlaps the ") else
+                      "window" if detail.startswith("the range must fall within the trip ") else "http_error")
+            return f"{reason} labels[{int(match[1])}]"
+    return "http_error"
+
+
 class Worker:
     """GET and POST ``/api/fleet/jobs/<path>`` with a GitHub OIDC token; 429, 5xx and transport errors retry.
 
@@ -152,6 +173,7 @@ class Worker:
         return self._token
 
     def request(self, method: str, path: str, body: Mapping | None = None, params: Mapping | None = None) -> dict:
+        endpoint = path if path in _JOB_ENDPOINTS else "other"
         url = f"{self.audience}/{path}" + ("?" + urlencode(params) if params else "")
         data = None if body is None else json.dumps(body, separators=(",", ":"), ensure_ascii=False).encode()
         for attempt in range(1, self.attempts + 1):
@@ -159,16 +181,22 @@ class Worker:
                        "User-Agent": self.user_agent}
             if data is not None:
                 headers["Content-Type"] = "application/json"
+            failure = None
             try:
                 with self.opener(Request(url, data=data, method=method, headers=headers), timeout=60) as response:
                     return json.load(response)
             except HTTPError as error:
-                detail = (error.read() or b"")[:300].decode(errors="replace")
-                if error.code not in self.RETRY or attempt == self.attempts:
-                    raise WorkerError(f"{method} {path}: HTTP {error.code} {detail}".strip()) from None
-            except OSError as error:
+                with error:
+                    if error.code not in self.RETRY or attempt == self.attempts:
+                        code = (_label_refusal(error) if method == "POST" and endpoint == "labels"
+                                and error.code in (400, 409) else "http_error")
+                        failure = f"{endpoint}: HTTP {error.code} {code}"
+            except OSError:
                 if attempt == self.attempts:
-                    raise WorkerError(f"{method} {path}: {type(error).__name__}: {error}") from None
+                    failure = f"{endpoint}: transport_error"
+            # Don't chain the transport exception: it can carry a private URL or response.
+            if failure is not None:
+                raise WorkerError(failure)
             self.sleep(min(60.0, 2.0 ** attempt))
         raise AssertionError("unreachable")  # pragma: no cover
 

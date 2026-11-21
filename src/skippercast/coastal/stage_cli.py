@@ -64,23 +64,30 @@ def execute(job, output, *, now):
         import rasterio
         from rasterio.warp import transform_bounds
         from shapely.geometry import box
-        leads = []
-        for candidate in manifest.get('candidates',[]):
+        leads, unknown_crs = [], []
+        candidates = manifest.get('candidates',[])
+        for candidate in candidates:
             path = validate_native_source(root,candidate['source'])
             with rasterio.open(path) as ds:
                 if not ds.crs:
+                    # Intersection cannot be tested without georeferencing: unevaluated, not disjoint.
+                    unknown_crs.append(candidate['source'])
                     continue
                 geographic = transform_bounds(ds.crs,'OGC:CRS84',*ds.bounds,densify_pts=21)
                 if box(*geographic).intersection(box(*job['segment']['bbox_crs84'])).area > 0:
                     leads.append(candidate)
         receipt = dict(schema='coastal-local-discovery-v1',synthetic=synthetic,segment_id=base['segment_id'],
                        leads=leads,catalog_scope='explicit_local_frozen_candidates',
-                       complete_within_supplied_catalog=True,unexamined_external_catalogs=True)
+                       candidates_attempted=len(candidates),
+                       candidates_evaluated=len(candidates)-len(unknown_crs),
+                       candidates_unknown_crs=len(unknown_crs),unknown_crs_sources=unknown_crs,
+                       complete_within_supplied_catalog=not unknown_crs,unexamined_external_catalogs=True)
         write(out/'discovery.json',receipt)
         artifact = ref(root,out/'discovery.json',receipt['schema'])
         base['artifacts'].append(artifact)
         if not leads:
-            return dict(base,state='held',holds=['no_local_leads_external_catalogs_unexamined'])
+            return dict(base,state='held',holds=['no_local_leads_unknown_crs_candidates_unevaluated'
+                if unknown_crs else 'no_local_leads_external_catalogs_unexamined'])
         next_manifest = dict(leads[0],schema='coastal-native-job-v1',synthetic=synthetic,segment_id=base['segment_id'])
         write(out/'native-job.json',next_manifest)
         native_ref = ref(root,out/'native-job.json',next_manifest['schema'])

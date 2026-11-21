@@ -5,8 +5,8 @@ and window D [4018,3360] had 962 mask-invalid BAG cells. grant_identity admits t
 larger profile only as a contiguous 2x2 block, so the whole block moved (G option
 A; Fable ruling, t_c8b57dcc comment by fable-2nd-look 21:50 PDT). The block rule
 runs over the pre-scan receipt's candidate table and never opens the source. These
-tests use synthetic tables; the real receipt is only read when present on the
-maintainer machine (CI uses the pins).
+tests use synthetic tables; an opt-in test reads the real receipt when present
+on the maintainer machine (CI uses the pins).
 """
 import hashlib
 import importlib.util
@@ -17,6 +17,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
+
+import pytest
 
 from skippercast.coastal.authenticated_v1.profiles import CONTAINED, LARGER, grant_identity
 from skippercast.coastal.coordinator.ordered_trial import LARGER_AFFINE, LARGER_BOUNDS, LARGER_WINDOWS
@@ -222,6 +224,7 @@ class SelectBlockMode(unittest.TestCase):
 class RealReceiptOnThisMachine(unittest.TestCase):
     """Read-only recomputation from the charged run's receipt when present (CI uses the pins)."""
 
+    @pytest.mark.host_archive
     def test_rule_over_the_real_candidate_table(self):
         path = PRESCAN / "prescan-receipt.json"
         try:

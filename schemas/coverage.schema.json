@@ -6,7 +6,8 @@
   "type": "object",
   "required": [
     "schema_version", "region_id", "region_name", "needs", "capabilities", "note",
-    "published_targets", "qualified_bottom_views", "published_bottom_views"
+    "published_targets", "published_research_candidates", "qualified_fishing_targets",
+    "qualified_bottom_views", "published_bottom_views"
   ],
   "properties": {
     "schema_version": {"const": 1},
@@ -43,6 +44,8 @@
     },
     "note": {"type": "string", "minLength": 1},
     "published_targets": {"type": "integer", "minimum": 0},
+    "published_research_candidates": {"description": "Published atlas points without affirmative fishing and depth qualification.", "type": "integer", "minimum": 0},
+    "qualified_fishing_targets": {"description": "Affirmatively qualified published atlas points, not current legal clearance.", "type": "integer", "minimum": 0},
     "qualified_bottom_views": {"type": "integer", "minimum": 0},
     "published_bottom_views": {"type": "integer", "minimum": 0},
     "qualified_subset": {

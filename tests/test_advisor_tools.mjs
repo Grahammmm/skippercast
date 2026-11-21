@@ -172,7 +172,8 @@ const {resolveLinks} = await import('../server/advisor/links.ts');
 
 const DAILY = () => read('./fixtures/feeds/daily-latest.json');
 const INTEL = () => read('./fixtures/feeds/intelligence.json');
-const feedsFrom = (daily = DAILY(), intel = INTEL()) => async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? daily : Promise.reject(Error('no feed'));
+// SCA-059: the default reader serves a current feed at FEED_NOW (the fixture was written after it).
+const feedsFrom = (daily = {...DAILY(), generated_at: '2026-09-28T18:00:00Z'}, intel = INTEL()) => async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? daily : Promise.reject(Error('no feed'));
 const FEED_NOW = Date.parse('2026-09-28T19:00:00Z');   // Mon 12:00 in Morro Bay: the fixtures' day
 const dataCtx = (over = {}) => ({env: {}, contact: {id: 'c1', role: 'angler', home_port: 'morro-bay', ...(over.contact ?? {})}, message: {id: 'in1'},
   deps: {feeds: over.feeds ?? feedsFrom(), ...(over.fetcher ? {fetcher: over.fetcher} : {})}, db: over.db ?? null, language: 'en', settings: advisorSettings({}), now: over.now ?? FEED_NOW});

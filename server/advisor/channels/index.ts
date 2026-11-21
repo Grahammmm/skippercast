@@ -63,15 +63,9 @@ export interface ChannelAdapter {
   fetchMediaByRef?(ref: string, env: Env): Promise<Response>;
 }
 
-/** Thrown by an adapter that does not exist yet; the consumer records the send as failed, not unknown. */
+/** Thrown when an adapter lacks an optional capability (no fetchMediaByRef); the consumer records a send that throws it as failed, not unknown. */
 export class ChannelNotImplemented extends Error {
   constructor(name: string) { super(`${name} channel not implemented`); this.name = 'ChannelNotImplemented'; }
-}
-
-/** A placeholder adapter: every call throws ChannelNotImplemented. TA-C2 and TA-C3 replaced the twilio and web stubs. */
-export function stubAdapter(name: AdapterName): ChannelAdapter {
-  const fail = async (): Promise<never> => { throw new ChannelNotImplemented(name); };
-  return {name, normalize: fail, send: fail, health: fail, fetchMediaByRef: fail, capabilities: {media: false, maxMediaBytes: 0, typing: false, read: false, segments: null}};
 }
 
 /** Every adapter by name. */

@@ -137,9 +137,12 @@ def model_verification_records(model, source_result, npoints, stations):
 
 
 def collection_health(sources):
-    return {'status':'ok' if all(s['status']=='ok' and not s.get('verification_issue') for s in sources.values()) else 'degraded',
-            'issues':[k for k,s in sources.items() if (s['status']!='ok' or s.get('verification_issue')) and not (k.startswith('hfr-') and s['status']=='missing')],
-            'coverage_gaps':[k for k,s in sources.items() if (k.startswith('hfr-') and s['status']=='missing') or s.get('verification_deferral')]}
+    # Freshness and horizon coverage are separate; keep exact wave samples usable even on a partial run.
+    wave=(sources.get('wave-ensemble') or {}).get('data') or {}
+    partial_wave=wave.get('horizon_status')=='partial'
+    return {'status':'ok' if not partial_wave and all(s['status']=='ok' and not s.get('verification_issue') for s in sources.values()) else 'degraded',
+            'issues':[k for k,s in sources.items() if (s['status']!='ok' or s.get('verification_issue') or (k=='wave-ensemble' and partial_wave)) and not (k.startswith('hfr-') and s['status']=='missing')],
+            'coverage_gaps':[k for k,s in sources.items() if (k.startswith('hfr-') and s['status']=='missing') or s.get('verification_deferral') or (k=='wave-ensemble' and partial_wave)]}
 
 
 def run(region_id,output,previous_root=None,now=None,clock=None):

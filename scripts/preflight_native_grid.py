@@ -13,12 +13,47 @@ import sys
 MAX_PIXELS = 25_000_000
 STRIP_ROWS = 512  # build_depth_contours.py strip read for a 2 m grid: 64 blocks x 16 m / 2 m
 METRE = ('metre', 'meter', 'm')
+ELEVATION_UP = ('elevation-up', 'positive_up', 'up')
 
 
 class Refused(Exception):
     def __init__(self, field, reason):
         super().__init__(f'{field}: {reason}')
         self.field = field
+
+
+def check_packing(scale, offset):
+    if scale != 1:
+        raise Refused('vertical_scale', 'only identity GDAL scale (1) is supported')
+    if offset != 0:
+        raise Refused('vertical_offset', 'only zero GDAL offset is supported')
+
+
+def check_ec_vertical(ds, *, require_declared):
+    """Validate the encoding EC reads without conversion; return only explicitly supported declarations."""
+    if ds.count != 1:
+        raise Refused('bands', 'EC needs exactly one elevation band')
+    if len(ds.files) != 1:
+        raise Refused('vertical metadata', 'sidecars are not covered by the raster hash')
+    check_packing(ds.scales[0], ds.offsets[0])
+    if ds.crs:
+        from pyproj import CRS
+
+        crs = CRS.from_wkt(ds.crs.to_wkt())
+        if crs.is_compound or len(crs.axis_info) != 2:
+            raise Refused('vertical metadata', 'EC does not support a CRS with vertical axes')
+    tags = (ds.tags(1), ds.tags())
+    units = [ds.units[0]] if ds.units[0] is not None else []
+    units += [t[k] for t in tags for k in ('vertical_unit', 'vertical_units', 'z_units') if k in t]
+    if 'units' in tags[0]:
+        units.append(tags[0]['units'])  # a generic dataset-level unit might describe the horizontal grid
+    signs = [t[k] for t in tags for k in ('vertical_sign', 'z_positive', 'positive') if k in t]
+    for field, values, supported in (('vertical_unit', units, METRE), ('vertical_sign', signs, ELEVATION_UP)):
+        if any(value.strip().lower() not in supported for value in values):
+            raise Refused(field, f'unsupported or conflicting declarations; expected {supported[0]}')
+        if require_declared and not values:
+            raise Refused(field, f'undeclared; supply a reviewed {supported[0]} band')
+    return bool(units), bool(signs)
 
 
 def _int_in(value, field, low, high=None):
@@ -86,6 +121,7 @@ def check_grid(meta, *, window, vertical_datum, vertical_unit, vertical_sign, ma
     band_unit = str(meta.get('band_unit') or '').strip().lower()
     if unit not in METRE or (band_unit and band_unit not in METRE):
         raise Refused('vertical_unit', 'must be metre; the band must not declare another unit')
+    check_packing(meta.get('band_scale', 1), meta.get('band_offset', 0))
     if vertical_sign != 'elevation-up':
         raise Refused('vertical_sign', 'only "elevation-up" is supported')
     return {'preflight': 'pass', 'driver': meta.get('driver'), 'crs_wkt': meta['crs_wkt'], 'transform': list(meta['transform']),
@@ -103,7 +139,8 @@ def raster_meta(path):
         return {'driver': ds.driver, 'crs_projected': bool(crs and crs.is_projected),
                 'crs_linear_units': (crs.linear_units if crs and crs.is_projected else ''),
                 'crs_wkt': crs.to_wkt() if crs else '', 'transform': list(ds.transform)[:6], 'width': ds.width,
-                'height': ds.height, 'count': ds.count, 'band_unit': (ds.units[0] if ds.units else None) or ''}
+                'height': ds.height, 'count': ds.count, 'band_unit': (ds.units[0] if ds.units else None) or '',
+                'band_scale': ds.scales[0] if ds.scales else None, 'band_offset': ds.offsets[0] if ds.offsets else None}
 
 
 def sha256_file(path):

@@ -1,6 +1,6 @@
 /* The Chart presentation's MapLibre chrome (FE-11), loaded with web/map/maplibre.js
    after maplibre-gl.css: token colours and type, 44 px zoom buttons, and the
-   bottom-right corner (zoom, nautical scale, attribution) placed clear of the
+   bottom-right corner (zoom, nautical scale, the Sources link) placed clear of the
    stage's own chrome, where web/app/app.css places the terrain's view buttons (FE-80):
    above the presentation toggle on the desktop, under it on mobile. */
 .app-chart.maplibregl-map { font: var(--weight-regular) var(--text-11) / var(--leading-body) var(--font-sans); color: var(--text); }
@@ -10,20 +10,17 @@
 .app-chart .maplibregl-ctrl-group:not(:empty) { box-shadow: var(--elev-2); }
 .app-chart .maplibregl-ctrl-group button { width: var(--touch-min); height: var(--touch-min); color: var(--text); }
 .app-chart .maplibregl-ctrl-group button + button { border-top: 1px solid var(--line); }
-.app-chart .maplibregl-ctrl-attrib-button:focus-visible, .app-chart .maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; box-shadow: none; }
+.app-chart .maplibregl-ctrl-group button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; box-shadow: none; }
 .app-chart .maplibregl-ctrl-group button:not(:disabled):hover { background: var(--panel-2); }
 .app-chart .maplibregl-ctrl button .maplibregl-ctrl-icon { background-image: none; display: grid; place-items: center; font: var(--weight-medium) var(--text-22) / 1 var(--font-sans); }
 .app-chart .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon::before { content: "+"; }
 .app-chart .maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon::before { content: "\2212"; }
 .app-chart .maplibregl-ctrl-scale { border-color: var(--muted); background: var(--panel); color: var(--text); font: var(--weight-regular) var(--text-11) / var(--leading-body) var(--font-mono); }
-.app-chart .maplibregl-ctrl-attrib { max-width: min(320px, calc(100vw - 2 * var(--space-4))); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); background: var(--panel); color: var(--muted); }
-.app-chart .maplibregl-ctrl-attrib a { color: var(--text); }
-/* BL-SC-1: at ≤ 640 px the credits are MapLibre's compact control, folded on load to one --touch-min square toggle on the panel. */
-.app-chart .maplibregl-ctrl-attrib.maplibregl-compact { box-sizing: border-box; min-width: var(--touch-min); min-height: var(--touch-min); padding: 0; }
-.app-chart .maplibregl-ctrl-attrib.maplibregl-compact-show { padding: var(--space-1) calc(var(--touch-min) + var(--space-1)) var(--space-1) var(--space-2); }
-.app-chart .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button { display: grid; place-items: center; width: var(--touch-min); height: var(--touch-min); border-radius: var(--radius-sm);
-  background: var(--panel); color: var(--text); font: italic var(--weight-semibold) var(--text-18) / 1 var(--font-sans); }
-.app-chart .maplibregl-ctrl-attrib-button::before { content: "i"; }
+/* MAP-SOURCES-PAGE-1: the map's one source-related control is a small "Sources" link (web/map/engine.ts SourcesLinkControl); no credit text is drawn. */
+.app-chart .map-sources-link { border-radius: var(--radius-sm); background: var(--panel); }
+.app-chart .map-sources-link a { box-sizing: border-box; display: grid; place-items: center; min-width: var(--touch-min); min-height: var(--touch-min); padding: 0 var(--space-2); color: var(--muted); font: var(--weight-regular) var(--text-11) / 1 var(--font-sans); text-decoration: underline; }
+.app-chart .map-sources-link a:hover { color: var(--text); }
+.app-chart .map-sources-link a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 @media (max-width: 1023px) {
   /* Under the top strip and the presentation toggle; the sheet's peek and the tab bar own the bottom. */

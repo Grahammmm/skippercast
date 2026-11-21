@@ -19,6 +19,7 @@ Every source behind a group must be an approved `catalog/sources.json` row with
 before any asset is downloaded. See docs/coastal-service.md.
 """
 import argparse
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import hashlib
@@ -42,6 +43,7 @@ REEF_CONTEXT = '/data/coast-wide/reef-context.json'
 DECLARED = {'terrain': ['usgs-naip'], 'habitat': []}
 PUBLIC_PATH = re.compile(r'^/data/(?:coast-wide|coast3d)/[A-Za-z0-9_.-]+\.(?:json|bin|png|jpg)$')
 SHA = re.compile(r'^[a-f0-9]{64}$')
+DOI = re.compile(r'(?:https://doi\.org/)?(10\.[0-9]{4,9}/[a-z0-9][a-z0-9._;()/:-]*)', re.I | re.ASCII)
 
 
 def group_of(path):
@@ -61,20 +63,40 @@ def get(path, origin=ORIGIN, headers=None):
         return response.status, dict(response.headers), response.read()
 
 
+def _doi(value):
+    match = DOI.fullmatch(value)
+    return match[1].lower() if match else None
+
+
 def catalog_ids(urls, catalog):
-    """{url: catalog id or None}: matched by DOI, else by the row's documentation or terms URL prefix."""
+    """Resolve an exact catalog ID, complete DOI or exact documented product URL to one row."""
+    counts = Counter(row['id'] for row in catalog)
+    terms = {(row.get('rights', {}).get('terms_url') or '').strip() for row in catalog}
+    documents = [(row['id'], (row.get('documentation_url') or '').strip()) for row in catalog]
     found = {}
     for url in urls:
-        doi = re.search(r'10\.5066[/-](P9[A-Z0-9]+)', url)
-        hits = [s['id'] for s in catalog if (doi and doi.group(1) in (s.get('documentation_url') or '')) or any(
-            prefix and url.startswith(prefix) for prefix in (s.get('documentation_url'), s.get('rights', {}).get('terms_url')))]
-        found[url] = hits[0] if len(hits) == 1 else None
+        identity = url.strip()
+        if not identity:  # a blank source identifies no product, even against a row with blank documentation or ID
+            found[url] = None
+            continue
+        doi = _doi(identity)
+        # A terms URL is not a product key, even if copied into documentation_url.
+        # A complete DOI is independently identifying, but only from documentation, never from terms.
+        hits = [source for source, document in documents
+                if identity == source
+                or (doi and doi == _doi(document))
+                or (not doi and identity == document and identity not in terms)]
+        # A matching row with no usable ID can never be the answer (refusals() would drop it without checking its
+        # rights), and it must not be masked by an approved row sharing the product: any such hit fails closed.
+        usable = all(isinstance(source, str) and source.strip() for source in hits)
+        found[url] = hits[0] if usable and len(hits) == 1 and counts[hits[0]] == 1 else None
     return found
 
 
 def refusals(group, urls, catalog):
     """Reasons this group may not be published; empty when every source is approved for commercial use."""
     rows, problems = {s['id']: s for s in catalog}, []
+    counts = Counter(s['id'] for s in catalog)
     if not urls:  # a manifest that names no source is never treated as cleared
         problems.append(f'{group}: upstream manifest lists no sources')
     ids = set(DECLARED[group])
@@ -84,7 +106,9 @@ def refusals(group, urls, catalog):
         ids.add(source)
     for source in sorted(i for i in ids if i):
         row = rows.get(source)
-        if row is None:
+        if counts[source] > 1:  # duplicate rows never let a later approved row clear an earlier held one
+            problems.append(f'{group}: ambiguous source {source} ({counts[source]} catalog/sources.json rows)')
+        elif row is None:
             problems.append(f'{group}: unknown source {source} (no catalog/sources.json row)')
         elif row.get('review_status') != 'approved' or row.get('rights', {}).get('commercial_use') != 'allowed':
             problems.append(f"{group}: rights held for {source} ({row.get('review_status')}, "
@@ -92,19 +116,25 @@ def refusals(group, urls, catalog):
     return problems
 
 
-def assets(value, out):
-    """Every {url, sha256, bytes} asset and every bare public path referenced inside a manifest."""
+def assets(value, out, problems):
+    """Collect terrain references, retaining every declared pin across all indexes."""
     if isinstance(value, dict):
-        if isinstance(value.get('url'), str) and SHA.match(str(value.get('sha256', ''))):
-            out[value['url']] = {'sha256': value['sha256'], 'bytes': value.get('bytes')}
+        path = value.get('url')
+        if isinstance(path, str) and group_of(path) == 'terrain':
+            entry = out.setdefault(path, {})
+            for field in ('sha256', 'bytes'):
+                pin = value.get(field)
+                if pin is None or (field == 'sha256' and not SHA.match(str(pin))):
+                    continue
+                if entry.setdefault(field, pin) != pin:
+                    problems.append(f'terrain: {path} has conflicting upstream {field} pins')
         for item in value.values():
-            assets(item, out)
+            assets(item, out, problems)
     elif isinstance(value, list):
         for item in value:
-            assets(item, out)
-    elif isinstance(value, str) and PUBLIC_PATH.match(value):
+            assets(item, out, problems)
+    elif isinstance(value, str) and group_of(value) == 'terrain':
         out.setdefault(value, {})
-    return out
 
 
 def pinned(data):
@@ -157,12 +187,15 @@ def plan(groups, origin=ORIGIN, catalog=None, now=None):
         for path in TERRAIN_SOURCES:  # each document must name its own sources
             problems += refusals('terrain', sorted({s['url'] for s in indexes[path].get('sources') or []}), catalog)
         for index in indexes.values():
-            wanted.update({k: v for k, v in assets(index, {}).items() if group_of(k) == 'terrain'})
+            assets(index, wanted, problems)
         # The copied indexes are the exact bytes whose references were enumerated and rights-checked.
         for path, data in raw.items():
-            if wanted.get(path, {}).get('sha256') not in (None, pinned(data)['sha256']):
+            expected, actual = wanted.get(path, {}), pinned(data)
+            if expected.get('sha256') not in (None, actual['sha256']):
                 problems.append(f'terrain: {path} differs from the digest the chart model declares')
-            wanted[path] = pinned(data)
+            elif expected.get('bytes') not in (None, actual['bytes']):
+                problems.append(f'terrain: {path} differs from the byte count the upstream index declares')
+            wanted[path] = actual
     if 'habitat' in groups:
         found, entries = habitat_plan(origin, catalog, now)
         problems += found

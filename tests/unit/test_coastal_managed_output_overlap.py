@@ -16,6 +16,8 @@ import time
 import unittest
 from pathlib import Path
 
+import pytest
+
 from skippercast.coastal.handoff.common import digest
 from skippercast.coastal.output_writer import (
     COMPACT_V3_PROFILE, MAX_FILES, ManagedOutputs, declaration, register_disjoint)
@@ -161,6 +163,7 @@ class LedgerReadCost(unittest.TestCase):
 
 
 class PreservedAttempt5Ledger(unittest.TestCase):
+    @pytest.mark.host_archive
     def test_attempt5_ledger_is_accepted_unchanged(self):
         """Read-only; the synthetic ledger checks run with or without this evidence."""
         try:

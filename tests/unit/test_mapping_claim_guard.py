@@ -36,6 +36,27 @@ def stop_receipt(root, record, **overrides):
             "stopped_utc": content["stopped_utc"], "sha256": hashlib.sha256(raw).hexdigest()}
 
 
+def pinned_file(root, name, raw):
+    (root / name).write_bytes(raw)
+    return {"path": name, "sha256": hashlib.sha256(raw).hexdigest()}
+
+
+def publication_fixture(root):
+    artifact = pinned_file(root, "artifact.json", b'{"release":"synthetic-generation-2"}')
+    record = job(state="publishing", attempt=2, publication_artifact=artifact)
+    path = root / "checkpoint.json"
+    path.write_text(json.dumps(checkpoint(record)))
+    contents = {}
+    refs = {}
+    for i, kind in enumerate(("rights", "restriction", "live_readback")):
+        content = {"schema": "sc-mapping-publication-receipt/1", "kind": kind, "status": "PASS",
+                   "job_id": record["id"], "attempt": 2, "artifact_sha256": artifact["sha256"],
+                   "evidence": pinned_file(root, f"producer-{i}.json", json.dumps({kind: "verified"}).encode())}
+        contents[kind] = content
+        refs[kind] = pinned_file(root, f"record-{i}.json", json.dumps(content).encode())
+    return path, refs, contents
+
+
 class MappingClaimGuardTests(unittest.TestCase):
     def test_old_overlapping_claim_is_refused_even_when_source_pair_order_differs(self):
         # Synthetic reproduction of the previous queue failure: two jobs reserve
@@ -247,16 +268,109 @@ class MappingClaimGuardTests(unittest.TestCase):
             self.assertEqual(result["handoff_note"], "preserve me")
             self.assertEqual(result["window"], "overnight")
 
-    def test_published_requires_existing_receipt_files_but_is_not_clearance(self):
+    def test_filename_only_receipts_do_not_record_publication(self):
+        # Previously even a single empty file with all three keywords sufficed.
         with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            record = job("p", state="published", receipt_paths=["rights-review.json", "restriction-check.json", "live-readback.json"])
-            with self.assertRaisesRegex(GuardError, "missing existing receipt"):
-                validate_checkpoint(checkpoint(record), base_dir=tmp_path)
-            for receipt in record["receipt_paths"]:
-                (tmp_path / receipt).write_text("synthetic receipt\n")
-            # Receipt presence is not a scientific-clearance claim.
-            validate_checkpoint(checkpoint(record), base_dir=tmp_path)
+            root = Path(tmp)
+            path = root / "checkpoint.json"
+            (root / "rights-restriction-live-readback.json").touch()
+            record = job(state="publishing", receipt_paths=["rights-restriction-live-readback.json"])
+            path.write_text(json.dumps(checkpoint(record)))
+            before = path.read_bytes()
+            with self.assertRaises(GuardError):
+                update_job(path, "a", {"state": "published"}, actor="coordinator-a")
+            self.assertEqual(path.read_bytes(), before)
+
+    def test_typed_receipts_record_publication_only_on_the_existing_coordinator_path(self):
+        # Neutral filenames are valid; evidence is neither approval nor a bypass.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, refs, _ = publication_fixture(root)
+            patch = {"state": "published", "publication_receipts": refs}
+            before = path.read_bytes()
+            with self.assertRaisesRegex(GuardError, "only the named coordinator"):
+                update_job(path, "a", patch, actor="worker-a")
+            self.assertEqual(path.read_bytes(), before)
+            saved = update_job(path, "a", patch, actor="coordinator-a")
+            self.assertEqual(saved, json.loads(path.read_bytes()))
+            self.assertEqual(saved["jobs"][0]["state"], "published")
+            self.assertEqual(saved["handoff_note"], "preserve me")
+            validate_checkpoint(saved, base_dir=root)
+            (root / "artifact.json").write_bytes(b"different generation")
+            with self.assertRaisesRegex(GuardError, "artifact SHA-256 does not match"):
+                validate_checkpoint(saved, base_dir=root)
+
+    def test_individually_invalid_receipts_leave_checkpoint_unchanged(self):
+        # Re-pin receipt bytes in semantic negatives, so the matching checks
+        # (not a coincidental checksum failure) must reject the transition.
+        cases = (
+            ("rights", "missing role"), ("restriction", "missing file"),
+            ("live_readback", b""), ("rights", b"unrelated text"),
+            ("restriction", b"{}"), ("rights", {"schema": "other/1"}),
+            ("rights", {"kind": "restriction"}), ("restriction", {"status": "FAIL"}),
+            ("live_readback", {"job_id": "another-job"}), ("rights", {"attempt": 1}),
+            ("restriction", {"attempt": 2.0}), ("live_readback", {"artifact_sha256": "a" * 64}),
+            ("rights", {"evidence": {}}), ("restriction", "empty evidence"),
+            ("rights", "producer changed"), ("live_readback", "receipt changed"),
+        )
+        for kind, defect in cases:
+            with self.subTest(kind=kind, defect=defect), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                path, refs, contents = publication_fixture(root)
+                name = refs[kind]["path"]
+                if defect == "missing role":
+                    del refs[kind]
+                elif defect == "missing file":
+                    (root / name).unlink()
+                elif defect == "receipt changed":
+                    (root / name).write_bytes((root / name).read_bytes() + b"\n")
+                elif defect == "producer changed":
+                    (root / contents[kind]["evidence"]["path"]).write_bytes(b"changed evidence")
+                else:
+                    if defect == "empty evidence":
+                        defect = {"evidence": pinned_file(root, "empty.json", b"")}
+                    raw = (json.dumps(dict(contents[kind], **defect)).encode()
+                           if isinstance(defect, dict) else defect)
+                    refs[kind] = pinned_file(root, name, raw)
+                before = path.read_bytes()
+                with self.assertRaises(GuardError):
+                    update_job(path, "a", {"state": "published", "publication_receipts": refs},
+                               actor="coordinator-a")
+                self.assertEqual(path.read_bytes(), before)
+
+    def test_publication_cannot_select_a_different_artifact_in_the_final_update(self):
+        # Internally consistent receipts can still target the wrong artifact.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path, refs, _ = publication_fixture(root)
+            recorded_artifact = json.loads(path.read_bytes())["jobs"][0]["publication_artifact"]
+            update_job(path, "a", {"publication_artifact": pinned_file(root, "new.json", b"new release")},
+                       actor="coordinator-a")
+            before = path.read_bytes()
+            with self.assertRaisesRegex(GuardError, "cannot change the recorded attempt or artifact"):
+                update_job(path, "a", {"state": "published", "publication_receipts": refs,
+                                       "publication_artifact": recorded_artifact}, actor="coordinator-a")
+            self.assertEqual(path.read_bytes(), before)
+
+    def test_producer_evidence_cannot_alias_the_checkpoint_it_is_recorded_in(self):
+        # Contract: a published checkpoint must still validate after the atomic
+        # rewrite. Evidence pinned to the checkpoint's own pre-update bytes
+        # passes the SHA check, then breaks it; the believable bug is update_job
+        # returning success on a checkpoint that immediately fails validation.
+        for alias in ("checkpoint.json", "./checkpoint.json", "symlink.json", "hardlink.json"):
+            with self.subTest(alias=alias), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                path, refs, contents = publication_fixture(root)
+                (root / "symlink.json").symlink_to(path)
+                (root / "hardlink.json").hardlink_to(path)
+                evidence = {"path": alias, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+                refs["rights"] = pinned_file(root, refs["rights"]["path"],
+                                             json.dumps(dict(contents["rights"], evidence=evidence)).encode())
+                before = path.read_bytes()
+                with self.assertRaisesRegex(GuardError, "must not be the checkpoint itself"):
+                    update_job(path, "a", {"state": "published", "publication_receipts": refs},
+                               actor="coordinator-a")
+                self.assertEqual(path.read_bytes(), before)
 
     def test_checkpoint_symlink_alias_is_rejected_without_replacing_target(self):
         with tempfile.TemporaryDirectory() as tmp:

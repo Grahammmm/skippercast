@@ -1,6 +1,13 @@
 // RF1230-14: a regional tide event without a readable time is dropped, so the brief's tide list never throws.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {mkdtemp, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {fileURLToPath, pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
+import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
+import {sparkArgs} from '../web/tides.ts';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 import montereyForecast from './fixtures/brief/monterey-forecast.json' with {type: 'json'};
 
@@ -79,4 +86,67 @@ test('edge 4: every kept event formats as an hour without throwing', () => {
 test('edge 5: missing or empty predictions give no events', () => {
   assert.deepEqual(eventsOf(withPredictions(data => { delete data.predictions; })), []);
   assert.deepEqual(eventsOf(withPredictions(data => { data.predictions = []; })), []);
+});
+
+test('regional datum: both tide lists retain the clocks but only show heights with a supported datum', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'tide-datum-'));
+  t.after(() => rm(dir, {recursive: true, force: true}));
+  const outfile = join(dir, 'views.mjs');
+  await build({
+    stdin: {resolveDir: fileURLToPath(new URL('..', import.meta.url)), loader: 'ts', contents: `
+      export {Conditions} from './web/app/views/Conditions.tsx';
+      export {currentBrief, dailyFeed} from './web/brief/Brief.tsx';
+      export {TideSpark} from './web/brief/TideSpark.tsx';
+      export {regionInfo} from './web/app/App.tsx';
+      export {language} from './web/i18n.ts';
+      export {configureStore, region} from './web/state.ts';
+      export {render} from 'preact-render-to-string';
+      export {h} from 'preact';`},
+    bundle: true, format: 'esm', platform: 'node', outfile, jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins,
+  });
+  const m = await import(pathToFileURL(outfile).href);
+  const now = new Date('2026-10-08T18:00:00Z');
+  const info = {...montereyPlace, id: montereyDaily.region_id, center: [montereyPlace.lat, montereyPlace.lon]};
+  m.configureStore({v2: true, storage: null});
+  m.language.value = 'en';
+  m.region.value = info.id;
+  m.regionInfo.value = info;
+  // 1:00 PM high and 8:00 PM low in Monterey. The source link already requests MLLW;
+  // it isn't a substitute for datum metadata on the regional payload itself.
+  const predictions = [
+    {time: '2026-10-08T20:00:00Z', type: 'H', height_ft: 3.3},
+    {time: '2026-10-09T03:00:00Z', type: 'L', height_ft: -0.4},
+  ];
+  const renderList = (component, props, className) => {
+    const html = m.render(m.h(component, props));
+    const list = html.match(new RegExp(`<ul class="${className}">(.*?)</ul>`, 's'));
+    assert.ok(list, `missing ${className}`);
+    return [...list[1].matchAll(/<li>(.*?)<\/li>/gs)].map(([, row]) => row.replace(/<[^>]*>/g, '').replace(/[\u202f\u00a0]/g, ' '));
+  };
+  for (const [label, datum] of [['explicit MLLW', 'MLLW'], ['missing', undefined], ['blank', '   '], ['unrecognised', 'chart-zero'], ['non-string', ['MLLW']]]) {
+    await t.test(label, () => {
+      m.dailyFeed.value = withPredictions(data => {
+        data.predictions = predictions;
+        if (datum === undefined) delete data.datum; else data.datum = datum;
+      });
+      const brief = m.currentBrief(now);
+      const known = datum === 'MLLW';
+      const expected = clocks => clocks.map((clock, i) => `${i ? 'Low' : 'High'} ${clock}${known ? ` · ${i ? '-0.4' : '3.3'} ft MLLW` : ''}`);
+      assert.deepEqual({
+        brief: renderList(m.TideSpark, {brief, now}, 'app-spark-events'),
+        conditions: renderList(m.Conditions, {now}, 'app-conditions-tides'),
+      }, {brief: expected(['1:00 pm', '8:00 pm']), conditions: expected(['1:00 PM PDT', '8:00 PM PDT'])});
+      assert.equal(brief.tideDatum, known ? 'MLLW' : null);
+      const tide = brief.tiles.find(tile => tile.id === 'tide');
+      assert.equal(tide.value, known ? 3.3 : null);
+      assert.equal(tide.display.datum, known ? 'MLLW' : undefined);
+    });
+  }
+});
+
+test('the sparkline does not chart heights without a datum, even with enough curve points', () => {
+  const day = {tides: GOLDEN.slice(0, 2), tideEvents: [], sunrise: null, sunset: null};
+  const chart = tideDatum => sparkArgs({...day, tideDatum}, day.tides[0].at, montereyPlace.timezone);
+  assert.equal(chart(null), null);
+  assert.equal(chart('MLLW')[0][0].unit, 'ft MLLW');
 });

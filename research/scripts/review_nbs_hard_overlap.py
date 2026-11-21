@@ -12,16 +12,19 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import numpy as np
-from pyproj import Transformer
+from pyproj import CRS, Transformer
 import rasterio
 from rasterio.enums import Resampling
 from rasterio.features import rasterize
 from rasterio.vrt import WarpedVRT
+from shapely import transform as transform_geometry
 from shapely.geometry import box, shape
 from shapely.ops import transform
 
 from research.scripts.audit_nbs_coast_camera_tiles import checked_mpas
 from research.scripts.audit_nbs_modeling_tile import audit, contributors, qualified_mask
+
+CLOSURE_BUFFER_M = 100
 
 
 def digest(path):
@@ -44,12 +47,30 @@ def current_federal(data):
     return features
 
 
-def mask_for(raster, geometries, *, buffer_m=0, all_touched=False):
+def mask_for(raster, geometries, *, all_touched=False):
     if not geometries:
         return np.zeros((raster.height, raster.width), dtype=bool)
-    shapes = [(geometry.buffer(buffer_m), 1) for geometry in geometries]
+    shapes = [(geometry, 1) for geometry in geometries]
     return rasterize(shapes, out_shape=(raster.height, raster.width), transform=raster.transform,
                      all_touched=all_touched, dtype="uint8").astype(bool)
+
+
+def closure_screen(raster, features, to_native):
+    """Use the same full, native-metre buffers for cell and outline screening."""
+    # NBS can have a compound CRS (projected horizontal axes and MLLW height).
+    crs = CRS.from_user_input(raster.crs)
+    if not crs.is_projected or any(axis.unit_conversion_factor != 1 for axis in crs.axis_info[:2]):
+        raise ValueError("NBS closure screening requires projected horizontal metres")
+    tile = box(*raster.bounds)
+    buffered = []
+    intersecting = 0
+    for feature in features:
+        polygon = transform_geometry(shape(feature["geometry"]), to_native, interleaved=False)
+        distance = tile.distance(polygon)
+        if distance <= CLOSURE_BUFFER_M:
+            buffered.append(polygon.buffer(CLOSURE_BUFFER_M))
+            intersecting += distance == 0  # Keep the receipt's unbuffered intersection count.
+    return mask_for(raster, buffered, all_touched=True), buffered, intersecting
 
 
 def original_usgs_class(release_id, raster, bounds_wgs84, audit_rows, usgs_cache):
@@ -127,10 +148,7 @@ def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit
                 to_native = Transformer.from_crs(4326, raster.crs, always_xy=True).transform
                 bounds = transform(to_geo, box(*raster.bounds))
                 locally_hard = [f for f in hard if shape(f["geometry"]).intersects(bounds)]
-                local_mpas = [f for f in mpa_features if shape(f["geometry"]).intersects(bounds)]
-                local_geas = [f for f in geas if shape(f["geometry"]).intersects(bounds)]
-                closed = mask_for(raster, [transform(to_native, shape(f["geometry"]))
-                                           for f in local_mpas + local_geas], buffer_m=100, all_touched=True)
+                closed, _, intersecting_closures = closure_screen(raster, mpa_features + geas, to_native)
                 elevation, uncertainty, contributor = raster.read()
                 strict = qualified_mask(elevation, uncertainty, contributor, rat,
                                         resolution_m=max(raster.res)) & ~closed
@@ -148,7 +166,7 @@ def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit
                 overlap = np.zeros(strict.shape, dtype=bool)
                 native_overlap = np.zeros(strict.shape, dtype=bool)
                 for release_id, polygons in sorted(hard_by_release.items()):
-                    inside = mask_for(raster, polygons)
+                    inside = mask_for(raster, [polygon.buffer(0) for polygon in polygons])
                     overlap |= inside
                     candidate = sensitive & inside
                     if not any(row.get("release_id") == release_id and row.get("kind") == "seafloor_character"
@@ -182,7 +200,7 @@ def build(review, scheme, cache, hard_context, hard_path, usgs_audit, usgs_audit
                 tiles.append({"tile": tile, "resolution_m": list(raster.res),
                               "source_raster_sha256": checked["raster_sha256"],
                               "source_rat_sha256": checked["rat_sha256"],
-                              "closure_polygons_intersecting_tile": len(local_mpas) + len(local_geas),
+                              "closure_polygons_intersecting_tile": intersecting_closures,
                               "original_class_releases_not_audited": unavailable_original_classes,
                               "strict_1m_measured_pixels_outside_closures": int(strict.sum()),
                               "sensitivity_2m_measured_pixels_outside_closures": int(sensitive.sum()),

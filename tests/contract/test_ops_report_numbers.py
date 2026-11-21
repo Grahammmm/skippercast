@@ -8,6 +8,7 @@ NOW = datetime(2026, 10, 5, 10, 0, tzinfo=timezone.utc)
 
 # The routes/llm fixture tests/contract/test_ops_report.py uses, and the report main rendered for it before.
 NORMAL = {
+    'route_totals': [{'requests': 1500, 's5xx': 6}],
     'routes': [
         {'route': '/feeds/*', 'requests': '1200', 's2xx': '1190', 's3xx': '0', 's4xx': '4', 's5xx': '6', 'p95_ms': 81.5},
         {'route': '/api/om/v1/forecast', 'requests': 300, 's2xx': 300, 's3xx': 0, 's4xx': 0, 's5xx': 0, 'p95_ms': 412.25}],
@@ -48,7 +49,8 @@ class FiniteNumberTests(unittest.TestCase):
                 self.assertIsNone(ops_report.finite(raw))
                 self.assertEqual(ops_report.cell(ops_report.number(raw)), '—')
                 self.assertEqual(ops_report.line_number(raw), '—')
-        text = ops_report.report({'routes': [route('/a', True, True), route('/b', 5)]}, now=NOW)
+        rows = [route('/a', True, True), route('/b', 5)]
+        text = ops_report.report({'routes': rows, 'route_totals': rows}, now=NOW)
         self.assertIn('Requests: 5; 5xx: 0 (0.00 %) (2 unreadable value(s) skipped).', text)
         self.assertIn('| /a | — | 0 | 0 | 0 | — | 10 |', text)
 
@@ -71,18 +73,19 @@ class FiniteNumberTests(unittest.TestCase):
 
     def test_unreadable_requests_are_skipped_from_the_totals_and_counted(self):
         routes = [route('/nan', 'nan'), route('/x', 'x'), route('/ok', '100', '4')]
-        text = ops_report.report({'routes': routes}, now=NOW)
+        text = ops_report.report({'routes': routes, 'route_totals': routes}, now=NOW)
         self.assertIn('Requests: 100; 5xx: 4 (4.00 %) (2 unreadable value(s) skipped).', text)
         self.assertIn('| /nan | — | 0 | 0 | 0 | 0 | 10 |', text)
         self.assertIn('| /x | — | 0 | 0 | 0 | 0 | 10 |', text)
         self.assertNotIn('nan', text.replace('/nan', ''))
         # An unreadable 5xx count is skipped too; a missing (None) cell is not "unreadable".
-        text = ops_report.report({'routes': [route('/a', 50, 'inf'), route('/b', None, None), route('/c', 50, 1)]}, now=NOW)
+        rows = [route('/a', 50, 'inf'), route('/b', None, None), route('/c', 50, 1)]
+        text = ops_report.report({'routes': rows, 'route_totals': rows}, now=NOW)
         self.assertIn('Requests: 100; 5xx: 1 (1.00 %) (1 unreadable value(s) skipped).', text)
 
     def test_all_requests_unreadable_gives_zero_without_dividing(self):
         routes = [route('/a', 'nan', 'nan'), route('/b', '-inf', 'oops'), route('/c', '', 3)]
-        text = ops_report.report({'routes': routes}, now=NOW)
+        text = ops_report.report({'routes': routes, 'route_totals': routes}, now=NOW)
         self.assertIn('Requests: 0; 5xx: 3 (0.00 %) (5 unreadable value(s) skipped).', text)
 
     def test_fleet_line_with_unreadable_heartbeat_or_messages(self):

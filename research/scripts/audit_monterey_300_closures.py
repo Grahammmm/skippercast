@@ -89,6 +89,8 @@ def audit(pixel, context, mpas, federal, *, now=None):
     for region, item in zip(("santa-cruz-monterey-bay", "monterey-point-sur"), mpas):
         if item.get("region_id") != region or len(item.get("features", [])) < 8:
             raise ValueError("Wrong or incomplete regional CDFW MPA source")
+        if item.get("exceededTransferLimit"):
+            raise ValueError("Regional CDFW MPA response is truncated")
         fresh(item["checked_at"], now)
         query_envelopes.append(official_query_envelope(item["source_url"]))
         all_mpas.extend(item["features"])

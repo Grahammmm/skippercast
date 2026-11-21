@@ -11,7 +11,7 @@
 // No position, track or vessel identifier is added here; the file is drawn as published.
 //
 // Erasable syntax only: tests/test_fleet_public_layers.mjs imports it by type stripping.
-import {computed, effect, signal} from '@preact/signals';
+import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {layers, region} from '../state.ts';
 import type {StringId} from '../i18n.ts';
@@ -21,9 +21,10 @@ import type {ChartMark} from './coastline.ts';
 import type {Engine, Overlay} from './engine.ts';
 import type {MarkScreen} from './habitat.ts';
 import {layerEntry} from './layers.ts';
-import {markData, markScreen} from './marks.ts';
+import {markData, markMetadataFailed, markScreen, screenedAvailability, type OverlayAvailability} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'commercial-ais';
 /** SC1352-07: a catalogue id for this module's card and status words (mark.layer.ais.<key>). */
@@ -67,15 +68,23 @@ export const cellCollection = (cells: readonly AisFeature[]): Collection => ({ty
 /** The installed opacity scale follows the displayed cells, with v1's one-hour floor. */
 const heatMaximum = (data: Collection): number => Math.max(1, ...data.features.map(f => Number(f.properties.hours) || 0));
 
-/** The heat fill and its outline in the --fleet colour; opacity rises with the cell's apparent fishing hours. */
-export function aisOverlay(p: Palette, data: Collection): Overlay {
+const lightTheme = () => typeof document !== 'undefined' && document.documentElement?.dataset?.theme === 'light';
+
+function aisLayers(p: Palette, most: number, light: boolean): MapLibre.LayerSpecification[] {
+  return [
+    {id: AIS_HEAT, type: 'fill', source: AIS_SOURCE, paint: {'fill-color': p.amber,
+      'fill-opacity': light ? 0.14 : ['interpolate', ['linear'], ['get', 'hours'], 0, HEAT_OPACITY[0], most, HEAT_OPACITY[1]]}},
+    {id: AIS_LINE, type: 'line', source: AIS_SOURCE, paint: {'line-color': p.amber, 'line-width': light ? 1.2 : 1.5}},
+  ];
+}
+
+/** The historical aggregate cells in the --amber colour. Keep the dark effort scale; light uses a fixed wash. */
+export function aisOverlay(p: Palette, data: Collection, light = false): Overlay {
   const most = heatMaximum(data);
   return {
     sources: {[AIS_SOURCE]: {type: 'geojson', data, attribution: layerEntry(REGISTRY_ID).attribution} as MapLibre.SourceSpecification},
-    layers: [
-      {id: AIS_HEAT, type: 'fill', source: AIS_SOURCE, paint: {'fill-color': p.amber, 'fill-opacity': ['interpolate', ['linear'], ['get', 'hours'], 0, HEAT_OPACITY[0], most, HEAT_OPACITY[1]]}},
-      {id: AIS_LINE, type: 'line', source: AIS_SOURCE, paint: {'line-color': p.amber, 'line-width': 1.5}},
-    ] as MapLibre.LayerSpecification[],
+    layers: aisLayers(p, most, light),
+    themePaint: palette => paintEdits(aisLayers(palette, most, lightTheme())),
   };
 }
 
@@ -88,40 +97,61 @@ export function aisMark(p: AisProps): ChartMark {
   return {
     id: `ais:${p.id}`, name: p.label, kind: 'Commercial AIS · historical 2024',
     reading: `${p.days_with_apparent_fishing} days with activity · ${hours(p.apparent_fishing_hours)} hr apparent fishing time. Apparent fishing activity, not a verified catch spot.`,
-    source: `${p.attribution} Activity dates (UTC): ${p.active_dates_utc.join(', ')}`,
+    source: `Activity dates (UTC): ${p.active_dates_utc.join(', ')}`,
     basis: `${layerEntry(REGISTRY_ID).basis} Depth and target species unknown. This offshore context is not qualified for the 200-foot fishing limit. ${p.resolution_note} `
       + `Gear classification: ${p.gear_label}. ${p.fishing_location_confidence}. Local sportfishing-charter identity remains unverified. ${p.vessel_count_note}`,
     // SC1352-07: Spanish wording, resolved by the card; the label, attribution, dates, gear, confidence and notes stay as published.
     copy: {
       kind: [cp(aid('kind'))],
       reading: [cp(aid('reading'), {days, hours: esHours(p.apparent_fishing_hours)})],
-      source: [cp(aid('source'), {attribution: p.attribution, dates: p.active_dates_utc.join(', ')})],
+      source: [cp(aid('source'), {dates: p.active_dates_utc.join(', ')})],
       basis: [cp(aid('basis'), {basis: cp('layer.commercial-ais.basis'), resolution: p.resolution_note, gear: p.gear_label, confidence: p.fishing_location_confidence, count: p.vessel_count_note})],
     },
   };
 }
 
+/** A published cell is usable only when every field the screen, the heat and the picker card read is present and well-typed;
+ * anything less is a failed asset, not a ready one that throws when the cell is selected (`hours(undefined)`). */
+const text = (v: unknown): boolean => typeof v === 'string';
+const count = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
+export const cellOk = (f: AisFeature | null | undefined): boolean => {
+  const p: Partial<Record<keyof AisProps, unknown>> | undefined = f?.properties;
+  return f?.type === 'Feature' && !!f.geometry && !!p && typeof p.id === 'string'
+    && count(p.latitude) && count(p.longitude) && count(p.days_with_apparent_fishing) && count(p.apparent_fishing_hours)
+    && Array.isArray(p.active_dates_utc) && p.active_dates_utc.every(text)
+    && [p.label, p.gear_label, p.resolution_note, p.fishing_location_confidence, p.vessel_count_note].every(text);
+};
+
 /** The Fleet entry's option (v1's "Show commercial AIS areas"): off by default. */
 export const aisOn = signal(false);
 export interface AisState {readonly offered: boolean; readonly drawn: number; readonly note: string; readonly copy?: StatusCopy}
 export const aisState = signal<AisState>({offered: false, drawn: 0, note: ''});
+const aisCheck = signal<OverlayAvailability | null>(null);
+export const aisAvailability: ReadonlySignal<OverlayAvailability | null> = aisCheck;
 
 /** Draws the cells while the Fleet entry and its option are on; created with the Chart (web/map/chart.ts `layers`). */
 export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette()}: FleetLayerOptions) {
-  const load = assetLoader<AisCollection>(fetchFn, page, d => (d as AisCollection | null)?.type === 'FeatureCollection' && Array.isArray((d as AisCollection).features));
-  const loaded = signal<{path: string; data: AisCollection | null} | null>(null);
+  const load = assetLoader<AisCollection>(fetchFn, page, d => (d as AisCollection | null)?.type === 'FeatureCollection' && Array.isArray((d as AisCollection).features)
+    && (d as AisCollection).features.every(cellOk));
+  const loaded = signal<{binding: NonNullable<typeof markData.value>; data: AisCollection | null} | null>(null);
   const on = computed(() => layers.value.includes('fleet') && aisOn.value);
-  const path = computed(() => { const m = markData.value; return m && m.region.id === region.value ? m.region.assets?.commercial_ais ?? '' : null; });
-  const cells = computed(() => { const l = loaded.value; return l && l.path === path.value && l.data ? shownCells(l.data, markScreen.value) : []; });
+  const binding = computed(() => { const m = markData.value; return m?.region.id === region.value ? m : null; });
+  const path = computed(() => binding.value ? binding.value.region.assets?.commercial_ais ?? '' : null);
+  const evidence = computed(() => { const l = loaded.value; return l?.binding === binding.value ? l : null; });
+  const cells = computed(() => { const l = evidence.value; return l?.data ? shownCells(l.data, markScreen.value) : []; });
   let drawn = false, drawnOn: Engine | null = null, drawnMaximum = 1;
   const disposers = [
     effect(() => {
-      const p = path.value;
-      if (!on.value || !p || loaded.peek()?.path === p && loaded.peek()?.data) return;
-      void load(p).then(data => { if (path.peek() === p) loaded.value = {path: p, data}; });
+      const p = path.value, b = binding.value;
+      if (!on.value || !p || !b || evidence.peek()?.data) return;
+      let current = true;
+      void load(p).then(data => { if (current) loaded.value = {binding: b, data}; });
+      return () => { current = false; };
     }),
     effect(() => {
-      const p = path.value, l = loaded.value, list = cells.value, ready = !!l && l.path === p;
+      const p = path.value, l = evidence.value, list = cells.value, ready = !!l;
+      aisCheck.value = p === null ? (markMetadataFailed.value ? 'failed' : null) : !p ? 'no-product'
+        : !l ? null : !l.data ? 'failed' : screenedAvailability(l.data.features.length, list.length, markScreen.value);
       const key: keyof typeof AIS_NOTES | 'screen' | 'summary' | '' = !on.value ? '' : p === null || !ready && !!p ? 'loading' : !p ? 'none' : !l!.data ? 'failed'
         : markScreen.value.status !== 'ready' ? 'screen' : 'summary';
       const note = key === '' ? '' : key === 'screen' ? markScreen.value.note : key === 'summary' ? aisSummary(list.length) : AIS_NOTES[key];
@@ -138,13 +168,13 @@ export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), pa
       // when its scale changes; a data-only update is enough for an unchanged maximum.
       if (drawn && e === drawnOn && most !== drawnMaximum) { e.setOverlay(REGISTRY_ID, null); drawn = false; }
       // § 9 draw order: above the charter grounds, under the fleet activity layers, the cloud frames and the marks.
-      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, aisOverlay(palette(), data), aisBefore());
+      if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, aisOverlay(palette(), data, lightTheme()), aisBefore());
       e.setData(AIS_SOURCE, data);
       drawn = true; drawnOn = e; drawnMaximum = most;
     }),
   ];
   return {
-    destroy() { for (const dispose of disposers) dispose(); aisState.value = {offered: false, drawn: 0, note: ''}; },
+    destroy() { for (const dispose of disposers) dispose(); aisCheck.value = null; aisState.value = {offered: false, drawn: 0, note: ''}; },
     pick: {layers: [AIS_HEAT] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
       const f = cells.peek().find(x => x.properties.id === properties?.id);
       return f ? aisMark(f.properties) : null;

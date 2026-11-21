@@ -8,7 +8,7 @@ import {DEFAULT_COAST_PALETTE,type CoastPalette} from './palette.ts';
 import type {CoastHandle,CoastMountOptions} from './embed-types.ts';
 import {coastPath} from './transport.ts';
 import {coastSceneMarkup,coastSourcesMarkup} from './embed-template.ts';
-export type {CoastChrome,CoastHabitat,CoastHabitatRank,CoastHandle,CoastInitialState,CoastLocation,CoastMountOptions,CoastPerspective,CoastReading,CoastSelection,CoastShading,CoastSourceCoverage,CoastTargetDetail,CoastTerrainSource,CoastView} from './embed-types.ts';
+export type {CoastChrome,CoastHabitat,CoastHabitatRank,CoastHandle,CoastInitialState,CoastLocation,CoastMountOptions,CoastPerspective,CoastReading,CoastSelection,CoastShading,CoastSky,CoastSourceCoverage,CoastTargetDetail,CoastTerrainSource,CoastTheme,CoastView} from './embed-types.ts';
 export type {CoastOverlay,CoastOverlayColor,CoastOverlayDrape,CoastOverlayFeature,CoastOverlayGeometry,CoastOverlayKind,CoastOverlayPalette,CoastOverlayPick,CoastOverlayStyle} from './embed-types.ts';
 
 type Viewer=Pick<CoastViewer,keyof CoastHandle>;
@@ -66,8 +66,8 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
  if(detached)detached.append(root.querySelector('.intro')!,root.querySelector('.layers')!,$('target-detail'),$('reading'),controls);
  for(const link of root.querySelectorAll<HTMLAnchorElement>('[data-coast-receipt]'))link.href=coastPath(link.dataset.coastReceipt!);
  if(options.forecastHref!==undefined)for(const link of root.querySelectorAll<HTMLAnchorElement>('a[href="index.html#forecast"]'))link.href=options.forecastHref;
- const {onSelection,onRestoredSelection,onSelectionInvalidated,onCurrentStatus,onHabitat,onView,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage,onShading}=options;
- const viewer=factory(scene,{root,managed:true,...(options.palette?{palette:embedPalette(options.palette)}:{}),...(detached?{controls:detached}:{}),onCurrentStatus,onHabitat,onView,onSelectionInvalidated,onRestoredSelection,onSelection,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage,onShading});
+ const {onSelection,onRestoredSelection,onSelectionInvalidated,onCurrentStatus,onHabitat,onView,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage,onShading,maxPitch,sky,onFrame}=options;
+ const viewer=factory(scene,{root,managed:true,...(options.palette?{palette:embedPalette(options.palette)}:{}),...(detached?{controls:detached}:{}),onCurrentStatus,onHabitat,onView,onSelectionInvalidated,onRestoredSelection,onSelection,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage,onShading,maxPitch,sky,onFrame});
  if(options.onTop)$('top').onclick=options.onTop;
  if(options.onCloseSelection)$('target-close').onclick=options.onCloseSelection;
  if(options.onReset){$('reset').setAttribute('aria-label','Reset map view');$('reset').onclick=options.onReset;}
@@ -85,6 +85,7 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
   setVisible:live(visible=>viewer.setVisible(visible),undefined),
   setOverlay:live((id,overlay)=>viewer.setOverlay(id,overlay),null),
   removeOverlay:live(id=>viewer.removeOverlay(id),false),
+  setTheme:live(theme=>viewer.setTheme(theme),undefined),
   setRelief:live(factor=>viewer.setRelief(factor),undefined),
   setWaterOpacity:live(opacity=>viewer.setWaterOpacity(opacity),undefined),
   setWaterVisible:live(visible=>viewer.setWaterVisible(visible),undefined),
@@ -92,6 +93,7 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
   setSunAzimuth:live(degrees=>viewer.setSunAzimuth(degrees),undefined),
   setPhotoMix:live(mix=>viewer.setPhotoMix(mix),undefined),
   setFixedRamp:live(fixed=>viewer.setFixedRamp(fixed),undefined),
+  setReliefLook:live(key=>viewer.setReliefLook(key),'legacy'),
   setSourceCoverage:live(visible=>viewer.setSourceCoverage(visible),undefined),
   setHabitatVisible:live(visible=>viewer.setHabitatVisible(visible),undefined),
   zoom:live(direction=>viewer.zoom(direction),undefined),

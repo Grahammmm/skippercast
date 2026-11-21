@@ -46,11 +46,14 @@ import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {COAST_NOT_SAVED, COAST_OFFLINE_COPY, NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY, watchOffline} from './offline.ts';
 import {pair, sp, type StatusCopy} from './status-copy.ts';
 import {MPA_FILL} from './mpa.ts';
+import {fieldOpacity, kitMinZoom} from './nearshore-paint.ts';
+import {NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
-import {LABEL_FONT} from './style.ts';
+import {LABEL_FONT, PLACE_LABELS} from './style.ts';
 import {surfaceField, temperatureRange, type SurfaceField} from './surface-field.js';
 import {SWELL_LAYER} from './swell.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'water-temp' as const;
 export const SST_SOURCE = 'water-temp';
@@ -58,7 +61,6 @@ export const CONTOUR_SOURCE = 'water-temp-contours';
 export const SST_LAYER = 'water-temp';
 export const CONTOUR_LAYER = 'water-temp-contours';
 export const CONTOUR_LABELS = 'water-temp-labels';
-export const SST_OPACITY = 0.8;
 const HOUR = 3_600_000;
 /** fish's `live(…, 72)`: an analysis, and its retrieval, under 72 hours old and at most 5 minutes ahead. */
 export const MAX_AGE_MS = 72 * HOUR;
@@ -66,7 +68,7 @@ const AHEAD_MS = 5 * 60_000;
 
 /** An analysis that passed the gate, with its grid. */
 export interface Analysis {
-  /** Changes with the product, its analysis time or its retrieval: a new key is a new texture. */
+  /** Metadata for the reading card ID. Paint follows the analysis object, not these timestamps. */
   readonly key: string;
   readonly sst: SurfaceTemperature;
   /** The product, from the report's status label ("NASA JPL MUR · surface temperature analysis" gives "NASA JPL MUR"). */
@@ -182,30 +184,38 @@ function judge(sst: SurfaceTemperature, product: string, limit: number, at: Date
 }
 
 /**
- * packages/coast `fieldContours` every 0.5 °F across `range`, joined into lines per level (field.ts
- * `isolines`); whole degrees are `major` and carry their label with the unit.
+ * packages/coast `fieldContours` every kit `overlays.sst_isoline_step_f` (0.5 °F) across `range`, joined into lines per level
+ * (field.ts `isolines`); whole degrees are `major` and carry their label with the unit.
  */
-export function contourLines(field: SurfaceField, range: readonly [number, number]): ReturnType<typeof isolines> {
-  const levels = Array.from({length: (range[1] - range[0]) * 2 + 1}, (_, i) => range[0] + i / 2);
+export function contourLines(field: SurfaceField, range: readonly [number, number], step: number = NEARSHORE_STYLE.overlays.sst_isoline_step_f): ReturnType<typeof isolines> {
+  const levels = Array.from({length: Math.round((range[1] - range[0]) / step) + 1}, (_, i) => range[0] + i * step);
   return isolines(field, levels, level => { const major = Number.isInteger(level); return {label: `${major ? level : level.toFixed(1)} °F`, major}; });
 }
 
-/** The texture, its contours and their labels, under the protected areas (§ 9 order); filled by setImage and setData. */
-export function waterTempOverlay(p: Palette): Overlay {
+/** The texture, its contours and their labels, under the protected areas (§ 9 order); filled by setImage and setData. A live theme switch re-runs the same layer builder with the new palette (`themePaint`); ids and sources stay.
+ * MSK-2: the texture's opacity follows the kit's field opacity by zoom, and the isotherms draw from the kit's isoline zoom. */
+function waterTempLayers(p: Palette): Overlay['layers'] {
   const width: MapLibre.ExpressionSpecification = ['interpolate', ['linear'], ['zoom'], 7, 0.5, 12, 1.2];
+  const isolines = kitMinZoom(NEARSHORE_STYLE.overlays.isolines_from_zoom);
+  return [
+    {id: SST_LAYER, type: 'raster', source: SST_SOURCE, paint: {'raster-opacity': fieldOpacity() as MapLibre.ExpressionSpecification, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
+    {id: CONTOUR_LAYER, type: 'line', source: CONTOUR_SOURCE, minzoom: isolines, layout: {'line-join': 'round'},
+      paint: {'line-color': p.text, 'line-width': width, 'line-opacity': ['case', ['get', 'major'], 0.5, 0.25]}},
+    {id: CONTOUR_LABELS, type: 'symbol', source: CONTOUR_SOURCE, minzoom: isolines, filter: ['get', 'major'],
+      layout: {'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 11},
+      paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
+  ];
+}
+
+/** One shared function, so equal overlays stay equal. A live theme switch re-runs the same layer builder with the new palette; ids and sources stay. */
+const themePaint = (pal: Palette) => paintEdits(waterTempLayers(pal));
+export function waterTempOverlay(p: Palette): Overlay {
   return {
     sources: {
       [SST_SOURCE]: {type: 'image', coordinates: [[0, 1], [1, 1], [1, 0], [0, 0]]},
       [CONTOUR_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}},
     },
-    layers: [
-      {id: SST_LAYER, type: 'raster', source: SST_SOURCE, paint: {'raster-opacity': SST_OPACITY, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
-      {id: CONTOUR_LAYER, type: 'line', source: CONTOUR_SOURCE, layout: {'line-join': 'round'},
-        paint: {'line-color': p.text, 'line-width': width, 'line-opacity': ['case', ['get', 'major'], 0.5, 0.25]}},
-      {id: CONTOUR_LABELS, type: 'symbol', source: CONTOUR_SOURCE, filter: ['get', 'major'],
-        layout: {'symbol-placement': 'line', 'symbol-spacing': 360, 'text-field': ['get', 'label'], 'text-font': [LABEL_FONT], 'text-size': 11},
-        paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
-    ],
+    layers: waterTempLayers(p), themePaint,
   };
 }
 
@@ -258,7 +268,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
     return analysisStatus(on.value, report.value, data.coastReport.value?.data ?? null, at, t, zone(), connection.offline.value);
   });
   let feedRegion = '', feedAt = 0, feedAbort: AbortController | undefined;
-  let drawnKey = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  let painted: SurfaceTemperature | null = null, drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
   const withdraw = (): void => { if (chartMark.peek()?.id.startsWith('sst:')) chartMark.value = null; };
 
   const disposers = [
@@ -288,16 +298,24 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
     }),
     // A new analysis repaints; no analysis (off, refused, stale) removes the texture and the contours at once.
     effect(() => {
-      const e = engine.value, a = status.value.drawn, key = a?.key ?? '';
-      if (!e || (key === drawnKey && e === drawnOn)) return;
-      if (key !== drawnKey) withdraw();
-      drawnKey = key; drawnOn = e;
+      const e = engine.value, a = status.value.drawn, generation = e ? a?.sst ?? null : null;
+      if (generation === painted && e === drawnOn) return;
+      if (generation !== painted) withdraw();
+      painted = null; drawnOn = e;
+      if (!e) return;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
       // § 9 order: under Temp contrast, else swell, wind, depth contours, or protected areas.
-      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
-      e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramps(p).sst, v => v[0]!));
+      const overlay = waterTempOverlay(p);
+      // The texture is pixels in an image source, not a paint: if a theme ever changes the ramp, a live switch repaints it from the same field
+      // (setImage sends no request and setData is not used). Today's --sst-* tokens are identical in both themes, so none is repainted.
+      let paintedRamp = ramps(p).sst.join();
+      const texture = (ramp: string[]): void => { paintedRamp = ramp.join(); e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramp, v => v[0]!)); };
+      e.setOverlay(REGISTRY_ID, {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).sst; if (ramp.join() !== paintedRamp) texture(ramp); return overlay.themePaint!(pal); }},
+        [CONTRAST_LAYER, 'chlorophyll', SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
+      texture(ramps(p).sst);
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
+      painted = a.sst;
     }),
     // Re-judge at the analysis's 72-hour limit and at the next whole hour (the dock's default hour moves on).
     effect(() => {
@@ -311,7 +329,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
   return {
     reading(at) {
       const a = status.peek().drawn;
-      return a && drawnKey === a.key && shownPresentation.peek() === 'chart' ? sstMark(a, at, now(), zone()) : null;
+      return a && painted === a.sst && drawnOn === engine.peek() && shownPresentation.peek() === 'chart' ? sstMark(a, at, now(), zone()) : null;
     },
     destroy() {
       connection.destroy();

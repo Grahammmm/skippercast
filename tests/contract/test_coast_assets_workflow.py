@@ -1,4 +1,4 @@
-"""The coast asset copy (FE-85) stays a manual, least-privilege job on the owner's runner."""
+"""The coast asset copy (FE-85) stays a manual, least-privilege job on hosted Ubuntu."""
 import re
 import unittest
 
@@ -12,12 +12,12 @@ class CoastAssetsWorkflowTests(unittest.TestCase):
         self.text = WORKFLOW.read_text()
         self.header = '\n'.join(line for line in self.text.split('\njobs:', 1)[0].splitlines() if not line.lstrip().startswith('#'))
 
-    def test_dispatch_only_from_main_on_the_owner_runner(self):
+    def test_dispatch_only_from_main_on_hosted_ubuntu(self):
         self.assertRegex(self.header, r'\non:\n  workflow_dispatch:\n')
         for trigger in ('schedule:', 'push:', 'pull_request'):
             self.assertNotIn(trigger, self.header)
-        self.assertIn("if: github.ref == 'refs/heads/main' && vars.DATA_RUNNER != ''", self.text)
-        self.assertEqual(re.findall(r'^\s*runs-on:\s*(.+?)\s*$', self.text, re.M), ["${{ vars.DATA_RUNNER || 'ubuntu-latest' }}"])
+        self.assertEqual(re.findall(r'^    if: (.+)$', self.text, re.M), ["github.ref == 'refs/heads/main'"])
+        self.assertEqual(re.findall(r'^\s*runs-on:\s*(.+?)\s*$', self.text, re.M), ['ubuntu-latest'])
 
     def test_least_privilege_and_the_token_only_on_the_upload_step(self):
         self.assertIn('permissions: {}', self.header)

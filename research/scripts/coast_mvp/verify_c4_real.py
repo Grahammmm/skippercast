@@ -26,6 +26,8 @@ def digest(path):
 
 
 def verify(packet, manifest_path):
+    if not __debug__:
+        raise RuntimeError('Evidence checks require Python assertions; run without optimization')
     packet, manifest_path = Path(packet), Path(manifest_path)
     report = json.loads((packet/'qa.json').read_text())
     segment = report['segments'][0]

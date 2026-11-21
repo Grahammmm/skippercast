@@ -12,17 +12,17 @@
     <link rel="stylesheet" href="coast-readable.css" />
   </head>
   <body class="coast-readable">
-    <a class="skip-link" href="#coverage-content">Skip to coverage</a>
+    <a class="skip-link" href="#coverage-content" data-i18n="coverage.skip">Skip to coverage</a>
     <header>
       <a class="brand" href="./">SkipperCast</a>
-      <nav aria-label="Public information"><a href="./">Back to the map</a><a href="/sources">Sources</a><a href="/methodology">Methods</a><a href="/about">About</a></nav>
+      <nav aria-label="Public information" data-i18n-aria="status.nav.public"><a href="./" data-i18n="status.nav.map">Back to the map</a><a href="/sources" data-i18n="status.nav.sources">Sources</a><a href="/methodology" data-i18n="status.nav.methods">Methods</a><a href="/about" data-i18n="status.nav.about">About</a></nav>
     </header>
     <main id="coverage-content">
-      <h1>Coverage</h1>
-      <p>Explore each published region by its fishing bounds; spaces between boxes are not covered.</p>
+      <h1 data-i18n="coverage.heading">Coverage</h1>
+      <p data-i18n="coverage.intro">Explore each published region by its fishing bounds; spaces between boxes are not covered.</p>
       <div id="coverage-map"></div>
-      <div id="coverage-list"><p>Loading the region list…</p></div>
-      <noscript><p>This page reads the published region list in your browser and needs JavaScript.</p></noscript>
+      <div id="coverage-list"><p data-i18n="coverage.loading">Loading the region list…</p></div>
+      <noscript><p>This page reads the published region list in your browser and needs JavaScript. <span lang="es">Esta página consulta la lista de regiones publicadas en tu navegador y necesita JavaScript.</span></p></noscript>
     </main>
     <script type="module" src="coverage-map.js"></script>
   </body>

@@ -351,6 +351,7 @@ def reconcile(seed, extra, nos, blue):
     resolved = {'crm', 'gmrt', 'usgs-cascadia', 'nccos-channel-islands', 'usgs-dds55',
                 'gebco-2026', 'usgs-borderland'}
     holds = list(extra['unresolved'])
+    checksum_holds = {}
     for row in extra['files']:
         if row['url'] in files:
             raise Hold('Supplement unexpectedly duplicates seed')
@@ -372,14 +373,29 @@ def reconcile(seed, extra, nos, blue):
         holds.extend(errors)
         audit.append(evidence)
         for row in rows:
-            old = files.get(row['url'])
+            url = row['url']
+            if url in checksum_holds:
+                checksum_holds[url]['observed'].append(dict(row))
+                continue
+            old = files.get(url)
             if old:
-                # Retain reviewed hashes/sizes; replace coarse inspected-window association.
+                old_sha, current_sha = old.get('sha256'), row.get('sha256')
+                if old_sha and current_sha and old_sha != current_sha:
+                    # Even partial prefetch must not attempt a URL with disputed pins.
+                    checksum_holds[url] = {
+                        'source': row['source'], 'url': url,
+                        'reason': 'Current SHA-256 differs from previous pin',
+                        'previous': files.pop(url), 'observed': [dict(row)],
+                    }
+                    continue
+                # Keep the reviewed size; never pair it with a hash of different-sized bytes.
                 if old.get('bytes') and row.get('bytes') and old['bytes'] != row['bytes']:
-                    holds.append({'source': row['source'], 'url': row['url'],
-                                  'reason': 'Current HEAD size differs from committed archive pin'})
-                row = {**row, 'bytes': old.get('bytes') or row.get('bytes'), 'sha256': old.get('sha256')}
-            files[row['url']] = row
+                    holds.append({'source': row['source'], 'url': url,
+                                  'reason': 'Current HEAD size differs from committed archive pin',
+                                  'previous': dict(old), 'observed': [dict(row)]})
+                    current_sha = None
+                row = {**row, 'bytes': old.get('bytes') or row.get('bytes'), 'sha256': old_sha or current_sha}
+            files[url] = row
     reconciled, remaining = [], []
     for gap in seed['unresolved']:
         survey = re.search(r'/([A-Z]\d{5})/BAG/', gap.get('url', ''))
@@ -406,7 +422,7 @@ def reconcile(seed, extra, nos, blue):
     return {**seed, 'scope': 'Campaign raw-mirror candidates; unresolved holds forbid complete status.',
             'supplement_sha256': SUPPLEMENT_SHA, 'enumeration_audit': audit,
             'reconciled_supplement_notes': notes,
-            'reconciled_seed_gaps': reconciled, 'unresolved': remaining + holds,
+            'reconciled_seed_gaps': reconciled, 'unresolved': remaining + holds + list(checksum_holds.values()),
             'files': sorted(files.values(), key=lambda r: (SEGMENTS.index(r['segments'][0]), r['source'], r['url']))}
 
 

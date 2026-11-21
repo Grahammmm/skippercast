@@ -38,8 +38,8 @@ from coastal_four128_runtime import gate, index, put, closed_sqlite
 from skippercast.coastal.handoff.common import load,ref,write,digest,epoch
 from skippercast.coastal.receipts import managed_writes
 from skippercast.coastal.derived_batch import arrays
-from skippercast.coastal.authenticated_v1.supplement import summarize
-from skippercast.coastal.authenticated_v1.policy import evaluate,policy_sha
+from skippercast.coastal.authenticated_v1.policy import evaluate
+from skippercast.coastal.authenticated_v1.profiles import validate_grant_packet
 from skippercast.coastal import vertical
 
 def validate_review_resources(unit,props,cg,readings,parent_readings,affinity,pid):
@@ -67,7 +67,22 @@ def resources(label,phase):
                               sorted(os.sched_getaffinity(0)),os.getpid())
     return dict(unit=unit,properties=props,cgroup=cg,readings=readings,parent=str(parent))
 
+def review_policy(grant, packet, frozen, diag, facts, result):
+    """Recompute against the admitted policy, never one selected by the result."""
+    domain = validate_grant_packet(grant, packet)
+    if domain != frozen['grant_identity']:
+        raise ValueError('review policy grant differs from frozen preparation')
+    evaluation = evaluate(diag, facts, execution_profile=domain['execution_profile'], configuration=domain)
+    if not evaluation['policy_sha256'] == packet['policy_sha256'] == result['policy_sha256']:
+        raise ValueError('scientific policy digest differs from admitted policy')
+    if packet['trial_policy_sha256'] != result['trial_policy_sha256']:
+        raise ValueError('trial policy digest differs from admitted packet')
+    evaluation['trial_policy_sha256'] = packet['trial_policy_sha256']
+    return evaluation
+
 def main():
+    from skippercast.coastal.authenticated_v1.supplement import summarize
+
     ap=argparse.ArgumentParser();ap.add_argument('label',choices=list('ABCD'));ap.add_argument('phase',choices=['acquire','qualify']);ap.add_argument('descriptor');ap.add_argument('--root',type=Path,default=DEFAULT_ROOT);a=ap.parse_args()
     configure(a.root)
     gate(a.label+'-review-'+a.phase,duration=180)
@@ -75,13 +90,15 @@ def main():
     descriptor_path=Path(a.descriptor)
     assert descriptor_path.is_relative_to(R/'metadata') and not descriptor_path.is_symlink() and descriptor_path.stat().st_size<4096
     rr=json.loads(descriptor_path.read_text());result=load(R,rr,contract='coastal-authenticated-stage-result-v1')
-    runtime_index=json.loads((R/'metadata/live-index.json').read_text())
+    runtime_index,grant=index()
     pre=load(R,runtime_index['independent_preflight'])
     assert pre['source']==CONTEXT['source'] and pre['native_window_set']==CONTEXT['windows']
     assert pre['expected_metadata_sha256']==CONTEXT['metadata_sha256'] and pre['expected_global_affine']==CONTEXT['header']['transform']
     assert bool(pre.get('rehearsal_synthetic',False))==FIXTURE
     if FIXTURE: assert pre['fixture_scope']==CONTEXT['fixture_scope']
     frozen=load(R,ref(R,R/'metadata/live-preparation.json','coastal-ordered-trial-preparation-v1'))
+    if runtime_index['grant']!=frozen['grant'] or runtime_index['requests']!=frozen['requests']:
+        raise ValueError('review grant or requests differ from frozen preparation')
     observation=load(R,result['observation'],contract='coastal-authenticated-observation-v1')
     facts=observation['native_facts'];fd=result['facts_digest'];window=pre['native_window_set']['ABCD'.index(a.label)]
     assert result['stage']==a.phase and result['source']==pre['source']==facts['source']==observation['source']
@@ -89,8 +106,7 @@ def main():
     assert facts['source_lineage']['metadata_sha256']==pre['expected_metadata_sha256']
     assert facts['header']['shape']==[10495,10034] and facts['header']['driver']=='BAG'
     assert type(observation['synthetic']) is bool and observation['synthetic'] is FIXTURE and observation['publication_prohibited'] is True
-    admitted_index=json.loads((R/'metadata/live-index.json').read_text())
-    admitted_packet=load(R,admitted_index['requests']['ABCD'.index(a.label)],contract='coastal-authenticated-input-v1')
+    admitted_packet=load(R,frozen['requests']['ABCD'.index(a.label)],contract='coastal-authenticated-input-v1')
     assert admitted_packet['synthetic'] is observation['synthetic'] and admitted_packet['source']==pre['source']
     assert facts['rights']['private_use'] is True and facts['rights']['evidence']
     import sqlite3
@@ -103,8 +119,7 @@ def main():
         record=json.loads(row['record_json'])
         assert record['source_domain_grant']==frozen['grant_identity'] and record['window_key']==digest(window)
         assert db.execute('SELECT job_id FROM authenticated_window_phases WHERE window_key=? AND stage=?',(digest(window),a.phase)).fetchone()['job_id']==result['job_id']
-        index_doc=json.loads((R/'metadata/live-index.json').read_text())
-        assert result['code_sha']==index_doc['code_sha'] and result['deps_sha']==index_doc['deps_sha']
+        assert result['code_sha']==runtime_index['code_sha'] and result['deps_sha']==runtime_index['deps_sha']
         assert result['accepted'] is False and result['qualification'] is False and result['rc']==(0 if result['state']=='done' else 3)
         namespace=Path('var/coastal/jobs')/result['job_id'].replace(':','-')/result['lease_token']/'output'
         assert Path(rr['path'])==namespace/'result.json'
@@ -123,11 +138,8 @@ def main():
     assert np.array_equal(vertical.to_depth(data['raw_elevation_data'],block,valid=valid),data['depth'],equal_nan=True)
     diag=summarize(data,fd)
     assert diag==load(R,result['diagnostics'],contract='coastal-same-return-pair-diagnostics-v1')
-    cfg=dict(window_side=128,window_count=4)
-    evaluation=evaluate(diag,facts,execution_profile='coastal-contained-windows-v3',configuration=cfg)
-    evaluation['trial_policy_sha256']=result['trial_policy_sha256']
+    evaluation=review_policy(grant,admitted_packet,frozen,diag,facts,result)
     assert evaluation==load(R,result['policy_evaluation'],contract='coastal-fixed-patch-policy-evaluation-v1')
-    assert result['policy_sha256']==policy_sha('coastal-contained-windows-v3',cfg)
     auth=load(R,result['finalized_authentication'],contract='coastal-authenticated-finalized-proof-v1')
     for key in ('facts_digest','policy_sha256','trial_policy_sha256','source','stage','code_sha','deps_sha'):
         assert auth[key]==result[key]
@@ -182,7 +194,6 @@ def main():
             native_facts_digest=fd,facts_digest=digest(dict(qualified_result=rr,facts_digest=fd)))
     out=R/'metadata'/('independent-'+a.label+'-'+a.phase+'-review.json')
     if out.exists():raise ValueError('preserve original review')
-    d,grant=index()
     put(out,doc,root=R)
     print(json.dumps(dict(review=ref(R,out,doc['schema']),quality_accepted=not holds,original_source_reads=0)))
 if __name__=='__main__':main()

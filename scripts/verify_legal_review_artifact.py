@@ -137,6 +137,16 @@ def verify(archive, jurisdiction_id):
                 "verified_source_count": len(verified), "source_ids": verified}
 
 
+def _same_archive(archive, output):
+    # Normalize even if receipt parent directories don't exist yet.
+    if os.path.realpath(archive) == os.path.realpath(output):
+        return True
+    try:
+        return archive.samefile(output)  # Includes hard links to the archive.
+    except FileNotFoundError:
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path)
@@ -145,6 +155,8 @@ def main():
     args = parser.parse_args()
     try:
         receipt = verify(args.archive, args.jurisdiction)
+        if args.output and _same_archive(args.archive, args.output):
+            raise ValueError("output must not name the input archive")
     except (ValueError, OSError) as exc:
         print(f"Legal review artifact refused: {exc}", file=sys.stderr)
         raise SystemExit(1) from None

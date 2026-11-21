@@ -24,6 +24,7 @@ import {cp, esDecimal, esStamp, type MarkCopyPart} from '../mark-copy.ts';
 import type {ChartMark} from './coastline.ts';
 import {freshNearshore, nearshoreAt, nearshoreSampleLabel} from './nearshore-model.js';
 import type {Palette} from './palette.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 export const NEARSHORE_SOURCE = 'swell-nearshore';
 export const NEARSHORE_LAYER = 'swell-nearshore';
@@ -84,6 +85,12 @@ export function ringLayer(p: Palette): MapLibre.LayerSpecification {
   return {id: NEARSHORE_LAYER, type: 'circle', source: NEARSHORE_SOURCE,
     paint: {'circle-radius': ['get', 'radius'], 'circle-color': p.blue, 'circle-opacity': 0, 'circle-stroke-color': p.blue, 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.9}};
 }
+
+/**
+ * Every theme-dependent paint of the ring layers, from the same two builders. The rings are mounted inside Swell's overlay
+ * (web/map/swell.ts), so that overlay's `themePaint` spreads this in; nothing here registers an overlay of its own.
+ */
+export const nearshoreThemePaint = (p: Palette): readonly {layer: string; property: string; value: unknown}[] => paintEdits([ringHitLayer(p), ringLayer(p)]);
 
 /** One sentence or two: the product, what a ring is, its window and its scale. */
 export function ringBasis(product: string, lang = 'en'): string {

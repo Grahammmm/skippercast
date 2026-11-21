@@ -54,24 +54,27 @@ Commands marked *on the runner* need a shell as the runner user, set up as in
 [fleet-labelling.md § 1](../../docs/operations/runbooks/fleet-labelling.md),
 with `SKIPPERCAST_FLEET_VAR` pointing at the fleet data directory (the
 `fleet-staging` one for a staging region). Without such a shell, mark those
-report lines `not run (no runner shell)`. `gh` commands take
-`--repo Grahammmm/skippercast`.
+report lines `not run (no runner shell)`. The fleet jobs (`fleet-registry.yml`,
+`fleet-osint.yml`) live in the private repository: their `gh` commands take
+`--repo Grahammmm/skippercast-ops`. `fleet-health.yml` and the issues stay in
+the public repository: those `gh` commands take `--repo Grahammmm/skippercast`.
 
 ## Modes
 
 ### `cycle` (weekly)
 
 1. Read the last runs:
-   `gh run list --workflow fleet-registry.yml --limit 5 --json databaseId,status,conclusion,createdAt,url`,
-   and the same for `fleet-osint.yml` and `fleet-health.yml`. Note any red run
+   `gh run list --repo Grahammmm/skippercast-ops --workflow fleet-registry.yml --limit 5 --json databaseId,status,conclusion,createdAt,url`,
+   `gh run list --repo Grahammmm/skippercast-ops --workflow fleet-osint.yml --limit 5 --json databaseId,status,conclusion,createdAt,url`,
+   and `gh run list --repo Grahammmm/skippercast --workflow fleet-health.yml --limit 5 --json databaseId,status,conclusion,createdAt,url`. Note any red run
    and any open `fleet-ais-stale` issue.
 2. Registry: if the last successful `fleet-registry.yml` run is older than
    seven days and none is queued or running, dispatch
-   `gh workflow run fleet-registry.yml -f region=<id> -f sink=<sink>`.
+   `gh workflow run fleet-registry.yml --repo Grahammmm/skippercast-ops -f region=<id> -f sink=<sink>`.
    Otherwise leave it to the Monday schedule.
 3. OSINT for new and stale boats: unless a `fleet-osint.yml` run is queued or
    running, dispatch
-   `gh workflow run fleet-osint.yml -f region=<id> -f mode=refresh -f sink=<sink>`.
+   `gh workflow run fleet-osint.yml --repo Grahammmm/skippercast-ops -f region=<id> -f mode=refresh -f sink=<sink>`.
 4. Matching needs no dispatch: every scheduled `ais process` run calls the
    `match` hook (FCC, call sign, AIS static name, geofence presence and
    `schedule-correlation`) and opens `mmsi` reviews for what it cannot
@@ -81,13 +84,13 @@ report lines `not run (no runner shell)`. `gh` commands take
 6. Owner steps: for each step a runbook names that is not done (a secret, a
    variable, a `sudo` command, the CPRA request in
    [open-questions.md](../../docs/plans/charter-fleet/open-questions.md)),
-   check `gh issue list --label owner-task --label charter-fleet --state open`
+   check `gh issue list --repo Grahammmm/skippercast --label owner-task --label charter-fleet --state open`
    and open one issue per missing step with both labels, the exact link or
    command, and links to #437 and #458. Never duplicate an open one.
 
 ### `discover`
 
-A registry pass only: `gh workflow run fleet-registry.yml -f region=<id> -f sink=<sink> -f steps=discover,resolve,enrich-code,ingest,refresh`.
+A registry pass only: `gh workflow run fleet-registry.yml --repo Grahammmm/skippercast-ops -f region=<id> -f sink=<sink> -f steps=discover,resolve,enrich-code,ingest,refresh`.
 For a local dry run, *on the runner*:
 `python -m skippercast.fleet run --region <id> --sink staging`. Resume a
 failed run with `-f run_id=<id from its summary>` and the same sink, as the
@@ -134,7 +137,7 @@ staging SQLite registry when it is absent:
 With `--sink staging` both run *on the runner*. With `--sink worker` they need
 the job identity (see the gaps): take the per-step counts and the
 `charter-identity coverage` block from the last `fleet-registry.yml` run
-(`gh run view <run id> --log`), and say the status line was not produced.
+(`gh run view <run id> --repo Grahammmm/skippercast-ops --log`), and say the status line was not produced.
 
 ## Guardrails
 
@@ -146,7 +149,7 @@ the job identity (see the gaps): take the per-step counts and the
   chat and the status log get counts only.
 - `--sink worker` only for a region whose `fleet.json` status is live
   (`active`).
-- One run at a time per workflow: check `gh run list` before any dispatch.
+- One run at a time per workflow: check `gh run list --repo Grahammmm/skippercast-ops` before any dispatch.
 - Bound each session to 60 minutes. Record the UTC start and deadline; at the
   deadline stop dispatching, leave running jobs alone and report.
 - Never run a fleet job from another session's checkout, rerun with
