@@ -427,6 +427,9 @@ for (const [kind, phase, label, respond, uncertain] of [
   ['story', undefined, '200 without post_id', () => jsonResponse({success: true}), true],
   ['story', undefined, 'definite Graph 400', () => jsonResponse(fixture('error-page-photo'), 400), false],
   ['reel', 'start', '500', () => jsonResponse({}, 500), false],
+  // Explicit rejection must permit retry: checking the ID alone holds the first case and falsely publishes the second.
+  ['story', undefined, '200 success:false without post_id', () => jsonResponse({success: false}), false],
+  ['story', undefined, '200 success:false with post_id', () => jsonResponse({success: false, post_id: `${PAGE}_100000000000399`}), false],
 ]) {
   const reel = kind === 'reel', edge = reel ? 'video_reels' : 'photo_stories';
   dbTest(`H8 #1 Page ${kind} ${phase ?? 'create'}: ${label} ${uncertain ? 'holds for reconciliation' : 'permits retry'}`, async () => {

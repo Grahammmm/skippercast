@@ -325,6 +325,7 @@ export async function fbFeed(cfg: MetaConfig, pageId: string, input: {message?: 
 export async function fbPhotoStory(cfg: MetaConfig, pageId: string, input: {url: string}): Promise<{photo_id: string; post_id: string}> {
   const photo = await fbPhoto(cfg, pageId, {url: input.url, published: false});
   const r = await graph<{post_id?: string; success?: boolean}>(cfg, 'POST', `/${requireId(pageId, 'page')}/photo_stories`, {photo_id: photo.id}, 'page-create');
+  if (r?.success === false) throw new MetaError('photo_stories', 200, null, null, null);
   return {photo_id: photo.id, post_id: pageCreateId('photo_stories', r?.post_id)};
 }
 
