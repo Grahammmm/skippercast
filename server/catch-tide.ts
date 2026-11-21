@@ -6,7 +6,7 @@ type CatchTide =
   | {missing: 'no station' | 'bad time' | 'not archived' | 'no tide curve'};
 
 // Numeric offsets must follow a clock (or a zone name), not be part of the date.
-const EXPLICIT_ZONE = /(?:\dZ|\b(?:GMT|UTC|[ECMP][SD]T)|(?:\d:\d{2}\s*|GMT|UTC)[+-]\d{2}:?\d{2})\s*$/i;
+const EXPLICIT_ZONE = /(?:\dZ|\b(?:GMT|UTC|[ECMP][SD]T)|(?:\d:\d{2}(?:\.\d+)?\s*|GMT|UTC)[+-]\d{2}:?\d{2})\s*$/i;
 
 export function catchTide(points: readonly TidePoint[], startedAt: string, station: string | null): CatchTide {
   if (!station) return {missing: 'no station'};

@@ -28,6 +28,15 @@ test('C2: naive, date-only and unparseable zoned times are bad before considerin
   }
 });
 
+test('C2: fractional seconds with numeric offsets match the equivalent UTC instant', () => {
+  const expected = catchTide(curve, '2026-01-01T00:10:00.123Z', station);
+  assert.deepEqual(expected, {stage: 'rising', height_ft: 1.24, station, at: time('10')});
+  for (const at of ['2026-01-01T00:10:00.123+00:00', '2026-01-01T01:10:00.123+0100',
+    '2025-12-31T19:10:00.123-05:00']) {
+    assert.deepEqual(catchTide(curve, at, station), expected, at);
+  }
+});
+
 test('C2: archive requires two usable points, not just two input rows', () => {
   for (const points of [[], [curve[0]], [curve[0], {at: 'invalid', heightFt: 2}, point('11', Infinity)]]) {
     assert.deepEqual(catchTide(points, time('10'), station), {missing: 'not archived'});
