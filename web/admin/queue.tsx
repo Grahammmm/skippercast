@@ -23,21 +23,30 @@ export function focusReview(doc: Pick<Document, 'getElementById'>, id: string | 
   target?.focus();
 }
 
+type DetailProps<T> = {load: () => Promise<T>; onLoaded?: (value: T) => void; children: (value: T) => ComponentChildren};
+
 /** Detail lives only inside the open card, not in page state or a shared cache. */
-export function AdminDisclosure<T>({load, children}: {load: () => Promise<T>; children: (value: T) => ComponentChildren}) {
+export function AdminDisclosure<T>({load, onLoaded, children}: Omit<DetailProps<T>, 'children'> & {
+  children: (value: T, setCollapseBlocked: (blocked: boolean) => void) => ComponentChildren;
+}) {
   const [open, setOpen] = useState(false);
+  const [collapseBlocked, setCollapseBlocked] = useState(false);
   return <>
-    <button type="button" class="admin-button" aria-expanded={open} onClick={() => setOpen(v => !v)}>Details</button>
-    {open ? <LoadedDetail load={load}>{children}</LoadedDetail> : null}
+    <button type="button" class="admin-button" aria-expanded={open} disabled={collapseBlocked} onClick={() => setOpen(v => !v)}>Details</button>
+    {open ? <LoadedDetail load={load} onLoaded={onLoaded}>{value => children(value, setCollapseBlocked)}</LoadedDetail> : null}
   </>;
 }
 
-function LoadedDetail<T>({load, children}: {load: () => Promise<T>; children: (value: T) => ComponentChildren}) {
+function LoadedDetail<T>({load, onLoaded, children}: DetailProps<T>) {
   const [value, setValue] = useState<T | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let live = true;
-    load().then(detail => { if (live) setValue(detail); }).catch(() => { if (live) setFailed(true); });
+    load().then(detail => {
+      if (!live) return;
+      onLoaded?.(detail);
+      setValue(detail);
+    }).catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
   }, []);
   return failed ? <p class="admin-error" role="alert">{COPY.loadFailed}</p> : value ? <>{children(value)}</> : <p role="status">{COPY.loading}</p>;
@@ -103,7 +112,8 @@ export function Queue() {
               <h2>{COPY.kinds[item.kind]} <span class="admin-reason">{item.reason}</span></h2>
               <p class="admin-meta">{COPY.opened(when(item.opened_at))} · {COPY.statuses[item.status]}</p>
               <AdminDisclosure key={`${item.id}:${item.status}`} load={() => getReview(item.id)}>
-                {detail => <ReviewCard item={detail} onDecided={result => decided(item, result)} nested />}
+                {(detail, setCollapseBlocked) => <ReviewCard item={detail} onDecided={result => decided(item, result)}
+                  onBusyChange={setCollapseBlocked} nested />}
               </AdminDisclosure>
             </div>
           </li>)}
@@ -114,7 +124,9 @@ export function Queue() {
   );
 }
 
-export function ReviewCard({item, onDecided, nested}: {item: QueueItem; onDecided: (result: DecisionResult) => void; nested?: boolean}) {
+export function ReviewCard({item, onDecided, onBusyChange, nested}: {
+  item: QueueItem; onDecided: (result: DecisionResult) => void; onBusyChange?: (busy: boolean) => void; nested?: boolean;
+}) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -126,12 +138,13 @@ export function ReviewCard({item, onDecided, nested}: {item: QueueItem; onDecide
   async function submit(body: DecisionBody): Promise<void> {
     if (busy) return;
     setBusy(true); setError('');
+    onBusyChange?.(true); // Keep the card mounted so a failed decision can show its error.
     try {
       const result = await decide(item.id, note.trim() ? {...body, note: note.trim()} : body);
       setEditing(false);
       onDecided(result);
     } catch (e) { setError(e instanceof ApiError && e.status !== 500 ? e.message : COPY.decisionFailed); }
-    finally { setBusy(false); }
+    finally { setBusy(false); onBusyChange?.(false); }
   }
 
   function onKey(event: KeyboardEvent): void {

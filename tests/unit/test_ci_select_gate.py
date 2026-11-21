@@ -119,7 +119,7 @@ class WorkflowWiringTest(unittest.TestCase):
         self.assertRegex(self.command, re.compile(r'^python3 scripts/ci_select\.py --gate$', re.M))
         self.assertNotIn('Core suite and GIS layer passed', self.job)
 
-    def test_draft_events_skip_all_ci_jobs_without_renaming_required_checks(self):
+    def test_draft_events_skip_all_ci_jobs_and_keep_other_required_names(self):
         # PyYAML's YAML 1.1 loader reads an unquoted `on` as True.
         events = self.workflow.get('on', self.workflow.get(True))
         self.assertEqual(events['pull_request']['types'], [
@@ -134,18 +134,18 @@ class WorkflowWiringTest(unittest.TestCase):
                 condition = job.get('if', '').removeprefix('${{').removesuffix('}}').strip()
                 self.assertTrue(condition == guard or condition.endswith(f' && ({guard})'), condition)
 
-        # Compare the names emitted by the required jobs to the protected list,
-        # including the separate DCO workflow and the two default matrix names.
+        # The event-dependent survey name is covered in test_workflow_pins.
+        # The other checks keep their static names, including DCO and both matrix legs.
         dco_jobs = yaml.safe_load((ROOT / '.github/workflows/dco.yml').read_text())['jobs']
         contexts = [jobs[key].get('name', key) for key in (
-            'survey-science', 'changes', 'e2e', 'e2e-2', 'e2e-3', 'e2e-4',
+            'changes', 'e2e', 'e2e-2', 'e2e-3', 'e2e-4',
         )]
         matrix = jobs['check']['strategy']['matrix']
         self.assertEqual(set(matrix), {'python'})
         contexts.extend(jobs['check'].get('name', f'check ({version})') for version in matrix['python'])
         contexts.append(dco_jobs['sign-off'].get('name', 'sign-off'))
         self.assertCountEqual(contexts, [
-            'survey-science', 'check (3.11)', 'check (3.13)', 'changes',
+            'check (3.11)', 'check (3.13)', 'changes',
             'e2e (1)', 'e2e (2)', 'e2e (3)', 'e2e (4)', 'sign-off',
         ])
 

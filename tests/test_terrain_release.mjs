@@ -52,3 +52,40 @@ test('terrain-release-selector', async t => {
   }
   assert.equal(fetch.mock.callCount(), 0);
 });
+
+// Catch raw-prefix validation accepting noncanonical asset paths instead of rejecting them before fetch.
+test('terrain release admits only canonical same-origin data asset URLs', async t => {
+  const fetch = t.mock.method(globalThis, 'fetch', () => { throw new Error('unexpected terrain request'); });
+  const {selectTerrainRelease} = await import('../web/map/terrain-release.ts');
+  const north = releaseFor('north', [-124.3, 42]);
+  const select = url => selectTerrainRelease('north', {...north, overview: {...north.overview, url}});
+  for (const url of [north.overview.url, '/data/relief/north/terrain/Coast%20caf%C3%A9.bin.gz']) {
+    const selected = select(url);
+    assert.equal(selected.available, true, url);
+    assert.equal(selected.assets[0].url, url, 'retain the original encoded asset name');
+  }
+  for (const [label, url] of [
+    ['parent segment outside data', '/data/../overview.bin.gz'],
+    ['encoded parent segment outside data', '/data/%2e%2E/overview.bin.gz'],
+    ['dot segment within data', '/data/relief/./overview.bin.gz'],
+    ['backslash', '/data/relief\\overview.bin.gz'],
+    ['protocol-relative', '//example.test/data/overview.bin.gz'],
+    ['absolute', 'https://example.test/data/overview.bin.gz'],
+    ['query', '/data/overview.bin.gz?kind=terrain'],
+    ['fragment', '/data/overview.bin.gz#terrain'],
+    ['empty query', '/data/overview.bin.gz?'],
+    ['empty fragment', '/data/overview.bin.gz#'],
+    ['encoded separator', '/data/relief%2Foverview.bin.gz'],
+    ['encoded backslash', '/data/relief%5Coverview.bin.gz'],
+    ['double encoding', '/data/relief/caf%25C3%25A9.bin.gz'],
+    ['invalid escape', '/data/overview%xy.bin.gz'],
+    ['control character', '/data/over\nview.bin.gz'],
+    ['encoded control character', '/data/over%0Aview.bin.gz'],
+    ['trailing space', '/data/overview.bin.gz '],
+    ['empty path segment', '/data/relief//overview.bin.gz'],
+    ['directory only', '/data/relief/'],
+  ]) {
+    assert.deepEqual(select(url), {available: false, reason: 'asset-contract'}, label);
+  }
+  assert.equal(fetch.mock.callCount(), 0);
+});

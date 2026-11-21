@@ -1,0 +1,1 @@
+ALTER TABLE `advisor_posts` ADD `ig_posted_at` text;
