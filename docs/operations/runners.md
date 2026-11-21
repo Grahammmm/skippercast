@@ -1,27 +1,47 @@
-# Runners: where the jobs run and what they cost
+# Runners: where the jobs run and what capacity they need
 
-SkipperCast's compute is GitHub Actions. On a public repository the minutes are free; on a
-private one they are billed, and the live forecast loop alone runs about 24 hours a day.
-This page records the numbers and separates the public hosted jobs from the private fleet jobs.
+This guide inventories GitHub Actions jobs for capacity planning. It describes the
+checked-in workflows, not how often jobs actually start, and separates public hosted jobs
+from private fleet jobs.
 
-## What the jobs cost on GitHub-hosted runners
+## Workflow inventory
 
-Measured from the workflow definitions (timeouts and loop budgets, 30 Sep 2026); billed
-minutes are per job, so parallel jobs add up.
+The September 2026 monthly estimates were historical planning assumptions, not measured
+usage or a bill. They assumed four short CI jobs and monthly research dispatches, and
+did not count the alarm clock. Do not use them to size today's runner pool.
 
-| Workflow | Cadence | Billed minutes / month (about) |
+The following inventory covers the workloads in the old estimate plus the alarm clock.
+Schedules are configured triggers, not observed starts. Jobs can be skipped, delayed,
+or cancelled; matrix legs each take a runner slot while executing.
+
+| Workflow / job | Configured cadence and job count | Runner selection |
 | --- | --- | --- |
-| `live-conditions.yml` refresh | 330-minute self-chaining loop, all day | 43,000 |
-| `live-conditions.yml` notify | Same, unless `ENABLE_QUEUES=true` | 43,000 |
-| `seafloor.yml` | Daily; prepare + one job per reach + publish | up to 5,000 |
-| `ci.yml` | Every push and PR; 4 jobs of 3–5 minutes | 1,500–3,000 |
-| `daily-data.yml`, `research-daily.yml`, `feed-freshness.yml`, `ops-report.yml` | Daily / hourly | 1,500 |
-| Monthly research workflows | Day 1 and 2 of the month | 500–1,000 (one job stays on `macos-latest`, billed at 10×: about 90 minutes, $7) |
-| **Total** | | **50,000–95,000** |
+| `live-conditions.yml` / `refresh` | Schedule at :07 and :37 UTC, manual dispatch, or a dispatch from the chain. One job refreshes every 30 minutes within a 330-minute loop budget (355-minute job timeout). | `ubuntu-latest` |
+| `live-conditions.yml` / `alarm-clock` | One independent job per `main` run. Attempts a freshness dispatch at startup and hourly thereafter, stopping when it observes refresh completed or reaches its loop limit (330-minute window; 345-minute job timeout). It can occupy a runner while sleeping. | `ubuntu-latest` |
+| `live-conditions.yml` / `notify` | One optional job alongside refresh, with a 345-minute loop budget and a 360-minute job timeout. Runs unless `ENABLE_QUEUES=true`; a manual dispatch with `check_trips` can still request it. | `ubuntu-latest` |
+| `live-conditions.yml` / `next` | One job after refresh on uncancelled `main` runs (5-minute timeout); it skips dispatching a successor if refresh did not record at least one hour of elapsed time. | `ubuntu-latest` |
+| `ci.yml` | Ready PR: up to 11 jobs (1 `changes`, 2 `check`, up to 4 `e2e`, 3 `survey-tests`, 1 `survey-science` roll-up). Main push, merge queue and dispatch: 11 jobs. Nightly at 09:00 UTC: the same full tier plus 1 `e2e-flake-rates` job. | `ubuntu-latest`. |
+| `seafloor.yml` | Daily at 10:23 UTC, matching pushes to `main`, or manual dispatch. On `main`, `prepare` selects work; if there is work, the `reaches` matrix groups up to three selected reaches from the same region per worker leg, with at most three legs running in parallel. After `reaches`, `publish` runs one matrix leg per selected region (at most three in parallel), followed by `ledger`. Both are conditioned on successful `prepare` with work selected and can run despite an upstream failure. | `ubuntu-latest` |
+| `daily-data.yml` | One refresh job; daily at 04:17 Los Angeles time, matching pushes to `main`, or manual dispatch. | `ubuntu-latest` |
+| `research-daily.yml` | One inventory job on completion of `daily-data.yml` or manual dispatch; no separate cron. | `ubuntu-latest` |
+| `feed-freshness.yml` | One check job; scheduled at :52 UTC each hour or dispatched, including by the alarm clock. | `ubuntu-latest` |
+| `ops-report.yml` | One report job; daily at 15:23 UTC or manual dispatch. | `ubuntu-latest` |
+| `research-substrate.yml` | Manual-only, 20 jobs defined (19 portable jobs and 1 macOS audit). No monthly executions assumed. | `ubuntu-latest`; `audit` uses `macos-latest`. |
+| `research-fish-survey.yml` | Manual-only, 11 jobs defined. No monthly executions assumed. | `ubuntu-latest` |
 
-A private repository on the Free plan includes 2,000 Linux minutes a month, then about
-$0.008 a minute (check GitHub's current price list). At the totals above that is roughly
-**$400–750 a month**. Paid plans add only 1,000–50,000 minutes, so no plan makes this cheap.
+### Observed duration by runner class
+
+A comparable anonymized sample of elapsed job times for today's jobs is **unavailable**
+for hosted Linux, hosted macOS, and self-hosted runners. Existing accounting aggregates
+different workloads; it does not establish a like-for-like duration comparison. For any
+future comparison, report sample size and elapsed time for the same job and tier by
+assigned runner class, keeping unknown assignments separate.
+
+Job elapsed time runs from start to completion and includes sleep. Parallel jobs add
+runner occupancy, not sequential wall time. Queue wait is time before a runner starts;
+host CPU time measures processing rather than occupancy; a configured timeout caps a
+job but is not its observed duration. None of these is a billing measure. Repository
+visibility, billing, and actual dispatch frequency were not measured for this inventory.
 
 ## Public hosted jobs and private fleet runners
 
@@ -51,6 +71,10 @@ The fleet runner setup script (`scripts/runner/setup.sh`) lives in private
 
 Separately, `ENABLE_QUEUES=true` (see `docs/cloudflare.md`) stops the hosted notify job
 from running all day; the Worker's cron queues trip checks itself.
+
+For hosted capacity planning, refresh and alarm can hold two slots at once; optional
+notify can hold a third, and a freshness check or `next` can use another. Jobs may
+queue when capacity is unavailable. This is an example, not a runner purchase recommendation.
 
 ## Keeping it healthy
 
