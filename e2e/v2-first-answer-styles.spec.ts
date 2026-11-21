@@ -178,12 +178,8 @@ test('first_answer_links_and_map_action_keep_keyboard_behavior: the desktop app 
   const [h, r, p, b] = await Promise.all(ys);
   expect(h! < r! && r! < p! && p! < b!, 'heading, reason, rules, action in order').toBe(true);
   // Answer before map: the section sits above the stage, and the 300 px brief column is unchanged.
-  // Measure both in one layout: async verdict updates can move the stage between separate browser calls.
-  const {answerBottom, stageTop} = await section.evaluate(el => ({
-    answerBottom: el.getBoundingClientRect().bottom,
-    stageTop: document.querySelector('section.app-stage')!.getBoundingClientRect().top,
-  }));
-  expect(answerBottom).toBeLessThanOrEqual(stageTop + 0.5);
+  const stage = (await page.locator('section.app-stage').boundingBox())!, secBox = (await section.boundingBox())!;
+  expect(secBox.y + secBox.height).toBeLessThanOrEqual(stage.y + 0.5);
   expect(Math.round((await page.locator('aside.app-brief').boundingBox())!.width)).toBe(300);
   await expect(link).toHaveText('Official rules');
   await expect(link).toHaveAttribute('target', '_blank');
