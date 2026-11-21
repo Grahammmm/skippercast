@@ -123,10 +123,11 @@ def _certified_pier(ds, source, row, baked, habitat, builder):
     line = LineString(xy)
     midpoint = line.interpolate(.5, normalized=True)
     half = settings['window_m'] / 2
-    # Cover the configured square, plus the whole pier if its endpoints extend beyond it.
+    # Any vertex may be deepest: certify the full largest ring around every vertex.
+    radius = max(settings['cast_arcs']['radii_m'], default=0)
     left, bottom, right, top = line.bounds
-    c0, r0 = ~ds.transform * (min(left, midpoint.x-half), max(top, midpoint.y+half))
-    c1, r1 = ~ds.transform * (max(right, midpoint.x+half), min(bottom, midpoint.y-half))
+    c0, r0 = ~ds.transform * (min(left-radius, midpoint.x-half), max(top+radius, midpoint.y+half))
+    c1, r1 = ~ds.transform * (max(right+radius, midpoint.x+half), min(bottom-radius, midpoint.y-half))
     c0, r0, c1, r1 = math.floor(c0), math.floor(r0), math.ceil(c1), math.ceil(r1)
     if c0 < 0 or r0 < 0 or c1 > ds.width or r1 > ds.height or c1 <= c0 or r1 <= r0:
         return None
@@ -138,8 +139,8 @@ def _certified_pier(ds, source, row, baked, habitat, builder):
         measured = support.read(1, window=window, masked=True).filled(0) == 3
     z = ds.read(1, window=window, masked=True).astype('float32').filled(np.nan)
     wet = z < 0
-    # Known dry cells can clip arcs, but unknown or estimated water cannot certify a window.
-    if not np.isfinite(z).all() or not (measured[wet] & (z[wet] >= -builder.DETAIL_M)).all():
+    # Dry cells also determine the water boundary and require measured support.
+    if not np.isfinite(z).all() or not measured.all() or not (z[wet] >= -builder.DETAIL_M).all():
         return None
     return pier_features(z, ds.window_transform(window), xy, ds.crs, row, source['id'], habitat)
 

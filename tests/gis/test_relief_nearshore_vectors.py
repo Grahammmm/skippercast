@@ -177,3 +177,54 @@ def test_only_output_groups_invalidate_production_receipt(tmp_path, monkeypatch,
     assert baked['generation'] != habitat['generation'] and baked['params']['habitat'] == habitat['params']['habitat']
     assert baked['params']['baked'] != habitat['params']['baked']
     assert baked['metrics']['piles_total'] == 0 < habitat['metrics']['piles_total']
+
+
+@pytest.mark.parametrize('support_value', [0, 2])
+def test_pier_rejects_uncertified_dry_boundary(tmp_path, support_value):
+    from skippercast.relief import nearshore_vectors, tiles
+
+    grid = from_origin(-200000, -50000, 1, 1)
+    elevation = np.full((480, 480), -10, dtype='float32')
+    elevation[200, 100] = 1  # dry, but still part of the clipping window
+    support = np.full(elevation.shape, 3, dtype='uint8')
+    support[200, 100] = support_value
+    Scene.write_grid(tmp_path / 'elevation.tif', elevation, grid)
+    Scene.write_grid(tmp_path / 'support.tif', support, grid)
+    xy = [(-199780.5, -50240.5), (-199760.5, -50240.5)]
+    coords = list(zip(*transform('EPSG:3310', 'EPSG:4326', *zip(*xy))))
+    row = dict(id='pier', name='Pier', coordinates=coords)
+    habitat = {'pier_view': {'window_m': 380, 'max_cell_m': 1,
+               'cast_arcs': {'clip': 'water cells only', 'radii_m': [150]}}}
+    baked = type('Baked', (), {'native_max_zoom': lambda self, res: 20})()
+    source = dict(id='grid', support_path=tmp_path / 'support.tif', resolution_m=1)
+    with rasterio.open(tmp_path / 'elevation.tif') as ds:
+        assert nearshore_vectors._certified_pier(ds, source, row, baked, habitat, tiles._builder()) is None
+
+
+def test_pier_certifies_complete_outer_ring(tmp_path):
+    from skippercast.relief import nearshore_vectors, tiles
+
+    grid = from_origin(-200000, -50000, 1, 1)
+    elevation = np.full((1600, 1600), -10, dtype='float32')
+    elevation[800, 1250] = -20
+    support = np.full(elevation.shape, 3, dtype='uint8')
+    Scene.write_grid(tmp_path / 'elevation.tif', elevation, grid)
+    Scene.write_grid(tmp_path / 'support.tif', support, grid)
+    xy = [(-199800.5, -50800.5), (-198749.5, -50800.5)]
+    coords = list(zip(*transform('EPSG:3310', 'EPSG:4326', *zip(*xy))))
+    row = dict(id='pier', name='Pier', coordinates=coords)
+    habitat = {'pier_view': {'window_m': 1200, 'max_cell_m': 1,
+               'cast_arcs': {'clip': 'water cells only', 'radii_m': [150]}}}
+    baked = type('Baked', (), {'native_max_zoom': lambda self, res: 20})()
+    source = dict(id='grid', support_path=tmp_path / 'support.tif', resolution_m=1)
+    with rasterio.open(tmp_path / 'elevation.tif') as ds:
+        result = nearshore_vectors._certified_pier(ds, source, row, baked, habitat, tiles._builder())
+    assert result is not None
+    project = Transformer.from_crs(4326, 3310, always_xy=True).transform
+    ring = project_shape(project, shape(result[1][0]['geometry']))
+    assert ring.length == pytest.approx(2 * np.pi * 150, rel=1e-4)
+    # A support gap beyond the old midpoint square must not be silently clipped.
+    support[800, 1380] = 2
+    Scene.write_grid(tmp_path / 'support.tif', support, grid)
+    with rasterio.open(tmp_path / 'elevation.tif') as ds:
+        assert nearshore_vectors._certified_pier(ds, source, row, baked, habitat, tiles._builder()) is None
