@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "point-arena-bodega",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "bodega-harbor-distant-planning-origin-z13", "center": [-123.05, 38.33], "size_m": 4000, "zoom": 13},
+    {"id": "arena-nearshore-z15", "center": [-123.78, 38.84], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}

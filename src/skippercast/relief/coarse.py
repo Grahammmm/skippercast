@@ -1,6 +1,11 @@
-"""Build the reviewed native-footprint coarse planning grid, without filling gaps."""
+"""Build the reviewed native-footprint coarse planning grid, without filling gaps.
+
+Run with ``region.py coarse --region ID --out OUT --family ID --cell-m N``.
+The bound ``OUT/ID/census.json`` supplies the region bbox and local tile pins.
+"""
 
 import hashlib
+import json
 import math
 import re
 from pathlib import Path
@@ -16,6 +21,10 @@ from rasterio.warp import reproject
 from rasterio.windows import from_bounds
 from scipy import ndimage
 from shapely.geometry import box
+
+from . import receipts, select
+
+CODE_FILES = ('skippercast.relief.select',)
 
 _CRS = "EPSG:3310"
 _FINE_M = 2  # Common refinement of the reviewed, even-metre UTM pixel edges.
@@ -187,3 +196,61 @@ def write_coarse(path, array, transform):
         dst.set_band_unit(1, "m")
         dst.update_tags(1, VERTICAL_DATUM="NAVD88 (EPSG:5703)", POSITIVE="up")
         dst.update_tags(AREA_OR_POINT="Area")
+
+
+def add_arguments(parser):
+    parser.add_argument('--family', required=True, help='coarse source family or its catalog ID')
+    parser.add_argument('--cell-m', required=True, type=float, help='planning grid cell size in metres')
+
+
+def plan(ctx):
+    census = ctx.region.dir / 'census.json'
+    params = {'family': ctx.args.family, 'cell_m': ctx.args.cell_m}
+    inputs = [receipts.Input(census, 'census')]
+    if not census.is_file():
+        return receipts.Plan(inputs, params)  # Let the runner report a missing input.
+
+    data = census.read_bytes()
+    doc = json.loads(data)
+    summary = doc['summary']
+    tiles = []
+    for row in sorted(doc['files'], key=lambda row: row['path']):
+        family = row.get('family')
+        if params['family'] not in (family, select.FAMILY_IDS.get(family)):
+            continue
+        path = select.local_path(ctx.region.resolve(row['path']))
+        tiles.append((path, row))
+        inputs.append(receipts.Input(path, 'coarse-tile'))
+    ctx.coarse_job = (summary, receipts.sha256_bytes(data), tiles)
+    return receipts.Plan(inputs, params)
+
+
+def build(ctx, out_dir):
+    summary, census_sha, rows = ctx.coarse_job
+    family, cell_m = ctx.args.family, ctx.args.cell_m
+    if summary['region'] != ctx.region.id:
+        raise receipts.ReceiptError('census region mismatch')
+    if not rows:
+        raise receipts.Held(f'no census rows for family {family!r} in region {ctx.region.id!r}')
+
+    tiles, pins = [], []
+    for path, row in rows:
+        expected = row.get('sha256_receipt') or row.get('sha256')
+        observed = receipts.sha256_file(path)
+        if observed != expected:
+            raise receipts.Held(f'SHA-256 mismatch for {row["path"]}: expected {expected}, observed {observed}')
+        pins.append({'path': row['path'], 'sha256': expected})
+        # The census producer records the native CRS read from the TIFF. A
+        # horizontal-only CRS does not attest to NAVD88 elevation.
+        crs = CRS.from_user_input(row['crs']) if row.get('crs') else None
+        if not crs or not crs.is_compound or crs.sub_crs_list[1].to_epsg() != 5703:
+            raise ValueError(f'Expected NAVD88-up in census CRS for {row["path"]}')
+        tiles.append((path, expected, 'NAVD88-up'))
+
+    bounds = summary['bbox']
+    array, transform, report = build_coarse(tiles, bounds, cell_m=cell_m)
+    write_coarse(out_dir / 'coarse-3310.tif', array, transform)
+    (out_dir / 'coarse.json').write_bytes(receipts.canonical({
+        'region': ctx.region.id, 'bbox': bounds, 'family': family, 'cell_m': cell_m,
+        'hole_report': report, 'inputs': {'census_sha256': census_sha, 'tiles': pins},
+    }) + b'\n')

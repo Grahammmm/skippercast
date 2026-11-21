@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "trinidad-klamath",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "trinidad-harbor-and-pier-z13", "center": [-124.144, 41.0565], "size_m": 4000, "zoom": 13},
+    {"id": "trinidad-outer-z15", "center": [-124.2, 41.05], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}
