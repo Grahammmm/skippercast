@@ -240,10 +240,19 @@ def sync_legacy(s3, bucket, source, prefix):
     with ThreadPoolExecutor(max_workers=16) as pool:
         list(pool.map(put, data_files))
         list(pool.map(put, pointers))
+    failed = set()
     for start in range(0, len(deletions), 1000):
         chunk = deletions[start:start + 1000]
-        s3.delete_objects(Bucket=bucket, Delete={'Objects': [{'Key': f'{prefix}/{k}'} for k in chunk], 'Quiet': True})
-    s3.put_object(Bucket=bucket, Key=index_key, Body=json.dumps(local).encode(), ContentType='application/json')
+        result = s3.delete_objects(Bucket=bucket,
+                                   Delete={'Objects': [{'Key': f'{prefix}/{k}'} for k in chunk], 'Quiet': True})
+        failed.update(error['Key'] for error in result.get('Errors', []))
+    # Quiet mode reports only failures. Drop successfully deleted entries so a
+    # later sync uploads a restored file even if its contents haven't changed.
+    pending = {k: remote[k] for k in deletions if f'{prefix}/{k}' in failed}
+    s3.put_object(Bucket=bucket, Key=index_key, Body=json.dumps({**local, **pending}).encode(),
+                  ContentType='application/json')
+    if failed:
+        raise RuntimeError(f'R2 {bucket}/{prefix}: failed to delete {len(failed)} stale keys; retained for retry')
     return (f'R2 {bucket}/{prefix}: {len(uploads)} uploaded ({len(pointers)} pointers last), '
             f'{len(deletions)} removed, {len(local) - len(uploads)} unchanged.')
 
