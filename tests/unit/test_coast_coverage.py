@@ -1,7 +1,10 @@
 """Runtime checks for the coast coverage report (C1–C3)."""
 
 import json
+import shutil
 import socket
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -69,7 +72,7 @@ def test_C1_real_release_bounds():
 
 @pytest.fixture
 def config_files(monkeypatch, tmp_path):
-    # A closed, in-memory tree: any attempt to read an undeclared data file fails.
+    # A closed, in-memory config tree: undeclared reads under tmp_path fail.
     files: dict[str, dict] = {'dist/regions/index.json': {'regions': [{'id': 'umbrella'}]}}
     for region_id, bounds in {
         'san-diego': [-120, 30, -115, 32],
@@ -80,7 +83,11 @@ def config_files(monkeypatch, tmp_path):
     }.items():
         files[f'regions/{region_id}/region.json'] = {'bounds': bounds}
 
+    read_text_from_disk = Path.read_text
+
     def read_text(path, **kwargs):
+        if not path.is_relative_to(tmp_path):
+            return read_text_from_disk(path, **kwargs)
         name = path.relative_to(tmp_path).as_posix()
         if name not in files:
             raise AssertionError(f'unexpected config read: {name}')
@@ -93,6 +100,89 @@ def config_files(monkeypatch, tmp_path):
     monkeypatch.setattr(Path, 'read_text', read_text)
     monkeypatch.setattr(socket, 'socket', no_network)
     return files
+
+
+@pytest.fixture
+def catalog_files(config_files, tmp_path):
+    relief = tmp_path / 'catalog/relief'
+    contours = tmp_path / 'catalog/depth-contours'
+    relief.mkdir(parents=True)
+    contours.mkdir()
+    schema = ROOT / 'catalog/relief/pointer.schema.json'
+    (relief / schema.name).write_bytes(schema.read_bytes())
+    return relief, contours
+
+
+@pytest.fixture
+def pointer():
+    return {
+        'schema': 'sc-relief-pointer/1', 'status': 'reviewed', 'private': False,
+        'generation': '0123456789abcdef' * 4, 'release_sha256': 'a' * 64,
+        'envelope_sha256': 'b' * 64, 'sha256': 'c' * 64, 'bytes': 1,
+        'digest_root_sha256': 'd' * 64, 'previous': None,
+        'region': 'umbrella', 'bounds': [-125, 29, -115, 41],
+        'minzoom': 8, 'maxzoom': 8,
+        'sources': [{
+            'id': 'fixture', 'label': 'Fixture survey', 'attribution': 'Synthetic fixture',
+            'vertical_datum': 'fixture datum', 'survey_dates': ['2000'], 'rights_class': 'public',
+            'rights': {'public_display': 'allowed', 'license': 'fixture license'},
+        }],
+        'detail_summary': {'mask': 'transparent-nodata', 'depth_bands': [{
+            'source_id': 'fixture', 'min_depth_m': 0, 'max_depth_m': 20, 'resolution_m': 5,
+        }]},
+        'native_support_by_zoom': {'8': {'tiles': 1, 'sources': [
+            {'id': 'fixture', 'resolution_m': 5, 'tiles': 1},
+        ]}},
+    }
+
+
+@pytest.fixture
+def run_standalone(config_files, tmp_path):
+    script = Path('scripts/relief/coast_coverage.py')
+    (tmp_path / script).parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / script, tmp_path / script)
+    for name, value in config_files.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(value), encoding='utf-8')
+
+    def run(*flags):
+        # Ignore environment paths and site-packages (including editable installs).
+        return subprocess.run([sys.executable, '-E', '-S', str(script), *flags],
+                              cwd=tmp_path, capture_output=True, text=True, timeout=10)
+
+    return run
+
+
+@pytest.mark.parametrize(('flags', 'expected'), [
+    pytest.param(['--help'], 'usage: coast_coverage.py', id='help'),
+    pytest.param([], 'Configured coast coverage: OK', id='no-flags'),
+])
+def test_C2_direct_script_without_install(run_standalone, flags, expected):
+    """An eager package import must not break direct help or the legacy check."""
+    result = run_standalone(*flags)
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ''
+    assert expected in result.stdout
+
+
+def test_C2_standalone_pointer_validation_without_jsonschema(run_standalone, catalog_files, pointer):
+    """Optional extras must not silence valid pointers or bypass nested schema checks."""
+    relief, _ = catalog_files
+    path = relief / 'umbrella.json'
+    path.write_text(json.dumps(pointer), encoding='utf-8')
+    markdown = run_standalone('--markdown')
+    assert markdown.returncode == 0, markdown.stderr
+    assert '| umbrella | 0123456789ab | none |' in markdown.stdout
+
+    # A nested violation still has a plausible generation and matching region.
+    pointer['sources'][0]['rights']['public_display'] = 'denied'
+    path.write_text(json.dumps(pointer), encoding='utf-8')
+    report = run_standalone('--json')
+    assert report.returncode == 0, report.stderr
+    assert json.loads(report.stdout)['regions'] == [
+        {'id': 'umbrella', 'relief': 'invalid', 'contours': 'none'},
+    ]
 
 
 def test_C2_table_success(config_files, capsys):
@@ -121,7 +211,7 @@ def test_C2_table_shows_gaps_overlaps_and_outside_islands(config_files, capsys):
     )
 
 
-def test_C2_json_failure(config_files, capsys):
+def test_C2_json_failure(config_files, catalog_files, capsys):
     """C2: A failed check still emits the full JSON report and returns 1."""
     config_files['regions/umbrella/region.json']['bounds'] = [-125, 32, -115, 36]
     assert coast.main(['--json']) == 1
@@ -131,13 +221,18 @@ def test_C2_json_failure(config_files, capsys):
         'gaps': [[30, 32], [36, 40]], 'overlaps': [],
         'islands_inside': {'channel-islands-north': None, 'outer-islands-borderland': 'umbrella'},
         'ok': False,
+        'regions': [{'id': 'umbrella', 'relief': 'none', 'contours': 'none'}],
     }
 
 
-def test_C2_usage_refusal(config_files):
+@pytest.mark.parametrize('argv', [
+    pytest.param(['--js'], id='C2: refuse abbreviated flags'),
+    pytest.param(['--json', '--markdown'], id='C1: refuse competing output formats'),
+])
+def test_C2_usage_refusal(config_files, argv):
     """C2: Invalid flags fail with usage status before any coverage report."""
     with pytest.raises(SystemExit) as error:
-        coast.main(['--js'])
+        coast.main(argv)
     assert error.type is SystemExit
     assert error.value.code == 2
 
@@ -170,3 +265,67 @@ def test_C3_loader_refusals(config_files, region_id, config_bounds):
     with pytest.raises(ValueError) as error:
         coast.load_regions(coast.ROOT)
     assert error.type is ValueError
+
+
+def test_C1_markdown_covers_every_release_region(config_files, catalog_files, pointer, capsys):
+    """C1: Missing assets must not drop a row; unrelated files must not add one."""
+    relief, contours = catalog_files
+    config_files['dist/regions/index.json']['regions'].append({'id': 'crescent-city'})
+    (relief / 'umbrella.json').write_text(json.dumps(pointer), encoding='utf-8')
+    (contours / 'umbrella.geojson').write_text('{"type":"FeatureCollection","features":[]}', encoding='utf-8')
+    (contours / 'channel-islands-north.geojson').touch()  # not a release ID
+    assert coast.main(['--markdown']) == 0
+    assert capsys.readouterr() == (
+        '| Region | Relief | Contours |\n'
+        '| --- | --- | --- |\n'
+        '| crescent-city | none | none |\n'
+        '| umbrella | 0123456789ab | present |\n', '',
+    )
+
+
+@pytest.mark.parametrize('defect', [
+    pytest.param('schema', id='C2: reject a private pointer even with a valid generation'),
+    pytest.param('false-as-number', id='C2: numeric zero is not JSON false'),
+    pytest.param('extra-field', id='C2: reject unevaluated top-level fields'),
+    pytest.param('duplicate-field', id='C2: reject duplicate members even if the final value is public'),
+    pytest.param('malformed', id='C2: report malformed JSON as invalid'),
+    pytest.param('wrong-region', id='C2: do not credit a pointer for another region'),
+    pytest.param('directory', id='C2: report an unreadable pointer as invalid'),
+])
+def test_C2_invalid_pointer_is_not_live(catalog_files, pointer, capsys, defect):
+    """C2: Invalid is distinct from absent, and contours are checked independently."""
+    relief, contours = catalog_files
+    path = relief / 'umbrella.json'
+    if defect == 'schema':
+        pointer['private'] = True
+    elif defect == 'false-as-number':
+        pointer['private'] = 0
+    elif defect == 'extra-field':
+        pointer['unexpected'] = True
+    elif defect == 'wrong-region':
+        pointer['region'] = 'crescent-city'
+    if defect == 'directory':
+        path.mkdir()
+    else:
+        body = json.dumps(pointer)
+        if defect == 'duplicate-field':
+            body = '{"private": true, ' + body[1:]
+        path.write_text('{' if defect == 'malformed' else body, encoding='utf-8')
+    (contours / 'umbrella.geojson').write_text('{"type":"FeatureCollection","features":[]}', encoding='utf-8')
+
+    assert coast.main(['--json']) == 0
+    out, err = capsys.readouterr()
+    assert err == ''
+    assert json.loads(out) == {
+        'gaps': [], 'overlaps': [], 'ok': True,
+        'islands_inside': {'channel-islands-north': 'umbrella', 'outer-islands-borderland': 'umbrella'},
+        'regions': [{'id': 'umbrella', 'relief': 'invalid', 'contours': 'present'}],
+    }
+
+
+def test_C2_unusable_schema_refuses_report(catalog_files, capsys):
+    """C2: A bad schema is a report error, not a conclusion about a pointer."""
+    relief, _ = catalog_files
+    (relief / 'pointer.schema.json').write_text('[]', encoding='utf-8')
+    assert coast.main(['--json']) == 1
+    assert capsys.readouterr() == ('', 'Coast coverage could not be checked: expected a JSON object\n')
