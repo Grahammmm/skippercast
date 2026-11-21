@@ -79,6 +79,7 @@ function project<T extends WatchExport | EventExport>(
   let length: number;
   try {
     length = rows.length;
+    if (!Number.isSafeInteger(length) || length < 0) return result;
   } catch {
     return result;
   }

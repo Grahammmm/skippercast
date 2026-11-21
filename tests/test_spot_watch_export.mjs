@@ -119,3 +119,35 @@ test('C3: unreadable collection and entry do not throw', () => {
     watches: [], spot_alert_events: [{...eventExport, id: 'e2'}],
   });
 });
+
+// Catch coercing a Symbol in the loop condition and aborting before events are projected.
+test('C3: Symbol watch length leaves the full event export intact', () => {
+  const watches = new Proxy([watch], {
+    get: (target, key) => key === 'length' ? Symbol('length') : target[key],
+  });
+  assert.deepEqual(exportSpotWatches(owner, watches, [event, {...event, id: 'e2'}]), {
+    watches: [], spot_alert_events: [eventExport, {...eventExport, id: 'e2'}],
+  });
+});
+
+// Catch a guard applied only to watches, or a loop that accepts/coerces non-integer lengths.
+test('C3: invalid event lengths leave the full watch export intact', () => {
+  for (const length of [Symbol('length'), '1', 0.5, -1, NaN]) {
+    const events = new Proxy([event], {
+      get: (target, key) => key === 'length' ? length : target[key],
+    });
+    assert.deepEqual(exportSpotWatches(owner, [watch], events), {
+      watches: [watchExport], spot_alert_events: [],
+    });
+  }
+});
+
+// Catch moving the length read outside the catch or re-reading an unreadable length.
+test('C3: a throwing length getter is read once and only empties its own list', () => {
+  let reads = 0;
+  const watches = {get length() { reads++; throw new Error('unreadable'); }};
+  assert.deepEqual(exportSpotWatches(owner, watches, [event]), {
+    watches: [], spot_alert_events: [eventExport],
+  });
+  assert.equal(reads, 1);
+});
