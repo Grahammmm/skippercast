@@ -22,6 +22,7 @@ XML_URL = 'https://pubs.usgs.gov/ds/781/OffshoreX/metadata/Bathymetry_X.xml'
 PAGES = {blocks_mod.INDEX: b'<a href="OffshoreX/data_catalog_OffshoreX.html">X</a>', CATALOG: b'<table></table>',
          XML_URL: b'<metadata><bounding><westbc>-122.5</westbc><eastbc>-122.4</eastbc>'
                   b'<southbc>37.2</southbc><northbc>37.4</northbc></bounding></metadata>'}
+# The reuse tests require a complete, healthy product inventory and an audit-built prior record.
 INVENTORY = {'scope': 'usgs-state-waters-map-block-links', 'block_count': 1,
              'health': {'status': 'ok', 'issues': []},
              'blocks': [{'id': 'OffshoreX', 'catalog_url': CATALOG, 'status': 'ok', 'products': {

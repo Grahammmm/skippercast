@@ -20,6 +20,7 @@ LANDING = 'https://cmgds.marine.usgs.gov/data-releases/datarelease/10.5066-P9TES
 XML_URL = 'https://cmgds.marine.usgs.gov/data-releases/media/2020/10.5066-P9TEST0/Bathymetry_X_metadata.xml'
 XML = (b'<metadata><bounding><westbc>-122.5</westbc><eastbc>-122.4</eastbc>'
        b'<southbc>37.2</southbc><northbc>37.4</northbc></bounding></metadata>')
+# The reuse tests require a complete, healthy product inventory and an audit-built prior record.
 RELEASES = {'scope': 'usgs-state-waters-doi-product-links', 'health': {'status': 'ok', 'issues': []}, 'releases': [
     {'release_id': 'P9TEST0', 'landing_url': LANDING, 'status': 'ok', 'study_areas': ['X'], 'products': [
         {'kind': 'bathymetry', 'archive_url': XML_URL[:-13] + '.zip', 'metadata_url': XML_URL, 'filename': 'Bathymetry_X.zip'}]}]}
