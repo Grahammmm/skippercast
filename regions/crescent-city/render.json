@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "crescent-city",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "crescent-city-harbor-z13", "center": [-124.185, 41.744], "size_m": 4000, "zoom": 13},
+    {"id": "crescent-south-z15", "center": [-124.26, 41.7], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}
