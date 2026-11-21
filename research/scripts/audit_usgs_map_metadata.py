@@ -4,6 +4,7 @@ Metadata bounds are discovery coverage only; they do not mean all pixels in a
 rectangle are surveyed or that a fishing location has been validated.
 """
 import argparse
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -81,40 +82,92 @@ def parse_metadata(url, raw, *, now):
             'substrate_definitions':definitions,'categorical_classes':categorical,'issue':None}
 
 
-def audit(blocks, previous=None, *, now=None, fetcher=fetch):
-    now=now or datetime.now(timezone.utc)
-    if blocks.get('scope')!='usgs-state-waters-map-block-links' or blocks.get('block_count')!=len(blocks.get('blocks',[])):
+SCOPE = 'usgs-state-waters-native-metadata'
+
+
+def _digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+
+def _bind(scope, source, sources, targets, healthy):
+    # Sort identities, not the discovery document: timestamps, markup hashes,
+    # descriptions and row order are not a change to the inventory.
+    return _digest([scope, source, sorted(set(sources)), sorted(targets)]), targets, healthy
+
+
+def _healthy(inventory, sources):
+    health = inventory.get('health')
+    return (isinstance(health, dict) and health.get('status') == 'ok' and health.get('issues') == []
+            and all(row.get('status') == 'ok' for row in sources))
+
+
+def _inventory(blocks):
+    if (not isinstance(blocks, dict) or blocks.get('scope') != 'usgs-state-waters-map-block-links'
+            or not isinstance(blocks.get('blocks'), list) or blocks.get('block_count') != len(blocks['blocks'])):
         raise ValueError('Invalid USGS map-block inventory')
-    targets={}
+    family = blocks.get('catalog_family', 'ds781')
+    if family not in ('ds781', 'csmp'):
+        raise ValueError('Unknown USGS catalog family')
+    source = (family, blocks.get('source_url'))
+    sources, targets = [], {}
     for block in blocks['blocks']:
+        ident, catalog = block['id'], block['catalog_url']
+        if not isinstance(ident, str) or not ident or not approved(catalog):
+            raise ValueError('Invalid USGS block identity')
+        attribution = _digest([source, ident, catalog])
+        sources.append(attribution)
         for kind,products in block['products'].items():
             if kind in {'bathymetry','seafloor_character'}:
                 for item in products:
-                    url=item['metadata_url']
-                    if not approved(url) or f"/{block['id']}/metadata/" not in url:
+                    url, archive = item['metadata_url'], item['archive_url']
+                    if not approved(url) or f'/{ident}/metadata/' not in url or not url.endswith('.xml'):
                         raise ValueError('USGS metadata URL does not match block')
-                    targets[url]=(block['id'],kind)
-    prior={row['metadata_url']:row for row in (previous or {}).get('records',[])}
+                    if not approved(archive):
+                        raise ValueError('Invalid USGS archive identity')
+                    targets[_digest([attribution, kind, url, archive])] = (url, {'block_id': ident, 'kind': kind})
+    return _bind(SCOPE, source, sources, targets, _healthy(blocks, blocks['blocks']))
+
+
+def _audit_xml(inventory, previous, *, now, fetcher, parse, scope, method):
+    binding, targets, healthy = inventory
+    previous = previous if previous and previous.get('scope') == scope else {}
+    # Old URL-only receipts cannot prove the source attribution of an XML row.
+    prior = {(row['product_sha256'], row['metadata_url']): row for row in previous.get('records', [])
+             if isinstance(row.get('product_sha256'), str) and row.get('status') in ('ok', 'retained')}
+    by_url = defaultdict(list)
+    for identity, (url, attribution) in sorted(targets.items()):
+        by_url[url].append((identity, attribution))
     rows=[]
     with ThreadPoolExecutor(max_workers=6) as pool:
-        pending={pool.submit(fetcher,url):url for url in targets}
+        pending={pool.submit(fetcher,url):url for url in by_url}
         for future in as_completed(pending):
             url=pending[future]
-            ident,kind=targets[url]
-            try:
-                rows.append({'block_id':ident,'kind':kind,**parse_metadata(url,future.result(),now=now)})
-            except (OSError,TimeoutError,ValueError,ET.ParseError,TypeError) as error:
-                older=prior.get(url)
-                rows.append({**older,'status':'retained','issue':str(error)[:180]} if older else
-                            {'block_id':ident,'kind':kind,'metadata_url':url,'status':'failed','checked_at':None,
-                             'xml_sha256':None,'bounds':None,'substrate_definitions':[],'issue':str(error)[:180]})
-    rows.sort(key=lambda row:(row['block_id'],row['kind']))
+            for identity, attribution in by_url[url]:
+                fields = {'product_sha256': identity, 'metadata_url': url, **attribution}
+                try:
+                    rows.append({**parse(url, future.result(), attribution, now=now), **fields})
+                except (OSError,ValueError,ET.ParseError,TypeError) as error:
+                    older = prior.get((identity, url))
+                    evidence = older or {'checked_at':None,'xml_sha256':None,'bounds':None,'substrate_definitions':[]}
+                    rows.append({**evidence, **fields, 'status':'retained' if older else 'failed', 'issue':str(error)[:180]})
+    rows.sort(key=lambda row:(row.get('block_id') or row['release_id'], row['kind'],
+                              row.get('filename', ''), row['product_sha256']))
     issues=[row['metadata_url'] for row in rows if row['status']!='ok']
-    return {'schema_version':1,'scope':'usgs-state-waters-native-metadata','collected_at':now.isoformat(),
-            'last_complete_scan_at':now.isoformat() if not issues else (previous or {}).get('last_complete_scan_at'),
-            'method':'Original USGS XML descriptions and bounding rectangles. Bounds do not imply complete pixel coverage; raster values, depth datum and legal clearance require later native review.',
+    if not healthy:
+        issues.append('upstream discovery is not complete')
+    if not targets:
+        issues.append('no XML targets')
+    return {'schema_version':1,'scope':scope,'collected_at':now.isoformat(),'inventory_sha256':binding,
+            'last_complete_scan_at':now.isoformat() if not issues else previous.get('last_complete_scan_at'),
+            'method':method,
             'record_count':len(rows),'verified_metadata_count':sum(row['status']=='ok' for row in rows),
             'health':{'status':'ok' if not issues else 'degraded','issues':issues},'records':rows}
+
+
+def audit(blocks, previous=None, *, now=None, fetcher=fetch):
+    return _audit_xml(_inventory(blocks), previous, now=now or datetime.now(timezone.utc), fetcher=fetcher,
+                      parse=lambda url, raw, _, now: parse_metadata(url, raw, now=now), scope=SCOPE,
+                      method='Original USGS XML descriptions and bounding rectangles. Bounds do not imply complete pixel coverage; raster values, depth datum and legal clearance require later native review.')
 
 
 def _days(text):
@@ -127,13 +180,17 @@ def _days(text):
 def _previous(path):
     try:  # the is_file() stat can raise too, e.g. PermissionError under an unreadable directory
         if not path or not path.is_file():
-            return None,None
-        previous=json.loads(path.read_text(encoding='utf-8'))
+            return None,None,None
+        raw=path.read_bytes()
+        previous=json.loads(raw.decode('utf-8'))
     except (OSError,ValueError):  # covers UnicodeDecodeError and JSONDecodeError
-        previous=None
-    rows=previous.get('records') if isinstance(previous,dict) else None
-    usable=isinstance(rows,list) and all(isinstance(row,dict) and isinstance(row.get('metadata_url'),str) for row in rows)
-    return (previous,None) if usable else (None,'records not a usable list' if isinstance(previous,dict) else 'unreadable')
+        return None,None,'unreadable'
+    if not isinstance(previous, dict):
+        return None,None,'unreadable'
+    rows=previous.get('records')
+    if not isinstance(rows,list) or not all(isinstance(row,dict) and isinstance(row.get('metadata_url'),str) for row in rows):
+        return None,None,'records not a usable list'
+    return previous,raw,None
 
 
 def _scan_time(value,now):
@@ -146,33 +203,53 @@ def _scan_time(value,now):
     return (when,None) if when<=now else (None,'scan time is in the future')
 
 
-def main():
-    parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--blocks',type=Path,required=True)
+def _reusable(previous, inventory, scope):
+    binding, targets, healthy = inventory
+    rows = previous['records']
+    return (healthy and bool(targets) and previous.get('scope') == scope
+            and previous.get('inventory_sha256') == binding
+            and previous.get('record_count') == previous.get('verified_metadata_count') == len(rows) == len(targets)
+            and previous['health'].get('issues') == []
+            and all(isinstance(row.get('product_sha256'), str) and row.get('status') == 'ok'
+                    and row['product_sha256'] in targets
+                    and row['metadata_url'] == targets[row['product_sha256']][0]
+                    and all(row.get(key) == value for key, value in targets[row['product_sha256']][1].items())
+                    for row in rows)
+            and len({row['product_sha256'] for row in rows}) == len(targets))
+
+
+def _main(input_name, description, prepare, audit, scope):
+    parser=argparse.ArgumentParser(description=description)
+    parser.add_argument(f'--{input_name}',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--previous',type=Path)
     parser.add_argument('--max-age-days',type=_days,default=30)
     args=parser.parse_args()
-    blocks=json.loads(args.blocks.read_text())
-    previous,reason=_previous(args.previous)
+    data=json.loads(getattr(args, input_name).read_text(encoding='utf-8'))
+    inventory=prepare(data)
+    previous,raw,reason=_previous(args.previous)
     now=datetime.now(timezone.utc)
     if previous and isinstance(previous.get('health'),dict) and previous['health'].get('status')=='ok':
         when,reason=_scan_time(previous.get('last_complete_scan_at'),now)
-        if when and now-when<timedelta(days=args.max_age_days):
+        if when and now-when<timedelta(days=args.max_age_days) and _reusable(previous, inventory, scope):
             args.output.parent.mkdir(parents=True,exist_ok=True)
-            (temp:=args.output.with_suffix(args.output.suffix+'.tmp')).write_bytes(args.previous.read_bytes())
+            (temp:=args.output.with_suffix(args.output.suffix+'.tmp')).write_bytes(raw)
             temp.replace(args.output)
             print('Retained complete USGS metadata audit from '+previous['last_complete_scan_at'])
             return
     if reason:  # an unusable previous is dropped: its rows and scan time must not reach the new audit
         print(f'previous scan ignored: {reason}',file=sys.stderr)
         previous=None
-    result=audit(blocks,previous,now=now)
+    result=audit(data,previous,now=now)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     temp=args.output.with_suffix(args.output.suffix+'.tmp')
     temp.write_text(json.dumps(result,separators=(',',':'),ensure_ascii=False)+'\n')
     temp.replace(args.output)
-    print(f"{result['health']['status']}: {result['verified_metadata_count']}/{result['record_count']} original XML records with geographic bounds")
+    print(f"{result['health']['status']}: {result['verified_metadata_count']}/{result['record_count']} original XML records checked")
+
+
+def main():
+    _main('blocks', __doc__, _inventory, audit, SCOPE)
 
 
 if __name__=='__main__':main()
