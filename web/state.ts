@@ -40,10 +40,11 @@ export const COAST_KEYS = ['presentation', 'current', 'habitat'] as const;
 export type CoastKey = typeof COAST_KEYS[number];
 /** The History view's pickers (FE-35): station id, measurement and day range, kept as written; packages/coast historyView falls back on anything it does not list. */
 export const HISTORY_KEYS = ['station', 'metric', 'range'] as const;
-/** URL parameters the store owns. `target` is the species/target id. */
+/** Legacy URL keys; newer optional parameters such as `sstRange` are read separately. */
 export const URL_KEYS = ['region', 'coast', 'view', 'target', 'grade', 'hour', 'profile', 'day', 'layers', 'area', 'base', 'port', ...HISTORY_KEYS, ...COAST_KEYS] as const;
-export type UrlKey = typeof URL_KEYS[number];
-export type UrlState = Record<Exclude<UrlKey, CoastKey>, string | null> & Partial<Record<CoastKey, string>> & {selection: string | null};
+type OptionalUrlKey = CoastKey | 'sstRange';
+export type UrlKey = typeof URL_KEYS[number] | OptionalUrlKey;
+export type UrlState = Record<Exclude<UrlKey, OptionalUrlKey>, string | null> & Partial<Record<OptionalUrlKey, string>> & {selection: string | null};
 export type Units = 'nautical';
 export type CoordinateFormat = 'dd' | 'ddm' | 'dms';
 
@@ -120,6 +121,8 @@ export const presentation = signal<Presentation>('chart');
 export const current = signal<CurrentChoice>('off');
 /** Coast habitat id (?habitat=), independent of the atlas spot in `selection`. */
 export const habitat = signal<string | null>(null);
+export type SstRange = {mode: 'analysis'} | {mode: 'view'} | {mode: 'custom'; min: number; max: number};
+export const sstRange = signal<SstRange>({mode: 'analysis'});
 /** History view pickers (?station=, ?metric=, ?range=) as written; null means the view's default. */
 export const historyStation = signal<string | null>(null);
 export const historyMetric = signal<string | null>(null);
@@ -169,6 +172,8 @@ export function readURL(href: string): UrlState {
     const value = params.get(key);
     if (value !== null) state[key] = value;
   }
+  const range = readSstRangeParam(params);
+  if (range !== undefined) state.sstRange = range;
   return state;
 }
 
@@ -187,6 +192,34 @@ export function parsePresentation(value: string | null | undefined): Presentatio
 export const parseCurrent = (value: string | null | undefined): CurrentChoice => value == null ? 'off' : isCurrentLayer(value) ? value : UNSUPPORTED;
 /** The habitat id habitatURL keeps (`[A-Za-z0-9._:-]{1,160}`); null otherwise. */
 export const parseHabitat = (value: string | null | undefined): string | null => value == null ? null : habitatURL(PROBE, value).searchParams.get('habitat');
+
+/** Only a single range is unambiguous, both when opening and when sharing a link. */
+export function readSstRangeParam(params: URLSearchParams): string | undefined {
+  const values = params.getAll('sstRange');
+  return values.length === 1 ? values[0] : undefined;
+}
+
+// A generous SST envelope: near the freezing point of seawater to above typical tropical SST, in °F.
+const validSstRange = (min: number, max: number): boolean =>
+  min >= 28 && max <= 100 && min < max && Number.isInteger(min * 2) && Number.isInteger(max * 2);
+
+/** `view` or two ordered Fahrenheit endpoints written as integers or with `.5`. */
+export function parseSstRange(value: string | null | undefined): SstRange {
+  if (value === 'view') return {mode: 'view'};
+  const match = /^(\d+(?:\.5)?)-(\d+(?:\.5)?)$/.exec(value ?? '');
+  if (match) {
+    const min = Number(match[1]), max = Number(match[2]);
+    if (validSstRange(min, max)) return {mode: 'custom', min, max};
+  }
+  return {mode: 'analysis'};
+}
+
+/** The canonical ?sstRange= value; analysis (or invalid custom ends) removes the key. */
+export function sstRangeParam(range: SstRange): string | null {
+  if (range.mode === 'view') return 'view';
+  if (range.mode === 'custom' && validSstRange(range.min, range.max)) return `${range.min}-${range.max}`;
+  return null;
+}
 
 export const isAppView = (value: unknown): value is AppView => typeof value === 'string' && (APP_VIEWS as readonly string[]).includes(value);
 export const isBase = (value: unknown): value is Base => typeof value === 'string' && (BASES as readonly string[]).includes(value);
@@ -268,13 +301,13 @@ export function resolvePresentation(state: UrlState): Presentation {
   return parsePresentation(state.presentation) ?? (options.v2 ? parsePresentation(stored(STORAGE_KEYS.presentation)) : null) ?? 'chart';
 }
 
-/** `href` with `patch` applied: a string sets a parameter, null removes it. An invalid habitat id removes it too. */
+/** `href` with `patch` applied: a string sets a parameter, null removes it. Invalid habitat or SST range values are removed. */
 export function withParams(href: string, patch: Partial<Record<UrlKey, string | null>>): string {
   const clearGeography = [patch.region, patch.coast].some(value => value === null || value === '');
   const url = options.v2 ? fishLink(href, clearGeography) : new URL(href);
   for (const [key, given] of Object.entries(patch)) {
     if (given === undefined) continue;
-    const value = key === 'habitat' ? parseHabitat(given) : given;
+    const value = key === 'habitat' ? parseHabitat(given) : key === 'sstRange' ? sstRangeParam(parseSstRange(given)) : given;
     if (value === null || value === '') url.searchParams.delete(key);
     else url.searchParams.set(key, value);
   }
@@ -304,6 +337,7 @@ export function syncFromURL(href: string = location.href): UrlState {
     appView.value = isAppView(state.view) ? state.view : 'coast';
     day.value = parseDay(state.day); area.value = state.area; port.value = parsePort(state.port);
     presentation.value = shown; current.value = resolveCurrent(state, kept.layers); habitat.value = parseHabitat(state.habitat);
+    sstRange.value = parseSstRange(state.sstRange);
     historyStation.value = state.station; historyMetric.value = state.metric; historyRange.value = state.range;
     urlEpoch.value = urlEpoch.peek() + 1;
   });
