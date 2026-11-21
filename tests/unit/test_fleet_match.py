@@ -428,12 +428,12 @@ class RunTests(unittest.TestCase):
 class ScheduleTests(unittest.TestCase):
     """Stage 4, schedule-correlation (N4): at-sea days against landing report days."""
 
-    def decide(self, statics, *, at_sea, reports, presence=None, prior=None, vessels=None):
+    def decide(self, statics, *, at_sea, reports, presence=None, prior=None, vessels=None, schedule_days=None):
         statics = {s.mmsi: s for s in statics}
         seen = {m: Seen(T0 - 20 * DAY, T0, "aisstream", 400) for m in statics}
         presence = {m: {"port-a": 1} for m in statics} if presence is None else presence
         return decide(REGION, fleet() if vessels is None else vessels, (), statics, seen, presence, prior or {}, NOW,
-                      at_sea=at_sea, reports=reports)
+                      at_sea=at_sea, reports=reports, schedule_days=schedule_days)
 
     def rows(self, decision):
         return {int(r["mmsi"]): r for r in decision.rows}
@@ -456,8 +456,9 @@ class ScheduleTests(unittest.TestCase):
         # Four of the five days is not enough.
         four = self.decide([boat], at_sea={CANDIDATE: set(TWO_WEEKS[1:])}, reports={SEA: set(TWO_WEEKS)})
         self.assertEqual(self.rows(four)[CANDIDATE]["status"], "candidate")
-        # Once watched it stays watched while the name matches, even when this run's feed could not be read.
-        sticky = self.decide([boat], at_sea={}, reports=None, prior={CANDIDATE: row})
+        # During an outage, the same binding can stay watched on the saved recent matching day.
+        sticky = self.decide([boat], at_sea={}, reports=None, prior={CANDIDATE: row},
+                             schedule_days=decision.schedule_days)
         self.assertEqual((self.rows(sticky)[CANDIDATE]["status"], self.rows(sticky)[CANDIDATE]["match_method"]),
                          ("watched", "schedule-correlation"))
 
@@ -517,22 +518,27 @@ class ScheduleTests(unittest.TestCase):
         boat = full_static(CANDIDATE, "SEA EXAMPLE", ship_type=60, length_m=18.0)
         watched = {"mmsi": str(CANDIDATE), "vessel_id": SEA, "status": "watched", "match_method": "schedule-correlation",
                    "confidence": 0.85}
+        schedule_days = {f"{CANDIDATE}|{SEA}|port-a": TWO_WEEKS[-1]}
         # Evidence aged below min_days (2 matched days) while a rival reports on 2 of them: no longer qualifies, yet demoted.
         aged = {CANDIDATE: set(TWO_WEEKS[3:])}
         reports = {SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[3:])}
-        rival = self.decide([boat], at_sea=aged, reports=reports, vessels=vessels, prior={CANDIDATE: watched})
+        rival = self.decide([boat], at_sea=aged, reports=reports, vessels=vessels, prior={CANDIDATE: watched},
+                            schedule_days=schedule_days)
         self.assertEqual(self.rows(rival)[CANDIDATE]["status"], "candidate")
-        alone = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS)}, vessels=vessels, prior={CANDIDATE: watched})
+        alone = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS)}, vessels=vessels, prior={CANDIDATE: watched},
+                            schedule_days=schedule_days)
         self.assertEqual(self.rows(alone)[CANDIDATE]["status"], "watched", "thin but recent evidence, no rival: stays")
         # No matched day in the last lapse_days (30): the row lapses. NOW is 2026-10-05.
         old = ["2026-08-20", "2026-08-25"]
-        lapsed = self.decide([boat], at_sea={CANDIDATE: set(old)}, reports={SEA: set(old)}, prior={CANDIDATE: watched})
+        lapsed = self.decide([boat], at_sea={CANDIDATE: set(old)}, reports={SEA: set(old)}, prior={CANDIDATE: watched},
+                             schedule_days=schedule_days)
         self.assertEqual(self.rows(lapsed)[CANDIDATE]["status"], "candidate")
         # A same-port vessel that reports only on other days is no rival, even to a thin row.
         stranger = self.decide([boat], at_sea=aged, reports={SEA: set(TWO_WEEKS), RIVAL: set(TWO_WEEKS[:3])},
-                               vessels=vessels, prior={CANDIDATE: watched})
+                               vessels=vessels, prior={CANDIDATE: watched}, schedule_days=schedule_days)
         self.assertEqual((self.rows(stranger)[CANDIDATE]["status"], stranger.reviews), ("watched", []))
-        none = self.decide([boat], at_sea={CANDIDATE: set()}, reports={SEA: set(TWO_WEEKS)}, prior={CANDIDATE: watched})
+        none = self.decide([boat], at_sea={CANDIDATE: set()}, reports={SEA: set(TWO_WEEKS)}, prior={CANDIDATE: watched},
+                           schedule_days=schedule_days)
         self.assertEqual(self.rows(none)[CANDIDATE]["status"], "candidate")
 
     def test_the_registry_mmsi_is_never_overwritten(self):
@@ -595,7 +601,8 @@ class ScheduleTests(unittest.TestCase):
                 raise OSError("offline")
             return {"reports": [{"id": "1", "date": "2026-10-01", "boat": "Sea Example", "port": "Morro Bay"}]}
 
-        self.assertEqual(schedule.load_report_days(ca, vessels, fetch=fetch), {SEA: {"2026-10-01"}})
+        self.assertEqual(schedule.load_report_days(ca, vessels, fetch=fetch),
+                         schedule.ReportDays({SEA: {"2026-10-01"}}, frozenset({"morro-bay", "port-san-luis"})))
         self.assertEqual(sorted(fetched), urls)
 
         def down(url):
@@ -633,7 +640,8 @@ class ScheduleTests(unittest.TestCase):
         del mstate
         calls = []
         original = match.load_report_days
-        match.load_report_days = lambda region, vessels: calls.append(len(vessels)) or {SEA: set(TWO_WEEKS)}
+        match.load_report_days = lambda region, vessels: calls.append(len(vessels)) or schedule.ReportDays(
+            {SEA: set(TWO_WEEKS)}, frozenset({"port-a"}))
         try:
             worker = FakeWorker()
             process.run(REGION, worker, root=root, now_ms=NOW)
