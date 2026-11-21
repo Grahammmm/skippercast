@@ -338,6 +338,60 @@ dbTest('both surfaces failing is failed; a retry tries both again', async () => 
   assert.equal(fake.count('POST', `/${PAGE}/photos`), 2);
 });
 
+/** A D1 that goes away at the post's Page-id write (the run stops after Meta accepted the create): that write and everything after it fail. */
+function lostAckDb(db) {
+  let down = false;
+  const gone = () => { down = true; throw Error('D1_ERROR: network connection lost'); };
+  return {
+    prepare(q) {
+      const st = db.prepare(q), lost = /SET fb_(post|story)_id=/.test(q);
+      return {
+        bind(...a) { st.bind(...a); return this; },
+        async first() { return down ? gone() : st.first(); },
+        async all() { return down ? gone() : st.all(); },
+        async run() { return down || lost ? gone() : st.run(); },
+      };
+    },
+    async batch(queries) { return down ? gone() : db.batch(queries); },
+  };
+}
+const publishState = (sql, id = 'p1') => JSON.parse(sql.prepare('SELECT value FROM job_state WHERE key=?').get(`advisor.publish.${id}`)?.value ?? 'null');
+
+// H8 #1 contract: a Page create is never issued twice for one post when Meta accepted it but the run lost the acknowledgement
+// (restart or admin retry holds it for reconciliation); a definite rejection still allows the retry. Bug caught: the create
+// runs before anything durable records it, so a resumed `publishing` post creates a second public Page post.
+dbTest('a Page create accepted by Meta whose id write is lost is held for reconciliation on restart and retry, never created twice; a definite rejection may retry', async () => {
+  const s = setup(), fake = graphFake();
+  addMedia(s.sql, 'm1'); addPost(s.sql, {targets: ['facebook']});
+  const lost = await quiet(() => P.publish({...s.env, DB: lostAckDb(s.db)}, 'p1', deps(s, fake).deps));
+  assert.equal(lost.value.outcome, 'error');
+  assert.equal(fake.count('POST', `/${PAGE}/photos`), 1, 'Meta accepted the create');
+  assert.deepEqual([postRow(s.sql).status, postRow(s.sql).fb_post_id], ['publishing', null], 'neither the id nor an outcome was stored');
+  // The restart (the lease has expired): the cron resumes the `publishing` post.
+  const restart = deps(s, fake);
+  restart.clock.t = T0 + P.LEASE_MS + 60000;
+  const resumed = await quiet(() => P.publishDue(s.env, restart.clock.t, restart.deps));
+  assert.deepEqual(resumed.value.outcomes, ['failed']);
+  assert.equal(fake.count('POST', `/${PAGE}/photos`), 1, 'no second Page post');
+  assert.match(postRow(s.sql).error, /^facebook: Page create outcome unknown after an interrupted photo create; reconcile before retrying$/);
+  assert.equal(publishState(s.sql).fb_uncertain, true);
+  // An admin retry does not create it either.
+  await quiet(() => P.publish(s.env, 'p1', restart.deps, {retry: true}));
+  assert.equal(fake.count('POST', `/${PAGE}/photos`), 1);
+  assert.equal(postRow(s.sql).status, 'failed');
+
+  // Control: a definite rejection leaves no marker, and the admin retry creates the post once.
+  let reject = true;
+  const d = setup(), page = graphFake({on: {[`POST /${PAGE}/photos`]: () => (reject ? jsonResponse(fixture('error-page-photo'), 400) : null)}});
+  addMedia(d.sql, 'm1'); addPost(d.sql, {targets: ['facebook']});
+  assert.equal((await quiet(() => P.publish(d.env, 'p1', deps(d, page).deps))).value.outcome, 'failed');
+  assert.deepEqual([publishState(d.sql).fb_pending, publishState(d.sql).fb_uncertain], [undefined, undefined]);
+  reject = false;
+  assert.equal((await quiet(() => P.publish(d.env, 'p1', deps(d, page).deps, {retry: true}))).value.outcome, 'posted');
+  assert.deepEqual([page.count('POST', `/${PAGE}/photos`), postRow(d.sql).fb_post_id], [2, '100000000000001_100000000000302']);
+  assert.equal(publishState(d.sql), null, 'the per-post state is cleared once posted');
+});
+
 // ---- idempotency --------------------------------------------------------------------------------------------------
 
 dbTest('idempotent: a stored container is polled and published, never created again; a concurrent run is busy; a carousel keeps its children', async () => {
