@@ -58,6 +58,27 @@ export function localParts(date: Date, tz: string): {day: string; hour: number; 
   return {day: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour) % 24, weekday: p.weekday ?? ''};
 }
 
+// Require an explicit offset so an observation never depends on the browser's zone.
+const ISO_INSTANT = /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/;
+
+/** The most recent observed local days before today, returned oldest first. */
+export function pastDays(now: Date, tz: string, available: readonly string[], max = 7): {day: string; weekday: string}[] {
+  if (!(max >= 1)) return [];
+  const {day: today} = localParts(now, tz), cutoff = now.getTime();
+  const observed = new Map<string, string>();
+  for (const instant of available) {
+    const date = ISO_INSTANT.exec(instant)?.[1];
+    if (!date) continue;
+    const at = new Date(instant);
+    if (!(at.getTime() < cutoff)) continue;
+    // Date can roll an impossible observation date (e.g. February 30) into the next month.
+    if (new Date(date).getUTCDate() !== Number(date.slice(-2))) continue;
+    const {day, weekday} = localParts(at, tz);
+    if (day < today) observed.set(day, weekday);
+  }
+  return [...observed.keys()].sort().slice(-Math.floor(max)).map(day => ({day, weekday: observed.get(day)!}));
+}
+
 /** One local day of the horizon: "YYYY-MM-DD", its weekday and its hours (epoch ms, ascending). */
 export interface HorizonDay {readonly day: string; readonly weekday: string; readonly hours: readonly number[]}
 
