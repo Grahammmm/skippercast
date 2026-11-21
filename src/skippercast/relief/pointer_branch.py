@@ -7,7 +7,13 @@ The data PR changes exactly ``catalog/relief/<id>.json`` and
 ``catalog/depth-contours/<id>.geojson``. The approval file comes from the attended
 operator's trusted R8 path: this command binds bytes and authenticates nobody.
 
-Order: ``envelope.verify_chain`` first; then the current done ``contours`` receipt's
+Order: ``envelope.verify_chain`` first. The contours are then bound to that approval
+through the existing receipt hash chain (no approval, envelope or QA field is added):
+the current ``envelope`` receipt must record the approved ``review/<gen>/envelope.json``
+bytes and name the current ``qa`` receipt's generation; that QA receipt's generation
+must re-derive (``receipts.generation``) from its own recorded fields, its upstream
+``contours`` generation must be the current done ``contours`` receipt's, and its pinned
+``contours`` input sha256 must be the exact bytes committed here. The contours receipt's
 ``layers/contours/contours.geojson`` is re-hashed against that receipt, its
 ``provenance.region_id`` checked, and the same bytes passed to the platform's
 unchanged catalog-input validator (``depth_contours.check_contours`` with the clone's
@@ -47,12 +53,13 @@ def paths(region: str) -> tuple[str, str]:
     return rollback._region_paths(region)
 
 
-def contour_bytes(region: receipts.Region) -> bytes:
-    """The current done contours receipt's catalog-input bytes, re-hashed against it."""
+def contour_bytes(region: receipts.Region) -> tuple[bytes, dict]:
+    """The current done contours receipt's catalog-input bytes (re-hashed) and that receipt."""
     verdict = receipts.check(region, CONTOURS_STAGE)
     if not verdict.done:
         raise PointerBranchError(f'contours receipt is not done: {verdict.state}: {verdict.reason}')
-    rows = [row for row in (verdict.receipt or {}).get('outputs', []) if row.get('path') == CONTOURS_OUTPUT]
+    receipt = verdict.receipt or {}
+    rows = [row for row in receipt.get('outputs', []) if row.get('path') == CONTOURS_OUTPUT]
     if len(rows) != 1:
         raise PointerBranchError(f'contours receipt does not list {CONTOURS_OUTPUT}')
     raw = package.artifact_path(region.dir, CONTOURS_OUTPUT).read_bytes()
@@ -63,6 +70,54 @@ def contour_bytes(region: receipts.Region) -> bytes:
     provenance = doc.get('provenance')
     if not isinstance(provenance, dict) or provenance.get('region_id') != region.id:
         raise PointerBranchError(f'{CONTOURS_OUTPUT} is not region {region.id}')
+    return raw, receipt
+
+
+def _recorded(region: receipts.Region, stage: str) -> dict:
+    """The current ok receipt of ``stage`` whose generation re-derives from its own fields.
+
+    Upstream currency is checked by the caller, so a rerun upstream gets its own refusal.
+    """
+    doc = receipts.read_receipt(region.receipt_path(stage))
+    if doc is None:
+        raise PointerBranchError(f'{stage} receipt is not ok: no receipt')
+    problem = receipts.validate_receipt(doc, region.id, stage, None)
+    if problem is None and doc['status'] != 'ok':
+        problem = f'status {doc["status"]}'
+    if problem:
+        raise PointerBranchError(f'{stage} receipt is not ok: {problem}')
+    try:
+        derived = receipts.generation(doc['inputs'], doc['upstream'], doc['code']['stage_digest'], doc['params'])
+    except (KeyError, TypeError, ValueError, AttributeError):
+        derived = None
+    if derived != doc['generation']:
+        raise PointerBranchError(f'{stage} receipt generation does not match its recorded fields')
+    return doc
+
+
+def _upstream(doc: dict, stage: str) -> str | None:
+    rows = [u['generation'] for u in doc['upstream'] if u['stage'] == stage and u.get('scope') is None]
+    return rows[0] if len(rows) == 1 else None
+
+
+def approved_contours(region: receipts.Region, verified: envelope.VerifiedRelease) -> bytes:
+    """The contours bytes the approved review's QA pinned, through the existing receipt chain.
+
+    approval -> envelope.json bytes (verify_chain) -> the envelope receipt that output them
+    -> the QA generation it names -> that QA receipt's pinned contours sha256 and upstream
+    contours generation -> the current contours receipt and the exact bytes committed.
+    """
+    review = f'review/{verified.release["generation"]}/envelope.json'
+    env = _recorded(region, 'envelope')
+    if not any(o['path'] == review and o['sha256'] == verified.envelope_sha256 for o in env['outputs']):
+        raise PointerBranchError(f'envelope receipt does not record the approved {review}')
+    qa = _recorded(region, 'qa')
+    if _upstream(env, 'qa') != qa['generation']:
+        raise PointerBranchError('envelope receipt does not name the current qa receipt')
+    raw, contours = contour_bytes(region)
+    pins = [row['sha256'] for row in qa['inputs'] if row['role'] == CONTOURS_STAGE]
+    if _upstream(qa, CONTOURS_STAGE) != contours['generation'] or pins != [receipts.sha256_bytes(raw)]:
+        raise PointerBranchError('contours changed since approval: rerun QA, envelope and approval')
     return raw
 
 
@@ -116,7 +171,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if verified.region_dir.resolve() != region.dir or verified.release['region'] != region_id:
             raise PointerBranchError(f'envelope is not a release of OUT/{region_id}')
         # C2: no Git command runs before these refusals.
-        contours = contour_bytes(region)
+        contours = approved_contours(region, verified)
         check_catalog_input(args.repo, region_id, contours)
 
         git = rollback.GitCli(args.repo)

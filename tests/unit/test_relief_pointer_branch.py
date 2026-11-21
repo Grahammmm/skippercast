@@ -13,7 +13,8 @@ from scripts.relief import region as cli
 from skippercast.platform import depth_contours as dc
 from skippercast.relief import envelope, pointer_branch, receipts, rollback
 from tests._support import ROOT
-from tests.unit.test_relief_package import REGION, SOURCE, LAYERS, approved, assembly, kit_style  # noqa: F401
+from tests.unit.test_relief_package import (  # noqa: F401
+    REGION, SOURCE, LAYERS, approved, assembly, inputs, kit_style, run, run_package, write_json)
 
 POINTER = f'catalog/relief/{REGION}.json'
 CONTOURS = f'catalog/depth-contours/{REGION}.geojson'
@@ -77,21 +78,42 @@ def contour_doc(*, survey_date='2020', region_id=REGION):
     }
 
 
-def stage_contours(region, doc=None):
-    """A done contours receipt whose output is the catalog-input bytes."""
+def stage_contours(region, doc=None, params=None):
+    """A done contours receipt whose output is the catalog-input bytes (params change the generation)."""
     raw = receipts.canonical(contour_doc() if doc is None else doc)
 
     def build(out):
         (out / 'contours.geojson').write_bytes(raw)
 
-    run = receipts.StageRun(region, 'contours', build, 'c' * 64, target='layers/contours')
+    run = receipts.StageRun(region, 'contours', build, 'c' * 64, plan=receipts.Plan(params=params or {}),
+                            target='layers/contours')
     assert receipts.run_stage(run).state == 'ok'
     return raw
 
 
+def stage_qa(region, gen):
+    """A QA receipt shaped like qa.py's: the contours output pinned as input role and upstream."""
+    report = {'status': 'PASS', 'release_sha256': receipts.sha256_file(region.dir / 'release' / gen / 'release.json')}
+    run = receipts.StageRun(region, 'qa', lambda out: write_json(out / 'qa.json', report), 'b' * 64,
+                            upstream=[receipts.Ref('package'), receipts.Ref('contours')],
+                            plan=receipts.Plan([receipts.Input(region.dir / OUTPUT, 'contours')],
+                                               {'release_generation': gen}), target=f'qa/{gen}')
+    assert receipts.run_stage(run).state == 'ok'
+
+
 def release(root, *, style=None, doc=None):
-    region, _, _, review, approval = approved(root, style=style)
-    return region, review, approval, stage_contours(region, doc)
+    """An approved chain in pipeline order: package, contours, QA (pins contours), envelope, approval."""
+    region, manifest = inputs(root, style=style)
+    assert run_package(region, manifest) == 0
+    gen = receipts.check(region, 'package').receipt['generation']
+    raw = stage_contours(region, doc)
+    stage_qa(region, gen)
+    assert run(region, 'envelope', '--generation', gen) == 0
+    review = region.dir / 'review' / gen / 'envelope.json'
+    approval = review.with_name('approval.json')
+    digest = receipts.sha256_file(review)
+    write_json(approval, {'envelope_sha256': digest, 'verdict': f'APPROVED release {REGION} envelope={digest}'})
+    return region, review, approval, raw
 
 
 def argv(region, review, approval, repo, *extra):
@@ -185,7 +207,7 @@ def test_c1_verify_chain_runs_before_anything_else(tmp_path, assembly, clone, gi
     region, review, approval, _ = release(tmp_path / 'out')
     approval.write_text(json.dumps(json.loads(approval.read_bytes()) | {'verdict': 'APPROVED'}))
     seen = []
-    monkeypatch.setattr(pointer_branch, 'contour_bytes', lambda *a: seen.append('contours'))
+    monkeypatch.setattr(pointer_branch, 'approved_contours', lambda *a: seen.append('contours'))
     monkeypatch.setattr(pointer_branch, 'check_catalog_input', lambda *a: seen.append('catalog'))
     assert invoke(capsys, argv(region, review, approval, root)) == 1
     refused(capsys, 'approval lacks the exact release verdict')
@@ -333,6 +355,86 @@ def test_c2_catalog_validator_refuses_unstated_survey_date(tmp_path, assembly, c
     refused(capsys, f'Depth contour source {SOURCE} lacks its grid hash, survey date or datum')
     assert git_calls == [] and (region.dir / OUTPUT).read_bytes() == raw
     untouched(clone, head)
+
+
+# ------------------------------------- R: contours bound to the approved review (luna RETURN 1)
+
+CHANGED = 'contours changed since approval: rerun QA, envelope and approval'
+
+
+def edit_receipt(region, stage, change):
+    path = region.receipt_path(stage)
+    doc = json.loads(path.read_bytes())
+    change(doc)
+    path.write_text(json.dumps(doc))
+
+
+def refused_before_git(capsys, clone, git_calls, args, message):
+    head = clone[1]('rev-parse', 'HEAD')
+    assert invoke(capsys, args) == 1
+    refused(capsys, message)
+    assert git_calls == []
+    untouched(clone, head)
+
+
+def test_r1_commits_the_contours_the_approved_qa_pinned(tmp_path, assembly, clone, capsys):
+    """R1: The committed contours are the bytes the approved QA receipt pinned, not merely a done output."""
+    root, git = clone
+    region, review, approval, raw = release(tmp_path / 'out')
+    qa = json.loads(region.receipt_path('qa').read_bytes())
+    assert [row['sha256'] for row in qa['inputs'] if row['role'] == 'contours'] == [sha(raw)]
+    assert invoke(capsys, argv(region, review, approval, root)) == 0
+    assert git('show', f'HEAD:{CONTOURS}').encode() == raw
+
+
+def test_r2_contours_rerun_after_approval_is_refused(tmp_path, assembly, clone, git_calls, capsys):
+    """R2: A done contours rerun after approval (new generation and bytes) must not ship beside the pointer."""
+    region, review, approval, raw = release(tmp_path / 'out')
+    rerun = stage_contours(region, contour_doc(survey_date='2021'), params={'rerun': 2})
+    assert rerun != raw and receipts.check(region, 'contours').done
+    refused_before_git(capsys, clone, git_calls, argv(region, review, approval, clone[0]), CHANGED)
+
+
+def test_r3_tampered_qa_contour_pin_fails_the_generation_recompute(tmp_path, assembly, clone, git_calls, capsys):
+    """R3: Re-pinning the QA receipt to rerun contours without a QA run is caught by its own generation."""
+    region, review, approval, _ = release(tmp_path / 'out')
+    rerun = stage_contours(region, contour_doc(survey_date='2021'), params={'rerun': 2})
+    new_gen = receipts.check(region, 'contours').receipt['generation']
+
+    def repin(doc):
+        for row in doc['inputs']:
+            row['sha256'] = sha(rerun)
+        for row in doc['upstream']:
+            if row['stage'] == 'contours':
+                row['generation'] = new_gen
+
+    edit_receipt(region, 'qa', repin)
+    refused_before_git(capsys, clone, git_calls, argv(region, review, approval, clone[0]),
+                       'qa receipt generation does not match its recorded fields')
+
+
+def test_r4_envelope_receipt_must_record_the_approved_envelope(tmp_path, assembly, clone, git_calls, capsys):
+    """R4: An envelope receipt for other envelope.json bytes cannot vouch for the approved review's QA."""
+    region, review, approval, _ = release(tmp_path / 'out')
+
+    def other_bytes(doc):
+        for row in doc['outputs']:
+            row['sha256'] = 'f' * 64
+
+    edit_receipt(region, 'envelope', other_bytes)
+    refused_before_git(capsys, clone, git_calls, argv(region, review, approval, clone[0]),
+                       f'envelope receipt does not record the approved review/{review.parent.name}/envelope.json')
+
+
+def test_r5_qa_rerun_not_named_by_the_envelope_receipt_is_refused(tmp_path, assembly, clone, git_calls, capsys):
+    """R5: Contours and QA rerun after approval (same qa.json bytes) still need a new envelope and approval."""
+    region, review, approval, _ = release(tmp_path / 'out')
+    qa_json = (region.dir / 'qa' / review.parent.name / 'qa.json').read_bytes()
+    stage_contours(region, contour_doc(survey_date='2021'), params={'rerun': 2})
+    stage_qa(region, review.parent.name)
+    assert (region.dir / 'qa' / review.parent.name / 'qa.json').read_bytes() == qa_json
+    refused_before_git(capsys, clone, git_calls, argv(region, review, approval, clone[0]),
+                       'envelope receipt does not name the current qa receipt')
 
 
 # ---------------------------------------------------------------- C3
