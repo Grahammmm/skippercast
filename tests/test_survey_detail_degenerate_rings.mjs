@@ -23,6 +23,22 @@ for (const [name, invalidFeature] of [
   });
 }
 
+test('withholds a ring whose edges are exactly retraced', () => {
+  const path = [[-122.522, 35.827], [-121.775, 35.854], [-122.901, 35.712],
+    [-122.278, 34.106], [-122.862, 35.968], [-121.054, 35.063]];
+  const ring = [...path, ...path.slice(0, -1).reverse()];
+  for (const coordinates of [[ring], [exterior, ring]]) {
+    assert.equal(decode(feature('Polygon', coordinates)), null);
+    assert.equal(decode(feature('Polygon', coordinates.map(r => r.toReversed()))), null);
+  }
+});
+
+test('retains a nonzero ring even at subnormal scale', () => {
+  const step = Number.MIN_VALUE;
+  const ring = [[0, 0], [step, 0], [0, step], [0, 0]];
+  assert.deepEqual(decode(feature('Polygon', [ring])).features[0].geometry.coordinates, [ring]);
+});
+
 // A sign restriction, rewinding, or an area cutoff could discard or change a real hole.
 // The tiny triangle also loses its area if summed in unshifted longitude/latitude.
 test('keeps a real hole and measured tier unchanged in either winding', () => {

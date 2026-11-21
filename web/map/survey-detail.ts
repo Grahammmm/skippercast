@@ -25,6 +25,17 @@ function surveyDetailText(p: Record<string, unknown>): string | null {
   return measured(p.tier) && p.grid_m <= maximumGrid[p.tier] ? measuredLabel[p.tier] : null;
 }
 
+// Every finite binary64 is an integer multiple of 2^-1074. Keeping that
+// common scale makes the signed area exact, even for retraced or tiny rings.
+function exactCoordinate(value: number, bits: DataView): bigint {
+  bits.setFloat64(0, value);
+  const raw = bits.getBigUint64(0);
+  const exponent = Number((raw >> 52n) & 0x7ffn);
+  const fraction = raw & ((1n << 52n) - 1n);
+  const magnitude = exponent === 0 ? fraction : (fraction | (1n << 52n)) << BigInt(exponent - 1);
+  return raw >> 63n ? -magnitude : magnitude;
+}
+
 function validRing(ring: unknown): boolean {
   if (!Array.isArray(ring) || ring.length < 4) return false;
   for (const pt of ring) {
@@ -35,14 +46,16 @@ function validRing(ring: unknown): boolean {
   const [lastX, lastY] = ring[ring.length - 1];
   if (x0 !== lastX || y0 !== lastY) return false;
 
-  // Sum signed triangle areas relative to the first vertex to retain small rings.
-  let twiceArea = 0;
-  for (let i = 1; i < ring.length - 2; i++) {
-    const [x, y] = ring[i];
-    const [nextX, nextY] = ring[i + 1];
-    twiceArea += (x - x0) * (nextY - y0) - (y - y0) * (nextX - x0);
+  const bits = new DataView(new ArrayBuffer(8));
+  let twiceArea = 0n;
+  let previousX = exactCoordinate(x0, bits), previousY = exactCoordinate(y0, bits);
+  for (let i = 1; i < ring.length; i++) {
+    const x = exactCoordinate(ring[i][0], bits), y = exactCoordinate(ring[i][1], bits);
+    twiceArea += previousX * y - previousY * x;
+    previousX = x;
+    previousY = y;
   }
-  return twiceArea !== 0;
+  return twiceArea !== 0n;
 }
 
 /** MB-09 writes Polygon or MultiPolygon with holes. Retain the actual geometry,
