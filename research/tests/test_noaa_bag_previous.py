@@ -23,8 +23,12 @@ def _iso(delta):
 
 
 def _inventory(**changes):
-    value = {'scope': 'noaa-bag-head-inventory', 'last_complete_scan_at': _iso(-timedelta(hours=1)),
-             'health': {'status': 'ok', 'issues': []}, 'files': [{'survey_id': 'D00182', 'url': URL, 'status': 'ok'}]}
+    checked_at = _iso(-timedelta(hours=1))
+    value = {'scope': 'noaa-bag-head-inventory', 'last_complete_scan_at': checked_at,
+             'health': {'status': 'ok', 'issues': []}, 'files': [
+                 {'survey_id': 'D00182', 'url': URL, 'status': 'ok', 'checked_at': checked_at,
+                  'bytes': 500000, 'last_modified_http': None, 'issue': None},
+             ]}
     value.update(changes)
     return json.dumps(value).encode()
 
@@ -92,7 +96,7 @@ class PreviousInventoryTests(unittest.TestCase):
             with self.subTest(value=value):
                 calls, err, out = self.run_main(_inventory(), '--max-age-days', value)
                 self.assertEqual((calls, err), ([], ''))
-                self.assertTrue(out.startswith('Retained complete BAG HEAD inventory from '), out)
+                self.assertTrue(out.startswith('ok: 1/1 BAG links accessible'), out)
 
     def test_stale_or_mismatched_previous_rescans_without_reason(self):
         calls, err, _ = self.run_main(_inventory(last_complete_scan_at=_iso(-timedelta(days=2))), '--max-age-days', '1')
@@ -100,14 +104,17 @@ class PreviousInventoryTests(unittest.TestCase):
         calls, err, _ = self.run_main(_inventory(files=[{'url': URL + '.other.bag'}]))
         self.assertEqual((calls, err), ([URL], ''))
 
-    def test_fresh_previous_is_retained_atomically_with_identical_bytes(self):
+    def test_fresh_previous_file_evidence_is_preserved_in_atomic_output(self):
         raw = _inventory()
         self.output.parent.mkdir()
         self.output.write_bytes(b'old output')
         calls, err, out = self.run_main(raw)
         self.assertEqual((calls, err), ([], ''))
-        self.assertTrue(out.startswith('Retained complete BAG HEAD inventory from '), out)
-        self.assertEqual(self.output.read_bytes(), raw)
+        self.assertTrue(out.startswith('ok: 1/1 BAG links accessible'), out)
+        result, previous = json.loads(self.output.read_bytes()), json.loads(raw)
+        self.assertEqual(result['last_complete_scan_at'], previous['last_complete_scan_at'])
+        self.assertEqual(result['files'], [{**previous['files'][0],
+                                          'native_review_hint': 'filename-MLLW-and-report; inspect-native-product'}])
         self.assertEqual(sorted(p.name for p in self.output.parent.iterdir()), ['inventory.json'])
 
     def test_missing_previous_scans_without_reason(self):
