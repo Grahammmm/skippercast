@@ -1,6 +1,7 @@
 """Public relief-basis vectors for QA, not for the release or Chart."""
 from contextlib import ExitStack
 from functools import lru_cache
+import json
 import math
 from pathlib import Path
 
@@ -13,6 +14,9 @@ TARGET = 'layers/public/nearshore'
 CODE_FILES = (*tiles.CODE_FILES, 'skippercast.relief.tiles')
 add_arguments = mosaic.add_region_config
 MAX_PILE_BYTES = 1_000_000
+MAX_PILE_INDEX_BYTES = 1_000_000
+PILE_SHARD_SCHEMA = 'sc-nearshore-pile-shards/1'
+PILE_STREAMS = ('piles', 'peaks')
 NO_CERT = 'no certified ≤1 m support (C7)'
 
 
@@ -163,11 +167,82 @@ def _collection(features):
     return receipts.canonical(dict(type='FeatureCollection', features=features))
 
 
+def _shard_index(products, streams, unsharded):
+    """Derive the QA index from the actual bytes, checking sequence and reconstruction."""
+    pairs, seen = [], set()
+    reconstructed = {kind: [] for kind in PILE_STREAMS}
+    for number in range(1, len(products) // 2 + 1):
+        pair, size = {}, 0
+        for kind in PILE_STREAMS:
+            name = f'{kind}-{number:06d}.geojson'
+            if name not in products:
+                raise receipts.ReceiptError(f'invalid pile shard sequence: missing {name}')
+            data = products[name]
+            collection = json.loads(data)
+            if collection.keys() != {'type', 'features'} or collection['type'] != 'FeatureCollection':
+                raise receipts.ReceiptError(f'invalid pile shard FeatureCollection: {name}')
+            features = collection['features']
+            pair[kind] = dict(name=name, bytes=len(data), sha256=receipts.sha256_bytes(data), count=len(features))
+            reconstructed[kind].extend(features)
+            size += len(data)
+            seen.add(name)
+        if size > MAX_PILE_BYTES:
+            raise receipts.ReceiptError(f'pile shard pair {number} requires {size} bytes; budget {MAX_PILE_BYTES} exceeded')
+        pairs.append(dict(pair, bytes=size))
+    if seen != products.keys() or not pairs:
+        raise receipts.ReceiptError('invalid pile shard sequence or basenames')
+    for kind in PILE_STREAMS:
+        features = reconstructed.pop(kind)
+        if len(features) != len(streams[kind]) or _collection(features) != unsharded[kind]:
+            raise receipts.ReceiptError(f'pile shard reconstruction differs from half-cell {kind}')
+    total = sum(pair['bytes'] for pair in pairs)
+    index = receipts.canonical(dict(schema=PILE_SHARD_SCHEMA, pair_cap_bytes=MAX_PILE_BYTES, pairs=pairs,
+                                    counts={kind: len(streams[kind]) for kind in PILE_STREAMS}, total_pair_bytes=total))
+    if len(index) > MAX_PILE_INDEX_BYTES:
+        raise receipts.ReceiptError(f'pile-shards.json requires {len(index)} bytes; index budget '
+                                    f'{MAX_PILE_INDEX_BYTES} exceeded')
+    return index, total
+
+
+def _pile_shards(piles, peaks, pile_bytes, peak_bytes):
+    """Pack the already ordered half-cell features; shards imply no geographic partition."""
+    streams = dict(piles=piles, peaks=peaks)
+    products = {}
+    pair = {kind: [] for kind in PILE_STREAMS}
+    envelopes = 2 * len(_collection([]))
+    size = envelopes
+
+    def close_pair():
+        number = len(products) // 2 + 1
+        for kind, features in pair.items():
+            products[f'{kind}-{number:06d}.geojson'] = _collection(features)
+            features.clear()
+
+    for kind, features in streams.items():  # all global-ID piles, then all region-NMS peaks
+        for ordinal, feature in enumerate(features, 1):
+            length = len(receipts.canonical(feature))
+            if envelopes + length > MAX_PILE_BYTES:
+                raise receipts.ReceiptError(f'{kind} feature {ordinal} requires {envelopes + length} bytes with both '
+                                            f'envelopes; shard budget {MAX_PILE_BYTES} exceeded at half-cell simplification')
+            # Canonical arrays add one ASCII comma only after the first feature of this stream.
+            addition = length + bool(pair[kind])
+            if size + addition > MAX_PILE_BYTES:
+                close_pair()
+                size, addition = envelopes, length
+            pair[kind].append(feature)
+            size += addition
+    close_pair()
+    index, total = _shard_index(products, streams, dict(piles=pile_bytes, peaks=peak_bytes))
+    products['pile-shards.json'] = index
+    return products, dict(pile_layout=PILE_SHARD_SCHEMA, pile_pair_bytes_total=total,
+                          pile_half_cell_unsharded_bytes=len(pile_bytes) + len(peak_bytes))
+
+
 def _piles_and_peaks(records, view):
     from scipy.spatial import cKDTree
 
     if not records:
-        return _collection([]), _collection([])
+        return {f'{kind}.geojson': _collection([]) for kind in PILE_STREAMS}, {}
     labels = view['rock_piles']['label']
     from skippercast.relief.nearshore import FT_PER_M
 
@@ -194,9 +269,8 @@ def _piles_and_peaks(records, view):
                                                           area_m2=round(geom.area, 3), basis='relief', source_id=source_id)))
         pile_bytes = _collection(piles)
         if len(pile_bytes) + len(peak_bytes) <= MAX_PILE_BYTES:
-            return pile_bytes, peak_bytes
-    raise receipts.ReceiptError(f'{len(records)} piles + peaks require {len(pile_bytes) + len(peak_bytes)} bytes; '
-                                f'budget {MAX_PILE_BYTES} exceeded at half-cell simplification (no piles dropped)')
+            return {'piles.geojson': pile_bytes, 'peaks.geojson': peak_bytes}, {}
+    return _pile_shards(piles, peaks, pile_bytes, peak_bytes)
 
 
 def build(ctx, out):
@@ -243,10 +317,10 @@ def build(ctx, out):
                         arcs.extend(rings)
                         statuses[row['id']] = dict(status='produced', reason=None)
                         break
-    piles, peaks = _piles_and_peaks(records, habitat)
-    products = {'piles.geojson': piles, 'peaks.geojson': peaks,
-                'pier.geojson': _collection(piers), 'arcs.geojson': _collection(arcs)}
+    products, diagnostics = _piles_and_peaks(records, habitat)
+    products.update({'pier.geojson': _collection(piers), 'arcs.geojson': _collection(arcs)})
     for name, data in products.items():
         (out / name).write_bytes(data)
     return dict(style=provenance, pier_view=statuses, piles_total=len(records),
-                piles_by_basis={'relief': len(records)}, bytes={name: len(data) for name, data in products.items()})
+                piles_by_basis={'relief': len(records)}, bytes={name: len(data) for name, data in products.items()},
+                **diagnostics)
