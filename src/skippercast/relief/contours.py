@@ -419,10 +419,12 @@ def build(ctx, out):
     except SystemExit as exc:
         raise receipts.ReceiptError(str(exc)) from None
     overview = dc.overview_contours(collection)
+    full_budget, overview_budget = dc.size_budgets(collection)
     selected = {row['source_id'] for row, *_ in entries}
-    for filename, value, budget in (('contours.geojson', collection, dc.MAX_BYTES),
-                                     ('contours-overview.geojson', overview, dc.OVERVIEW_MAX_BYTES)):
+    for filename, value, budget in (('contours.geojson', collection, full_budget),
+                                    ('contours-overview.geojson', overview, overview_budget)):
         dc.check_selected_contours(value, region, sources, selected, view=ctx.contour_view)
-        if atomic_json(out / filename, value)['bytes'] > budget:
-            raise receipts.ReceiptError(f'{filename} exceeds its byte budget')
+        size = atomic_json(out / filename, value)['bytes']
+        if size > budget:
+            raise receipts.ReceiptError(f'{filename} exceeds its byte budget ({size} bytes, budget {budget} bytes)')
     return metrics

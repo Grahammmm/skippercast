@@ -1,9 +1,13 @@
 """Restore a region's catalog files from Git, not the pointer's lineage metadata."""
 from __future__ import annotations
 
+import argparse
 from collections.abc import Callable, Mapping, Sequence
+from hashlib import sha256
 from pathlib import Path
+import shlex
 import subprocess
+import sys
 from typing import Protocol
 
 from skippercast.relief.receipts import REGION_ID
@@ -113,3 +117,38 @@ def write_branch(
             oid = run(['git', 'hash-object', '-w', '--no-filters', '--', path]).decode('ascii').strip()
             run(['git', 'update-index', '--add', '--cacheinfo', f'100644,{oid},{path}'])
     run(['git', 'commit', '-s', '--allow-empty', '-m', f'Roll back relief release for {region}'])
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog='region.py rollback', description=__doc__)
+    parser.add_argument('--region', required=True, help='region id')
+    parser.add_argument('--repo', required=True, type=Path, help='root of a clean clone')
+    parser.add_argument('--branch', help='new branch (default: rollback/<region>-<short HEAD sha>)')
+    args = parser.parse_args(argv)
+
+    git = GitCli(args.repo)
+    try:
+        if git.run(['git', 'rev-parse', '--show-prefix']) != b'\n':
+            raise RollbackError('--repo must point to the root of the clone')
+        state = previous_state(git, args.region)
+        before = {path: git.show('HEAD', path) for path in state}
+        branch = args.branch
+        if branch is None:
+            short = git.run(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
+            branch = f'rollback/{args.region}-{short}'
+        write_branch(args.repo, args.region, state, branch=branch, run=git.run)
+        commit = git.run(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    except (RollbackError, OSError) as exc:
+        print(f'region.py rollback: {exc}', file=sys.stderr)
+        return 1
+
+    print(f'Branch: {branch}\nCommit: {commit}')
+    for path, payload in state.items():
+        old = before[path]
+        old_hash = sha256(old).hexdigest() if old is not None else 'absent'
+        new_hash = sha256(payload).hexdigest() if payload is not None else 'removed'
+        print(f'{path}: {old_hash} -> {new_hash}')
+    push = shlex.join(['git', 'push', 'origin', f'refs/heads/{branch}'])
+    print(f'Next: in the clone, run `{push}`, then open one PR into main titled '
+          f'"Roll back relief release for {args.region}".')
+    return 0
