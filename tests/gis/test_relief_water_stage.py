@@ -18,6 +18,7 @@ _REGION = 'synthetic-coast'
 _BOUNDS = [-120.0, 38.0, -119.95, 38.04]  # Frame tiles: 12/682/1579 (offshore) and 12/683/1579 (coast).
 _FRAME = (-120.0, 38.0, -119.95, 38.04)
 _WEST, _EAST, _DECOY = '12/682/1579', '12/683/1579', '12/690/1570'
+_OFFSHORE = '12/680/1579'  # Outside the frame; sorts before the unavailable frame tile.
 _OUTPUTS = ('water.geojson', 'water.json')
 
 
@@ -66,7 +67,7 @@ class Inputs:
     def write(self, tiles, regions=None):
         """``tiles`` maps a tile id to its features, or to None for an unavailable row."""
         rows = []
-        for name, features in sorted(tiles.items()):
+        for name, features in tiles.items():
             if features is None:
                 rows.append({'status': 'unavailable', 'tile': name})
                 continue
@@ -81,9 +82,12 @@ class Inputs:
         return doc
 
 
+def _off_frame_coast(accuracy):
+    return _line(_DECOY, accuracy, (-119.4, 38.6), (-119.39, 38.6))
+
+
 def _default_tiles(coast='18'):
-    # The decoy is a listed served tile outside the frame: an input, checked, never decoded.
-    return {_WEST: None, _EAST: [_coast(coast), _ISLAND], _DECOY: [_line(_DECOY, '2', (-119.4, 38.6), (-119.39, 38.6))]}
+    return {_WEST: None, _EAST: [_coast(coast), _ISLAND], _DECOY: [_off_frame_coast('2')]}
 
 
 @pytest.fixture
@@ -133,18 +137,22 @@ def _expected(inputs):
     return water.ocean_polygon(lines, _FRAME, close_m=close_m, connect_m=250.0)
 
 
-@pytest.mark.parametrize('coast,close_m,accuracies', [
-    pytest.param('18', water.CLOSE_M, [4.31, 18.0], id='C1: north-B parity, maximum HOR_ACC 18 gives the reviewed CLOSE_M'),
-    pytest.param('12', 12.0, [4.31, 12.0], id='C1: close_m is the decoded maximum HOR_ACC, not a fixed 18'),
+@pytest.mark.parametrize('coast,off_frame,close_m,accuracies', [
+    pytest.param('18', False, water.CLOSE_M, [4.31, 18.0], id='C1: in-frame-only north-B parity at 18 m'),
+    pytest.param('12', True, 12.0, [2.0, 4.31, 12.0], id='C1: close_m is the decoded maximum HOR_ACC, not a fixed 18'),
 ])
-def test_C1_receipt_and_outputs(held, monkeypatch, capsys, coast, close_m, accuracies):
+def test_C1_receipt_and_outputs(held, monkeypatch, capsys, coast, off_frame, close_m, accuracies):
     """C1: Dropping a listed tile, re-typing the radii or decoding unlisted bytes changes this receipt or report."""
     def offline(*args, **kwargs):
         raise AssertionError('the water stage must not open a network connection')
 
     monkeypatch.setattr(socket.socket, 'connect', offline)
     monkeypatch.setattr(socket, 'getaddrinfo', offline)
-    held.write(_default_tiles(coast))
+    tiles = _default_tiles(coast)
+    if not off_frame:
+        del tiles[_DECOY]
+    served = tuple(name for name in (_EAST, _DECOY) if name in tiles)
+    held.write(tiles)
     # The reviewed builder's constants (build_water.py:67, sha256 5b17edd6...): the rule's north-B instance and the
     # connectivity radius, pinned here so neither is re-typed silently.
     assert (water.CLOSE_M, water.CONNECT_M) == (18.0, 250.0)
@@ -152,7 +160,7 @@ def test_C1_receipt_and_outputs(held, monkeypatch, capsys, coast, close_m, accur
     receipt = _receipt(held.region)
     assert capsys.readouterr() == (f'[water] OK generation {receipt["generation"][:12]}: 2 outputs, attempt 1\n', '')
     assert (receipt['status'], receipt['rc'], receipt['held_reason'], receipt['error']) == ('ok', 0, None, None)
-    assert receipt['inputs'] == _inputs(held)
+    assert receipt['inputs'] == _inputs(held, served)
     assert receipt['params'] == {'close_m': 'max stated HOR_ACC', 'connect_m': 250.0}
     assert receipt['metrics'] == {'close_m': close_m, 'connect_m': 250.0}
     assert (receipt['upstream'], receipt['target']) == ([], 'water')
@@ -167,12 +175,29 @@ def test_C1_receipt_and_outputs(held, monkeypatch, capsys, coast, close_m, accur
         'close_m': close_m, 'connect_m': 250.0, 'hor_acc_values_m': accuracies,
         'unavailable_tiles': [_WEST], 'report': expected_report,
         'inputs': {'manifest_sha256': _sha(held.manifest),
-                   'tiles': [{'tile': name, 'sha256': _sha(held.tile_path(name))} for name in (_EAST, _DECOY)]},
+                   'tiles': [{'tile': name, 'sha256': _sha(held.tile_path(name))} for name in served]},
     }
     assert expected_report['displacement_bound_m'] == 2 * close_m
     ocean = shape(json.loads(geojson.read_bytes())['features'][0]['geometry'])
     # Offshore (in the unavailable west tile), island interior, inland.
     assert [ocean.contains(Point(lon, 38.02)) for lon in (-119.99, -119.967, -119.955)] == [True, False, False]
+
+
+def test_C1_off_frame_maximum_sets_close_m(held):
+    """C1: A frame-only maximum ignores the largest verified shoreline accuracy."""
+    held.write({**_default_tiles(), _DECOY: [_off_frame_coast('36')]})
+    assert _run(held) == 0
+    report = json.loads(_output_paths(held.region)[1].read_bytes())
+    assert report['hor_acc_values_m'] == [4.31, 18.0, 36.0]
+    assert (report['close_m'], report['connect_m'], report['report']['displacement_bound_m']) == (36.0, 250.0, 72.0)
+
+
+def test_C2_lists_all_unavailable_manifest_tiles(held):
+    """C2: Extract provenance misses off-frame rows; manifest order is not report order."""
+    held.write({**_default_tiles(), _OFFSHORE: None})
+    assert _run(held) == 0
+    report = json.loads(_output_paths(held.region)[1].read_bytes())
+    assert report['unavailable_tiles'] == [_OFFSHORE, _WEST]
 
 
 def _assert_failed(inputs, error):
@@ -253,17 +278,22 @@ def test_C2_frame_tile_not_listed(held, capsys):
     _assert_held(held, f"shoreline manifest lists no served or unavailable row for frame tiles ['{_WEST}']", capsys)
 
 
-@pytest.mark.parametrize('accuracy,reason', [
-    pytest.param(None, 'shoreline feature cusp-12-683-1579-0 states no positive HOR_ACC: None',
+@pytest.mark.parametrize('name,accuracy,reason', [
+    pytest.param(_EAST, None, 'shoreline feature cusp-12-683-1579-0 states no positive HOR_ACC: None',
                  id='C1: hold a feature without HOR_ACC'),
-    pytest.param('0', "shoreline feature cusp-12-683-1579-0 states no positive HOR_ACC: '0'",
+    pytest.param(_EAST, '0', "shoreline feature cusp-12-683-1579-0 states no positive HOR_ACC: '0'",
                  id='C1: hold a zero HOR_ACC'),
-    pytest.param('300', 'maximum stated HOR_ACC 300.0 m exceeds connect_m 250.0 m',
+    pytest.param(_EAST, '300', 'maximum stated HOR_ACC 300.0 m exceeds connect_m 250.0 m',
                  id='C1: hold a maximum HOR_ACC above connect_m'),
+    pytest.param(_DECOY, None, 'shoreline feature cusp-12-690-1570-0 states no positive HOR_ACC: None',
+                 id='C1: hold an off-frame feature without HOR_ACC'),
+    pytest.param(_DECOY, '300', 'maximum stated HOR_ACC 300.0 m exceeds connect_m 250.0 m',
+                 id='C1: hold an off-frame maximum above connect_m'),
 ])
-def test_C1_unusable_accuracy(held, capsys, accuracy, reason):
-    """C1: The opening radius is never guessed when the stated accuracy cannot set it."""
-    held.write(dict(_default_tiles(), **{_EAST: [_coast(accuracy), _ISLAND]}))
+def test_C1_unusable_accuracy(held, capsys, name, accuracy, reason):
+    """C1: Frame-only validation wrongly accepts unusable accuracies on off-frame shoreline."""
+    features = [_coast(accuracy), _ISLAND] if name == _EAST else [_off_frame_coast(accuracy)]
+    held.write({**_default_tiles(), name: features})
     assert _run(held) == 4
     _assert_held(held, reason, capsys)
 

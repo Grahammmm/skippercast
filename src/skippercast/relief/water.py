@@ -3,7 +3,7 @@
 Also the receipted region stage ``region.py water --region ID --out OUT
 --shoreline-manifest FILE [--region-config FILE]``. It reads one admitted CUSP
 custody manifest and only the tiles it lists as served (sha256-checked against
-their rows; it never fetches), decodes the tiles the region frame needs with the
+their rows; it never fetches), decodes their shoreline accuracies with the
 merged importer, and writes ``water.geojson`` and its report ``water.json``.
 """
 
@@ -275,15 +275,34 @@ def _cusp():
     return module
 
 
-def _accuracy(feature):
-    raw = feature['properties'].get('HOR_ACC')
+def _accuracy(properties, feature_id):
+    raw = properties.get('HOR_ACC')
     try:
         value = float(raw)
     except (TypeError, ValueError):
         value = float('nan')
     if not (isfinite(value) and value > 0):
-        raise receipts.Held(f"shoreline feature {feature['id']} states no positive HOR_ACC: {raw!r}")
+        raise receipts.Held(f'shoreline feature {feature_id} states no positive HOR_ACC: {raw!r}')
     return value
+
+
+def _manifest_accuracies(cusp, held, frame_max):
+    """Scan verified tile features before spatial clipping can discard them."""
+    accuracies = set()
+    support = None
+    maximum = frame_max
+    for tile, body in held.items():
+        tile_id = tile.replace('/', '-')
+        for layer in cusp.decode_tile(body):
+            for index, feature in enumerate(layer['features']):
+                if feature['type'] != 2:  # MVT LineString
+                    continue
+                accuracy = _accuracy(feature['properties'], f'cusp-{tile_id}-{index}')
+                accuracies.add(accuracy)
+                if accuracy > maximum:
+                    maximum = accuracy
+                    support = (tile, layer['extent'], feature['geometry'])
+    return accuracies, support
 
 
 def build(ctx, out_dir):
@@ -314,7 +333,8 @@ def build(ctx, out_dir):
     cusp = _cusp()
     frame = _frame_bounds(bounds)
     needed = ['/'.join(map(str, tile)) for tile in cusp.tiles_for(frame)]
-    unlisted = [tile for tile in needed if tile not in held and rows.get(tile, {}).get('status') != 'unavailable']
+    unavailable = {tile for tile, row in rows.items() if row['status'] == 'unavailable'}
+    unlisted = [tile for tile in needed if tile not in held and tile not in unavailable]
     if unlisted:
         raise receipts.Held(f'shoreline manifest lists no served or unavailable row for frame tiles {unlisted}')
 
@@ -324,14 +344,26 @@ def build(ctx, out_dir):
     shoreline.check_shoreline(collection, frame_region)
     published = shoreline.slim_shoreline(collection)
     shoreline.check_shoreline(published, frame_region)
-    accuracies = [_accuracy(feature) for feature in published['features']]
-    lines = [(line, accuracy) for feature, accuracy in zip(published['features'], accuracies)
+    frame_accuracies = [_accuracy(feature['properties'], feature['id']) for feature in published['features']]
+    lines = [(line, accuracy) for feature, accuracy in zip(published['features'], frame_accuracies)
              for line in map(LineString, shoreline.feature_lines(feature['geometry'])) if line.length]
-    if not lines:
-        raise receipts.Held(f'no shoreline lines in the frame of region {region_id}')
-    close_m = max(accuracy for _, accuracy in lines)
+    frame_max = max((accuracy for _, accuracy in lines), default=0.0)
+    accuracies, support = _manifest_accuracies(cusp, held, frame_max)
+    close_m = max(accuracies, default=0.0)
     if close_m > CONNECT_M:
         raise receipts.Held(f'maximum stated HOR_ACC {close_m} m exceeds connect_m {CONNECT_M} m')
+    if not lines:
+        raise receipts.Held(f'no shoreline lines in the frame of region {region_id}')
+    if support is not None:
+        # The public API requires the maximum to be carried by real shoreline.
+        # Keep the frame extract and include the source feature supplying the higher radius.
+        tile, extent, geometry = support
+        z, x, y = map(int, tile.split('/'))
+        for points in cusp.lines(geometry):
+            line = LineString([(cusp.tile_lon(x + px / extent, z), cusp.tile_lat(y + py / extent, z))
+                               for px, py in points])
+            if line.length:
+                lines.append((line, close_m))
     try:
         water, report = ocean_polygon(lines, frame, close_m=close_m, connect_m=CONNECT_M)
     except ValueError as exc:  # For example no west-connected ocean, or an east leak after the cuts.
@@ -340,8 +372,8 @@ def build(ctx, out_dir):
     (out_dir / 'water.geojson').write_bytes(receipts.canonical(to_geojson(water, region_id)) + b'\n')
     (out_dir / 'water.json').write_bytes(receipts.canonical({
         'region': region_id, 'region_bounds_wgs84': bounds, 'frame_wgs84': list(frame),
-        'close_m': close_m, 'connect_m': CONNECT_M, 'hor_acc_values_m': sorted(set(accuracies)),
-        'unavailable_tiles': collection['provenance']['unavailable_tiles'],
+        'close_m': close_m, 'connect_m': CONNECT_M, 'hor_acc_values_m': sorted(accuracies),
+        'unavailable_tiles': sorted(unavailable),
         'report': report, 'inputs': {'manifest_sha256': manifest_sha, 'tiles': pins},
     }) + b'\n')
     beyond = report['unlisted_beyond_bound']
