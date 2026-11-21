@@ -257,6 +257,32 @@ dbTest('a story: STORIES with the derived story.jpg and no caption; the Page pho
   assert.deepEqual([row.status, row.fb_story_id, row.fb_post_id], ['posted', '100000000000501', null]);
 });
 
+// H8 #13 contract: a Story's insights window runs from Instagram's own success, not the first surface's: an Instagram Story that
+// succeeds 25 h after the Page Story is still read for its 24 h, and posted_at (first success) is unchanged for other consumers.
+// Bug caught: both Story eligibility checks used posted_at, so a late Instagram success was already 'too old' when it went up.
+dbTest('a Story whose Instagram success comes 25 h after the Page Story keeps posted_at and is read by both Story insights checks for its own 24 h', async () => {
+  const I = await import('../server/advisor/social/insights.ts');
+  let failIg = true;
+  const s = setup(), fake = graphFake({on: {[`POST /${IG}/media`]: () => (failIg ? jsonResponse(fixture('error-unknown-field'), 400) : null)}});
+  addMedia(s.sql, 'm1'); addPost(s.sql, {kind: 'story'});
+  assert.equal((await quiet(() => P.publish(s.env, 'p1', deps(s, fake).deps))).value.outcome, 'partial', 'the Page Story went up at T0; Instagram failed');
+  failIg = false;
+  const late = deps(s, fake);
+  late.clock.t = T0 + 25 * HOUR;
+  assert.equal((await quiet(() => P.publish(s.env, 'p1', late.deps, {retry: true}))).value.outcome, 'posted');
+  const reads = [];
+  const insights = {fetcher: async url => { reads.push(new URL(url).pathname); return jsonResponse(fixture('insights-story')); }, sleep: async () => {}};
+  const tick = await quiet(() => I.storyInsightsTick(s.env, T0 + 26 * HOUR, insights));
+  assert.deepEqual(tick.value, {posts: 1, instagram: 1, facebook: 0, failed: 0}, 'the hourly Story tick reads it 1 h after Instagram took it');
+  const slot = await quiet(() => I.collectInsights(s.env, T0 + 27 * HOUR, insights));
+  assert.deepEqual([slot.value.instagram, slot.value.failed], [1, 0], 'the 03:00 slot does not treat it as expired either');
+  assert.equal(reads.filter(p => p.endsWith('/17890000000000202/insights')).length, 2);
+  const row = postRow(s.sql);
+  assert.deepEqual([row.posted_at, row.ig_posted_at, row.ig_media_id], [iso(T0), iso(T0 + 25 * HOUR), '17890000000000202'], 'first success unchanged; Instagram\'s own time kept');
+  // Past Instagram's own 24 h it is no longer read.
+  assert.equal(await I.storyInsightsTick(s.env, T0 + 49 * HOUR + 1, insights), 'idle');
+});
+
 // ---- quota -------------------------------------------------------------------------------------------
 
 dbTest('quota used up: no container, back to approved an hour later (from now for a past time, from the time when it is later), recorded', async () => {

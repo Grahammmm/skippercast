@@ -233,6 +233,8 @@ export const advisorPosts=sqliteTable('advisor_posts',{
   scheduledFor:text('scheduled_for'),igContainerId:text('ig_container_id'),igMediaId:text('ig_media_id'),
   fbPostId:text('fb_post_id'),fbStoryId:text('fb_story_id'),collabStatus:text('collab_status'),error:text('error'),
   createdBy:text('created_by').notNull(),approvedBy:text('approved_by'),approvedAt:text('approved_at'),postedAt:text('posted_at'),
+  // H8 #13: when Instagram itself accepted the post (a Story's 24 h life runs from here); null on legacy rows.
+  igPostedAt:text('ig_posted_at'),
   createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull(),
 },t=>[index('post_status_time').on(t.status,t.scheduledFor),index('post_boat').on(t.boatId)]);
 

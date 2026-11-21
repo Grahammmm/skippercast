@@ -264,7 +264,8 @@ async function publishInstagram(run: Run): Promise<Step> {
     // TA-S3: collaborators were invited with the container; the cron reads their answers.
     const invited = post.kind !== 'story' && tagsOf(post).collaborators.length > 0;
     const at = run.at();
-    await db.prepare(`UPDATE advisor_posts SET ig_media_id=?,collab_status=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(mediaId, invited ? 'invited' : null, at, at, post.id).run();
+    // H8 #13: ig_posted_at is Instagram's own time (its Story's 24 h starts here); posted_at stays the first surface's.
+    await db.prepare(`UPDATE advisor_posts SET ig_media_id=?,ig_posted_at=?,collab_status=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(mediaId, at, invited ? 'invited' : null, at, at, post.id).run();
     post.ig_media_id = mediaId; post.collab_status = invited ? 'invited' : null;
     advisorLog('info', 'advisor_post_published', {surface: 'instagram', kind: post.kind});
     const permalink = await igPermalink(cfg, mediaId).catch(() => null);
