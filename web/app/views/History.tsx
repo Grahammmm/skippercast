@@ -18,6 +18,7 @@ import {historyMetric, historyRange, historyStation, navigate, profile, species,
 import {regionInfo} from '../App.tsx';
 import {CoastMarkup, isRenderableHistory, type CoastSelection} from '../CoastMarkup.tsx';
 import {historyCopy} from '../../view-copy.ts';
+import {units} from '../../unit-choice.ts';
 
 /** The measurements historyView lists, in its order; anything else falls back to its default (sea temperature). */
 export const HISTORY_METRICS: readonly HistoryMetric[] = ['waterTempF', 'waveFt', 'windKnots', 'airTempF', 'gustKnots', 'periodS'];
@@ -87,7 +88,7 @@ export function History({now = new Date()}: {now?: Date} = {}) {
     <section class="app-history" aria-labelledby="app-history-title">
       <h2 id="app-history-title">{t('history.title', lang)}</h2>
       {state.kind === 'ready'
-        ? <CoastMarkup renderer="historyView" args={[{county: state.county, now}, state.bundle, selection, historyCopy(lang)]} onSelect={choose} />
+        ? <CoastMarkup renderer="historyView" args={[{county: state.county, now}, state.bundle, selection, historyCopy(lang), units.value]} onSelect={choose} />
         : <>
           <p class="app-empty" role="status">{t(NOTES[state.kind], lang)}</p>
           {failed ? <button type="button" class="app-history-retry" onClick={() => { void coastData.load('history'); }}>{t('history.retry', lang)}</button> : null}

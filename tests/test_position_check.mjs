@@ -302,8 +302,8 @@ test('far from every closure, low accuracy, stale boundaries: each is said plain
   const shown = text(html(done({located: {ok: true, fix: fixOf(OUTSIDE, 250)}, reading: {kind: 'checked', fix: fixOf(OUTSIDE, 250), where: 'outside', name: 'X', distanceM: 900, lowAccuracy: true, stale: false, missing: [], clock: 'ok', checkedAt: FRESH}})));
   assert.match(shown, /Position accuracy: ±250 m \(820 ft\)/);
   assert.match(shown, /Low accuracy\. Your real position may be well away/);
-  assert.match(text(html(checked('outside', {stale: true, clock: 'old', checkedAt: OLD}))), new RegExp(`last checked ${OLD.slice(0, 10)}, more than 36 hours ago`));
-  assert.match(text(html(checked('outside'))), new RegExp(`Boundaries last checked ${FRESH.slice(0, 10)}`));
+  assert.match(text(html(checked('outside', {stale: true, clock: 'old', checkedAt: OLD}))), new RegExp(`last checked ${new Intl.DateTimeFormat('en-US', {timeZone: 'America/Los_Angeles', dateStyle: 'medium'}).format(new Date(OLD))}, more than 36 hours ago`));
+  assert.match(text(html(checked('outside'))), new RegExp(`Boundaries last checked ${new Intl.DateTimeFormat('en-US', {timeZone: 'America/Los_Angeles', dateStyle: 'medium'}).format(new Date(FRESH))}`));
 });
 
 test('permission denied, no fix, no API, no boundaries, outside coverage and no pack: plain words, no verdict', () => {
