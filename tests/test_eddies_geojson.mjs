@@ -62,6 +62,14 @@ test('C3: selects the westernmost northern vertex regardless of tie order, with 
   ));
 });
 
+test('C1: skips empty outlines and preserves the original indexes of valid eddies', () => {
+  const ring = [[0, 0], [2, 0], [2, 1], [0, 0]];
+  assert.deepEqual(eddiesGeoJSON({frameTime, eddies: [eddy([]), eddy(ring), eddy([])]}), collection(
+    polygon(1, ring, 'cw', 12.4), arrow(1, [2, 1], 'cw', 90),
+  ));
+  assert.deepEqual(eddiesGeoJSON({frameTime, eddies: [eddy([])]}), collection());
+});
+
 test('C4: returns an empty FeatureCollection for an empty tile', () => {
   // Empty data is not an exception, null, or a placeholder arrow.
   assert.deepEqual(eddiesGeoJSON({frameTime, eddies: []}), {type: 'FeatureCollection', features: []});

@@ -18,6 +18,8 @@ export function eddiesGeoJSON(tile: {frameTime: string; eddies: readonly Eddy[]}
   const outlines: Feature[] = [];
   const arrows: Feature[] = [];
   tile.eddies.forEach(({outline, sense, diameterKm}, index) => {
+    // An empty direct input has neither an outline nor a vertex for an arrow.
+    if (outline.length === 0) return;
     // Parsed outlines have at least four positions. Also close open rings supplied directly.
     const ring = outline.map(([lon, lat]): Position => [lon, lat]);
     const first = ring[0]!, last = ring[ring.length - 1]!;
