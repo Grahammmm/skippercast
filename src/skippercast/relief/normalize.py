@@ -120,9 +120,15 @@ def semantics(ds, original, convention):
         scale = axis.unit_conversion_factor if axis else 1
     # The BAG elevation and refinement values are positive-up by format even
     # when the vertical CRS is specified as a depth (positive-down) axis.
-    convention = convention or tags.get('value_convention') or (
-        VALUE_DOWN if ds.driver != 'BAG' and (tags.get('positive', '').lower() == 'down'
-                                             or (axis and axis.direction == 'down')) else VALUE_UP)
+    convention = convention or tags.get('value_convention')
+    if not convention:
+        positive = tags.get('positive', '').lower()
+        if ds.driver == 'BAG' or positive == 'up':
+            convention = VALUE_UP
+        elif positive == 'down' or (axis and axis.direction == 'down'):
+            convention = VALUE_DOWN
+        else:
+            convention = VALUE_UP
     if convention not in {VALUE_UP, VALUE_DOWN}:
         raise ValueError('unknown source value convention')
     return dict(vertical_datum=datum, source_vertical_datum=name or 'unstated',
