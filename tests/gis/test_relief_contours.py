@@ -281,8 +281,9 @@ def test_selected_v3_pier_requires_attested_native_eligibility(builder, tmp_path
 
 
 def v3_selected_job(builder, tmp_path, *, convention='elevation_positive_up', native=None, tile_res=None,
-                    sidecar_on=True, cell=1, upsample=1):
+                    sidecar_on=True, cell=1, upsample=1, distinct_original=False):
     import numpy as np
+    import rasterio
     from rasterio.transform import from_origin
     from skippercast.relief import contours
 
@@ -297,9 +298,13 @@ def v3_selected_job(builder, tmp_path, *, convention='elevation_positive_up', na
     if convention == 'depth_positive_down':
         values = -values
     original = None
-    if upsample != 1:
+    if distinct_original or upsample != 1:
         original = write_grid(tmp_path / 'original.tif', values, 'EPSG:32610',
                               from_origin(690000, 3915000, cell * upsample, cell * upsample))
+        # Even at the same spacing and with identical samples, normalization can change the bytes.
+        with rasterio.open(original, 'r+') as dataset:
+            dataset.update_tags(product='synthetic original')
+    if upsample != 1:
         values = values.repeat(upsample, axis=0).repeat(upsample, axis=1)
     grid = write_grid(tmp_path / 'grid.tif', values, 'EPSG:32610', transform)
     support = write_support(tmp_path / 'support.tif', grid)
@@ -385,6 +390,49 @@ def test_v3_requires_reviewed_original_resolution(builder, tmp_path, caplog, sid
     assert doc['provenance']['sources'] == []
     assert doc['provenance']['sources_omitted'] == [{'source_id': SOURCE, 'review_status': 'approved'}]
     assert f'{SOURCE}/tile: missing or invalid reviewed original native resolution' in caplog.text
+
+
+@pytest.mark.parametrize('binding, value, scalar, emits', [
+    ('original', 4, None, True),
+    ('missing-entry', 4, None, False),
+    ('normalized', 4, None, False),
+    ('original', True, None, False),
+    ('original', '4', None, False),
+    ('original', 0, None, False),
+    ('original', float('inf'), None, False),
+    ('original', float('nan'), None, False),
+    ('malformed-map', 4, None, False),
+    ('original', 16, None, False),
+    ('missing-entry', 4, 4, False),
+    ('scalar', None, 4, True),
+    ('scalar', None, None, False),
+])
+def test_v3_reviewed_original_digest_resolution(builder, tmp_path, caplog, binding, value, scalar, emits):
+    # Keep the real geometry/support path: a scalar-only lookup loses the positive; a lookup
+    # by selected output hash or a fallback to its 4 m lattice wrongly admits the negatives.
+    from skippercast import style
+    from skippercast.relief import contours
+
+    _, job = v3_selected_job(builder, tmp_path, cell=4, native=scalar, distinct_original=True,
+                             upsample=4 if value == 16 else 1)
+    row, grid, _, _, _ = job[3][0]
+    job[4].add(row['id'])
+    original = digest(tmp_path / 'original.tif')
+    normalized = digest(grid)
+    assert original != normalized
+    if binding != 'scalar':
+        key = {'original': original, 'normalized': normalized, 'missing-entry': '0' * 64}.get(binding)
+        job[2][SOURCE]['native_resolution_m_by_original_sha256'] = {key: value} if key else [value]
+
+    doc = contours.trace_v3(job, style.load().view('contours'))
+    if emits:
+        assert len(doc['features']) > 0
+        assert doc['provenance']['sources'][0]['sha256'] == original
+    else:
+        assert doc['features'] == []
+        assert doc['provenance']['sources'] == []
+        if value != 16:
+            assert f'{SOURCE}/tile: missing or invalid reviewed original native resolution' in caplog.text
 
 
 def test_normalized_twin_retains_original_identity_and_shelf_lines(builder, geographic_twin, tmp_path):
