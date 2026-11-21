@@ -81,15 +81,34 @@ def test_c2_continues_and_only_prints_rollback(sweep, capsys):
     assert live_sweep.main([*sweep.argv, '--base', base]) == 1
     assert sweep.calls == ['broken', 'refused', 'working']
     clone = shlex.quote(str(sweep.repo))
+    python = shlex.quote(sys.executable)
+    cli = shlex.quote(str(ROOT / 'scripts/relief/region.py'))
     assert capsys.readouterr() == (
         'region verdict requests\nbroken FAIL 8\nrefused FAIL -\nworking PASS 5\n'
-        f'python scripts/relief/region.py rollback --region broken --repo {clone}\n'
-        f'python scripts/relief/region.py rollback --region refused --repo {clone}\n'
+        f'{python} {cli} rollback --region broken --repo {clone}\n'
+        f'{python} {cli} rollback --region refused --repo {clone}\n'
         'FAIL regions: broken, refused\n',
         'refused: live-check exited 2\n',
     )
     assert stale.read_text() == '{"region":"broken","verdict":"FAIL","requests":1}'
     assert {p: p.read_bytes() for p in sweep.catalog.iterdir()} == before
+
+
+def test_c2_printed_rollback_runs_outside_checkout(sweep, capsys, tmp_path, monkeypatch):
+    """The copied command finds its CLI even from another directory and with spaces."""
+    cli = tmp_path / 'cli with spaces' / 'region.py'
+    cli.parent.mkdir()
+    cli.symlink_to(ROOT / 'scripts/relief/region.py')
+    monkeypatch.setattr(live_sweep, '_REGION_CLI', cli)
+    sweep.add('broken', 1)
+    # The live-check stub normally expects the original CLI path.
+    monkeypatch.setattr(live_sweep, '_check_region', lambda *args: ('FAIL', 1))
+    assert live_sweep.main(sweep.argv) == 1
+    command = capsys.readouterr().out.splitlines()[2]
+    result = subprocess.run([*shlex.split(command), '--help'], cwd=tmp_path,
+                            capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+    assert 'rollback' in result.stdout
 
 
 @pytest.mark.parametrize(('code', 'body', 'error'), [
@@ -105,7 +124,8 @@ def test_c2_unusable_outcome(sweep, capsys, code, body, error):
     assert live_sweep.main(sweep.argv) == 1
     assert capsys.readouterr() == (
         'region verdict requests\nalpha FAIL -\n'
-        f'python scripts/relief/region.py rollback --region alpha --repo {shlex.quote(str(sweep.repo))}\n'
+        f'{shlex.quote(sys.executable)} {shlex.quote(str(ROOT / "scripts/relief/region.py"))} '
+        f'rollback --region alpha --repo {shlex.quote(str(sweep.repo))}\n'
         'FAIL regions: alpha\n', f'alpha: {error}\n',
     )
 

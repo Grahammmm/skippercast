@@ -72,7 +72,7 @@ def main(argv=None):
             failed.append(region)
 
     for region in failed:
-        print(shlex.join(['python', 'scripts/relief/region.py', 'rollback',
+        print(shlex.join([sys.executable, str(_REGION_CLI), 'rollback',
                           '--region', region, '--repo', str(repo)]))
     if failed:
         print('FAIL regions: ' + ', '.join(failed))
