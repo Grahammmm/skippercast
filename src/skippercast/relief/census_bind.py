@@ -88,25 +88,47 @@ def bind(region, source_path, sha256):
 
     census = region.dir / 'census.json'
     binding = region.receipt_path('census_bind')
-    if _already_bound(region, census, data, digest):
+    pending = region.stages_dir / '.census_bind.pending'
+    already_bound = _already_bound(region, census, data, digest)
+    if pending.is_symlink():
+        raise BindError(f'symlink refused: {pending}')
+    if already_bound and not pending.exists():
         return
     if binding.is_symlink():
         raise BindError(f'symlink refused: {binding}')
-    if source.resolve() == binding:
+    if source.resolve() in (binding, pending):
         raise BindError('source cannot also be the binding record')
     region.dir.mkdir(parents=True, exist_ok=True)
     # Serialize binders without creating a lock file on the idempotent path.
     fd = os.open(region.dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        if _already_bound(region, census, data, digest):
+        already_bound = _already_bound(region, census, data, digest)
+        if pending.is_symlink():
+            raise BindError(f'symlink refused: {pending}')
+        if pending.exists():
+            record = pending.read_bytes()
+            try:
+                saved = json.loads(record)
+            except (ValueError, RecursionError) as exc:
+                raise BindError('invalid pending binding record') from exc
+            if (not isinstance(saved, dict) or saved.get('region') != region.id
+                    or saved.get('source_sha256') != digest or saved.get('size') != len(data)):
+                raise BindError('pending binding record does not match census')
+        elif already_bound:
             return
-        record = receipts.canonical({'region': region.id, 'source_path': source_path,
-                                     'source_sha256': digest, 'size': len(data),
-                                     'time': receipts.iso(receipts.utc_now())})
-        region.stages_dir.mkdir(exist_ok=True)
-        _write_atomic(census, data)
-        _write_atomic(binding, record + b'\n')
+        else:
+            record = receipts.canonical({'region': region.id, 'source_path': source_path,
+                                         'source_sha256': digest, 'size': len(data),
+                                         'time': receipts.iso(receipts.utc_now())}) + b'\n'
+            region.stages_dir.mkdir(exist_ok=True)
+            # Persist intent before installing the census, so a retry can finish
+            # the record without backfilling genuinely pre-existing copies.
+            _write_atomic(pending, record)
+        if not already_bound:
+            _write_atomic(census, data)
+        _write_atomic(binding, record)
+        pending.unlink()
     finally:
         os.close(fd)
 

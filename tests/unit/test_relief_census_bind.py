@@ -70,7 +70,7 @@ def test_C1_copies_bytes_before_recording_provenance(paths, monkeypatch, absolut
 
     monkeypatch.setattr(Path, 'replace', inspect_move)
     assert census_bind.main(arguments(out, source.name, SHA.upper())) == 0
-    assert moves == [census, binding]
+    assert moves == [producer.parent / '.census_bind.pending', census, binding]
     assert census.read_bytes() == DATA
     assert json.loads(binding.read_bytes()) == {'region': REGION, 'source_path': source.name,
                                                 'source_sha256': SHA, 'size': len(DATA),
@@ -103,6 +103,35 @@ def test_C1_region_dispatch_and_unchanged_select_plan(paths):
     assert selected['upstream'] == []
     assert census.read_bytes() == DATA
     assert not (out / REGION / 'stages/census.json').exists()
+
+
+@pytest.mark.parametrize('failure', ['census', 'binding'])
+def test_failed_write_recovers_on_retry(paths, monkeypatch, failure):
+    source, out = paths
+    census = out / REGION / 'census.json'
+    binding = out / REGION / 'stages/census_bind.json'
+    write = census_bind._write_atomic
+
+    def fail_write(path, data):
+        if path == (census if failure == 'census' else binding):
+            raise OSError('disk full')
+        write(path, data)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(census_bind, '_write_atomic', fail_write)
+        assert census_bind.main(arguments(out, source)) == 1
+    assert census.exists() == (failure == 'binding')
+    assert not binding.exists()
+    alternate = source.with_name('retry.json')
+    alternate.write_bytes(DATA)
+    assert census_bind.main(arguments(out, alternate)) == 0
+    assert census.read_bytes() == DATA
+    record = json.loads(binding.read_bytes())
+    assert record['source_sha256'] == SHA
+    assert record['source_path'] == str(source)
+    before = snapshot(out)
+    assert census_bind.main(arguments(out, alternate)) == 0
+    assert snapshot(out) == before
 
 
 @pytest.mark.parametrize('prior_bind', [False, True], ids=['C2: existing copy', 'C2: repeat bind'])
