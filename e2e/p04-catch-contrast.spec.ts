@@ -237,7 +237,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-03: the Currents note resolves the chosen frame note or reason in the page's language (same note element and text role). No CSS, token or catch markup change.
   // MAPLIVE-1: LayerRail.tsx only appends <PreviewRailItems />, which renders nothing without an owner/admin session and adds no catch markup; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched.
   // SC1922-07: LayerRail.tsx sets disabled and a catalogue note on its existing rail buttons while the Chart cannot start (a state the contrast pages never reach). No CSS, token or catch markup change. Rebind only LayerRail.tsx.
-  "web/app/LayerRail.tsx": "ff4d6306b012540b3839b5222ead7fd064f5a160f4e8ea7cf715f42fc202cefb",
+  // MSK-7 (3D look colours): LayerRail.tsx changes only TerrainOptions' fixed-ramp checked/disabled state and the 3D terrain readout (unmatched note, token no-data swatch). BODY09 mounts Reports/CatchCards, never the terrain options; no CSS, token, class or catch markup changes, contrast() untouched. Rebind only LayerRail's hash.
+  "web/app/LayerRail.tsx": "8a6f382d21f4d49fb7de3c99aeeff906255c7dc5568b8084e4aa70037a7becd8",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
@@ -284,7 +285,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-14 adds the 3D view's --map-sky/--map-horizon/--map-fog in both themes (MAP-DESIGN-LOCK 10.2); Reports catch text and backing do not use them.
   // MB-11: Chart legend colours/layout only (ramp-B chips, survey-detail chips, dim note); Reports catch text and backing do not use them. Rebind only tokens.css.
   // MSK-1 adds only unused --skn-* variables. Reports catch markup, paint and thresholds are unchanged; rebind tokens.css only.
-  "web/tokens.css": "cfb8d4f43efb5f85157946d82146d6d43e37a0fc67773e6b160fdc674c21b5be",
+  // MSKL-1 adds only --skl-* declarations unused by Reports; all prior CSS bytes and catch paint are unchanged.
+  "web/tokens.css": "ea900e4864cf82b5dcac7876ec9c0d8a31dd3ede3f24eae8ab5718b75045cbd0",
   // SC1407-15: Chart-only planning route factory; Reports/CatchCards never mount MapStage. Paint and assertions unchanged.
   // UXFIX-05: tokens.css only turns the eight --text-* font sizes from px into the same sizes in rem (identical at a 16 px root); no colour, paint, gradient, catch markup, assertion or threshold changes, so BODY09 stays applicable. Rebind web/tokens.css and the check_contrast.mjs surface-source pin only.
   // SC1722-08: ui.css gains one shared a:focus-visible ring and inset map-canvas rings; app.css and plan.css drop duplicate link outlines. Focus paint intentionally
@@ -431,7 +433,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-11: contrast check gains the legend chip/panel pairs only; no existing pair, assertion or threshold changes. Rebind only check_contrast.mjs.
   // MSK-1: only tokensCss source digest/comment changed in the checker; no contrast logic changed.
   // MSK-2: only the legendTsx surface hash and its comment changed; contrast() untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "28b6d0812f1cab8057616ff163ea52abd472c3172a6f1489c73d0fa903b8e6f8",
+  // MSKL-1: only the tokensCss surface hash and applicability comment changed; contrast() and all gates are unchanged.
+  "scripts/check_contrast.mjs": "70b848ad2b0bc66cbee97525ad67c3f81673cc100cb89c9c2d097fd22019323a",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // SCA-479: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.

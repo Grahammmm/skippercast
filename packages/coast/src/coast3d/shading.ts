@@ -2,8 +2,22 @@
 // sun direction). Pure functions of displayed values: nothing here changes a
 // source height, a source identity or what click inspection returns.
 
+import {NEARSHORE_COAST_LOOKS} from '../palette.ts';
+
+type KitLook = Readonly<{legacy:false;depthStopsFt:readonly (readonly [number,string])[];contour:string;noData:string}>;
+type LookTable = Readonly<Record<string,KitLook|{legacy:true}>>;
+/** Undefined = legacy (including regions without a pointer); null = unmatched. */
+export function coastLook(key:string|null|undefined,looks:LookTable=NEARSHORE_COAST_LOOKS):KitLook|null|undefined{
+ if(key===undefined)return;
+ const look=key!==null&&Object.hasOwn(looks,key)?looks[key]:undefined;
+ return look?.legacy?undefined:look??null;
+}
+export const KIT_RAMP_CAPACITY=Math.max(2,...Object.values(NEARSHORE_COAST_LOOKS).map(look=>look.legacy?0:look.depthStopsFt.length));
+
 /** One US survey foot is close enough to the international foot for display spacing. */
 const FOOT=.3048;
+/** Convert only at the renderer boundary, which consumes metres below water reference. */
+export const rampMetres=(ft:number)=>ft*FOOT;
 /** Contour steps offered, in feet, finest first: 10 ft is the lidar floor (SOURCE_CONTOUR_FLOOR_M), so nothing finer is offered. */
 export const CONTOUR_STEPS_FT=[10,20,50,100,250,500] as const;
 /** The narrowest depth window the ramp may stretch across, in metres. */
@@ -68,8 +82,9 @@ export function sunDirection(azimuthDeg:number,altitudeDeg:number):[number,numbe
 export const feet=(metres:number)=>Math.round(metres/FOOT);
 
 /** The readout line: the ramp's span in view and the contour spacing in feet (the finest drawn; each source keeps its own floor), or that contours are off. */
-export function shadingReadout(window:{min:number;max:number}|null,fixed:boolean,contours:{minor:number;index:number}|null):string{
- const ramp=fixed?'Fixed ramp 0–5,900 ft':window?`Ramp ${feet(window.min).toLocaleString('en-US')}–${feet(window.max).toLocaleString('en-US')} ft in view`:'Ramp waiting for seabed in view';
+export function shadingReadout(window:{min:number;max:number}|null,fixed:boolean,contours:{minor:number;index:number}|null,look?:KitLook|null):string{
+ const range=look?`${look.depthStopsFt[0]?.[0].toLocaleString('en-US')}–${look.depthStopsFt.at(-1)?.[0].toLocaleString('en-US')}`:'0–5,900';
+ const ramp=fixed?`Fixed ramp ${range} ft`:window?`Ramp ${feet(window.min).toLocaleString('en-US')}–${feet(window.max).toLocaleString('en-US')} ft in view`:'Ramp waiting for seabed in view';
  return contours?`${ramp} · contours ${feet(contours.minor)} ft where the source allows, index ${feet(contours.index)} ft`:`${ramp} · contours off`;
 }
 

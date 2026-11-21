@@ -396,7 +396,7 @@ def _dated(value, **kw):
 
 BAD_DATES = ['2026-02-29', '1900-02-29', '2026-04-31', '2026-01-00', '2026-01-32', '0000', '0000-01', '0000-01-01',
              '2026-00', '2026-13', 2008, True, None, '\u0662\u0660\u0660\u0668', '2026-1', '2026-01-1', '2026-W05-3',
-             ' 2008', '2008 ', '2008\n', '2008-01-01\r\n', '2008-01-01T00:00:00Z', '200', '20080']
+             ' 2008', '2008 ', '2008\n', '2008-01-01\r\n', '2008-01-01T00:00:00Z', '200', '20080', 'unstated']
 GOOD_DATES = ['0001', '9999', '2008', '2026-02', '2000-02-29', '2024-02-29']
 
 
@@ -406,7 +406,7 @@ def test_check_refuses_an_impossible_or_non_canonical_survey_date(value):
         dc.check_contours(_dated(value), REGION, SOURCES)
 
 
-@pytest.mark.parametrize('value', BAD_DATES[:3] + ['0000-01-01'])
+@pytest.mark.parametrize('value', BAD_DATES[:3] + ['0000-01-01', 'unstated'])
 def test_held_check_has_the_same_calendar_gate(value):
     region = {**REGION, 'source_bindings': {'bathymetry': ['survey-a', 'survey-c']}}
     c = _dated(value, sources=('survey-a', 'survey-c'))
@@ -426,6 +426,14 @@ def test_check_keeps_valid_partial_survey_dates_verbatim(value):
     dc.check_contours(c, REGION, SOURCES)
     assert c['provenance']['sources'][0]['survey_date'] == value
     assert {f['properties']['survey_date'] for f in c['features']} == {value}
+
+
+@pytest.mark.parametrize('value', [None, 'Unstated', 'unstated ', '2023-02-29'])
+def test_selected_contours_refuse_missing_or_invalid_survey_dates(value):
+    # R5b allows only the exact token, not arbitrary placeholders or malformed dates.
+    sources = {**SOURCES, 'survey-a': {**SOURCES['survey-a'], 'rights': {'public_display': 'allowed'}}}
+    with pytest.raises(ValueError, match='survey date or datum'):
+        dc.check_selected_contours(_dated(value), REGION, sources, {'survey-a'})
 
 
 def test_valid_but_unequal_feature_and_source_dates_still_hit_the_feature_error():

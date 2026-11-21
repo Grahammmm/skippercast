@@ -8,6 +8,7 @@
 // controls (MGL-15), carried as their CSS text for MapLibre's `to-number`; the
 // modules that draw with them validate the text (mapControl in style.ts).
 import {basemapRoles} from './style.ts';
+import {SKL_PALETTE_TOKENS} from './layers-style.gen.ts';
 
 /** Palette keys and the custom property each one reads (without the leading `--`). */
 export const PALETTE_TOKENS = {
@@ -39,6 +40,7 @@ export const PALETTE_TOKENS = {
   sknPile: 'skn-hab-pile', sknPileEdge: 'skn-hab-pile-edge', sknPileLabel: 'skn-hab-pile-label', sknHardEdge: 'skn-hab-hard-edge',
   sknPierFill: 'skn-map-pier-fill', sknPierCasing: 'skn-map-pier-casing', sknCastArc: 'skn-map-cast-arc', sknCastArcHalo: 'skn-map-cast-arc-halo',
   sknCastArcLabel: 'skn-map-cast-arc-label',
+  ...SKL_PALETTE_TOKENS,
 } as const;
 
 const BY_TOKEN: ReadonlyMap<string, PaletteKey> = new Map(Object.entries(PALETTE_TOKENS).map(([key, token]) => [token, key as PaletteKey]));

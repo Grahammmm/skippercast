@@ -98,7 +98,7 @@
     },
     {
       "path": "schemas/sc-render-v1.schema.json",
-      "sha256": "61c7630827d448c404b73efe2f53fa55a391e8db3f46f50c076aa8681d0cc345"
+      "sha256": "bd4ed13a31eaaf63204eea795c924b37be64b2c98edaab2e6905c019fe8d1f2f"
     },
     {
       "path": "schemas/shore-habitat.schema.json",

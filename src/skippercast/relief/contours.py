@@ -298,7 +298,7 @@ def trace(job):
         ident, (original, datum) = row['source_id'], identities[i]
         src = sources[ident]
         entry = listed.setdefault(ident, {'source_id': ident, 'name': src['name'], 'url': src['documentation_url'],
-                                          'attribution': src['rights']['attribution'], 'survey_date': str(src['survey_year']),
+                                          'attribution': src['rights']['attribution'], 'survey_date': dc.selected_survey_date(src),
                                           'vertical_datum': datum, 'native_cell_m': None, 'supported_blocks': 0,
                                           'original_sha256s': set()})
         if datum != entry['vertical_datum']:
