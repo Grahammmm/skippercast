@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 
-from skippercast.relief import rebuild_plan, receipts, render_config
+from skippercast.relief import rebuild_plan, receipts
 
 if __package__:
     from .run_region import STAGES
@@ -15,7 +15,6 @@ else:
     from run_region import STAGES
 
 HEAVY = {'mosaic', 'tiles'}
-STYLE_GROUPS = ('baked', 'contours', 'habitat')
 
 
 def _stage_digests():
@@ -49,7 +48,7 @@ def _stage_digests():
     return current
 
 
-def _region_plan(out, region, current):
+def _region_plan(out, region, current, *, default=None, pin=None):
     # Region.keys() globs, which can hide permission errors as an empty directory.
     # A missing stages directory is normal for a region that has not been run.
     location = receipts.Region(out, region)
@@ -59,8 +58,7 @@ def _region_plan(out, region, current):
     except FileNotFoundError:
         pass
     docs = rebuild_plan.load_receipts(out, region)
-    _, style = render_config.resolve_style(region)
-    styles = {group: style.digest(group) if style is not None else None for group in STYLE_GROUPS}
+    styles = rebuild_plan.style_digests(region, default=default, pin=pin)
     # Compare existing scoped receipts too, even if the current runner doesn't emit that scope.
     by_stage = {key.partition('.')[0]: digest for key, digest in current.items()}
     digests = dict(current)
@@ -75,15 +73,33 @@ def main(argv=None):
     parser = argparse.ArgumentParser(prog='rebuild_plan.py', description=__doc__)
     parser.add_argument('--out', required=True, type=Path, help='existing relief output root')
     parser.add_argument('--json', action='store_true', help='print one JSON document')
+    parser.add_argument('--style-default', metavar='VERSION', help='simulate a different default style')
+    parser.add_argument('--style-pin', metavar='REGION=VERSION', action='append', default=[],
+                        help='simulate a pin for a requested region (repeatable)')
     parser.add_argument('regions', metavar='REGION', nargs='+')
     args = parser.parse_intermixed_args(argv)
+
+    pins = {}
+    for assignment in args.style_pin:
+        region, _, version = assignment.partition('=')
+        if not region or not version or '=' in version:
+            parser.error('--style-pin requires REGION=VERSION')
+        if region not in args.regions:
+            parser.error(f'--style-pin region not in report: {region}')
+        if region in pins:
+            parser.error(f'duplicate --style-pin for region: {region}')
+        pins[region] = version
 
     try:
         out = args.out.expanduser()
         with os.scandir(out):
             pass
         current = _stage_digests()
-        blocks = [{'region': region, 'stages': _region_plan(out, region, current)} for region in args.regions]
+        blocks = [
+            {'region': region, 'stages': _region_plan(out, region, current,
+                                                     default=args.style_default, pin=pins.get(region))}
+            for region in args.regions
+        ]
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
 

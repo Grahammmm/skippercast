@@ -57,6 +57,8 @@ The data branch publishes `regions/<id>/latest.json` and `regions/<id>/regulatio
 
    The verifier requires every source to have succeeded, compares exact URLs and normalizers with the current jurisdiction, checks the legal-content fingerprint, and recomputes every HTML/PDF/eCFR source hash from the archived bytes. It rejects unsafe ZIP members. A verification receipt proves source identity and integrity only; the reviewer must still read the documents, resolve spatial and method rules, and write the explicit decision. Archives and receipts under `var/` are not published to the website.
 
+   Before re-signing, compare the saved packets offline with `python -m skippercast.pipeline.regulation_review diff --old var/rules/previous-review --new var/rules/new-review` (optionally `--source ID`). This does not approve changes.
+
 3. Write a decision JSON using `jurisdictions/reviews/` as examples. It records the actual review time, revision, jurisdiction, exact legal-content hash, explicitly reviewed species, and each inspected source hash with an `approve` or `hold` conclusion. Failed sources can be held; they cannot be approved. Holds stay visible and affect their own dependencies. Do not copy all new hashes into an approval automatically.
 4. Apply the decision and compile. The gate rejects wrong jurisdictions, changed legal content, incomplete decisions, missing or stale evidence, wrong URLs, wrong normalizers, and reviews predating source retrieval.
 

@@ -76,14 +76,22 @@ def probe(base, path, timeout=TIMEOUT):
             if path.startswith('/feeds/tiles/seafloor/manifest-') and path.endswith('.json'):
                 try:
                     manifest = json.loads(_json_body(response))
-                    region = path.removeprefix('/feeds/tiles/seafloor/manifest-').removesuffix('.json')
+                    status, region = manifest['status'], manifest['region']
                     expires = datetime.fromisoformat(manifest['expires_at'].replace('Z', '+00:00'))
-                    ok = (manifest['status'] == 'ready' and manifest['region'] == region
-                          and expires.tzinfo is not None and expires > datetime.now(timezone.utc))
                 except (ValueError, KeyError, TypeError, AttributeError, RecursionError):
-                    ok = False
-                if not ok:
-                    return {'path': path, 'status': 200, 'error': 'habitat unavailable'}
+                    reason = 'habitat manifest unreadable'
+                else:
+                    expected_region = path.removeprefix('/feeds/tiles/seafloor/manifest-').removesuffix('.json')
+                    if status != 'ready':
+                        reason = 'habitat not ready'
+                    elif region != expected_region:
+                        reason = 'habitat for another region'
+                    elif expires.tzinfo is None or expires <= datetime.now(timezone.utc):
+                        reason = 'habitat expired'
+                    else:
+                        reason = None
+                if reason is not None:
+                    return {'path': path, 'status': 200, 'error': reason}
             if path == "/api/health":
                 try:
                     ok = isinstance(json.loads(_json_body(response)), dict)
@@ -134,7 +142,9 @@ def plan(failures, issues, now, still_hours=STILL_HOURS, title=TITLE, subject="t
     refused = ("\n\nEvery path was refused (4xx), not unreachable: check edge bot rules before treating this as an outage."
                if all(f.get("error") == "refused" for f in failures) else "")
     if not issues:
-        body = (f"{subject[:1].upper()}{subject[1:]} did not answer on:\n{lines}{refused}\n\nThis issue is the alert: it is not repeated every hour. A `still: N h` "
+        opening = ("did not answer, or answered without usable data, on:"
+                   if any(f.get("status") == 200 for f in failures) else "did not answer on:")
+        body = (f"{subject[:1].upper()}{subject[1:]} {opening}\n{lines}{refused}\n\nThis issue is the alert: it is not repeated every hour. A `still: N h` "
                 f"comment follows every {still_hours} h while it stays down, and the issue closes when {subject} answers again.")
         return [("create", title, body)]
     issue = issues[0]

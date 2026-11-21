@@ -19,6 +19,7 @@
 // Erasable syntax only: Node tests import this file by type stripping.
 import type {Series} from '../packages/coast/src/charts/series.ts';
 import type {TideEvent, TidePoint} from '../packages/coast/src/types.ts';
+import {M_PER_FT} from './units.ts';
 
 export type TideTrend = 'Rising' | 'Falling' | 'Turning';
 export const TIDE_UNAVAILABLE = 'Tide series unavailable';
@@ -56,12 +57,17 @@ export interface TideDay {
 }
 
 /** The arguments of `chart()` for the day's sparkline; null without a datum or two points. */
-export function sparkArgs(day: TideDay, selected: string, tz: string, colour = TIDE_COLOUR):
+export function sparkArgs(day: TideDay, selected: string, tz: string, colour = TIDE_COLOUR, heightUnit: 'ft' | 'm' = 'ft'):
   [Series[], string, string, string, string, {mini: boolean; sunrise: string | null; sunset: string | null}] | null {
   const first = day.tides[0], last = day.tides.at(-1);
   if (!day.tideDatum || day.tides.length < 2 || !first || !last) return null;
   const heights = [...day.tides, ...day.tideEvents].map(p => p.heightFt).filter(Number.isFinite);
   const min = heights.length ? Math.min(...heights) : 0, max = (heights.length ? Math.max(...heights) : 5) + 0.3;
-  const row: Series = {label: 'Tide', unit: `ft ${day.tideDatum}`, color: colour, points: day.tides.map(p => ({at: p.at, value: p.heightFt})), gapMs: TREND_STEP_MS, min, max};
+  const factor = heightUnit === 'm' ? M_PER_FT : 1;
+  const row: Series = {
+    label: 'Tide', unit: `${heightUnit} ${day.tideDatum}`, color: colour,
+    points: day.tides.map(p => ({at: p.at, value: p.heightFt * factor})), gapMs: TREND_STEP_MS,
+    min: min * factor, max: max * factor,
+  };
   return [[row], first.at, last.at, selected, tz, {mini: true, sunrise: day.sunrise, sunset: day.sunset}];
 }

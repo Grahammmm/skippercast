@@ -8,7 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
+from difflib import unified_diff
 import hashlib
+from itertools import islice
 import json
 import os
 import re
@@ -214,6 +216,103 @@ def approved_registry(registry, jurisdiction, packet, decision, now=None):
     return regulatory_snapshot(packet['sources'], now, data)
 
 
+def _packet_sources(folder):
+    path = folder / 'packet.json'
+    if not path.is_file():
+        raise ValueError('missing packet.json')
+    packet = read_json(path)
+    sources = packet.get('sources') if isinstance(packet, dict) else None
+    if not isinstance(sources, dict):
+        raise ValueError('packet.sources must be an object')
+    for ident, record in sources.items():
+        if not isinstance(record, dict):
+            raise ValueError(f'packet.sources.{ident} must be an object')
+        if record.get('data') is not None and not isinstance(record['data'], dict):
+            raise ValueError(f'packet.sources.{ident}.data must be an object or null')
+    return sources
+
+
+def _unavailable_reason(record):
+    if record.get('status') != 'ok':
+        return f"status {record.get('status')!r}"
+    data = record.get('data')
+    if data is None:
+        return 'no data'
+    digest = data.get('content_sha256')
+    if not isinstance(digest, str) or not re.fullmatch(r'[a-f0-9]{64}', digest):
+        return 'missing or invalid content_sha256'
+    normalization = data.get('normalization')
+    if not isinstance(normalization, str) or not normalization:
+        return 'missing or invalid normalization'
+    return None
+
+
+def _saved_text(folder, ident):
+    try:
+        path = within(folder, ident + '.txt')
+        if path.is_file():
+            return path.read_text(encoding='utf-8').splitlines()
+    except (ValueError, OSError, RuntimeError):
+        # An unreadable, undecodable or out-of-packet sidecar isn't review evidence.
+        pass
+    return None
+
+
+def _changed_details(ident, old_dir, new_dir, before, after):
+    normalization = before['normalization']
+    note = 'hash-only: manual review (no saved text to diff)'
+    if normalization == 'text-and-links-v4':
+        old_text = _saved_text(old_dir, ident)
+        new_text = _saved_text(new_dir, ident)
+        if old_text is not None and new_text is not None:
+            lines = list(islice(unified_diff(old_text, new_text, f'old/{ident}.txt',
+                                            f'new/{ident}.txt', lineterm=''), 201))
+            return [*lines[:200], 'truncated'] if len(lines) > 200 else lines
+    elif normalization == 'pdf-bytes-v1':
+        note = 'PDF bytes changed: read both files'
+    elif normalization == 'ecfr-section-text-v1':
+        # The collector's generic text sidecar is not what the eCFR adapter hashes.
+        note = 'hash-only: manual review (no saved eCFR-normalized text to diff)'
+    return [f"old sha256: {before['content_sha256']}", f"new sha256: {after['content_sha256']}", note]
+
+
+def _diff_packets(old_dir, new_dir, source_id):
+    packets = []
+    for side, folder in [('old', old_dir), ('new', new_dir)]:
+        try:
+            packets.append(_packet_sources(folder))
+        except (OSError, ValueError) as error:
+            print(f'regulation review diff refused: {side}: {error}', file=sys.stderr)
+            return 2
+    old, new = packets
+    ids = old.keys() | new.keys()
+    if source_id is not None:
+        ids &= {source_id}
+    for ident in sorted(ids):
+        if ident not in old:
+            print(f'{ident}: added')
+            continue
+        if ident not in new:
+            print(f'{ident}: removed')
+            continue
+        unavailable = [f'{side} {reason}' for side, record in [('old', old[ident]), ('new', new[ident])]
+                       if (reason := _unavailable_reason(record))]
+        if unavailable:
+            print(f'{ident}: unavailable: ' + '; '.join(unavailable))
+            continue
+        before, after = old[ident]['data'], new[ident]['data']
+        a, b = before['normalization'], after['normalization']
+        if a != b:
+            print(f'{ident}: incomparable: normalization {a} vs {b}')
+        elif before['content_sha256'] == after['content_sha256']:
+            print(f'{ident}: unchanged')
+        else:
+            print(f'{ident}: changed')
+            for line in _changed_details(ident, old_dir, new_dir, before, after):
+                print(line)
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -226,7 +325,13 @@ def main():
     apply.add_argument('--decision', type=Path, required=True)
     fingerprint = commands.add_parser('fingerprint')
     fingerprint.add_argument('--jurisdiction', required=True)
+    diff = commands.add_parser('diff', help='Compare saved review packets offline')
+    diff.add_argument('--old', type=Path, required=True)
+    diff.add_argument('--new', type=Path, required=True)
+    diff.add_argument('--source')
     args = parser.parse_args()
+    if args.command == 'diff':
+        return _diff_packets(args.old, args.new, args.source)
     try:
         _run(args)
     except (ValueError, OSError) as e:
