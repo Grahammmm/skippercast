@@ -29,6 +29,8 @@ def chart_files(output):
 
 def target_options(region, targets):
     labels = region.get('target_labels', {})
+    if not isinstance(labels, dict):
+        raise ValueError('target_labels must be an object')
     if not set(labels) <= set(region['species']) or any(not isinstance(v, str) or not v.strip() or len(v) > 80 for v in labels.values()):
         raise ValueError('Regional target labels must name existing targets')
     return [{'id': ident, **targets[ident], 'name': labels.get(ident, targets[ident]['name'])} for ident in region['species']]

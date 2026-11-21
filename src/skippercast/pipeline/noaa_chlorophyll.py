@@ -48,6 +48,22 @@ def recent_files(client, max_age_hours=MAX_AGE_HOURS):
     return (found[:1] + [f for f in found[1:] if client.now - (f[0] + timedelta(hours=12)) <= window])[:MAX_FILES]
 
 
+def dated_file(client, date):
+    """Return (UTC midnight, dataset path) for one exact UTC calendar date."""
+    if date > client.now.astimezone(timezone.utc).date():
+        raise ValueError(f"NOAA VIIRS chlorophyll date {date} is in the future")
+    # Generate the ordinal from a real date: impossible catalog ordinals cannot match.
+    filename = f"V{date.year:04d}{date.timetuple().tm_yday:03d}_D1_NPP-N20_WW00_chloci.nc"
+    path = f"{DIRECTORY}/{filename}"
+    root = ElementTree.fromstring(client.get(CATALOG))
+    matches = sum(entry.get("urlPath") == path for entry in root.iter())
+    if not matches or not FILENAME.fullmatch(filename):
+        raise ValueError(f"No NOAA VIIRS chlorophyll file for {date} in official catalog")
+    if matches > 1:
+        raise ValueError(f"Ambiguous NOAA VIIRS chlorophyll file for {date} in official catalog")
+    return datetime(date.year, date.month, date.day, tzinfo=timezone.utc), path
+
+
 def _bounds(bounds):
     """Admit only finite non-bool numeric lon/lat pairs inside the supported range."""
     try:
@@ -143,3 +159,15 @@ def fetch(client, bounds):
             return result
         newest = newest or result
     return newest
+
+
+def fetch_for_date(client, bounds, date):
+    """Read this UTC date's regional subset; preserve gaps rather than walking back."""
+    west, south, east, north = _bounds(bounds)
+    day, path = dated_file(client, date)
+    query = urlencode({"var": "chl_oci", "north": north, "south": south,
+                       "west": west, "east": east, "accept": "netcdf"})
+    url = f"{HOST}/thredds/ncss/grid/{path}?{query}"
+    result = read_subset(client.get(url, as_binary=True), bounds, path, day)
+    result.update(catalog_url=CATALOG, query_url=url, requested_bounds=bounds)
+    return result

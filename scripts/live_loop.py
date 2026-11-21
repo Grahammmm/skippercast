@@ -7,6 +7,7 @@ minutes for most of its 6-hour limit, then the workflow dispatches its
 successor (dispatch is not throttled like schedule).
 
 Each cycle is independent: a failed cycle is reported and the next one runs.
+The exit status reflects the final cycle.
 Intelligence (models, currents, verification; ~15 minutes) runs when its last
 run is older than --intelligence-minutes. Observations run every cycle.
 """
@@ -85,7 +86,7 @@ def main():
     if os.environ.get('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as handle:
             handle.write(f'\n## Live loop\n{summary}\n')
-    raise SystemExit(0 if successes else 1)
+    raise SystemExit(0 if ok else 1)
 
 
 if __name__ == '__main__':

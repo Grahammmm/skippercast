@@ -34,10 +34,15 @@
 //                                    survey, date and datum; not for navigation.")
 // MB-11b may point `planner` at one reworded shared id instead (the amendment drops
 // "every 150 ft" for both sets); this model keeps v1 on today's id until it does.
+// ft-v3: v2's label, summary, planner and legend1, plus two NEW ids, en + es:
+//   layer.depth-contours.v3.basis    lines in feet to 300 ft, closer as you zoom in,
+//                                    heavier at 60/150/300 ft (wide), every 50 ft,
+//                                    then every 10 ft (closest); NOT FOR NAVIGATION kept
+//   layer.depth-contours.v3.legend0  depth lines in feet; heavier every 50 ft, then 10 ft
 import type {NearshoreStyle} from './nearshore-paint.ts';
 import {NEARSHORE_LOOKS, NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 
-export type ContourSet = 'v1' | 'ft-v2';
+export type ContourSet = 'v1' | 'ft-v2' | 'ft-v3';
 export type LegendTheme = 'dark' | 'light';
 
 /** The always-present footer id (today's `legend.notForNav`). */
@@ -178,12 +183,17 @@ const V2 = {
   legend: ['layer.depth-contours.v2.legend0', 'layer.depth-contours.v2.legend1'],
   plannerLabel: V1.plannerLabel, plannerText: 'layer.depth-contours.v2.planner',
 } as const;
+const V3 = {
+  label: V1.label, summary: V1.summary, basis: 'layer.depth-contours.v3.basis',
+  legend: ['layer.depth-contours.v3.legend0', V2.legend[1]],
+  plannerLabel: V1.plannerLabel, plannerText: V2.plannerText,
+} as const;
 
 /** An absent `set` is a v1 file. Any other unknown value throws rather than show copy that may be wrong. */
 export function contourCopy(set: ContourSet | undefined): ContourCopy {
-  if (set !== undefined && set !== 'v1' && set !== 'ft-v2') throw new RangeError(`Unknown contour set: ${String(set)}`);
-  const ids = set === 'ft-v2' ? V2 : V1;
-  return {set: set === 'ft-v2' ? 'ft-v2' : 'v1', label: ids.label, summary: ids.summary, basis: ids.basis,
+  if (set !== undefined && set !== 'v1' && set !== 'ft-v2' && set !== 'ft-v3') throw new RangeError(`Unknown contour set: ${String(set)}`);
+  const ids = set === 'ft-v3' ? V3 : set === 'ft-v2' ? V2 : V1;
+  return {set: set ?? 'v1', label: ids.label, summary: ids.summary, basis: ids.basis,
     legend: [ids.legend[0], ids.legend[1]], plannerLabel: ids.plannerLabel, plannerText: ids.plannerText,
     notForNavigation: NOT_FOR_NAVIGATION_ID};
 }

@@ -172,9 +172,14 @@ def validate_metadata(doc: dict, schema: dict, catalog: dict) -> None:
         if (support.get('limit_m') != limit or (z >= 14 and not support['sources'])
                 or (z >= 16 and support.get('support_class') != 3)):
             raise ReleaseError(f'missing required evidence at z{z}')
+        seen_native = set()
         for native in support['sources']:
             sid = native['id']
             grid = native['resolution_m']
+            key = (sid, grid)
+            if key in seen_native:
+                raise ReleaseError(f'duplicate native source summary at z{z}: {sid!r} at {grid} m')
+            seen_native.add(key)
             relevant = [b for b in bands if b['source_id'] == sid and b['resolution_m'] == grid
                         and b['min_depth_m'] < limit]
             if not relevant or native['tiles'] > support['tiles']:

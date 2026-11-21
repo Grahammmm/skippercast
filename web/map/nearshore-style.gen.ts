@@ -570,3 +570,53 @@ export const NEARSHORE_LOOKS = {
     "plus300": "--depth-b-10"
   }
 } as const;
+export const CONTOUR_TIERS = {
+  "83060cabb89fc1386bc31b41e57146eb30094d2eca222408523fba440f5ca572": {
+    "pier": "pier",
+    "tiers": [
+      {
+        "name": "z8",
+        "min_zoom": 8,
+        "minor_ft": 60,
+        "index_ft": [
+          60,
+          150,
+          300
+        ],
+        "max_cell_m": 16.0
+      },
+      {
+        "name": "z11",
+        "min_zoom": 11,
+        "minor_ft": 30,
+        "index_ft": [
+          60,
+          150,
+          300
+        ],
+        "max_cell_m": 10.0
+      },
+      {
+        "name": "z13",
+        "min_zoom": 13,
+        "minor_ft": 10,
+        "index_every_ft": 50,
+        "max_cell_m": 4.0
+      },
+      {
+        "name": "z15",
+        "min_zoom": 15,
+        "minor_ft": 5,
+        "index_every_ft": 10,
+        "max_cell_m": 2.0
+      },
+      {
+        "name": "pier",
+        "min_zoom": 16,
+        "minor_ft": 5,
+        "index_every_ft": 10,
+        "max_cell_m": 2.0
+      }
+    ]
+  }
+} as const;

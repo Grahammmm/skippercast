@@ -2,6 +2,7 @@
 import {tripFeatures, featuresGPX, geometryTrack, xml, exportEvidenceLabel} from './gpx.js';
 import {formatCoordinates} from './coordinates.js';
 import {PLANNING_MARGIN_M} from './geo-screen.js';
+import {CONTOUR_TIERS} from '../web/map/nearshore-style.gen.ts';
 
 export const DEFAULT_LAYERS={waypoints:true,outlines:false,alignments:false,exclusions:false};
 // Research coordinates require deliberate consent for this export session.
@@ -62,8 +63,9 @@ function contourTracks(c,region,bounds,now) {
   const bad=r=>Error(`Depth contours cannot be exported: ${r}. Turn off depth contour tracks or reload the region.`);
   const p=c?.provenance,fs=c?.features,str=v=>typeof v==='string'&&v.trim()!=='',expires=p?.review_expires;
   if(c?.type!=='FeatureCollection'||!Array.isArray(fs))throw bad('not a published contour file');
-  const v2=p?.set==='ft-v2',index=p?.index_depths_ft;
-  if(!p||p.region_id!==region.id||p.units!=='ft'||(v2
+  const v2=p?.set==='ft-v2',v3=p?.set==='ft-v3',index=p?.index_depths_ft;
+  const rules=v3&&typeof p.contours==='string'&&Object.hasOwn(CONTOUR_TIERS,p.contours)?CONTOUR_TIERS[p.contours]:null;
+  if(!p||p.region_id!==region.id||p.units!=='ft'||(v3 ? !rules||p.shelf_limit_ft!==300 : v2
     ? Object.hasOwn(p,'interval_ft')||p.shelf_limit_ft!==300||!Array.isArray(index)||index.length!==V2_INDEX_FT.length||!V2_INDEX_FT.every((d,i)=>index[i]===d)
     : Object.hasOwn(p,'set')||p.interval_ft!==30))throw bad('wrong region, units or interval');
   if([c,p,...fs,...fs.map(f=>f?.properties)].some(o=>o&&typeof o==='object'
@@ -75,12 +77,22 @@ function contourTracks(c,region,bounds,now) {
   const tracks=[],unlisted=omittedText(omitted);
   const wrongSource='a contour does not match its listed source',wrongDepth='a contour depth is not a multiple of 30 ft';
   const finest=new Map(),bounded=new Set(),runs=new Set(),grouped=new Map();
-  const basis=v2?'an estimated display contour from the reviewed survey grid':'a display contour from averaged survey blocks';
+  const basis=v2||v3?'an estimated display contour from the reviewed survey grid':'a display contour from averaged survey blocks';
   for(const f of fs){
     const props=f?.properties;
     if(props?.kind!=='contour')continue;
     const {source_id,survey_date,vertical_datum,depth_ft,minzoom}=props;
     if(v2&&props.index!==V2_INDEX_FT.includes(depth_ft))throw bad(wrongDepth);
+    if(rules){
+      const tier=rules.tiers.find(t=>t.name===props.tier),cell=props.native_cell_m;
+      if(!tier||minzoom!==tier.min_zoom||!Number.isInteger(depth_ft)||depth_ft<=0||depth_ft>300
+        ||typeof cell!=='number'||!(cell>0&&cell<=tier.max_cell_m)||props.estimated!==true)throw bad('invalid contour tier');
+      const isIndex='index_ft' in tier?tier.index_ft.includes(depth_ft):depth_ft%tier.index_every_ft===0;
+      if(props.index!==isIndex||(!isIndex&&depth_ft%tier.minor_ft!==0))throw bad('invalid contour level');
+      const next=rules.tiers.find(t=>t.name!==rules.pier&&t.min_zoom>minzoom&&cell<=t.max_cell_m);
+      if(tier.name===rules.pier){if(cell>1||Object.hasOwn(props,'maxzoom'))throw bad('invalid pier contour');continue;}
+      if(props.maxzoom!==next?.min_zoom)throw bad('invalid contour zoom range');
+    }
     if(props.index!==true)continue;
     const s=sources.find(s=>s.source_id===source_id);
     if(!s||s.survey_date!==survey_date||s.vertical_datum!==vertical_datum)throw bad(wrongSource);
@@ -94,17 +106,19 @@ function contourTracks(c,region,bounds,now) {
       if(runs.has(run))throw bad(wrongSource);
       runs.add(run);
       finest.set(key,Boolean(finest.get(key))||native);
+    }else if(v3){
+      if(Object.hasOwn(props,'maxzoom'))continue;
     }else if(!Number.isInteger(depth_ft)||depth_ft<=0||depth_ft%30)throw bad(wrongDepth);
     const g=f.geometry,lines=g?.type==='LineString'?[g.coordinates]:g?.type==='MultiLineString'?g.coordinates:null;
     if(!Array.isArray(lines))throw Error('Invalid export geometry');
     const kept=lines.filter(l=>{const e=extent({coordinates:l});if(e.some(Number.isNaN))throw Error('Invalid export geometry');return overlap(e,bounds);});
     if(kept.length){
-      const key=JSON.stringify([source_id,depth_ft]),existing=v2&&grouped.get(key);
+      const key=JSON.stringify([source_id,depth_ft]),existing=(v2||v3)&&grouped.get(key);
       if(existing)existing.geometry.coordinates.push(...kept);
       else{
         const track={name:`${depth_ft} ft contour · ${source_id}`,source:s.name,survey_date,vertical_datum,geometry:{type:'MultiLineString',coordinates:kept},
           desc:`${s.name}. Surveyed ${survey_date}. Depth below the survey's ${vertical_datum}; ${basis}, not a sounding or chart depth. Lines stop where the reviewed survey grid stops.${unlisted?` Bound surveys not drawn: ${unlisted}`:''} NOT FOR NAVIGATION.`};
-        tracks.push(track);if(v2)grouped.set(key,track);
+        tracks.push(track);if(v2||v3)grouped.set(key,track);
       }
     }
   }
