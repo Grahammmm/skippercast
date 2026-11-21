@@ -374,8 +374,18 @@ export function habitatHref(href: string, id: string): string {
   return url.href;
 }
 
+// Store navigation flushes effects synchronously. Only an explicit local choice should override a saved 3D orbit.
+let choosingPresentation = false;
+function withPresentationChoice(change: () => void): void {
+  const previous = choosingPresentation;
+  choosingPresentation = true;
+  try { change(); } finally { choosingPresentation = previous; }
+}
+
 /** Go to a presentation, with a history entry (v2 writes `presentation=chart` explicitly). */
-export const choosePresentation = (next: Presentation): void => { navigate(withParams(location.href, {presentation: next})); };
+export const choosePresentation = (next: Presentation): void => {
+  withPresentationChoice(() => { navigate(withParams(location.href, {presentation: next})); });
+};
 
 /**
  * Hand the registry's terrain layers to the renderer: set what changed, remove what went, in § 9 order; returns what is draped.
@@ -560,7 +570,7 @@ export function createStage(options: StageOptions): Stage {
           // The report of the stage's own setPerspective, or a change while Chart shows, is not a choice.
           if (applied.perspective === key(mode) || shownPresentation.peek() === 'chart') return;
           applied.perspective = key(mode);
-          if (presentation.peek() !== mode) setParams({presentation: mode});
+          if (presentation.peek() !== mode) withPresentationChoice(() => { setParams({presentation: mode}); });
         },
       });
       for (const name of ORDER) applied[name] = key(state[name]);
@@ -592,13 +602,20 @@ export function createStage(options: StageOptions): Stage {
   const visibility = (): void => { pageHidden.value = !!doc.hidden; monitor.reset(); };
   // A 3D choice after Chart or 2D starts at the entry camera. A straight return from 2D, the camera still where 3D left it,
   // is not made wider again: the half zoom level is for a view that moved.
-  // `opening`: the page itself opened in 3D. A link that names an orbit (bearing and pitch) is kept as shared; one that does not
-  // gets the entry pose. With no camera yet (the region's centre still arriving) the entry waits for the home camera.
-  const enter3d = (opening: boolean): void => {
+  // Opening or restoring a link with an explicit orbit uses that orbit, not the automatic entry pose.
+  // With no camera yet (the region's centre still arriving) the entry waits for the home camera.
+  const enter3d = (): void => {
+    const saved = choosingPresentation ? null : parseCamera(view.peek());
+    if (saved && saved.pitch !== undefined) {
+      entryPending = false;
+      entry = undefined;
+      clearTimeout(viewTimer);
+      camera.value = saved;
+      return;
+    }
     const c = camera.peek();
     if (!c) { entryPending = true; return; }
     entryPending = false;
-    if (opening && c.pitch !== undefined) return;
     const back = last3d !== undefined && sameSpot(c, last3d);
     const pose = entryCamera(c, c.bearing ?? lastBearing ?? 0, back ? 0 : ENTRY_ZOOM_DROP);
     entry = {base: entry?.pose === c ? entry.base : c, pose};
@@ -622,15 +639,14 @@ export function createStage(options: StageOptions): Stage {
   const disposers = [
     effect(() => { const c = parseCamera(view.value); if (c) camera.value = c; }),
     // A new region (or its centre arriving) moves the camera home unless the link names one.
-    effect(() => { const next = home(); if (next && !parseCamera(view.peek())) { camera.value = next; if (entryPending) enter3d(true); } }),
+    effect(() => { const next = home(); if (next && !parseCamera(view.peek())) { camera.value = next; if (entryPending) enter3d(); } }),
     // Entering and leaving 3D (MB-14): the entry camera, the frame watch's fresh start, and the fallback notice's end.
     effect(() => {
       const now = shownPresentation.value, was = lastShown;
       lastShown = now;
       if (now === was) return;
       monitor.reset();
-      // The first run has no earlier view: a page opened in 3D is an entry too, kept as it is only when its link names an orbit.
-      if (now === '3d') { fpsFallback.value = false; clearTimeout(noticeTimer); enter3d(was === undefined); }
+      if (now === '3d') { fpsFallback.value = false; clearTimeout(noticeTimer); enter3d(); }
       else {
         entryPending = false;
         if (was === '3d') leave3d();

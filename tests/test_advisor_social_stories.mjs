@@ -169,6 +169,39 @@ dbTest('the conditions card: an approved Story with no photo and its story graph
   assert.equal(s.sql.prepare("SELECT COUNT(*) AS n FROM advisor_posts WHERE kind='story'").get().n, 1, 'once a day');
 });
 
+/** A D1 whose first conditions-card existence read misses a row another tick has just inserted; `batchError` replaces the batch outcome. */
+function racingDb(db, {batchError = null} = {}) {
+  let missed = false;
+  return {
+    prepare(q) {
+      if (!missed && q === 'SELECT 1 AS x FROM advisor_posts WHERE id=?') { missed = true; return {bind() { return this; }, async first() { return null; }}; }
+      return db.prepare(q);
+    },
+    async batch(queries) { if (batchError) throw batchError; return db.batch(queries); },
+  };
+}
+
+// H8 #4 contract: the same-id loser of the conditions-card race reports `exists` and leaves the winner's post and graphic as they are;
+// any other write failure still fails the region. Bug caught: the deterministic-id INSERT's UNIQUE abort surfacing as a failed slot.
+dbTest('the conditions card race: the loser of a duplicate insert is exists with the winner\'s render state kept; other errors still fail', async () => {
+  const s = setup();
+  await quiet(() => ST.morningStories(s.env, NOW, {feeds: feeds()}));
+  const id = await ST.conditionsStoryId('morro-bay', '2026-09-28');
+  // The winner's graphic has since been rendered.
+  const key = `advisor.graphic.${id}`, rendered = {...JSON.parse(s.sql.prepare('SELECT value FROM job_state WHERE key=?').get(key).value), status: 'done'};
+  s.sql.prepare('UPDATE job_state SET value=? WHERE key=?').run(JSON.stringify(rendered), key);
+  const before = {post: {...post(s.sql, id)}, graphic: s.sql.prepare('SELECT value,updated_at FROM job_state WHERE key=?').get(key)};
+  const {value} = await quiet(() => ST.morningStories({...s.env, DB: racingDb(s.db)}, NOW + 5 * 60000, {feeds: feeds()}));
+  assert.deepEqual(value, [{region: 'morro-bay', kind: 'conditions', status: 'exists', postId: id}]);
+  assert.deepEqual({post: {...post(s.sql, id)}, graphic: s.sql.prepare('SELECT value,updated_at FROM job_state WHERE key=?').get(key)}, before, 'the winner\'s rows are untouched');
+  assert.equal((await graphicState(s.db, id)).status, 'done');
+  // An unrelated batch failure is not mistaken for the race.
+  const other = setup();
+  await assert.rejects(quiet(() => ST.morningStories({...other.env, DB: racingDb(other.db, {batchError: Error('D1_ERROR: database is locked')})}, NOW, {feeds: feeds()})),
+    /morning stories failed for 1 region/);
+  assert.equal(other.sql.prepare('SELECT COUNT(*) AS n FROM advisor_posts').get().n, 0);
+});
+
 dbTest('nothing while social publishing is off or Meta is not configured', async () => {
   for (const env of [{}, {ADVISOR_SOCIAL_ENABLED: 'true'}, {...META, ADVISOR_SOCIAL_ENABLED: 'false'}]) {
     const s = setup(env);

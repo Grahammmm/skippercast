@@ -5,9 +5,9 @@ The page section ``id="data-sources"`` is built from the reviewed source registe
 
 * the catalogue and its display contract come from ``catalog/sources.json`` through
   ``skippercast.platform.contracts.load_catalogs`` (so an invalid ``public_display`` fails here too);
-* what is live comes from the non-draft ``regions/*/region.json`` bindings and the runtime service scan in
-  ``tests/contract/test_commercial_sources.py`` (``published_regions``, ``asset_sources``, ``usages``), the one
-  provenance map the commercial-use gate already keeps; the two views must agree or generation fails;
+* what is live comes from the non-draft ``regions/*/region.json`` bindings, the runtime service scan in
+  ``tests/contract/test_commercial_sources.py`` (``published_regions``, ``asset_sources``, ``usages``), and reviewed
+  ``catalog/relief/*.json`` pointers; the collected layers and usage scan must agree or generation fails;
 * credits are ``rights.attribution`` verbatim, plus the canonical ``CSUMB_CREDIT`` once, only while a listed source is CSUMB's.
 
 Held rows. A row whose catalogue ``needs`` include an id in ``HELD_NEEDS`` (kelp, until KELP-3) is never listed, live or
@@ -27,6 +27,7 @@ import argparse
 import contextlib
 import difflib
 import html
+import json
 import re
 import sys
 from pathlib import Path
@@ -38,6 +39,7 @@ for entry in (ROOT / 'src', ROOT):  # this script sets its own path; no PYTHONPA
         sys.path.insert(0, str(entry))
 
 from skippercast.platform.contracts import load_catalogs, public_url  # noqa: E402
+from skippercast.relief import package as relief_package  # noqa: E402
 from skippercast.seafloor.rights import CSUMB_CREDIT  # noqa: E402
 from tests.contract import test_commercial_sources as contract  # noqa: E402
 
@@ -47,6 +49,7 @@ END = '<!-- END GENERATED data-sources -->'
 # First run only: the section goes in front of this heading; later runs replace the marked block.
 INSERT_BEFORE = '<h2>Current official checks</h2>'
 INDENT = '      '
+DEPTH_SHADING = 'Depth shading'
 
 # Services the app calls that have no catalogue row (tests/contract/test_commercial_sources.py RUNTIME_SERVICES).
 # Name, agency, a public page and the credit printed for it. The OpenStreetMap credit points at the page's own "Map and
@@ -162,6 +165,30 @@ def _dates(row, extra=()):
     return '; '.join(parts)
 
 
+def _relief_pointers(root):
+    directory = root / 'catalog/relief'
+    schema_path = directory / 'pointer.schema.json'
+    for path in sorted(directory.glob('*.json')):
+        if path == schema_path:
+            continue
+        try:
+            pointer = relief_package.decode_document(path.read_bytes())
+        except (OSError, ValueError) as error:
+            raise RegisterError(f'{path.name}: invalid relief pointer: {error}') from error
+        try:
+            schema = relief_package.decode_document(schema_path.read_bytes())
+            relief_package.validate_schema(pointer, schema)
+        except (OSError, ValueError) as error:
+            region_id = pointer.get('region') or path.name
+            entries = pointer.get('sources')
+            ids = ', '.join(
+                repr(entry['id']) for entry in (entries if isinstance(entries, list) else ())
+                if isinstance(entry, dict) and 'id' in entry
+            )
+            raise RegisterError(f'{region_id}: invalid relief pointer {path.name} (source IDs: {ids or "unavailable"}): {error}') from error
+        yield pointer['region'], dict.fromkeys((entry['id'] for entry in pointer['sources']), '')
+
+
 def collect(root=ROOT):
     """Everything the page shows, as plain data. Raises RegisterError when the live views disagree."""
     root = Path(root)
@@ -171,7 +198,7 @@ def collect(root=ROOT):
         found, unmapped, cache = contract.usages()
         if unmapped:
             raise RegisterError('unmapped region assets: ' + ', '.join(sorted(unmapped)))
-        live_regions, region_ids = [], set()
+        live_regions, region_ids = {}, set()
         for region in regions:
             layers = {}  # layer name -> {source id: extra date text}
 
@@ -201,20 +228,44 @@ def collect(root=ROOT):
                     if sources[ident]['adapter'] == 'open-meteo' and sources[ident]['review_status'] == 'approved':
                         add(f'Forecast: {need.split("-")[0]}', ident)
             region_ids |= {ident for members in layers.values() for ident in members}
-            live_regions.append({'id': region['id'], 'name': region.get('name') or region['id'],
-                                 'status': region['status'], 'layers': layers})
+            live_regions[region['id']] = {'id': region['id'], 'name': region.get('name') or region['id'],
+                                          'status': region['status'], 'layers': layers}
         runtime = {ident for label, ident in found if label.startswith('runtime:')}
+
+    relief_usage = set()
+    for region_id, members in _relief_pointers(root):
+        if region_id not in live_regions:
+            config = root / 'regions' / region_id / 'region.json'
+            if not config.is_file():
+                ids = ', '.join(map(repr, members))
+                raise RegisterError(f'{region_id}: no region config for depth shading sources {ids}')
+            # A reviewed pointer credits only its own layer, not any other draft assets.
+            region = json.loads(config.read_text(encoding='utf-8'))
+            live_regions[region_id] = {'id': region_id, 'name': region.get('name') or region_id,
+                                       'status': region['status'], 'layers': {}}
+        for ident in members:
+            if ident not in sources:
+                raise RegisterError(f'{region_id}: depth shading has unknown source {ident!r}')
+            if not listed(sources[ident], live=True):
+                raise RegisterError(f'{region_id}: depth shading has unlistable source {ident!r}')
+            relief_usage.add((region_id, ident))
+        live_regions[region_id]['layers'].setdefault(DEPTH_SHADING, {}).update(members)
+
     expected = {ident for _, ident in found}
-    if region_ids | runtime != expected:
+    relief_layers = {(region_id, ident) for region_id, region in live_regions.items()
+                     for ident in region['layers'].get(DEPTH_SHADING, {})}
+    # Keep relief usage regional and separate: a pointer must not hide a mismatch on an ordinary asset.
+    drift = ((region_ids | runtime) ^ expected) | {ident for _, ident in relief_layers ^ relief_usage}
+    if drift:
         raise RegisterError('live usage disagrees with tests/contract/test_commercial_sources.py usages(): '
-                            + ', '.join(sorted((region_ids | runtime) ^ expected)))
+                            + ', '.join(sorted(drift)))
     unknown = sorted(ident for ident in expected if ident not in sources and ident not in contract.RUNTIME_SERVICES)
     if unknown:
         raise RegisterError('live usage names unknown sources: ' + ', '.join(unknown))
     missing = sorted(set(contract.RUNTIME_SERVICES) - set(RUNTIME_SERVICE_INFO))
     if missing:
         raise RegisterError('add these runtime services to RUNTIME_SERVICE_INFO: ' + ', '.join(missing))
-    return {'needs': needs, 'sources': sources, 'regions': sorted(live_regions, key=lambda r: r['id']),
+    return {'needs': needs, 'sources': sources, 'regions': [live_regions[ident] for ident in sorted(live_regions)],
             'runtime': sorted(runtime)}
 
 
@@ -258,7 +309,7 @@ def _by_name(ids, sources):
 
 
 def render(data):
-    """The marked block as text (deterministic: sorted everywhere, no clock) and a summary."""
+    """The marked block as deterministic text and a summary."""
     sources, needs = data['sources'], data['needs']
     live_ids = {ident for region in data['regions'] for members in region['layers'].values() for ident in members} | set(data['runtime'])
 
@@ -280,8 +331,11 @@ def render(data):
                 f'{h}<p class="data-source-credit">{_esc(CSUMB_CREDIT)}</p>']
     out.append(f'{h}<h3 id="data-sources-live">In use on live layers</h3>')
     for region in data['regions']:
-        layers = {layer: _by_name([i for i in members if show(i)], sources) for layer, members in sorted(region['layers'].items())}
-        layers = {layer: ids for layer, ids in layers.items() if ids}
+        layers = {}
+        for layer, members in sorted(region['layers'].items()):
+            ids = [i for i in members if show(i)]
+            if ids:
+                layers[layer] = ids if layer == DEPTH_SHADING else _by_name(ids, sources)
         if not layers:
             continue
         label = region['name'] + (f" ({region['status']} region)" if region['status'] != 'active' else '')
