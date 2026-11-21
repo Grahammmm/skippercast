@@ -13,7 +13,7 @@ function privacyHits(file, source) {
   // Strip comments without mangling quoted module paths (including URL imports).
   const code = source.replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*/g,
     (_, quoted) => quoted ?? ' ');
-  const paths = [...code.matchAll(/\bimport\s*(?:\(\s*|[^"'`;()=]+?\bfrom\s*)?(["'])([^"'\r\n]+)\1/g)]
+  const paths = [...code.matchAll(/\bimport\s*(?:\(\s*|[^"'`;()=]+?\bfrom\s*)?(["'`])((?:(?!\1)[^\r\n])+)\1/g)]
     .map(match => match[2]);
   return [...hits, ...importTokens.filter(token => paths.some(path => path.includes(token)))]
     .map(token => `${file}: ${token}`);
@@ -39,6 +39,9 @@ test('C1: catch-conditions sources have no banned logging or transport tokens', 
     /* import '../telemetry.ts'; */
     import {example as analytics} from './example.ts';
   `), []);
+
+  // C1 regression: dynamic imports with template-literal paths are transports too.
+  assert.deepEqual(privacyHits('sample.ts', 'import(`../telemetry.ts`)'), ['sample.ts: telemetry']);
 
   const root = new URL('../', import.meta.url);
   const files = [
