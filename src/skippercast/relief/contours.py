@@ -377,12 +377,20 @@ def trace_v3(job, view):
                       'vertical_datum': datum or dc.UNVERIFIED_DATUM}
             certified = (row['id'] in native_ids and row.get('support_class_cap') == 3
                          and (row.get('max_zoom') or 0) >= 16)
-            # A normalized tile's resolution describes its output pixels, not the original sampling.
-            native = source.get('native_resolution_m')
-            if not (type(native) in (int, float) and 0 < native < math.inf):
+            # The selection/sidecar checks above bind the original identity. A normalized
+            # tile's resolution describes its output pixels, not the original sampling.
+            map_key = 'native_resolution_m_by_original_sha256'
+            if map_key in source:
+                reviewed = source[map_key]
+                native = (reviewed.get(original) if isinstance(reviewed, dict)
+                          and 'native_resolution_m' not in source else None)
+            else:
+                native = source.get('native_resolution_m')
+            if not (isinstance(native, (int, float)) and not isinstance(native, bool) and 0 < native < math.inf):
                 logging.getLogger(__name__).warning(
                     '%s/%s: missing or invalid reviewed original native resolution; withholding ft-v3 contours',
                     ident, row['id'])
+                native = None
             lines = list(tool.v3_grid(grid, region, view, common, native, support=measured, certified=certified,
                                       positive_down=convention == 'depth_positive_down'))
             if not lines:

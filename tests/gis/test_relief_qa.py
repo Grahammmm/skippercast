@@ -4,8 +4,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 import rasterio
-from rasterio.transform import array_bounds
-from rasterio.warp import transform_bounds
+from rasterio.transform import array_bounds, from_origin
+from rasterio.warp import Resampling, reproject, transform_bounds
 from shapely.geometry import box, mapping
 
 from scripts import build_bathy_tiles as tiles
@@ -282,6 +282,54 @@ def test_capture_script_binds_the_packaged_layer_paths():
     script = (ROOT / 'scripts/relief/qa_shots.mjs').read_text(encoding='utf-8')
     assert f"const archive = '{package.ARCHIVE}'" in script
     assert f"const detailKey = '{qa.DETAIL}'" in script
+
+
+def test_land_evidence_uses_exact_tile_lattice(tmp_path):
+    # QA must agree with the producer's exact nearest +3 m mask. An approximate
+    # warp can select an adjacent land or nodata cell in this projected checkerboard.
+    z, x, y = 11, 333, 807
+    grid = qa._tile_grid(z, x, y)
+    extent = array_bounds(256, 256, grid)
+    bounds = transform_bounds('EPSG:3857', 'EPSG:4326', *extent)
+    west, south, east, north = transform_bounds('EPSG:3857', 'EPSG:3310', *extent)
+    cell, nodata = 10.0, -999999.0
+    w, h = int((east - west) / cell) + 40, int((north - south) / cell) + 40
+    profile = dict(driver='GTiff', crs='EPSG:3310', width=w, height=h, count=1,
+                   transform=from_origin(west - 200, north + 200, cell, cell))
+    rows, cols = np.ogrid[:h, :w]
+    alternate = (rows + cols) % 2 != 0
+    values = np.where(alternate, np.where(cols < w // 3, nodata, 10), -5).astype('float32')
+    elevation, contributor = tmp_path / 'elev.tif', tmp_path / 'contributor.tif'
+    with rasterio.open(elevation, 'w', **profile, dtype='float32', nodata=nodata) as ds:
+        ds.write(values, 1)
+    with rasterio.open(contributor, 'w', **profile, dtype='uint16', nodata=0) as ds:
+        ds.write(np.ones((h, w), dtype='uint16'), 1)
+
+    archive = tmp_path / 'relief.pmtiles'
+    release = dict(bounds=bounds, minzoom=z, maxzoom=z)
+
+    def measure(mask):
+        rgba = np.zeros((256, 256, 4), dtype='uint8')
+        rgba[mask] = (40, 90, 160, 255)
+        tiles.write_pmtiles(archive, {(z, x, y): tiles.encode_png(rgba)}, metadata={}, **release,
+                            center=(z, bounds[0], bounds[1]))
+        return qa._raster_metrics(archive, release, bounds, depth, owner, {})
+
+    exact = np.full((256, 256), np.nan, dtype='float32')
+    with rasterio.open(elevation) as depth, rasterio.open(contributor) as owner:
+        reproject(rasterio.band(depth, 1), exact, dst_transform=grid, dst_crs='EPSG:3857',
+                  dst_nodata=float('nan'), resampling=Resampling.nearest, tolerance=0)
+        paint = np.isfinite(exact) & (exact <= 3)
+        metrics, failures = measure(paint)
+        counts = (metrics['painted_land_pixels'], metrics['painted_without_land_evidence'])
+        assert counts == (0, 0)
+        assert failures == []
+
+        shifted = np.zeros_like(paint)
+        shifted[:, 1:] = paint[:, :-1]
+        metrics, failures = measure(shifted)
+        assert metrics['painted_land_pixels'] > 0
+        assert 'land_leak_pct' in failures
 
 
 def test_source_edge_across_tile_boundary_uses_actual_paint(tmp_path):
