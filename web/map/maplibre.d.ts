@@ -8,3 +8,5 @@ export declare const lib: typeof MapLibre;
 export declare const workerUrl: string;
 export declare const Protocol: typeof PMTilesProtocol;
 export declare const PMTiles: typeof PMTilesArchive;
+/** Start MapLibre's worker pool once. */
+export declare function prewarm(): void;

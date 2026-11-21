@@ -159,3 +159,95 @@ test('warm_rejection_does_not_change_chart_error_owner', async t => {
   assert.equal(warms(r), 1, 'the failed module is not evaluated again');
   assert.equal(r.chart, 'failed: wrapper failed', 'the Chart still sees the failure');
 });
+
+const MAP_ENTRY = {href: 'https://s.test/map?region=test-coast', region: 'test-coast'};
+
+// Reuse the bootstrap fixture, adding just the worker-prewarm observable to its fake wrapper.
+const prewarmStub = {name: 'prewarm-stub', setup(b) {
+  b.onLoad({filter: /\/web\/map\/maplibre\.js$/}, () => ({loader: 'js', contents: WRAPPER + `
+export function prewarm() {
+  globalThis.__events.push('wrapper:prewarm');
+  if (globalThis.__scenario.prewarmThrows) throw new Error('prewarm failed');
+}
+`}));
+}};
+
+async function prewarmPage(scenario) {
+  const dir = await mkdtemp(join(tmpdir(), 'maplibre-prewarm-'));
+  try {
+    const out = join(dir, 'out');
+    const {metafile} = await build({entryPoints: {main: MAIN}, bundle: true, splitting: true, format: 'esm', platform: 'browser',
+      absWorkingDir: ROOT, outdir: out, chunkNames: '[name]-[hash]', metafile: true, logLevel: 'silent', plugins: [prewarmStub, stubs]});
+    const wrapper = Object.keys(metafile.outputs).find(path => metafile.outputs[path].entryPoint === 'web/map/maplibre.js');
+    const runner = join(dir, 'runner.mjs');
+    await writeFile(runner, RUNNER);
+    const args = {host: true, presentation: 'chart', ...scenario, main: pathToFileURL(join(out, 'main.js')).href,
+      chart: scenario.chart ? pathToFileURL(join(ROOT, wrapper)).href : null};
+    const result = spawnSync(process.execPath, [runner, JSON.stringify(args)], {encoding: 'utf8', cwd: dir});
+    assert.equal(result.status, 0, result.stderr);
+    return JSON.parse(result.stdout);
+  } finally {
+    await rm(dir, {recursive: true, force: true});
+  }
+}
+
+test('C1: the real helper sets the worker URL before prewarming and never repeats either call', async () => {
+  const {outputFiles} = await build({entryPoints: [join(ROOT, 'web/map/maplibre.js')], bundle: true, write: false, format: 'esm',
+    plugins: [{name: 'fake-maplibre', setup(b) {
+      b.onResolve({filter: /^maplibre-gl(?:$|\/dist\/.*\?worker&url$)/}, args => ({path: args.path, namespace: 'fake'}));
+      b.onLoad({filter: /^maplibre-gl$/, namespace: 'fake'}, () => ({loader: 'js', contents: `
+export const calls = [];
+export function setWorkerUrl(url) { calls.push(['setWorkerUrl', url]); }
+export function prewarm() { calls.push(['prewarm']); }
+`}));
+      b.onLoad({filter: /\?worker&url$/, namespace: 'fake'}, () => ({loader: 'js', contents: 'export default "/assets/test-worker.mjs";'}));
+    }}, ...rendererPlugins]});
+  const {lib, prewarm} = await import(`data:text/javascript;base64,${Buffer.from(outputFiles[0].text).toString('base64')}`);
+  const expected = [['setWorkerUrl', '/assets/test-worker.mjs'], ['prewarm']];
+  assert.deepEqual(lib.calls, [], 'evaluating the wrapper alone must not start a worker');
+  assert.equal(prewarm(), undefined);
+  assert.deepEqual(lib.calls, expected);
+  assert.equal(prewarm(), undefined);
+  assert.deepEqual(lib.calls, expected);
+});
+
+test('C2: an already-allowed Chart prewarms after its dynamic import resolves', async () => {
+  assert.deepEqual(await prewarmPage(MAP_ENTRY), {
+    events: ['render', 'wrapper:import', 'startTrip', 'bootstrap:done', 'wrapper:evaluate', 'wrapper:prewarm'],
+    rejections: [], chart: null, holds: 1,
+  });
+});
+
+test('C3: a prewarm throw is handled by the bootstrap without poisoning the Chart import', async () => {
+  assert.deepEqual(await prewarmPage({...MAP_ENTRY, prewarmThrows: true, chart: true}), {
+    events: ['render', 'wrapper:import', 'startTrip', 'bootstrap:done', 'wrapper:import', 'wrapper:evaluate', 'wrapper:prewarm', 'wrapper:import'],
+    rejections: [], chart: 'loaded', holds: 1,
+  });
+});
+
+test('C4: the app adds no static edge to the wrapper or worker', async () => {
+  const {metafile} = await bundled();
+  const imports = metafile.inputs['web/app/main.tsx'].imports;
+  assert.deepEqual(imports.filter(({path}) => /maplibre/.test(path)).map(({path, kind}) => [path, kind]), [
+    ['web/map/maplibre.js', 'dynamic-import'],
+  ]);
+});
+
+test('C5: a held Chart neither imports nor prewarms until release, then prewarms once', async () => {
+  assert.deepEqual(await prewarmPage({...MAP_ENTRY, held: true}), {
+    events: ['render', 'startTrip', 'bootstrap:done', 'release', 'wrapper:import', 'wrapper:evaluate', 'wrapper:prewarm'],
+    rejections: [], chart: null, holds: 1,
+  });
+});
+
+test('C5: non-Chart and unresolved entries never prewarm, even after release', async () => {
+  for (const [scenario, events, holds] of [
+    [{...MAP_ENTRY, presentation: '2d', held: true}, ['render', 'startTrip', 'bootstrap:done', 'release'], 1],
+    [{...MAP_ENTRY, presentation: '3d', held: true}, ['render', 'startTrip', 'bootstrap:done', 'release'], 1],
+    [{href: 'https://s.test/map?coast=test-coast', region: null, coast: 'test-coast'}, ['render', 'startTrip', 'bootstrap:done'], 0],
+    [{...MAP_ENTRY, href: 'https://s.test/admin'}, ['render', 'startTrip', 'bootstrap:done'], 1],
+    [{...MAP_ENTRY, host: false}, ['startTrip', 'bootstrap:done'], 1],
+  ]) {
+    assert.deepEqual(await prewarmPage(scenario), {events, rejections: [], chart: null, holds}, JSON.stringify(scenario));
+  }
+});
