@@ -106,7 +106,11 @@ def _rows(path, raw, reach, kind):
             props['fish_haven'] = src['enc_fish_haven'] is True
         depth = src.get('VALSOU')
         if depth is not None:
-            if type(depth) not in (int, float) or not isfinite(depth):
+            try:
+                valid_depth = type(depth) in (int, float) and isfinite(depth)
+            except OverflowError:
+                valid_depth = False
+            if not valid_depth:
                 raise ValueError(f'{at}: invalid chart depth')
             # Preserve the native unit and positive-down sign; no datum conversion.
             props.update(chart_depth=depth, depth_label=DEPTH_LABEL,
