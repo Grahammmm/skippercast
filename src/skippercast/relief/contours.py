@@ -373,7 +373,7 @@ def trace_v3(job, view):
                 measured = stack.enter_context(tool.open_geotiff(support, normalized=True))
             if row['vertical_datum'] not in ('unstated', datum):
                 raise ValueError(f'{ident}: selected datum differs from the reviewed original')
-            common = {'source_id': ident, 'survey_date': str(source['survey_year']),
+            common = {'source_id': ident, 'survey_date': dc.selected_survey_date(source),
                       'vertical_datum': datum or dc.UNVERIFIED_DATUM}
             certified = (row['id'] in native_ids and row.get('support_class_cap') == 3
                          and (row.get('max_zoom') or 0) >= 16)

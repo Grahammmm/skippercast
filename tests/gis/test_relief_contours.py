@@ -338,6 +338,30 @@ def test_v3_positive_down_matches_positive_up(builder, tmp_path):
            [(f['id'], f['geometry'], f['properties']['depth_ft'], f['properties']['tier']) for f in down]
 
 
+@pytest.mark.parametrize('dates, expected', [({'survey_year': None}, 'unstated'),
+                                             ({'survey_date': '2011-05-06'}, '2011-05-06'),
+                                             ({}, '2008')])
+def test_v3_survey_date_follows_selected_survey_date(builder, tmp_path, dates, expected):
+    # Contract: v3 reads the date via dc.selected_survey_date, so a source with no survey_year
+    # (every Morro source) is 'unstated' instead of KeyError; a reviewed survey_date wins.
+    from skippercast import style
+    from skippercast.relief import contours
+    from skippercast.platform import depth_contours as dc
+
+    _, source = builder
+    if dates == {'survey_year': None}:
+        source.pop('survey_year')
+    else:
+        source.update(dates)
+    _, job = v3_selected_job(builder, tmp_path, native=1, sidecar_on=False)
+    view = style.load().view('contours')
+    doc = contours.trace_v3(job, view)
+    assert doc['features']
+    assert {f['properties']['survey_date'] for f in doc['features']} == {expected}
+    assert {s['survey_date'] for s in doc['provenance']['sources']} == {expected}
+    dc.check_selected_contours(doc, job[1], job[2], {SOURCE}, view=view)
+
+
 def test_v3_unknown_value_convention_raises(builder, tmp_path):
     from skippercast import style
     from skippercast.relief import contours
