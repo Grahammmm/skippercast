@@ -3,7 +3,9 @@
 // other origins and fresh reads straight through. Runs by type stripping.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {shareStatic, sharedKey} from '../web/shared-fetch.ts';
+import {shareStatic, sharedFetch, sharedKey} from '../web/shared-fetch.ts';
+import {DEFAULT_PLACE, loadReadout} from '../web/landing/readings.ts';
+import {warmRegion} from '../web/landing/region-warm.ts';
 
 const BASE = 'https://s.test/map?region=morro-bay';
 
@@ -77,6 +79,62 @@ const PART = JSON.stringify({subset: true});
 const whole = () => new Response(WHOLE, {status: 200});
 const partial = () => new Response(PART, {status: 206});
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return {promise, resolve}; };
+
+function landingFetch(t, region, respond) {
+  const pathname = `/regions/${region}/region.json`;
+  const page = 'https://s.test/';
+  globalThis.location = {href: page};
+  t.after(() => { delete globalThis.location; });
+  const regionFetch = t.mock.fn(respond);
+  t.mock.method(globalThis, 'fetch', async (url, init) => new URL(url, page).pathname === pathname
+    ? regionFetch(init) : Response.json({}));
+  return {page, pathname, regionFetch};
+}
+const landingRegion = () => Response.json({name: 'Test Harbor', chart_files: []});
+// Plain default fetches would issue two requests; both consumers must still read the body.
+test('landing readout and warmRegion share their default region request', async t => {
+  const region = 'shared-landing-success';
+  const {page, regionFetch} = landingFetch(t, region, landingRegion);
+  const [readout, warm] = await Promise.all([loadReadout(undefined, region), warmRegion(region, page)]);
+  assert.equal(regionFetch.mock.callCount(), 1);
+  assert.equal(readout.place, 'Test Harbor');
+  assert.equal(warm.state, 'ready');
+  assert.ok(!warm.paths.includes(`regions/${region}/poster.svg`), 'warmup parsed chart_files');
+});
+
+// Canceling the warmup that started the transfer must not strand the other readers.
+test('landing warmup can abort while the readout and night-map-shaped read finish', async t => {
+  const region = 'shared-landing-abort', started = deferred(), pending = deferred();
+  const {page, pathname, regionFetch} = landingFetch(t, region, init => { started.resolve(init.signal); return pending.promise.then(landingRegion); });
+  const controller = new AbortController();
+  const warm = warmRegion(region, page, undefined, undefined, {signal: controller.signal});
+  const transferSignal = await started.promise;
+  const readout = loadReadout(undefined, region);
+  const night = sharedFetch(new URL(pathname, page).href, {signal: AbortSignal.timeout(15000)}).then(r => r.json());
+  controller.abort();
+  const stopped = await warm;
+  pending.resolve();
+  const [reading, frame] = await Promise.all([readout, night]);
+  assert.deepEqual(stopped, {state: 'failed', paths: []});
+  assert.equal(transferSignal.aborted, false);
+  assert.equal(regionFetch.mock.callCount(), 1);
+  assert.equal(reading.place, 'Test Harbor');
+  assert.equal(frame.name, 'Test Harbor');
+});
+
+// A shared 500 must keep each caller's own fallback without poisoning a later read.
+test('landing callers handle a failed share independently and can retry', async t => {
+  const region = 'shared-landing-retry';
+  let failed = true;
+  const {page, pathname, regionFetch} = landingFetch(t, region, () => failed ? new Response(null, {status: 500}) : landingRegion());
+  const [readout, warm] = await Promise.all([loadReadout(undefined, region), warmRegion(region, page)]);
+  assert.equal(regionFetch.mock.callCount(), 1);
+  assert.equal(readout.place, DEFAULT_PLACE);
+  assert.deepEqual(warm, {state: 'failed', paths: [pathname.slice(1)]});
+  failed = false;
+  assert.equal((await loadReadout(undefined, region)).place, 'Test Harbor');
+  assert.equal(regionFetch.mock.callCount(), 2);
+});
 
 test('shared_key_header_shapes', () => {
   const key = 'https://s.test/regions/morro-bay/region.json';

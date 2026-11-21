@@ -12,6 +12,7 @@
 // is answered from the cache). Only the chosen region is fetched, nothing
 // under Save-Data, and a failure is quiet: the map loads as it would have.
 // Erasable syntax only: tests/test_landing.mjs imports this file by type stripping.
+import {sharedFetch} from '../shared-fetch.ts';
 import {saveData} from './save-data.ts';
 
 export type WarmState = 'loading' | 'ready' | 'failed' | 'skipped';
@@ -108,7 +109,7 @@ export type WarmResult = {state: Exclude<WarmState, 'loading'>; paths: string[]}
 export type StartupOptions = {timeoutMs?: number; signal?: AbortSignal};
 
 /** W10B's region-switch boundary: stale completions never publish, even A→B→A. */
-export function createRegionWarmup(fetchFn: typeof fetch = (...a) => fetch(...a), nav: unknown = (globalThis as {navigator?: unknown}).navigator) {
+export function createRegionWarmup(fetchFn: typeof fetch = sharedFetch, nav: unknown = (globalThis as {navigator?: unknown}).navigator) {
   let current: AbortController | undefined;
   const cancel = () => { current?.abort(); current = undefined; };
   return {cancel, async select(region: string, page: string, publish: (result: WarmResult) => void, timeoutMs = 8000) {
@@ -121,7 +122,7 @@ export function createRegionWarmup(fetchFn: typeof fetch = (...a) => fetch(...a)
 }
 
 /** Fetch only the chosen region; the whole warmup (including bodies) has one deadline. */
-export async function warmRegion(region: string, page: string, fetchFn: typeof fetch = (...a) => fetch(...a), nav: unknown = (globalThis as {navigator?: unknown}).navigator,
+export async function warmRegion(region: string, page: string, fetchFn: typeof fetch = sharedFetch, nav: unknown = (globalThis as {navigator?: unknown}).navigator,
   options: StartupOptions = {}): Promise<WarmResult> {
   if (saveData(nav)) return {state: 'skipped', paths: []};
   try {
