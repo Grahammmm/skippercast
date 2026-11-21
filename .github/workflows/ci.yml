@@ -21,12 +21,14 @@ on:
 # unchanged: PRs still select affected core/web areas on Python 3.11 and 3.13.
 # Obsolete PR revisions are cancelled. Per G (2026-11-19), main pushes share
 # one running slot (not cancelled by concurrency) and one pending slot (newest
-# queued wins). Merge groups, schedules and dispatches keep their own run groups.
+# queued wins) on their first attempt. Reruns are isolated so an old revision
+# cannot replace the newest pending tip. Other events keep their own run groups.
 # PR drafts skip every job (review before CI, G 2026-11-19); required CI runs on ready_for_review and on later pushes to a non-draft PR.
 concurrency:
   group: >-
     ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        && format('ci-main-{0}', github.ref)
+        && ((github.run_attempt == '1' && format('ci-main-{0}', github.ref))
+            || format('ci-main-rerun-{0}-{1}', github.run_id, github.run_attempt))
         || format('{0}-{1}-{2}', github.workflow, github.event_name, github.event.pull_request.number || github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 

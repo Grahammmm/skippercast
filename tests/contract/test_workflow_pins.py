@@ -25,18 +25,18 @@ class WorkflowPinTests(unittest.TestCase):
         for name in ('survey-science', 'e2e', 'check'):
             self.assertRegex(ci, rf'\n  {name}:\n')
 
-    def test_main_pushes_only_coalesce_pending_and_prs_cancel_running(self):
+    def test_main_reruns_cannot_replace_pending_new_tips(self):
         ci = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
-        # Pin the selector and fallback together: a ref-only selector would
-        # let a dispatch on main replace a pending push without deploy coverage.
+        # Only new main tips share the pending slot; an older rerun could evict the newest tip.
         concurrency = ci['concurrency']
-        self.assertEqual({**concurrency, 'group': ' '.join(concurrency['group'].split())}, {
-            'group': "${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') "
-                     "&& format('ci-main-{0}', github.ref) "
-                     "|| format('{0}-{1}-{2}', github.workflow, github.event_name, "
-                     "github.event.pull_request.number || github.run_id) }}",
-            'cancel-in-progress': "${{ github.event_name == 'pull_request' }}",
-        })
+        self.assertEqual(' '.join(concurrency['group'].split()),
+                         "${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') "
+                         "&& ((github.run_attempt == '1' && format('ci-main-{0}', github.ref)) "
+                         "|| format('ci-main-rerun-{0}-{1}', github.run_id, github.run_attempt)) "
+                         "|| format('{0}-{1}-{2}', github.workflow, github.event_name, "
+                         "github.event.pull_request.number || github.run_id) }}")
+        # The unchanged fallback scopes PRs to their number and other events to their run ID.
+        self.assertEqual(concurrency['cancel-in-progress'], "${{ github.event_name == 'pull_request' }}")
         publication = (ROOT / '.github/workflows/seafloor.yml').read_text()
         self.assertIn('group: seafloor-publication', publication)
         self.assertIn('cancel-in-progress: false', publication)
