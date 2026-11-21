@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "humboldt-bay-cape-mendocino",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "woodley-island-marina-humboldt-bay-z13", "center": [-124.15908, 40.80982], "size_m": 4000, "zoom": 13},
+    {"id": "humboldt-outer-z15", "center": [-124.33, 40.76], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}
