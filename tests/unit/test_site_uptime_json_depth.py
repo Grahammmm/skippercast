@@ -16,7 +16,7 @@ DEEP_OBJECTS = ('{"a":' * 10000 + '"' + CANARY + '"' + "}" * 10000).encode()
 GOOD_MANIFEST = json.dumps({"status": "ready", "region": "morro-bay", "expires_at": "2099-01-01T00:00:00Z"}).encode()
 GOOD = {HEALTH: b'{"ok": {"a": [1, {"b": 2}]}}', MANIFEST: GOOD_MANIFEST}
 MAPPING = {HEALTH: {"path": HEALTH, "status": 200, "error": "not JSON"},
-           MANIFEST: {"path": MANIFEST, "status": 200, "error": "habitat unavailable"}}
+           MANIFEST: {"path": MANIFEST, "status": 200, "error": "habitat manifest unreadable"}}
 
 
 class Response(io.BytesIO):
