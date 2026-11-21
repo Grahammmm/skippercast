@@ -5,6 +5,9 @@ import {signal} from '@preact/signals';
 export const mapFirstIdle = signal(false);
 export const markMapIdle = (): void => { if (!mapFirstIdle.peek()) mapFirstIdle.value = true; };
 
+export const chartMounted = signal(false);
+export const markChartMounted = (): void => { if (!chartMounted.peek()) chartMounted.value = true; };
+
 /**
  * SCB-11: false while the page holds the Chart's own downloads (MapLibre, the basemap, the protected areas, the marks) so that
  * they do not share a slow link with the files the first verdict needs; true otherwise. web/app/main.tsx holds it on a page that
@@ -13,6 +16,8 @@ export const markMapIdle = (): void => { if (!mapFirstIdle.peek()) mapFirstIdle.
 export const mapMayLoad = signal(true);
 /** The longest the map waits for the first verdict, from the start of the page load. */
 export const MAP_WAIT_MAX_MS = 6000;
+/** Give Chart's initial downloads a head start without waiting indefinitely for its first idle. */
+export const REEF_WAIT_MAX_MS = 6000;
 let held = false;
 /** Hold the map's downloads; only the first call of a visit holds, so a released map never waits again. */
 export const holdMap = (): void => { if (held) return; held = true; mapMayLoad.value = false; };

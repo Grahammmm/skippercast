@@ -6,6 +6,7 @@ import test from 'node:test';
 import util from 'node:util';
 import {linkVerdict, measuredBytesPerSecond, offerMegabytes, pageTimings, requestReefPublication, acceptReefLoad, mapFirstIdle, SLOW_BYTES_PER_S} from '../web/reef-lazy.ts';
 import {ranking, reefPublication} from '../web/ranking.ts';
+import {chartMounted, markChartMounted, REEF_WAIT_MAX_MS} from '../web/map-ready.ts';
 
 const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
 const DATA = {region: {...read('regions/morro-bay/region.json'), id: 'morro-bay'}, atlas: read('data/atlas.json'), survey: null, geology: null};
@@ -257,4 +258,144 @@ test('connection_and_cache_policy_unchanged: cache hits, empty spans and small t
   const input = [row('https://x.test/a'), row('https://evil.invalid/b')], before = JSON.stringify(input);
   timingsOf(input, 'https://x.test');
   assert.equal(JSON.stringify(input), before, 'the timing buffer is not mutated');
+});
+
+const deferred = region => ({state: 'deferred', region});
+const offer = (region, why) => ({state: 'offer', region, bytes: EXPORT_BYTES, why});
+const ready = region => ({state: 'ready', region, loaded: {targets: [], areas: [], publication: {export_sha256: 'b'.repeat(64)}}});
+
+function ceilingFixture(t, mounted = false) {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  chartMounted.value = false;
+  if (mounted) markChartMounted();
+  t.after(() => { chartMounted.value = false; });
+  // Leave the default ceiling in place and never release the injected map-idle signal.
+  return setup();
+}
+
+test('C2: a fast link loads only after the full ceiling from mount', async t => {
+  const {deps, idle, calls} = ceilingFixture(t);
+  const done = requestReefPublication('morro-bay', deps);
+  t.mock.timers.tick(REEF_WAIT_MAX_MS);
+  markChartMounted();
+  t.mock.timers.tick(REEF_WAIT_MAX_MS - 1);
+  idle.go();
+  await tick();
+  // Resolving this browser-idle gate early would expose a timer armed before mount.
+  assert.deepEqual(reefPublication.value, deferred('morro-bay'));
+  assert.deepEqual(calls, {fetch: 0, size: 0});
+
+  t.mock.timers.tick(1);
+  assert.equal(await done, undefined);
+  assert.deepEqual(reefPublication.value, ready('morro-bay'));
+  assert.deepEqual(calls, {fetch: 1, size: 0});
+});
+
+test('C3: an already mounted Chart starts the ceiling immediately; measured slow offers after browser idle', async t => {
+  const {deps, idle, calls} = ceilingFixture(t, true);
+  let timings = [];
+  deps.link = () => linkVerdict(undefined, timings);
+  const done = requestReefPublication('morro-bay', deps);
+  timings = [BAD];
+  t.mock.timers.tick(REEF_WAIT_MAX_MS);
+  await tick();
+  assert.deepEqual(reefPublication.value, deferred('morro-bay'));
+  assert.deepEqual(calls, {fetch: 0, size: 0});
+  idle.go();
+  assert.equal(await done, undefined);
+  assert.deepEqual(reefPublication.value, offer('morro-bay', 'slow-measured'));
+  assert.deepEqual(calls, {fetch: 0, size: 1});
+});
+
+test('C3: an early offer bypasses both waits, and a duplicate request leaves the offer alone', async () => {
+  for (const why of ['save-data', 'slow-type']) {
+    const {deps, calls} = setup({link: {slow: true, why}});
+    deps.mapIdle = deps.ceiling = deps.idle = () => assert.fail('an early offer must bypass all waits');
+    assert.equal(await requestReefPublication('morro-bay', deps), undefined);
+    assert.deepEqual(reefPublication.value, offer('morro-bay', why));
+    assert.equal(await requestReefPublication('morro-bay', deps), undefined);
+    assert.deepEqual(reefPublication.value, offer('morro-bay', why));
+    assert.deepEqual(calls, {fetch: 0, size: 1});
+  }
+});
+
+test('C3: first map idle wins before the ceiling, then browser idle precedes the link recheck and load', async t => {
+  const {deps, map, idle, calls} = ceilingFixture(t, true);
+  const order = [], load = deps.load;
+  deps.link = () => { order.push('link'); return FAST; };
+  deps.idle = () => { order.push('browser idle'); return idle.p; };
+  deps.load = region => { order.push(`load ${region}`); return load(region); };
+  const done = requestReefPublication('morro-bay', deps);
+  assert.deepEqual(order, ['link']);
+  map.go(); await tick();
+  assert.deepEqual(order, ['link', 'browser idle']);
+  assert.deepEqual(reefPublication.value, deferred('morro-bay'));
+  idle.go();
+  assert.equal(await done, undefined);
+  assert.deepEqual(order, ['link', 'browser idle', 'link', 'load morro-bay']);
+  assert.deepEqual(reefPublication.value, ready('morro-bay'));
+  assert.deepEqual(calls, {fetch: 1, size: 0});
+});
+
+test('C4: a region change before the ceiling drops the older request before it can load or offer', async t => {
+  const {deps, idle, calls} = ceilingFixture(t, true);
+  const old = requestReefPublication('morro-bay', deps);
+  t.mock.timers.tick(1);
+  const current = requestReefPublication('santa-barbara', deps);
+  idle.go();
+  t.mock.timers.tick(REEF_WAIT_MAX_MS - 1);
+  assert.equal(await old, undefined);
+  assert.deepEqual(reefPublication.value, deferred('santa-barbara'));
+  assert.deepEqual(calls, {fetch: 0, size: 0});
+  t.mock.timers.tick(1);
+  assert.equal(await current, undefined);
+  assert.deepEqual(reefPublication.value, ready('santa-barbara'));
+  assert.deepEqual(calls, {fetch: 1, size: 0});
+});
+
+test('C4: a tap before the ceiling wins even if the deferred request would now offer', async t => {
+  const {deps, idle, loader, calls} = ceilingFixture(t, true);
+  let timings = [];
+  deps.link = () => linkVerdict(undefined, timings);
+  const old = requestReefPublication('morro-bay', deps);
+  assert.equal(await acceptReefLoad('morro-bay', loader), undefined);
+  const tapped = reefPublication.value;
+  timings = [BAD];
+  t.mock.timers.tick(REEF_WAIT_MAX_MS);
+  idle.go();
+  assert.equal(await old, undefined);
+  assert.equal(reefPublication.value, tapped);
+  assert.deepEqual(tapped, ready('morro-bay'));
+  assert.deepEqual(calls, {fetch: 1, size: 0});
+});
+
+test('C4: a region change while the ceiling-triggered offer reads its size drops that stale offer', async t => {
+  const {deps, idle, calls} = ceilingFixture(t, true);
+  const size = gate();
+  let timings = [];
+  deps.link = () => linkVerdict(undefined, timings);
+  deps.size = () => { calls.size++; return size.p; };
+  const old = requestReefPublication('morro-bay', deps);
+  timings = [BAD];
+  idle.go();
+  t.mock.timers.tick(REEF_WAIT_MAX_MS);
+  await tick();
+  assert.deepEqual(calls, {fetch: 0, size: 1});
+  await requestReefPublication('santa-barbara', {...deps, size: async () => EXPORT_BYTES});
+  size.go(EXPORT_BYTES);
+  assert.equal(await old, undefined);
+  assert.deepEqual(reefPublication.value, offer('santa-barbara', 'slow-measured'));
+  assert.deepEqual(calls, {fetch: 0, size: 1});
+});
+
+test('C6: advancing the clock on an unmounted Chart cannot release the ceiling', async t => {
+  const {deps, idle, calls} = ceilingFixture(t);
+  const settlements = [];
+  void requestReefPublication('morro-bay', deps).then(result => settlements.push(result));
+  idle.go();
+  t.mock.timers.tick(2 * REEF_WAIT_MAX_MS);
+  await tick();
+  assert.deepEqual(settlements, []);
+  assert.deepEqual(reefPublication.value, deferred('morro-bay'));
+  assert.deepEqual(calls, {fetch: 0, size: 0});
 });
