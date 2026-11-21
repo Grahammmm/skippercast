@@ -2,13 +2,14 @@ import {useId, useState} from 'preact/hooks';
 import pickerStyles from '../region-picker.css?url';
 import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
 import {Button} from '../ui/Button.tsx';
+import {DEFAULT_ZONE} from '../zone.ts';
 import {COVERAGE_LAYERS, coverageNeedsRecheck, coverageRegionURL, coverageStatusId, lifecycleId, snapshot} from '../region-coverage.ts';
 
 export function coverageDay(checkedAt: string, lang: Language): string {
   const checked = Date.parse(checkedAt);
   if (!Number.isFinite(checked)) return checkedAt.slice(0, 10);
   return new Intl.DateTimeFormat(localeOf(lang), {
-    timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+    timeZone: DEFAULT_ZONE, year: 'numeric', month: 'short', day: 'numeric',
   }).format(checked);
 }
 
