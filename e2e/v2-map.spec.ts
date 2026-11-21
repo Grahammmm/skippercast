@@ -522,7 +522,8 @@ test('layer presets preserve Back and helm view makes controls larger', async ({
   await showLayers(page);
   const presets = page.getByRole('group', {name: 'Layer presets'});
   await presets.getByRole('button', {name: 'Offshore'}).click();
-  expect(params(page).layers).toBe('water-temp,sst-contrast,chlorophyll,swell');
+  // MB-13 (§ 2.5): one field at a time, so Offshore shows water temp and its contrast without chlorophyll.
+  expect(params(page).layers).toBe('water-temp,sst-contrast,swell');
   expect(params(page).current).toBe('off');
   await expect(presets.getByRole('button', {name: 'Offshore'})).toHaveAttribute('aria-pressed', 'true');
   await page.goBack();
