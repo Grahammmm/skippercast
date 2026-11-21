@@ -1,17 +1,17 @@
 """Audit original XML metadata from newer USGS DS781 DOI releases."""
-import argparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta, timezone
-import json
+from datetime import datetime, timezone
 from pathlib import Path
-import re
-from urllib.request import Request, urlopen
-from xml.etree import ElementTree as ET
-
 import sys
+from urllib.parse import urlsplit
+from urllib.request import Request, urlopen
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repository root, for research.*
-from research.scripts.audit_usgs_map_metadata import parse_metadata, MAX_XML
+from research.scripts.audit_usgs_map_metadata import (
+    MAX_XML, _audit_xml, _bind, _digest, _healthy, _main, parse_metadata,
+)
 from research.scripts.discover_usgs_doi_releases import official
+
+SCOPE = 'usgs-state-waters-doi-native-metadata'
 
 
 def fetch(url):
@@ -21,94 +21,60 @@ def fetch(url):
         return response.url,raw
 
 
-def audit(releases,previous=None,*,now=None,fetcher=fetch):
-    now=now or datetime.now(timezone.utc)
-    if releases.get('scope')!='usgs-state-waters-doi-product-links':raise ValueError('Wrong USGS DOI scope')
-    tasks=[]
-    for release in releases['releases']:
-        ident=release['release_id'];landing=release['landing_url']
-        if not landing:continue
-        for product in release['products']:
-            url=product['metadata_url']
-            if not official(url,ident,landing):raise ValueError('Original XML URL outside reviewed DOI release')
-            tasks.append((release,product))
-    prior={r['metadata_url']:r for r in (previous or {}).get('records',[])}
-    rows=[]
-    with ThreadPoolExecutor(max_workers=6) as pool:
-        pending={pool.submit(fetcher,p['metadata_url']):(r,p) for r,p in tasks}
-        for future in as_completed(pending):
-            release,product=pending[future]
-            ident=release['release_id'];url=product['metadata_url']
-            try:
-                final,raw=future.result()
-                if not official(final,ident,release['landing_url']):raise ValueError('USGS XML redirected outside reviewed DOI release')
-                parsed=parse_metadata(url,raw,now=now)
-                rows.append({'release_id':ident,'study_areas':release['study_areas'],'kind':product['kind'],
-                             'archive_url':product['archive_url'],'filename':product['filename'],**parsed})
-            except (OSError,TimeoutError,ValueError,ET.ParseError,TypeError) as error:
-                old=prior.get(url)
-                rows.append({**old,'status':'retained','issue':str(error)[:180]} if old else
-                            {'release_id':ident,'study_areas':release['study_areas'],'kind':product['kind'],
-                             'archive_url':product['archive_url'],'filename':product['filename'],
-                             'metadata_url':url,'status':'failed','issue':str(error)[:180]})
-    rows.sort(key=lambda row:(row['release_id'],row['kind'],row['filename']))
-    issues=[row['metadata_url'] for row in rows if row['status']!='ok']
-    return {'schema_version':1,'scope':'usgs-state-waters-doi-native-metadata',
-            'collected_at':now.isoformat(),'last_complete_scan_at':now.isoformat() if not issues else (previous or {}).get('last_complete_scan_at'),
-            'method':'Original CMGDS metadata XML linked from a USGS DOI release. Bounds and class descriptions are source evidence only, not surveyed-pixel or fishing coverage.',
-            'record_count':len(rows),'verified_metadata_count':len(rows)-len(issues),
-            'health':{'status':'ok' if not issues else 'degraded','issues':issues},'records':rows}
+def _inventory(data):
+    if (not isinstance(data, dict) or data.get('scope') != 'usgs-state-waters-doi-product-links'
+            or not isinstance(data.get('releases'), list)):
+        raise ValueError('Invalid USGS DOI inventory')
+    releases = data['releases']
+    source = data.get('index_url')
+    sources, targets = [], {}
+    product_count = 0
+    for release in releases:
+        ident, landing, areas = release['release_id'], release['landing_url'], release['study_areas']
+        doi = release.get('doi')
+        if (not isinstance(ident, str) or not ident or (doi is not None and doi != f'https://doi.org/10.5066/{ident}')
+                or not isinstance(areas, list) or not all(isinstance(area, str) for area in areas)):
+            raise ValueError('Invalid USGS DOI release identity')
+        products = release['products']
+        if not isinstance(products, list) or (landing is None and products) or (
+                landing is not None and not official(landing, ident)):
+            raise ValueError('Invalid USGS DOI release landing or product list')
+        areas = sorted(set(areas))
+        attribution = _digest([source, ident, doi, landing, areas, release.get('official_source_page')])
+        sources.append(attribution)
+        product_count += len(products)
+        for product in products:
+            url, archive, kind, filename = (product[field] for field in ('metadata_url', 'archive_url', 'kind', 'filename'))
+            if (not official(url, ident, landing) or not urlsplit(url).path.lower().endswith('.xml')
+                    or not official(archive, ident, landing) or not urlsplit(archive).path.lower().endswith('.zip')
+                    or kind not in ('bathymetry', 'seafloor_character', 'cmecs')
+                    or not isinstance(filename, str) or not filename):
+                raise ValueError('Invalid original XML product identity for DOI release')
+            targets[_digest([attribution, url, archive, kind, filename])] = (url, {
+                'release_id': ident, 'study_areas': areas, 'landing_url': landing, 'kind': kind,
+                'archive_url': archive, 'filename': filename,
+            })
+    if data.get('release_count', len(releases)) != len(releases) or data.get('product_count', product_count) != product_count:
+        raise ValueError('USGS DOI inventory counts do not match products')
+    healthy = _healthy(data, releases) and all(row['landing_url'] for row in releases)
+    return _bind(SCOPE, source, sources, targets, healthy)
 
 
-def _days(text):
-    days=int(text) if re.fullmatch(r'[+-]?[0-9]+',text.strip()) else 0
-    if not 1<=days<=365:raise argparse.ArgumentTypeError('must be a whole number of days from 1 to 365')
-    return days
+def _parse(url, result, attribution, *, now):
+    final, raw = result
+    if not official(final, attribution['release_id'], attribution['landing_url']):
+        raise ValueError('USGS XML redirected outside reviewed DOI release')
+    return parse_metadata(url, raw, now=now)
 
 
-def _previous(path,key='records',row_key='metadata_url'):
-    try:  # the is_file() stat can raise too, e.g. PermissionError under an unreadable directory
-        if not path or not path.is_file():return None,None
-        previous=json.loads(path.read_text(encoding='utf-8'))
-    except (OSError,ValueError):previous=None  # covers UnicodeDecodeError and JSONDecodeError
-    if not isinstance(previous,dict):return None,'unreadable'
-    rows=previous.get(key)
-    if isinstance(rows,list) and all(isinstance(row,dict) and isinstance(row.get(row_key),str) for row in rows):
-        return previous,None
-    return None,key+' not a usable list'
-
-
-def _scan_time(value,now):
-    try:when=None if value is None else datetime.fromisoformat(value)
-    except (TypeError,ValueError):return None,'bad scan time'
-    if when is None or when.utcoffset() is None:return None,'scan time has no UTC offset' if when else 'no scan time'
-    return (when,None) if when<=now else (None,'scan time is in the future')
+def audit(releases, previous=None, *, now=None, fetcher=fetch):
+    return _audit_xml(_inventory(releases), previous, now=now or datetime.now(timezone.utc), fetcher=fetcher,
+                      parse=_parse, scope=SCOPE,
+                      method='Original CMGDS metadata XML linked from a USGS DOI release. Bounds and class descriptions are source evidence only, not surveyed-pixel or fishing coverage.')
 
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--releases',type=Path,required=True)
-    parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--previous',type=Path)
-    parser.add_argument('--max-age-days',type=_days,default=30)
-    args=parser.parse_args()
-    previous,reason=_previous(args.previous)
-    now=datetime.now(timezone.utc)
-    if previous and isinstance(previous.get('health'),dict) and previous['health'].get('status')=='ok':
-        when,reason=_scan_time(previous.get('last_complete_scan_at'),now)
-        if when and now-when<timedelta(days=args.max_age_days):
-            args.output.parent.mkdir(parents=True,exist_ok=True)
-            (temp:=args.output.with_suffix(args.output.suffix+'.tmp')).write_bytes(args.previous.read_bytes())
-            temp.replace(args.output)
-            print('Retained complete USGS DOI metadata audit from '+previous['last_complete_scan_at']);return
-    if reason:  # an ignored previous is never handed on: a failed fetch must not keep its rows or scan time
-        print(f'previous scan ignored: {reason}',file=sys.stderr);previous=None
-    result=audit(json.loads(args.releases.read_text()),previous,now=now)
-    args.output.parent.mkdir(parents=True,exist_ok=True)
-    temp=args.output.with_suffix(args.output.suffix+'.tmp')
-    temp.write_text(json.dumps(result,separators=(',',':'),ensure_ascii=False)+'\n')
-    temp.replace(args.output)
-    print(f"{result['health']['status']}: {result['verified_metadata_count']}/{result['record_count']} DOI XML records checked")
+    _main('releases', __doc__, _inventory, audit, SCOPE)
 
 
 if __name__=='__main__':main()
