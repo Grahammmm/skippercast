@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 from tempfile import NamedTemporaryFile
@@ -52,9 +53,18 @@ def write_history_tile(target: Path, tile: dict, frame_time: int) -> dict:
 
     path.parent.mkdir(parents=True, exist_ok=True)
     # Use a fresh sibling so a stale .tmp can't be overwritten or followed.
-    with NamedTemporaryFile(dir=path.parent, suffix=".tmp", delete=False) as tmp:
-        tmp.write(data)
-    Path(tmp.name).replace(path)
+    tmp = NamedTemporaryFile(dir=path.parent, suffix=".tmp", delete=False)
+    tmp_path = Path(tmp.name)
+    try:
+        with tmp:
+            tmp.write(data)
+        try:
+            os.link(tmp_path, path)
+        except FileExistsError:
+            if path.is_symlink() or path.read_bytes() != data:
+                raise ValueError("immutable") from None
+    finally:
+        tmp_path.unlink(missing_ok=True)
     return ref
 
 

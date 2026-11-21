@@ -101,18 +101,48 @@ def test_c2_rejects_non_integer_time_before_frame_lookup(tile: dict, when: objec
 def test_c3_writes_via_tmp_sibling(tmp_path: Path, tile: dict, monkeypatch: pytest.MonkeyPatch):
     ref = _ref(_FIRST_BYTES, "20231231")
     path = tmp_path / ref["path"]
-    original_replace = Path.replace
-    replacements = []
+    original_link = os.link
+    publications = []
 
-    def observe_replace(source: Path, dest: Path) -> Path:
-        # Catch direct writes to the immutable path, including partial output before rename.
-        replacements.append((source.parent, source.suffix, dest, dest.exists(), source.read_bytes()))
-        return original_replace(source, dest)
+    def observe_link(source: Path, dest: Path) -> None:
+        # Catch direct writes to the immutable path, including partial output before publication.
+        publications.append((source.parent, source.suffix, dest, dest.exists(), source.read_bytes()))
+        original_link(source, dest)
 
-    monkeypatch.setattr(Path, "replace", observe_replace)
+    monkeypatch.setattr(os, "link", observe_link)
     assert write_history_tile(tmp_path, tile, _FIRST) == ref
-    assert replacements == [(path.parent, ".tmp", path, False, _FIRST_BYTES)]
+    assert publications == [(path.parent, ".tmp", path, False, _FIRST_BYTES)]
     assert path.read_bytes() == _FIRST_BYTES
+    assert list(path.parent.iterdir()) == [path]
+
+
+@pytest.mark.parametrize("existing", [_FIRST_BYTES, b"other bytes"])
+def test_c3_concurrent_destination_is_never_overwritten(
+    tmp_path: Path, tile: dict, monkeypatch: pytest.MonkeyPatch, existing: bytes,
+):
+    ref = _ref(_FIRST_BYTES, "20231231")
+    path = tmp_path / ref["path"]
+    original_exists = Path.exists
+    created = []
+
+    def race_exists(candidate: Path) -> bool:
+        result = original_exists(candidate)
+        if candidate == path and not result and not created:
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            candidate.write_bytes(existing)
+            created.append(candidate.stat())
+        return result
+
+    monkeypatch.setattr(Path, "exists", race_exists)
+    if existing == _FIRST_BYTES:
+        assert write_history_tile(tmp_path, tile, _FIRST) == ref
+    else:
+        with pytest.raises(ValueError, match=r"\Aimmutable\Z"):
+            write_history_tile(tmp_path, tile, _FIRST)
+    assert created
+    assert (path.read_bytes(), path.stat().st_ino, path.stat().st_mtime_ns) == (
+        existing, created[0].st_ino, created[0].st_mtime_ns,
+    )
     assert list(path.parent.iterdir()) == [path]
 
 
