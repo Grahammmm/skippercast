@@ -70,12 +70,15 @@ def test_region_and_sector_readiness_count_only_affirmative_targets(tmp_path, mo
         packet[field] = hashlib.sha256((tmp_path / source).read_bytes()).hexdigest()
         contracts.atomic_json(path, packet)
 
-    monkeypatch.setattr(build, 'load_region', lambda *_: dict(region))
+    # These build collaborators receive the shared catalog snapshot; keep the
+    # readiness assertions isolated from catalog and coastal compilation I/O.
+    monkeypatch.setattr(build, 'load_region', lambda *_, catalogs=None: dict(region))
     monkeypatch.setattr(build, 'load_catalogs', lambda *_: ({}, {}))
-    monkeypatch.setattr(build, 'requirement_report', lambda *_: report)
+    monkeypatch.setattr(build, 'requirement_report', lambda *_, catalogs=None: report)
+    monkeypatch.setattr(build, 'compile_coasts', lambda *_, catalogs=None: None)
     for name in ('validate_regional_rules', 'publish_shoreline', 'publish_depth_contours',
                  'publish_startup_forms', 'publish_land_water', 'compile_launch_points',
-                 'compile_shore_habitat', 'compile_coasts'):
+                 'compile_shore_habitat'):
         monkeypatch.setattr(build, name, lambda *_: None)
     monkeypatch.setattr(build, 'atomic_json', lambda path, value, *, kind=None:
                         contracts.atomic_json(path, value, kind=kind if kind == 'coverage' else None))
