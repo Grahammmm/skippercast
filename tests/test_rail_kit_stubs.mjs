@@ -49,6 +49,8 @@ test('all nine kit stubs are selectable, not preselected, and survive unrelated 
 test('the rendered legend uses live module metadata and the actual stack result', () => {
   pick('kd490');
   assert.match(row('kd490'), /no data yet/);
+  assert.match(row('kd490'), /data-kit-reason="kd490"/);
+  assert.doesNotMatch(row('kd490'), /\sdata-reason=/);
   const set = (state, stack = {status: 'drawn', reps: ['fill']}) => {
     m.testState.value = state;
     if (m.registry.chartStack) m.registry.chartStack.value = [{id: 'kd490', opacity: {}, ...stack}];

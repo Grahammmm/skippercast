@@ -455,7 +455,7 @@ function KitRows({on}: {on: readonly string[]}) {
     const state = liveKitRow(kitState(id), stack), row = kitRow(id, state), label = t(row.labelId as StringId, lang);
     const layer = row.byLabelId ? t(row.byLabelId as StringId, lang) : label;
     return <li key={id} class="app-legend-plain" data-kit={id} data-state={state.kind}>{row.noteId === 'legend.skl.noData' ? null : label}
-      {row.noteId ? <p class="app-legend-note" data-reason={id}>{t(row.noteId as StringId, lang, {...row.vars, layer})}</p> : null}
+      {row.noteId ? <p class="app-legend-note" data-kit-reason={id}>{t(row.noteId as StringId, lang, {...row.vars, layer})}</p> : null}
     </li>;
   })}</>;
 }
