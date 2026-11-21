@@ -75,6 +75,15 @@ test('C2: decide from the highest attempt without sorting the input in place', (
 const canRetry = Object.freeze({attempt: 2, status: 'failed', httpStatus: 503});
 const exhausted = Object.freeze({attempt: 3, status: 'failed', httpStatus: 503});
 
+test('C3: ignore malformed outcomes without masking valid outcomes', () => {
+  const malformed = [null, undefined, 3, {}, {get status() { throw new TypeError('unreadable'); }}];
+  const accepted = {attempt: 1, status: 'accepted', httpStatus: 201};
+  assert.equal(eventStatus(malformed, 1, retryable), 'held');
+  assert.equal(eventStatus([...malformed, accepted], 1, retryable), 'delivered');
+  assert.equal(eventStatus([...malformed, canRetry], 1, retryable), 'pending');
+  assert.equal(eventStatus(malformed, 0, retryable), 'in-app');
+});
+
 // A pending subscription must not mask a successful one.
 test('C3: delivered wins over an outstanding retry', () => {
   const accepted = Object.freeze({attempt: 1, status: 'accepted', httpStatus: 201});

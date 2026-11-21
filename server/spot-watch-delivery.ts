@@ -32,11 +32,24 @@ export function nextAttempt(prior: readonly unknown[], retryable: Retryable): De
 }
 
 export function eventStatus(
-  outcomes: readonly Outcome[],
+  outcomes: readonly unknown[],
   subscriptionCount: number,
   retryable: Retryable,
 ): 'delivered' | 'pending' | 'held' | 'in-app' {
-  if (outcomes.some(outcome => outcome.status === 'accepted')) return 'delivered';
-  if (outcomes.some(({status, httpStatus, attempt}) => retryable(status, httpStatus, attempt))) return 'pending';
+  const readable: Outcome[] = [];
+  for (const row of outcomes) {
+    if (row === null || typeof row !== 'object') continue;
+    try {
+      const {status, httpStatus, attempt} = row as Record<string, unknown>;
+      if (typeof status !== 'string' || status.length === 0 ||
+          typeof attempt !== 'number' ||
+          (httpStatus !== null && typeof httpStatus !== 'number')) continue;
+      readable.push({status, httpStatus, attempt});
+    } catch {
+      // Ignore unreadable outcomes without hiding other subscriptions.
+    }
+  }
+  if (readable.some(outcome => outcome.status === 'accepted')) return 'delivered';
+  if (readable.some(({status, httpStatus, attempt}) => retryable(status, httpStatus, attempt))) return 'pending';
   return subscriptionCount > 0 ? 'held' : 'in-app';
 }
