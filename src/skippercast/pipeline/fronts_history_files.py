@@ -34,6 +34,10 @@ def _stale_names(history_dir: Path, keep: frozenset[str]) -> tuple[str, ...]:
     return tuple(sorted(stale))
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
 def write_fronts_history(
     region_dir: str | Path, day: str, today: str, keep_days: int = 7,
 ) -> FrontsHistoryWrite:
@@ -41,7 +45,7 @@ def write_fronts_history(
     region_dir = Path(region_dir)
     try:
         source = (region_dir / "sst-fronts.json").read_bytes()
-        document = json.loads(source)
+        document = json.loads(source, parse_constant=_reject_json_constant)
     except (OSError, ValueError) as exc:
         raise FrontsHistoryError("cannot read the live SST fronts document") from exc
     if (

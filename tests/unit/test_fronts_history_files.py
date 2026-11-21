@@ -56,7 +56,11 @@ def _index_bytes(index):
     b"[]",
     b'{"region_id":"other-region","layer_id":"sst-fronts"}',
     b'{"region_id":"test-region","layer_id":"other-layer"}',
-], ids=["missing", "malformed", "bad-encoding", "not-object", "wrong-region", "wrong-layer"])
+    b'{"region_id":"test-region","layer_id":"sst-fronts","value":NaN}',
+    b'{"region_id":"test-region","layer_id":"sst-fronts","value":Infinity}',
+    b'{"region_id":"test-region","layer_id":"sst-fronts","value":-Infinity}',
+], ids=["missing", "malformed", "bad-encoding", "not-object", "wrong-region", "wrong-layer",
+        "nan", "infinity", "negative-infinity"])
 def test_c1_invalid_live_document_leaves_existing_history_untouched(region, content):
     """C1: Reject bad live input before a dated file or index can be changed."""
     _put(region, INDEX, b"[]\n")
