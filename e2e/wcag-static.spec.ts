@@ -138,7 +138,7 @@ test.describe('at 360 px', () => {
     });
   }
 
-  test('every status group scrolls inside its own wrapper, by keyboard, without moving the page', async ({page}) => {
+  test('status groups wrap long names on phones and retain keyboard scrolling for wider tables', async ({page}) => {
     const index = await (await page.request.get('/regions/index.json')).json();
     for (const region of index.regions) region.name = 'W'.repeat(90);   // an unbreakable name wider than the phone
     await page.route('**/regions/index.json', route => route.fulfill({json: index}));
@@ -154,6 +154,21 @@ test.describe('at 360 px', () => {
       expect(info.width).toBeLessThanOrEqual(360);
     }
     const wide = wraps.first();
+    for (const wrap of await wraps.all()) {
+      expect(await wrap.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+      const cells = await wrap.locator('tr').evaluateAll(rows => rows.map(row => {
+        const bounds = row.getBoundingClientRect();
+        return Array.from(row.children).every(cell => {
+          const rect = cell.getBoundingClientRect();
+          return rect.left >= bounds.left - 0.5 && rect.right <= bounds.right + 0.5 && cell.scrollWidth <= cell.clientWidth;
+        });
+      }));
+      expect(cells.every(Boolean)).toBe(true);
+    }
+    await expect(wide.locator('table thead th[scope="col"]')).toHaveCount(4);
+    await expect(wide.locator('tbody th[scope="row"]', {hasText: `Buoys: ${'W'.repeat(90)}`})).toHaveCount(index.regions.length);
+    // A genuinely wider table must still be reachable using the named wrapper.
+    await wide.locator('table').evaluate(table => { table.style.minWidth = '720px'; });
     expect(await wide.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
     await wide.focus();
     for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
