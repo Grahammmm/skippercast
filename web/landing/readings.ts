@@ -9,10 +9,12 @@
 // itself, "backup for" the primary, never under the primary's name.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
+import {compass} from '../compass.ts';
 import {num, t, type Language} from '../i18n.ts';
 import {sharedFetch} from '../shared-fetch.ts';
 import {sharedStation, sourceStation, stationText} from '../station-label.ts';
-import {FT_PER_M, KT_PER_MS} from '../units.ts';
+import {units, type Units} from '../unit-choice.ts';
+import {FT_PER_M, fToC, KT_PER_MS, M_PER_FT, WIND_SPEED} from '../units.ts';
 
 import {DEFAULT_REGION, DEFAULT_PLACE, placeLabel} from './place.ts';
 export {DEFAULT_REGION, DEFAULT_PLACE, placeLabel} from './place.ts';
@@ -51,9 +53,9 @@ interface Feed {schema_version?: number; generated_at?: string; sources?: Record
 
 const time = (value: unknown): number => typeof value === 'string' && /(?:Z|[+-]\d\d:\d\d)$/.test(value) ? Date.parse(value) : NaN;
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
-const POINTS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-/** 16-point compass name for degrees true. */
-export const compass = (deg: number): string => POINTS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]!;
+/** English keeps toFixed's trailing zero; Spanish uses its comma and at most one decimal. */
+const oneDecimal = (n: number, lang: Language): string => lang === 'es' ? num(Number(n.toFixed(1)), lang, 1) : n.toFixed(1);
+export {compass} from '../compass.ts';
 
 /** "about 56 nm WNW of Morro Bay harbor" for NDBC `station`, or null when the region lacks either position. SC0707-05: `lang` words it; the harbor's name stays as published. */
 export function fromHarbor(region: RegionStations, station: string | undefined, lang: Language = 'en'): string | null {
@@ -94,7 +96,7 @@ function judged(station: string, at: number | null, ok: boolean, limitH: number 
 }
 
 /** Wind, swell and water from the conditions feed; the region names the buoys when the feed is missing and places them against its harbor. */
-export function buoyReadings(feed: unknown, region: RegionStations = {}, now = Date.now(), lang: Language = 'en'): Reading[] {
+export function buoyReadings(feed: unknown, region: RegionStations = {}, now = Date.now(), lang: Language = 'en', u: Units = units.peek()): Reading[] {
   const f = (feed as Feed)?.schema_version === 1 ? feed as Feed : null;
   const stations = region.stations ?? {};
   const src = (key: string) => f?.sources?.[key];
@@ -119,25 +121,30 @@ export function buoyReadings(feed: unknown, region: RegionStations = {}, now = D
     sharedStation(actual(key, buoy), actual(other, otherBuoy)) ? t('landing.basis.same', lang, {kind: t(`landing.basis.kind.${kind}`, lang)}) : '';
 
   const wind = newest(src('offshore'), 'WSPD', 'm/s');
-  const gust = wind && finite(wind.row.GST) ? Math.round((wind.row.GST as number) * KT_PER_MS) : null;
+  const speed = WIND_SPEED[u.wind], roundWind = (ms: number) => Math.round(ms * KT_PER_MS * speed.factor);
+  const gust = wind && finite(wind.row.GST) ? roundWind(wind.row.GST) : null;
   const windFrom = wind && finite(wind.row.WDIR) ? compass(wind.row.WDIR as number) : null;
   const swell = newest(src('diablo-spectrum'), 'SwH', 'm');
   const period = swell && finite(swell.row.SwP) ? `${Math.round(swell.row.SwP as number)} s` : null;
-  /** One decimal: English as toFixed gives it, Spanish with its comma (num keeps at most one decimal). */
-  const oneDecimal = (n: number): string => lang === 'es' ? num(Number(n.toFixed(1)), lang, 1) : n.toFixed(1);
   const none = t('landing.reading.none', lang);
   const water = newest(src('diablo'), 'WTMP', 'degC');
+  const waterReading = (c: number) => {
+    const f = c * 1.8 + 32;
+    if (u.temp === 'F') return {reading: String(Math.round(f)), unit: '°F'};
+    const value = Math.round(fToC(f) * 10) / 10;
+    return {reading: lang === 'en' ? String(value) : num(value === 0 ? 0 : value, lang, 1), unit: '°C'};
+  };
   const rule = (key: string) => { const h = limit(key); return h === null ? t('landing.basis.rule.none', lang) : t('landing.basis.rule.limit', lang, {h}); };
   return [
-    {id: 'wind', label: t('tile.wind', lang), ...(wind ? {reading: String(Math.round((wind.row.WSPD as number) * KT_PER_MS)), unit: 'kt'} : {reading: none}),
+    {id: 'wind', label: t('tile.wind', lang), ...(wind ? {reading: String(roundWind(wind.row.WSPD as number)), unit: speed.label} : {reading: none}),
       detail: [windFrom, gust !== null ? t('landing.reading.gusts', lang, {n: gust}) : null].filter(Boolean).join(' · ') || undefined,
       ...judged(station('offshore', stations.offshore_buoy), wind?.at ?? null, ok('offshore'), limit('offshore'), now, lang),
       basis: t('landing.basis.wind', lang, {station: name('offshore', 'offshore', stations.offshore_buoy), rule: rule('offshore'), same: same('offshore', 'diablo', 'water', stations.offshore_buoy, stations.nearshore_buoy)})},
-    {id: 'swell', label: t('tile.swell', lang), ...(swell ? {reading: oneDecimal((swell.row.SwH as number) * FT_PER_M), unit: 'ft'} : {reading: none}),
+    {id: 'swell', label: t('tile.swell', lang), ...(swell ? {reading: oneDecimal((swell.row.SwH as number) * (u.height === 'm' ? 1 : FT_PER_M), lang), unit: u.height} : {reading: none}),
       detail: [period, swell && typeof swell.row.SwD === 'string' && /^[NSEW]{1,3}$/.test(swell.row.SwD) ? swell.row.SwD : null].filter(Boolean).join(' · ') || undefined,
       ...judged(station('diablo-spectrum', stations.nearshore_buoy), swell?.at ?? null, ok('diablo-spectrum'), limit('diablo-spectrum'), now, lang),
       basis: t('landing.basis.swell', lang, {station: name('diablo-spectrum', 'nearshore', stations.nearshore_buoy, 'diablo'), rule: rule('diablo-spectrum'), same: same('diablo-spectrum', 'offshore', 'wind', stations.nearshore_buoy, stations.offshore_buoy)})},
-    {id: 'water', label: t('tile.water', lang), ...(water ? {reading: String(Math.round((water.row.WTMP as number) * 1.8 + 32)), unit: '°F'} : {reading: none}),
+    {id: 'water', label: t('tile.water', lang), ...(water ? waterReading(water.row.WTMP as number) : {reading: none}),
       ...judged(station('diablo', stations.nearshore_buoy), water?.at ?? null, ok('diablo'), limit('diablo'), now, lang),
       basis: t('landing.basis.water', lang, {station: name('diablo', 'nearshore', stations.nearshore_buoy), rule: rule('diablo'), same: same('diablo', 'offshore', 'wind', stations.nearshore_buoy, stations.offshore_buoy)})},
   ];
@@ -150,7 +157,7 @@ export const tideURL = (station: string): string =>
   `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=water_level&application=SkipperCast&station=${encodeURIComponent(station)}&range=2&datum=MLLW&time_zone=gmt&units=english&format=json`;
 
 /** Tide: the latest observed water level and whether it rose over the last two hours; `note` is the region's own caveat for the station. */
-export function tideReading(response: unknown, station: string, stationName?: string, now = Date.now(), note?: string, lang: Language = 'en'): Reading {
+export function tideReading(response: unknown, station: string, stationName?: string, now = Date.now(), note?: string, lang: Language = 'en', u: Units = units.peek()): Reading {
   const data = (response as {data?: unknown})?.data;
   const rows = (Array.isArray(data) ? data as {t?: unknown; v?: unknown}[] : [])
     .map(r => ({at: coopsTime(r?.t), v: typeof r?.v === 'string' && r.v.trim() ? Number(r.v) : NaN}))
@@ -158,7 +165,7 @@ export function tideReading(response: unknown, station: string, stationName?: st
   const last = rows.at(-1), first = rows[0];
   const trend = last && first && last.at - first.at >= 30 * 60000 ? (last.v - first.v > 0.05 ? 'rising' : last.v - first.v < -0.05 ? 'falling' : 'slack') : undefined;
   return {
-    id: 'tide', label: t('tile.tide', lang), ...(last ? {reading: lang === 'es' ? num(Number(last.v.toFixed(1)), lang, 1) : last.v.toFixed(1), unit: 'ft'} : {reading: t('landing.reading.none', lang)}), detail: trend && t(`landing.reading.${trend}`, lang),
+    id: 'tide', label: t('tile.tide', lang), ...(last ? {reading: oneDecimal(last.v * (u.height === 'm' ? M_PER_FT : 1), lang), unit: u.height} : {reading: t('landing.reading.none', lang)}), detail: trend && t(`landing.reading.${trend}`, lang),
     ...judged(`NOAA ${station}`, last?.at ?? null, true, TIDE_LIMIT_H, now, lang),
     basis: t('landing.basis.tide', lang, {station: stationName === undefined ? t('landing.tide.station', lang) : stationName, h: TIDE_LIMIT_H, note: note?.trim() ? ` ${note.trim()}` : ''}),
   };
@@ -175,6 +182,7 @@ export interface Readout {readonly readings: Reading[]; readonly feed: FeedState
 
 /** Load the default region's readings; every failure becomes an unavailable tile, never an error. */
 export async function loadReadout(fetchFn: typeof fetch = sharedFetch, region = DEFAULT_REGION, now: () => number = Date.now, lang: Language = 'en'): Promise<Readout> {
+  const u = units.peek();
   const json = async (url: string): Promise<unknown> => {
     const response = await fetchFn(url, {signal: AbortSignal.timeout(10000)});
     if (!response.ok) throw Error(`${url} ${response.status}`);
@@ -184,6 +192,6 @@ export async function loadReadout(fetchFn: typeof fetch = sharedFetch, region = 
   const station = info.stations?.tide ?? '9412110';
   const [feed, tide] = await Promise.all([json(feedPath(info.conditions_feed, region)).catch(() => null), json(tideURL(station)).catch(() => null)]);
   const at = now();
-  return {readings: [...buoyReadings(feed, info, at, lang), tideReading(tide, station, info.stations?.tide_name, at, info.stations?.tide_note, lang)], feed: feedState(feed, at),
+  return {readings: [...buoyReadings(feed, info, at, lang, u), tideReading(tide, station, info.stations?.tide_name, at, info.stations?.tide_note, lang, u)], feed: feedState(feed, at),
     place: typeof info.name === 'string' && info.name.trim() ? info.name.trim() : DEFAULT_PLACE};
 }

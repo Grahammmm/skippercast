@@ -19,7 +19,7 @@ import type * as MapLibre from 'maplibre-gl';
 import type {NearshoreHour, NearshoreSite} from '../../packages/coast/src/enrichment-types.ts';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {t} from '../i18n.ts';
-import {compass} from '../landing/readings.ts';
+import {compass} from '../compass.ts';
 import {cp, esDecimal, esStamp, type MarkCopyPart} from '../mark-copy.ts';
 import type {ChartMark} from './coastline.ts';
 import {freshNearshore, nearshoreAt, nearshoreSampleLabel} from './nearshore-model.js';
