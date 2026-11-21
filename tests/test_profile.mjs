@@ -16,13 +16,13 @@ test('the table matches design § 8 row for row', () => {
   assert.equal(DEFAULT_PROFILE, 'boat');
   const rows = {
     boat: {defaultTarget: 'lingcod', maxDepthFt: 300, method: 'boat', fixedSpecies: [], whereToLook: 'reef-fit', swellTile: 'offshore',
-      defaultLayers: ['seafloor', 'currents'], caveat: 'Habitat describes a place to look; fish presence is unverified.'},
+      defaultLayers: ['fleet'], caveat: 'Habitat describes a place to look; fish presence is unverified.'},
     shore: {defaultTarget: 'surfperch', maxDepthFt: null, method: 'shore', fixedSpecies: ['surfperch', 'halibut'], whereToLook: 'shore-runs', swellTile: 'nearshore',
-      defaultLayers: ['swell', 'water-temp'], caveat: 'Offshore seas do not measure breakers at your beach; check surf, access and water quality.'},
+      defaultLayers: ['fleet'], caveat: 'Offshore seas do not measure breakers at your beach; check surf, access and water quality.'},
     spear: {defaultTarget: 'cabezon-shallow-reef', maxDepthFt: 60, method: 'dive', fixedSpecies: [], whereToLook: 'reef-shallow', swellTile: 'nearshore',
-      defaultLayers: ['seafloor', 'swell'], caveat: 'In-water visibility is unverified; surface currents cannot clear a dive.'},
+      defaultLayers: ['fleet'], caveat: 'In-water visibility is unverified; surface currents cannot clear a dive.'},
     kayak: {defaultTarget: 'lingcod', maxDepthFt: 120, method: 'boat', fixedSpecies: [], whereToLook: 'reef-fit', swellTile: 'offshore',
-      defaultLayers: ['seafloor', 'currents'], caveat: 'Wind, offshore drift and surf at the launch set a kayak day; a forecast cannot clear a paddle.'},
+      defaultLayers: ['fleet'], caveat: 'Wind, offshore drift and surf at the launch set a kayak day; a forecast cannot clear a paddle.'},
   };
   for (const [id, row] of Object.entries(rows)) {
     const {id: tableId, label, ...rest} = profileSemantics(id);
