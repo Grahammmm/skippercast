@@ -265,13 +265,15 @@ def layer_web_tokens(tokens):
 
 
 def layer_projections(directory, index):
+    from typing import Any
+
     version = index["layers_default"]
     entry = index["layers"][version]
     tokens = load_layers(version, root=directory)
     colours = {}
     css_hex = re.compile(r"#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})")
 
-    def project(value, path=()):
+    def project(value: object, path=()) -> Any:
         if isinstance(value, Mapping):
             return {key: project(item, path if not path and key == "layers" else (*path, key))
                     for key, item in value.items()}
@@ -290,10 +292,31 @@ def layer_projections(directory, index):
     css = (f"  /* skl:begin {header} */\n"
            + "".join(f"  --{name}: {value};\n" for name, value in colours.items())
            + "  /* skl:end */\n")
+    sst = web["layers"]["sst-fill"]
+    stretch = sst["stretch"]
+    edge = sst["band_edge"]
+    # Emit independent literals so using an SST token does not bundle the full kit table.
+    sst_exports = {
+        "MAX_AGE_H": sst["data_age"]["max_age_h"],
+        "ZOOM": sst["zoom"],
+        "PICK": sst["pick"],
+        "RAMP_STOPS": sst["ramp_stops"],
+        "BAND_STEPS": sst["band_step_f_by_zoom"],
+        "BAND_COLORS_RULE": sst["band_colors_rule"],
+        "STRETCH": [stretch[key] for key in ("low_pct", "high_pct", "method", "round", "user_lock")],
+        "OPACITY": sst["opacity"],
+        "BAND_EDGE": [edge[key] for key in ("color", "width_pt", "opacity", "hide_when_any_on")],
+        "WATER_ONLY": sst["water_only"],
+        "DISPLAY_SAMPLING": web["display_sampling"],
+        "LEGEND_TITLE": sst["legend"]["title"],
+        "BASE_DESATURATION": web["stacking"]["base_desaturation_when_field_on"] if sst["desaturates_base"] else 0,
+    }
     ts = (f"// {header}\n"
           f"export const LAYERS_STYLE_VERSION = {json.dumps(version)};\n"
           f"export const LAYERS_STYLE = {pretty(web)} as const;\n"
-          f"export const SKL_PALETTE_TOKENS = {pretty({name: name for name in colours})} as const;\n")
+          f"export const SKL_PALETTE_TOKENS = {pretty({name: name for name in colours})} as const;\n"
+          + "".join(f"export const SST_{name} = {json.dumps(value, ensure_ascii=False)} as const;\n"
+                    for name, value in sst_exports.items()))
     # The fragment contains immutable mappings from the loader. Convert them only at serialization.
     doc = fragment(tokens)
     canonical = json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False, default=dict)

@@ -26,6 +26,7 @@ import {CONTRAST_SOURCE, LAYERS, layerEntry, railNotes} from '../web/map/layers.
 import {MPA_FILL} from '../web/map/mpa.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {CONTOUR_LABELS, CONTOUR_LAYER, SST_LAYER, waterTempOverlay} from '../web/map/sst.ts';
+import {SST_BAND_EDGE} from '../web/map/sst-bands.ts';
 import {ISOLINE_LABELS, ISOLINE_LAYER, STROKE_CASING, STROKE_LAYER, SWELL_LAYER, swellOverlay} from '../web/map/swell.ts';
 import {PLACE_LABELS} from '../web/map/style.ts';
 import {PROFILE_TABLE, RAIL_IDS} from '../web/profile.ts';
@@ -303,7 +304,7 @@ test('in the stack Temp contrast sits over Water temp and under chlorophyll, swe
   }
   const control = class {}, module = {lib: {Map: FakeMap, NavigationControl: control, ScaleControl: control, AttributionControl: control, setWorkerUrl() {}, addProtocol() {}},
     workerUrl: '/w.js', Protocol: class { constructor() { this.tile = () => {}; } }};
-  const sst = [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS], swell = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER];
+  const sst = [SST_LAYER, SST_BAND_EDGE, CONTOUR_LAYER, CONTOUR_LABELS], swell = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER];
   // Replay the captured contrast call among the other overlays' § 9 anchors in every arrival order.
   const contours = contoursOverlay(sentinel, {type: 'FeatureCollection', features: []}), contourIds = contours.layers.map(l => l.id);
   const wind = windOverlay(sentinel), windIds = wind.layers.map(l => l.id);
