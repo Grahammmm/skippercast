@@ -108,8 +108,12 @@ async function warmBody(response: Response, signal: AbortSignal, parse = false):
 export type WarmResult = {state: Exclude<WarmState, 'loading'>; paths: string[]};
 export type StartupOptions = {timeoutMs?: number; signal?: AbortSignal};
 
+// Share only region metadata; other warmup assets must stay streaming and bounded.
+const warmFetch: typeof fetch = (input, init) => /\/region\.json$/.test(new URL(String(input)).pathname)
+  ? sharedFetch(input, init) : fetch(input, init);
+
 /** W10B's region-switch boundary: stale completions never publish, even A→B→A. */
-export function createRegionWarmup(fetchFn: typeof fetch = sharedFetch, nav: unknown = (globalThis as {navigator?: unknown}).navigator) {
+export function createRegionWarmup(fetchFn: typeof fetch = warmFetch, nav: unknown = (globalThis as {navigator?: unknown}).navigator) {
   let current: AbortController | undefined;
   const cancel = () => { current?.abort(); current = undefined; };
   return {cancel, async select(region: string, page: string, publish: (result: WarmResult) => void, timeoutMs = 8000) {
@@ -122,7 +126,7 @@ export function createRegionWarmup(fetchFn: typeof fetch = sharedFetch, nav: unk
 }
 
 /** Fetch only the chosen region; the whole warmup (including bodies) has one deadline. */
-export async function warmRegion(region: string, page: string, fetchFn: typeof fetch = sharedFetch, nav: unknown = (globalThis as {navigator?: unknown}).navigator,
+export async function warmRegion(region: string, page: string, fetchFn: typeof fetch = warmFetch, nav: unknown = (globalThis as {navigator?: unknown}).navigator,
   options: StartupOptions = {}): Promise<WarmResult> {
   if (saveData(nav)) return {state: 'skipped', paths: []};
   try {

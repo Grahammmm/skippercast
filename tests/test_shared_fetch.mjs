@@ -122,6 +122,59 @@ test('landing warmup can abort while the readout and night-map-shaped read finis
   assert.equal(frame.name, 'Test Harbor');
 });
 
+test('default warmup stops oversized metadata before buffering the complete stream', async t => {
+  const region = 'bounded-metadata'; let chunks = 0, cancelled = false;
+  const {page} = landingFetch(t, region, () => new Response(new ReadableStream({
+    pull(controller) { chunks++; controller.enqueue(new Uint8Array(64 * 1024)); if (chunks === 32) controller.close(); },
+    cancel() { cancelled = true; },
+  })));
+  assert.equal((await warmRegion(region, page)).state, 'failed');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(chunks < 32, `consumed ${chunks} chunks`);
+  assert.equal(cancelled, true);
+});
+
+test('default warmup cancels a stalled shared metadata transfer when its deadline expires', async t => {
+  const region = 'bounded-deadline'; let cancelled = false, signal;
+  const {page} = landingFetch(t, region, init => { signal = init.signal; return new Response(new ReadableStream({cancel() { cancelled = true; }})); });
+  assert.equal((await warmRegion(region, page, undefined, undefined, {timeoutMs: 20})).state, 'failed');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(signal.aborted, true);
+  assert.equal(cancelled, true);
+});
+
+test('a remaining reader finishes the metadata body after warmup aborts', async t => {
+  const region = 'bounded-other-reader', started = deferred(); let body, cancelled = false;
+  const {page, regionFetch} = landingFetch(t, region, () => new Response(new ReadableStream({
+    start(controller) { body = controller; started.resolve(); },
+    cancel() { cancelled = true; },
+  })));
+  const controller = new AbortController();
+  const warm = warmRegion(region, page, undefined, undefined, {signal: controller.signal});
+  await started.promise;
+  const readout = loadReadout(undefined, region);
+  controller.abort();
+  assert.equal((await warm).state, 'failed');
+  body.enqueue(new TextEncoder().encode('{"name":"Test Harbor","chart_files":[]}'));
+  body.close();
+  assert.equal((await readout).place, 'Test Harbor');
+  assert.equal(regionFetch.mock.callCount(), 1);
+  assert.equal(cancelled, false);
+});
+
+test('default warmup bounds asset streams without sharing them', async t => {
+  const region = 'bounded-assets'; let chunks = 0, cancelled = false;
+  const {page} = landingFetch(t, region, landingRegion);
+  t.mock.method(globalThis, 'fetch', async url => !new URL(url, page).pathname.endsWith('/atlas-marks.json') ? landingRegion() : new Response(new ReadableStream({
+    pull(controller) { chunks++; controller.enqueue(new Uint8Array(1024 * 1024)); if (chunks === 25) controller.close(); },
+    cancel() { cancelled = true; },
+  })));
+  assert.equal((await warmRegion(region, page)).state, 'failed');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(chunks < 25, `consumed ${chunks} chunks`);
+  assert.equal(cancelled, true);
+});
+
 // A shared 500 must keep each caller's own fallback without poisoning a later read.
 test('landing callers handle a failed share independently and can retry', async t => {
   const region = 'shared-landing-retry';
