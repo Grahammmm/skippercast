@@ -116,7 +116,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     const surf = shoreHour && shoreHour.surf.band !== 'Unknown'
       ? ` · ${shoreHour.surf.band.toLowerCase()} surf${shoreHour.surf.basis === 'offshore' ? ' (offshore estimate)' : ''}${shoreHour.surf.sneaker ? ' · long-period swell' : ''}` : '';
     swell = tile('swell', 'Swell', point?.waveFt ?? null, 'ft', (site ? `${finite(point?.periodS) ? `${periodSecondsText(point.periodS)} s · ` : ''}${site.name}` : 'No nearshore model site') + surge + surf,
-      site ? {label: site.name, url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now, false,
+      site ? {label: 'Scripps/CDIP', url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now, false,
       {parts: [...(site ? [...(finite(point?.periodS) ? [{kind: 'literal', text: `${periodSecondsText(point.periodS)} s`} as TileDetailPart] : []), {kind: 'literal', text: site.name} as TileDetailPart] : [{kind: 'noNearshore'} as TileDetailPart]),
         ...(surgeHour && surgeHour.surge.band !== 'Unknown' ? [{kind: 'surge', band: surgeHour.surge.band} as TileDetailPart] : []),
         ...(shoreHour && shoreHour.surf.band !== 'Unknown' ? [{kind: 'surf', band: shoreHour.surf.band, offshore: shoreHour.surf.basis === 'offshore'} as TileDetailPart, ...(shoreHour.surf.sneaker ? [{kind: 'longSwell'} as TileDetailPart] : [])] : [])],

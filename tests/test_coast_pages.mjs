@@ -72,6 +72,8 @@ test('nearshore original sampling remains visible only within supported first/la
  for(const [hour,present] of [['11',false],['13',true],['16',false]]){
   const html=await(await serveCoastPage(request('/report?hour=2026-10-07T'+hour+':00Z'),options())).text();
   assert.equal(html.includes('Sampling interval 180 minutes'),present,hour);
+  // A rendered model section must carry linked credit even if no sample covers that hour.
+  assert.match(html,/<a href="https:\/\/cdip\.ucsd\.edu\/">CDIP, Scripps Institution of Oceanography<\/a>/);
   if(present)assert.match(html,/Original model sample <time datetime="2026-10-07T12:00:00.000Z"/);
  }
 });
