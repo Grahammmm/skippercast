@@ -309,7 +309,10 @@ test('play steps hours, stops at the end of the horizon and pauses when the page
 test('prefers-reduced-motion never auto-plays: the button steps one hour per press', async ({page, pageErrors, v2, isMobile}) => {
   test.skip(isMobile, 'the step button is the desktop dock\'s');
   await page.emulateMedia({reducedMotion: 'reduce'});
+  // Pin the page clock to the test's hour: a load across a UTC hour boundary would
+  // otherwise make the requested start hour stale and correctly disable Next hour.
   const start = horizonStart();
+  await page.clock.setFixedTime(new Date(start));
   await v2.open('app', {region: 'morro-bay', hour: hourParam(start)});
   await expect(page.getByRole('button', {name: 'Play'})).toHaveCount(0);
   await page.getByRole('button', {name: 'Next hour'}).click();
