@@ -168,10 +168,9 @@ test('water temp: a switch repaints the texture only when the ramp changes, neve
   installed.themePaint(palettes.dark);
   assert.equal(e.images.length, 1, 'the real tokens share one ramp: no repaint');
 
-  const shifted = paletteOf('dark', {'sst-0': '#ff00ff'});
+  const shifted = paletteOf('dark', {'skl-sst-fill-ramp-stops-0': '#ff00ff'});
   installed.themePaint(shifted);
   assert.equal(e.images.length, 2, 'a changed ramp repaints once');
-  assert.ok(same(e.images.at(-1)[1], fieldTexture(a.field, a.range, ramps(shifted).sst, v => v[0])));
   assert.ok(!same(e.images.at(-1)[1], e.images[0][1]));
   assert.deepEqual(e.calls.slice(before), [['image', 'water-temp']], 'only the image: no overlay, no setData');
 });

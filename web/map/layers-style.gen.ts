@@ -2115,3 +2115,16 @@ export const SKL_PALETTE_TOKENS = {
   "skl-ais-fleet-line-color": "skl-ais-fleet-line-color",
   "skl-ais-fleet-label-color": "skl-ais-fleet-label-color"
 } as const;
+export const SST_MAX_AGE_H = 72 as const;
+export const SST_ZOOM = 9 as const;
+export const SST_PICK = "SST-B" as const;
+export const SST_RAMP_STOPS = ["--skl-sst-fill-ramp-stops-0", "--skl-sst-fill-ramp-stops-1", "--skl-sst-fill-ramp-stops-2", "--skl-sst-fill-ramp-stops-3", "--skl-sst-fill-ramp-stops-4", "--skl-sst-fill-ramp-stops-5", "--skl-sst-fill-ramp-stops-6", "--skl-sst-fill-ramp-stops-7", "--skl-sst-fill-ramp-stops-8"] as const;
+export const SST_BAND_STEPS = [[0, 1.0], [13, 0.5]] as const;
+export const SST_BAND_COLORS_RULE = "n bands between the stretch limits; band i takes the ramp colour at position i/(n−1), linear in sRGB between ramp_stops" as const;
+export const SST_STRETCH = [2, 98, "percentile of visible water cells", "floor/ceil to band_step_f", "the user may lock the range; the legend says 'auto-stretched' only when not locked"] as const;
+export const SST_OPACITY = [[8, 0.75], [11, 0.55], [13, 0.35], [15, 0.2]] as const;
+export const SST_BAND_EDGE = ["--skl-sst-fill-band-edge-color", 0.35, 0.6, ["isolines", "particles", "arrows_barbs"]] as const;
+export const SST_WATER_ONLY = true as const;
+export const SST_DISPLAY_SAMPLING = "fields are sampled to the screen bilinearly between valid cells only: any output cell whose neighbours include no data is empty. Never fill, extrapolate or smooth across gaps (no data stays visibly no data)." as const;
+export const SST_LEGEND_TITLE = "SST °F, {step}° bands, auto-stretched" as const;
+export const SST_BASE_DESATURATION = 0.4 as const;
