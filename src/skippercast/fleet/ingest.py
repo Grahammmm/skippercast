@@ -5,8 +5,7 @@
   fetch skips by reason or the error; ``gaps``, the bindings with a known-gap
   status (``GAP_STATUSES``: not-implemented, unsupported, unavailable, empty);
   ``complete`` when every binding that ran listed its boats (none failed,
-  unsupported or unavailable, and none skipped source work), which ``refresh``
-  needs before it counts an unlisted vessel towards ``vanished``). One failing
+  unsupported or unavailable, and none skipped source work). One failing
   source does not stop the others.
 - ``resolve`` resolves the candidates (and a file import's ``imported.jsonl``)
   against the registry snapshot and writes ``resolved.jsonl``, the vessels
@@ -20,8 +19,9 @@
   winning-source record). A flagged fact (a webmail address) is held back and
   opens a ``fact-conflict`` review until an admin confirms it. It writes
   ``ingest-ops.jsonl`` and ``ingest-snapshot.json`` (the registry before the
-  write) for ``refresh``. On the staging sink every stored fact must have a
-  ``source_url``, or the step fails.
+  write) for ``refresh``. The successful ingest receipt notes whether complete,
+  nonempty discovery was ingested. On the staging sink every stored fact must
+  have a ``source_url``, or the step fails.
 - ``ingest --profiles DIR`` (CF-20) ingests the OSINT agent's profiles instead:
   each file is validated (``profile.validate_profile``: schema and policy) and
   must name a vessel of this region; invalid files are refused and listed in
@@ -33,13 +33,14 @@ sink, ``GET /api/fleet/jobs/snapshot`` (paged, OIDC) for the Worker.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import asdict
 import json
 import os
 import stat
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any, Callable, IO, Iterable, Iterator, Mapping, TypeVar
 from urllib.parse import urlencode
 from urllib.request import Request
 
@@ -48,6 +49,7 @@ from .adapters import Candidate, Departure, Fact, Offering, RunContext, get
 from .adapters.base import offering_name_norm
 from .enrich import ENRICHERS, IMPORTERS
 from .resolve import ORDER, ResolverConfig, Snapshot, fingerprint, op_sort_key, resolve
+from .runs import completed_step_counts
 from .sinks import SinkError
 
 Loader = Callable[[Any, str], Snapshot]
@@ -111,13 +113,12 @@ def _jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
-    """Write one JSON object per line, replacing ``path`` only once the whole payload is written and closed.
+_Output = TypeVar("_Output", bound=IO[Any])
 
-    A failed write leaves any previous file intact (and an absent one absent); the staging file is private to this call.
-    """
-    rows = list(rows)
-    payload = "".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in rows).encode("utf-8")
+
+@contextmanager
+def _atomic_output(path: Path, open_fd: Callable[[int], _Output]) -> Iterator[_Output]:
+    """Stage one private file next to its destination and replace only after a successful close."""
     try:
         mode = stat.S_IMODE(path.stat().st_mode) if path.is_file() else 0o600
     except OSError:
@@ -125,7 +126,7 @@ def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
     fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     try:
         try:
-            fh = os.fdopen(fd, "wb")
+            fh = open_fd(fd)
         except BaseException:
             # Ownership transfers only when fdopen returns a file object.
             try:
@@ -134,7 +135,7 @@ def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
                 pass
             raise
         with fh:
-            fh.write(payload)
+            yield fh
         os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:
@@ -143,6 +144,14 @@ def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
         except OSError:
             pass
         raise
+
+
+def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
+    """Atomically write one JSON object per line with UTF-8 characters unescaped."""
+    rows = list(rows)
+    payload = "".join(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n" for r in rows).encode("utf-8")
+    with _atomic_output(path, lambda fd: os.fdopen(fd, "wb")) as handle:
+        handle.write(payload)
     return len(rows)
 
 
@@ -426,11 +435,27 @@ def ingest_profiles(ctx: RunContext, sink, profiles: Path | str, load: Loader = 
             "changed": result["changed"], **{kind.replace(".", "_"): n for kind, n in kinds.items() if n}}
 
 
+def _complete_listings(run_dir: Path, candidate_count: int) -> bool:
+    if not candidate_count:
+        return False  # discovery completeness alone can be vacuously true
+    discovery = completed_step_counts(run_dir, "discover") or {}
+    if discovery.get("candidates") != candidate_count:
+        return False
+    try:
+        doc = json.loads((run_dir / "discover.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(doc, dict) and doc.get("complete") is True
+
+
 def ingest(ctx: RunContext, sink, load: Loader = load_snapshot, profiles: Path | str | None = None) -> dict:
     if profiles is not None:
         return ingest_profiles(ctx, sink, profiles, load)
+    listings = _jsonl(ctx.run_dir / "candidates.jsonl")
+    listing_complete = _complete_listings(ctx.run_dir, len(listings))
+    candidates = [candidate_from_dict(d) for d in [*listings, *_jsonl(ctx.run_dir / "imported.jsonl")]]
     snapshot, now = load(sink, ctx.region.id), ops.iso(ctx.clock(), "now")
-    out, info = build_ops(snapshot, run_candidates(ctx.run_dir), _jsonl(ctx.run_dir / "facts.jsonl"),
+    out, info = build_ops(snapshot, candidates, _jsonl(ctx.run_dir / "facts.jsonl"),
                           ResolverConfig.from_region(ctx.region), now)
     (ctx.run_dir / "ingest-snapshot.json").write_text(
         json.dumps({"now": now, "snapshot": snapshot_to_dict(snapshot)}, sort_keys=True, ensure_ascii=False), encoding="utf-8")
@@ -442,7 +467,9 @@ def ingest(ctx: RunContext, sink, load: Loader = load_snapshot, profiles: Path |
         if missing:
             raise SinkError(f"{missing} stored facts have no source_url")
     kinds = {kind: sum(op["op"] == kind for op in out) for kind in ORDER}
+    # Only returned after the registry write succeeds; execute persists the sink and outcome in state.json.
     return {"ops": len(out), "changed": result["changed"], "held": info["held"], "skipped": len(info["skipped"]),
+            "registry_at": now, "listing_complete": int(listing_complete and bool(out)),
             **{kind.replace(".", "_"): n for kind, n in kinds.items() if n}}
 
 

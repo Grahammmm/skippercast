@@ -72,12 +72,14 @@ def charter_reports(body, day, url, *, ports):
             count_match = re.match(r"([\d,]+)\s+(.+)", part)
             if not count_match:
                 continue
-            label = re.sub(r"\([^)]*\)", "", count_match[2]).strip()
+            raw_label = count_match[2]
+            released_annotation = re.search(r"\(\s*Released?\s*\)", raw_label, re.I)
+            label = re.sub(r"\([^)]*\)", "", raw_label).strip()
+            label, released_suffix = re.subn(r"\s+Released?$", "", label, flags=re.I)
             key = species_id(label)
             if not key:
                 continue
-            disposition = "released" if re.search(r"release", label, re.I) else "reported"
-            label = re.sub(r"\s+Released?\b", "", label, flags=re.I).strip()
+            disposition = "released" if released_annotation or released_suffix else "reported"
             catches.append({"species": key, "label": label, "count": int(count_match[1].replace(",", "")),
                             "disposition": disposition})
         # A blank or changed count cell must not silently become a zero catch.

@@ -15,7 +15,7 @@ from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "catalog/recent-intel-watchlist.json"
-GOOD = {"ok", "no-results"}
+GOOD = ("ok", "no-results")
 PLACE_TERMS = {
     "morro-bay": ("morro bay", "avila", "point buchon", "cayucos", "estero bay"),
     "cambria-san-simeon": ("cambria", "san simeon"),
@@ -32,7 +32,7 @@ def iso(value):
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
         return parsed.astimezone(timezone.utc)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, OverflowError):
         return None
 
 
@@ -41,12 +41,49 @@ def clean_url(value):
         return None
     try:
         p = urlsplit(value)
-        if p.scheme != "https" or not p.hostname or p.username or p.password:
+        if p.scheme != "https" or not p.hostname or p.username is not None or p.password is not None:
             return None
+        _ = p.port  # Reject malformed or out-of-range ports.
         query = urlencode([(k, v) for k, v in parse_qsl(p.query) if not k.lower().startswith("utm_")])
         return urlunsplit(("https", p.netloc.lower(), p.path.rstrip("/") or "/", query, ""))
     except ValueError:
         return None
+
+
+def _candidate(row, region, query, lower, upper, *, retained=False):
+    url = clean_url(row.get("url"))
+    published_at = row.get("published_at")
+    published = iso(published_at)
+    if not url or not published or not lower <= published <= upper:
+        return None
+    try:
+        ident = hashlib.sha256(url.encode()).hexdigest()[:20]
+    except UnicodeEncodeError:
+        return None
+    title, summary, source = (row.get(field) for field in ("title", "summary", "source"))
+    if retained and not all(isinstance(value, str) and value.strip() for value in (title, summary, source, query)):
+        return None
+    title = str(title or "").strip()[:220]
+    summary = str(summary or "").strip()[:220]
+    if not title or not summary:
+        return None
+    text = (title + " " + summary).lower()
+    # Upstream relevance is not evidence. Require local context and a fishing term.
+    link = urlsplit(url)
+    subreddit = link.path.lower().split("/")[2:3]
+    regional_forum = (region == "southern-california" and link.hostname in ("reddit.com", "www.reddit.com")
+                      and subreddit and subreddit[0] in ("socalfishing", "sandiegofishing"))
+    mentions_region = any(p in text for p in PLACE_TERMS[region])
+    if not (mentions_region or regional_forum) or not any(f in text for f in FISH_TERMS):
+        return None
+    return {"id": ident, "region_id": region, "query_id": query,
+            "source": str(source or "unknown")[:40], "url": url,
+            "published_at": published_at if retained else published.isoformat(),
+            "title": title, "summary": summary,
+            "location_basis": "text mentions region" if mentions_region else "regional forum only",
+            "review_status": "candidate", "reported_catch": None,
+            "species": [], "fishing_date": None, "geometry": None,
+            "note": "Search lead only; no catch, species, trip date, or fishing position verified."}
 
 
 def normalize(raw, region, query, now, lookback):
@@ -56,33 +93,12 @@ def normalize(raw, region, query, now, lookback):
     for index, r in enumerate(raw["results"]):
         if not isinstance(r, dict):
             raise ValueError("Malformed last30days result at position " + str(index))
-    lower = now - timedelta(days=lookback)
+    lower, upper = now - timedelta(days=lookback), now + timedelta(hours=1)
     items = []
     for r in raw["results"]:
-        url = clean_url(r.get("url"))
-        published = iso(r.get("published_at"))
-        if not url or not published or not lower <= published <= now + timedelta(hours=1):
-            continue
-        title = str(r.get("title") or "").strip()[:220]
-        summary = str(r.get("summary") or "").strip()[:220]
-        if not title or not summary:
-            continue
-        text = (title + " " + summary).lower()
-        # The upstream relevance score was zero even for local posts in a live
-        # test. Require explicit local place and fishing terms instead.
-        subreddit = urlsplit(url).path.lower().split("/")[2:3]
-        regional_forum = region == "southern-california" and urlsplit(url).hostname in ("reddit.com", "www.reddit.com") and subreddit and subreddit[0] in ("socalfishing", "sandiegofishing")
-        if not (any(p in text for p in PLACE_TERMS[region]) or regional_forum) or not any(f in text for f in FISH_TERMS):
-            continue
-        source = str(r.get("source") or "unknown")[:40]
-        ident = hashlib.sha256(url.encode()).hexdigest()[:20]
-        items.append({"id": ident, "region_id": region, "query_id": query,
-                      "source": source, "url": url, "published_at": published.isoformat(),
-                      "title": title, "summary": summary,
-                      "location_basis": "regional forum only" if regional_forum and not any(p in text for p in PLACE_TERMS[region]) else "text mentions region",
-                      "review_status": "candidate", "reported_catch": None,
-                      "species": [], "fishing_date": None, "geometry": None,
-                      "note": "Search lead only; no catch, species, trip date, or fishing position verified."})
+        item = _candidate(r, region, query, lower, upper)
+        if item is not None:
+            items.append(item)
     return items
 
 
@@ -118,6 +134,7 @@ def gather(config, engine, output, now, previous=None, runner=subprocess.run):
     env["FROM_BROWSER"] = "off"
     env["LAST30DAYS_CONFIG_DIR"] = ""  # documented clean/no-config mode
     env["LAST30DAYS_DEFAULT_SEARCH"] = ",".join(config["source_set"])
+    providers = set(config["source_set"])
     for key, region, query in scheduled:
         path = raw_dir / (key.replace("/", "-") + ".json")
         cmd = [sys.executable, str(engine), query["text"],
@@ -138,12 +155,13 @@ def gather(config, engine, output, now, previous=None, runner=subprocess.run):
             raw = json.loads(path.read_text())
             items = normalize(raw, region, query["id"], now, config["lookback_days"])
             status = raw["source_status"]
-            if any(v not in GOOD for v in status.values()):
-                outcome = "partial"
-            elif not status:
+            completed_providers = {provider for provider in providers if status.get(provider) in GOOD}
+            if not completed_providers:
                 outcome = "failed"
-            else:
+            elif completed_providers == providers:
                 outcome = "ok"
+            else:
+                outcome = "partial"
             checks[key] = {"status": outcome, "source_status": status, "retrieved_at": now.isoformat(),
                            "result_count": len(items)}
             if outcome in ("ok", "partial"):
@@ -152,14 +170,19 @@ def gather(config, engine, output, now, previous=None, runner=subprocess.run):
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
             checks[key] = {"status": "failed", "issue": str(exc)[:160], "retrieved_at": now.isoformat(), "result_count": 0}
     raw_handle.cleanup()
-    # Retained leads keep their original publication and collection dates, never a fresh status.
+    # Rebuild from the public candidate fields; do not trust facts from an old snapshot.
     olds = previous.get("candidates") if isinstance(previous, dict) else None
     olds = olds if isinstance(olds, list) else []
     valid = [o for o in olds if isinstance(o, dict) and isinstance(o.get("id"), str) and o["id"]]
+    regions = {region for _, region, _ in jobs if region in PLACE_TERMS}
+    lower = now - timedelta(days=config["lookback_days"])
     for old in valid:
-        published = iso(old.get("published_at"))
-        if old.get("id") not in results and published and now - timedelta(days=config["lookback_days"]) <= published <= now:
-            results[old["id"]] = {**old, "retained": True}
+        region = old.get("region_id")
+        if not isinstance(region, str) or region not in regions:
+            continue
+        item = _candidate(old, region, old.get("query_id"), lower, now, retained=True)
+        if item is not None and item["id"] not in results:
+            results[item["id"]] = {**item, "retained": True}
     candidates = sorted(results.values(), key=lambda x: (x["published_at"], x["id"]), reverse=True)
     usable = sum(c["status"] in ("ok", "partial") for c in checks.values())
     skipped = {"previous_skipped": len(olds) - len(valid)} if len(olds) > len(valid) else {}

@@ -112,21 +112,29 @@ function predictions(id: string, sources: RegionalSource[], report: Report | nul
         noteCopy: [cp('map.station.tide.oldestClock'), ` ${county.tideStation.note}`]});
     }
   }
-  const product = products.filter(p => readingState(p.fetched, now, STATION_PREDICTION_STALE_HOURS * HOUR) !== 'unavailable')
-    .sort((a, b) => stationClock(b.fetched) - stationClock(a.fetched))[0];
-  if (!product) return {text: 'Tide prediction unavailable; no valid retrieval clock or data.', stale: true, copy: [cp('map.station.tide.noClock')]};
-  const points = product.points.filter(p => finite(p.value) && finite(stationClock(p.at))).sort((a, b) => stationClock(a.at) - stationClock(b.at));
-  const start = stationClock(product.start) || stationClock(points[0]?.at), end = stationClock(product.end) || stationClock(points.at(-1)?.at);
+  // Without a usable reading, keep the newest product with a valid clock only for the gap explanation.
+  const selected = products.flatMap(product => {
+    const st = readingState(product.fetched, now, STATION_PREDICTION_STALE_HOURS * HOUR, product.retained);
+    if (st === 'unavailable') return [];
+    const points = product.points.filter(p => finite(p.value) && finite(stationClock(p.at))).sort((a, b) => stationClock(a.at) - stationClock(b.at));
+    const start = stationClock(product.start) || stationClock(points[0]?.at), end = stationClock(product.end) || stationClock(points.at(-1)?.at);
+    const covered = at >= start && at <= end;
+    const curve = points.filter(p => p.type === 'prediction');
+    const point = !covered ? undefined : curve.length
+      ? curve.reduce((a, b) => Math.abs(stationClock(a.at) - at) <= Math.abs(stationClock(b.at) - at) ? a : b)
+      : points.find(p => stationClock(p.at) >= at);
+    const usable = point && (!curve.length || Math.abs(stationClock(point.at) - at) <= 90 * 60_000) ? point : undefined;
+    return [{product, start, end, st, covered, point: usable}];
+  }).sort((a, b) => Number(!a.point) - Number(!b.point) || stationClock(b.product.fetched) - stationClock(a.product.fetched))[0];
+  if (!selected) return {text: 'Tide prediction unavailable; no valid retrieval clock or data.', stale: true, copy: [cp('map.station.tide.noClock')]};
+  const {product, start, end, st, covered, point} = selected;
   const coverage = finite(start) && finite(end) ? `coverage ${new Date(start).toISOString()} – ${new Date(end).toISOString()}` : 'coverage unavailable';
-  const st = readingState(product.fetched, now, STATION_PREDICTION_STALE_HOURS * HOUR, product.retained);
   const stamp = `retrieved ${product.fetched} · ${st}${product.retained ? ' / last good' : ''} · ${coverage}. ${product.note}`;
   const stampCopy: MarkCopyPart = cp('map.station.tide.stamp', {time: esStamp(product.fetched, zone), state: state(st), lastGood: product.retained ? cp('map.station.lastGood') : '',
     coverage: finite(start) && finite(end) ? cp('map.station.tide.coverage', {start: esStamp(new Date(start).toISOString(), zone), end: esStamp(new Date(end).toISOString(), zone)}) : cp('map.station.tide.coverageNone'),
     note: product.noteCopy ?? product.note});
-  if (!(at >= start && at <= end)) return {text: `Tide prediction unavailable for selected time; ${stamp}`, stale: true, copy: [cp('map.station.tide.unavailableAt', {stamp: stampCopy})]};
-  const curve = points.filter(p => p.type === 'prediction');
-  const point = curve.length ? curve.reduce((a, b) => Math.abs(stationClock(a.at) - at) <= Math.abs(stationClock(b.at) - at) ? a : b) : points.find(p => stationClock(p.at) >= at);
-  if (!point || (curve.length && Math.abs(stationClock(point.at) - at) > 90 * 60_000)) return {text: `Tide prediction gap; ${stamp}`, stale: true, copy: [cp('map.station.tide.gap', {stamp: stampCopy})]};
+  if (!covered) return {text: `Tide prediction unavailable for selected time; ${stamp}`, stale: true, copy: [cp('map.station.tide.unavailableAt', {stamp: stampCopy})]};
+  if (!point) return {text: `Tide prediction gap; ${stamp}`, stale: true, copy: [cp('map.station.tide.gap', {stamp: stampCopy})]};
   return {text: `Tide ${point.type}: ${point.value.toFixed(1)} ft ${product.datum} · valid ${point.at}; ${stamp}`, stale: st === 'stale',
     copy: [cp('map.station.tide.reading', {type: cp(`map.station.tide.type.${point.type === 'high event' ? 'high' : point.type === 'low event' ? 'low' : 'prediction'}`), height: esDecimal(point.value), datum: product.datum, time: esStamp(point.at, zone), stamp: stampCopy})]};
 }

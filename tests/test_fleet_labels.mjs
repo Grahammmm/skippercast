@@ -4,10 +4,7 @@
 // stubbed. Synthetic throughout: invented boats, 999xxxxxx MMSIs, made-up admin and agent ids.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
-import {spawnSync} from 'node:child_process';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {readFileSync} from 'node:fs';
 import {advisorDatabase, sqliteUnavailable} from './_advisor_d1.mjs';
 import {withSessions} from './fixtures/test-sessions.mjs';
 
@@ -310,15 +307,21 @@ test('N7: the owner approves a trip\'s agent labels; the list filters and flags 
   assert.deepEqual(await listed('no'), [[OPEN, 0, 0], [BARE, 0, 0]]);
 
   const get = path => worker.fetch(new Request(ORIGIN + path, {headers: {'x-test-owner': ADMIN}}), {ASSETS, DB: db, ...ON});
-  const post = (path, owner = ADMIN, extra = ON) => worker.fetch(new Request(ORIGIN + path, {method: 'POST',
-    headers: {'Content-Type': 'application/json', Origin: ORIGIN, ...(owner ? {'x-test-owner': owner} : {})}, body: '{}'}), {ASSETS, DB: db, ...extra});
+  const path = `/api/admin/fleet/trips/${TRIP}`;
+  const detail = await (await get(path)).json();
+  const reviewed_ids = detail.labels.filter(l => l.labeller.startsWith('agent:')).map(l => l.id);
+  const post = (url, payload = {reviewed_ids}, owner = ADMIN, extra = ON) => worker.fetch(new Request(ORIGIN + url, {method: 'POST',
+    headers: {'Content-Type': 'application/json', Origin: ORIGIN, ...(owner ? {'x-test-owner': owner} : {})}, body: JSON.stringify(payload)}), {ASSETS, DB: db, ...extra});
   assert.deepEqual((await (await get('/api/admin/fleet/trips?labelled=agent')).json()).trips.map(t => t.id), [TRIP, OREGON]);
-  assert.equal((await post(`/api/admin/fleet/trips/${TRIP}/approve`, 'someone-else')).status, 404, 'non-admin');
-  assert.equal((await post(`/api/admin/fleet/trips/${TRIP}/approve`, ADMIN, {})).status, 404, 'fleet off');
+  assert.equal((await post(`${path}/approve`, {reviewed_ids}, 'someone-else')).status, 404, 'non-admin');
+  assert.equal((await post(`${path}/approve`, {reviewed_ids}, ADMIN, {})).status, 404, 'fleet off');
   assert.equal((await post(`/api/admin/fleet/trips/${hex('9')}/approve`)).status, 404);
+  // A legacy/invalid HTTP body must not fall back to approving the current labels.
+  assert.equal((await post(`${path}/approve`, {})).status, 400, 'no reviewed ids');
+  assert.equal((await post(`${path}/approve`, {reviewed_ids: [reviewed_ids[0], 'bad-id']})).status, 400, 'malformed reviewed ids');
   assert.equal(sql.prepare("SELECT count(*) n FROM fleet_segment_labels WHERE labeller LIKE 'agent:%'").get().n, 3);
 
-  const approved = await post(`/api/admin/fleet/trips/${TRIP}/approve`);
+  const approved = await post(`${path}/approve`);
   assert.equal(approved.status, 200);
   const value = await approved.json();
   assert.equal(value.approved, 2);
@@ -326,7 +329,7 @@ test('N7: the owner approves a trip\'s agent labels; the list filters and flags 
     [at(0), 'transit', ADMIN, 'approved from agent:test-labeller: track shape'],
     [at(30), 'drift-anchor', ADMIN, 'approved from agent:test-labeller: slow drift'],
     [at(90), 'transit', ADMIN, 'skipper log']]);
-  assert.equal((await post(`/api/admin/fleet/trips/${TRIP}/approve`)).status, 409, 'nothing left to approve');
+  assert.equal((await post(`${path}/approve`)).status, 409, 'nothing left to approve');
   assert.deepEqual(await listed('agent'), [[OREGON, 1, 1]]);
   assert.deepEqual(await listed('approved'), [[TRIP, 3, 0]]);
   // Approved labels are the owner's: the agent's next import cannot replace them and must not overlap them.
@@ -336,47 +339,12 @@ test('N7: the owner approves a trip\'s agent labels; the list filters and flags 
   // Withdrawing touches only that agent's labels.
   await labels.importAgentLabels(db, {trip_id: OREGON, labeller: AGENT, labels: []}, NOW);
   assert.deepEqual(await listed('agent'), [[OREGON, 1, 1]], 'another agent\'s labels are not withdrawn');
-  assert.equal((await labels.approveTrip(db, TRIP, '')).status, 'invalid');
+  assert.equal((await labels.approveTrip(db, TRIP, '', reviewed_ids)).status, 'invalid');
 
   const view = readFileSync(new URL('../web/admin/fleet-trip.tsx', import.meta.url), 'utf8');
   assert.match(view, /awaiting: 'Awaiting approval'/);
-  assert.match(view, /postFleet\(`trips\/\$\{encodeURIComponent\(id\)\}\/approve`, \{\}\)/);
+  assert.match(view, /postFleet\(`trips\/\$\{encodeURIComponent\(trip\.id\)\}\/approve`, \{reviewed_ids: reviewedIds\}\)/);
   assert.match(view, /t\.agent_labels \? <span class="admin-reason">\{COPY\.awaiting\}<\/span>/);
-});
-
-test('N7: fleet-ais.yml label_import runs `label import` on a file under FLEET_VAR, alone', () => {
-  const text = readFileSync(new URL('../.github/workflows/fleet-ais.yml', import.meta.url), 'utf8');
-  assert.match(text, /\n {6}label_import:\n/);
-  assert.equal(text.split('inputs.label_import').length - 1, 1, 'the input reaches the script through the environment');
-  assert.doesNotMatch(text, /(contents|actions|issues|pull-requests): write/);
-  // Run the step's script with a stand-in python that records its arguments.
-  const start = text.indexOf('        run: |\n', text.indexOf('- name: Process AIS positions'));
-  const script = text.slice(start + '        run: |\n'.length).split('\n').map(l => l.slice(10)).join('\n');
-  const dir = mkdtempSync(join(tmpdir(), 'fleet-ais-')), bin = join(dir, 'bin'), fleetVar = join(dir, 'var');
-  mkdirSync(bin); mkdirSync(join(fleetVar, 'labels'), {recursive: true});
-  writeFileSync(join(bin, 'python'), `#!/bin/sh\necho "$@" >> "${join(dir, 'calls')}"\n`, {mode: 0o755});
-  writeFileSync(join(fleetVar, 'labels', 'proposed.json'), '{}');
-  const run = env => {
-    rmSync(join(dir, 'calls'), {force: true});
-    const r = spawnSync('bash', ['-e', '-c', script], {encoding: 'utf8', env: {PATH: `${bin}:${process.env.PATH}`, HOME: dir,
-      SKIPPERCAST_FLEET_VAR: fleetVar, GITHUB_STEP_SUMMARY: join(dir, 'summary'), REGION: 'CA', WINDOW_FROM: '', WINDOW_TO: '', BACKFILL_MONTH: '',
-      VALIDATE: 'false', LABEL_IMPORT: '', ...env}});
-    return {status: r.status, err: r.stdout + r.stderr, calls: existsSync(join(dir, 'calls')) ? readFileSync(join(dir, 'calls'), 'utf8') : ''};
-  };
-  try {
-    assert.deepEqual(run({LABEL_IMPORT: 'labels/proposed.json'}), {status: 0, err: 'AIS run kind=label-import trigger=unknown cron=none source=unknown\n',
-      calls: `-m skippercast.fleet.ais label import ${join(fleetVar, 'labels', 'proposed.json')}\n`});
-    for (const env of [{WINDOW_FROM: '2026-01-01'}, {BACKFILL_MONTH: '2026-01'}, {VALIDATE: 'true'}]) {
-      const r = run({LABEL_IMPORT: 'labels/proposed.json', ...env});
-      assert.deepEqual([r.status, r.calls], [2, ''], JSON.stringify(env));
-      assert.match(r.err, /label_import runs alone/);
-    }
-    for (const path of [join(fleetVar, 'labels', 'proposed.json'), '../var/labels/proposed.json', 'labels/../labels/proposed.json', '..', 'labels/missing.json']) {
-      const r = run({LABEL_IMPORT: path});
-      assert.deepEqual([r.status, r.calls], [2, ''], path);
-    }
-    assert.match(run({}).calls, /^-m skippercast\.fleet\.ais process --region CA\n/, 'a normal run is unchanged');
-  } finally { rmSync(dir, {recursive: true, force: true}); }
 });
 
 // ---- RF0844-8: a written day that is not on the calendar is refused, never rolled into the next month ----

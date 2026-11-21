@@ -15,7 +15,7 @@ Every figure carries a label:
   UNKNOWN    the repo has no catalog figure for it; never filled by guessing
 
 Three facts are kept apart for the 0-300 ft band of every sector:
-  1. finest grid available at any depth (catalogued or opened, depth band not necessarily known);
+  1. finest exact grid spacing at any depth (with variable-resolution ranges reported separately);
   2. best tier with CONFIRMED shallow cells (a catalog records cells in 0-300 ft, 25-200 ft or the
      seafloor ledger's 0-100 m band for that grid in that sector). No area threshold is applied;
   3. extent: km2 of such cells, reported per evidence family and never summed across families.
@@ -41,6 +41,10 @@ OUT_MD = ROOT / 'reports/COAST-SEAFLOOR-INVENTORY.md'
 FT_300_M = 91.44
 TIER_ORDER = ['2 m', '5 m', '10 m', 'coarser', 'none']
 TIER_RES = {'2 m': 2.0, '5 m': 5.0, '10 m': 10.0}
+EXTENT_2M_FAMILIES = {
+    'csumb_2m_0_300ft_km2': 'CSUMB (0-300 ft)',
+    'noaa_bag_2m_25_200ft_km2': 'NOAA BAG (25-200 ft)',
+}
 # NOAA variable-resolution BAG refinements are recorded only as "1-4 m", per file, not per cell.
 VR_RANGE_M = (1.0, 4.0)
 
@@ -187,14 +191,6 @@ def classify_shallow(evidence):
     - 'none-shallow': a catalog records zero 0-300 ft cells.
     No area threshold: one confirmed fine cell set makes that tier available; extent is reported apart.
     """
-    def finest(items):
-        vals = []
-        for e in items:
-            if e.get('resolution_m'):
-                vals.append(float(e['resolution_m']))
-            elif e.get('resolution_range_m'):
-                vals.append(float(e['resolution_range_m'][0]))
-        return min(vals, default=None)
 
     confirmed = [e for e in evidence if e['depth'] == 'confirmed']
     definite = [e for e in confirmed if e.get('resolution_m')]
@@ -211,7 +207,7 @@ def classify_shallow(evidence):
         # Uncertain when the ranged cells could be finer than the tier we can prove.
         if TIER_ORDER.index(tier_of(lo)) < TIER_ORDER.index(tier):
             uncertain = True
-    finest_any = finest(evidence)
+    finest_any = min((float(e['resolution_m']) for e in evidence if e.get('resolution_m')), default=None)
     finer_unconfirmed = [e for e in evidence if e['depth'] == 'unrecorded' and e.get('resolution_m')
                          and TIER_ORDER.index(tier_of(e['resolution_m'])) < TIER_ORDER.index(tier)]
     tier_sources = [e for e in confirmed if (e.get('resolution_m') and tier_of(e['resolution_m']) == tier)
@@ -367,7 +363,7 @@ def build():
                 'acquisition': csumb_acq(src),
                 'read': bool(src.get('sha256') or src.get('archive_sha256')),
                 'pixels_0_300ft': px,
-                'extent_km2': px * res * res / 1e6 if px and res else None,
+                'extent_km2': px * res * res / 1e6 if px is not None and res else None,
                 'depth_max_m': src.get('depth_max_m'),
                 'crosses_sector_line': len(touching) > 1,
                 'catalog': rel,
@@ -637,9 +633,11 @@ def build():
                          'rasters) do not set the tier; they are listed as finer_grids_depth_unrecorded.',
             'tier_uncertain': 'true when the tier rests on NOAA VR BAG cells whose spacing is recorded only as 1-4 m, so the '
                               'true class may be 2 m',
+            'grid_spacing_ranges_m': 'reported variable-resolution ranges at any depth, not evidence of exact cell spacing',
             'coverage_pct_at_best_tier': 'ESTIMATED reach-level range from the seafloor ledger (low = reaches using only grids at '
                                          'the tier or finer; high = reaches using any such grid) over the provisional '
                                          'BlueTopo 0-100 m band of reaches wholly inside the sector; UNKNOWN elsewhere',
+            'confirmed_2m_extent_km2': 'distinct sector-wide 2 m shallow area; null because the catalog figures do not establish it',
             'release_date': 'publication/release date of the grid; acquisition_dates is a separate field',
         },
         'limits': [
@@ -649,8 +647,8 @@ def build():
             'The seafloor ledger records one selected native footprint per reach, not per grid, so coverage at a given resolution '
             'is a low-high range.',
             'NOAA counts come from bounded audits (files <= 100 MB); larger or failed files are open items, not zeros.',
-            'Extent figures are per evidence family and are never summed across families; overlapping surveys within a '
-            'family are not deduplicated.',
+            'Extent figures are per-family grid-record totals, not distinct seafloor area. Surveys can overlap within and '
+            'across families; the totals cannot be used to compare distinct areas or as lower bounds on distinct area.',
             'This inventory changes no map layer, target, score or export.',
         ],
         'inputs': [{'path': p, 'sha256': sha256(p)} for p in input_files],
@@ -727,12 +725,14 @@ def shallow_block(sid, cls, ev, reaches, ctx):
     conf = [e for e in ev if e['depth'] == 'confirmed']
 
     def ext(fam, pred, basis):
-        items = {e['id']: e for e in conf if e['family'] == fam and pred(e) and e.get('extent_km2')}.values()
+        # The adapters set an area only for tabulated cells. A recorded zero
+        # is valid for that grid and band, but does not establish a shallow tier.
+        items = {e['id']: e for e in ev if e['family'] == fam and e.get('extent_km2') is not None and pred(e)}.values()
         if not items:
             return None
         total = sum(e['extent_km2'] for e in items)
         crossing = sum(1 for e in items if e.get('crosses_sector_line'))
-        return fig(round(total, 1 if total >= 1 else 2), 'ESTIMATED' if crossing else 'MEASURED',
+        return fig(round(total, 1 if total >= 1 else 2) or total, 'ESTIMATED' if crossing else 'MEASURED',
                    basis + (f'; {crossing} grid(s) cross a sector line and are counted whole in their centre sector'
                             if crossing else '') + '; overlaps within the family are not deduplicated')
 
@@ -742,8 +742,7 @@ def shallow_block(sid, cls, ev, reaches, ctx):
         'csumb_5m_0_300ft_km2': ext('CSUMB', lambda e: e['resolution_m'] and 2 < e['resolution_m'] <= 5,
                                     'CSUMB nominal_0_300ft_pixels x cell area, grids > 2 m and <= 5 m centred in the sector'),
         'noaa_bag_2m_25_200ft_km2': ext('NOAA BAG', lambda e: e['resolution_m'] <= 2,
-                                        'NOAA regular BAG 25-200 ft depth/uncertainty-eligible cells x cell area, grids <= 2 m '
-                                        '(a lower bound for 0-300 ft)'),
+                                        'NOAA regular BAG 25-200 ft depth/uncertainty-eligible cells x cell area, grids <= 2 m'),
         'noaa_bag_5m_25_200ft_km2': ext('NOAA BAG', lambda e: 2 < e['resolution_m'] <= 5,
                                         'same, regular BAGs > 2 m and <= 4 m'),
         'ledger_tier_footprint_km2': (fig({'low': round(proxy['low_km2'], 1), 'high': round(proxy['high_km2'], 1)}, 'ESTIMATED',
@@ -772,9 +771,10 @@ def shallow_block(sid, cls, ev, reaches, ctx):
                                         if cls['best_confirmed_resolution_m'] else
                                         fig(None, 'UNKNOWN', 'best tier rests on NOAA VR BAG refinements recorded only as 1-4 m'
                                             if cls['tier_uncertain'] or tier == '5 m' else 'no confirmed-shallow grid')),
-        'finest_grid_any_depth_m': (fig(rnd(finest_any, 2), 'MEASURED', 'finest native spacing of any catalogued or opened grid '
-                                        'placed in the sector, whatever its depth band (VR BAGs counted at their 1 m lower end)')
-                                    if finest_any else fig(None, 'UNKNOWN', 'no native grid placed in the sector')),
+        'finest_grid_any_depth_m': (fig(rnd(finest_any, 2), 'MEASURED', 'finest exact native spacing recorded for a grid '
+                                        'placed in the sector, whatever its depth band')
+                                    if finest_any else fig(None, 'UNKNOWN', 'no exact native spacing recorded in the sector')),
+        'grid_spacing_ranges_m': sorted({tuple(e['resolution_range_m']) for e in ev if e.get('resolution_range_m')}),
         'finer_grids_depth_unrecorded': [
             {'name': e['name'], 'family': e['family'], 'resolution_m': e['resolution_m'],
              'valid_area_all_depths_km2': fig(round(e['valid_area_all_depths_km2'], 1), 'MEASURED' if not e['crosses_sector_line']
@@ -844,8 +844,7 @@ def rank_gaps(rows):
         sh = r['shallow_0_300ft']
         cov = sh['coverage_pct_at_best_tier']
         tier = sh['best_tier']
-        ext2 = sum((sh['extent_confirmed_shallow'].get(k) or {}).get('value') or 0
-                   for k in ('csumb_2m_0_300ft_km2', 'noaa_bag_2m_25_200ft_km2'))
+
         unrec = [g for g in sh['finer_grids_depth_unrecorded'] if g['resolution_m'] and g['resolution_m'] <= 2]
         unrec_note = f'; {len(unrec)} opened 2 m grid(s) with unrecorded depth band' if unrec else ''
         if tier != '2 m':
@@ -853,8 +852,7 @@ def rank_gaps(rows):
             why = f'no confirmed 2 m shallow grid (best confirmed {tier}{", true class may be 2 m" if sh["tier_uncertain"] else ""})' + unrec_note
         elif cov['label'] == 'UNKNOWN':
             severity = 2
-            why = ('2 m confirmed in part of the sector; coverage UNKNOWN; confirmed 2 m extent '
-                   f'{ext2:.{1 if ext2 >= 1 else 2}f} km2 (CSUMB + NOAA BAG, not deduplicated)') + unrec_note
+            why = '2 m confirmed in part of the sector; coverage UNKNOWN; distinct 2 m shallow extent UNKNOWN' + unrec_note
         elif cov['value']['low'] < 60:
             severity = 2
             why = f'2 m coverage {cov["value"]["low"]}-{cov["value"]["high"]}% of the 0-100 m reference band (E)'
@@ -866,10 +864,10 @@ def rank_gaps(rows):
         cands, action = candidates_for(r)
         gaps.append({'sector_id': r['id'], 'name': r['name'], 'severity': severity, 'why': why,
                      'home_ports': r['use_proxy']['home_ports']['value'], 'home_port_names': r['use_proxy']['home_port_names'],
-                     'confirmed_2m_extent_km2': round(ext2, 1 if ext2 >= 1 else 2), 'candidate_sources': cands, 'action': action})
-    # Severity, then use proxy (home ports), then smaller confirmed 2 m extent, then north to south.
+                     'confirmed_2m_extent_km2': None, 'candidate_sources': cands, 'action': action})
+    # The family totals overlap and cover different depth bands; use geographic order to break ties.
     order = {r['id']: r['order'] for r in rows}
-    gaps.sort(key=lambda g: (-g['severity'], -g['home_ports'], g['confirmed_2m_extent_km2'], order[g['sector_id']]))
+    gaps.sort(key=lambda g: (-g['severity'], -g['home_ports'], order[g['sector_id']]))
     for i, g in enumerate(gaps, 1):
         g['rank'] = i
         g['rank_label'] = 'ESTIMATED'
@@ -903,8 +901,14 @@ def candidates_for(r):
 
 def summarize(rows):
     tiers = {t: [r['id'] for r in rows if r['shallow_0_300ft']['best_tier'] == t] for t in TIER_ORDER}
-    any_depth = {t: [r['id'] for r in rows if tier_of(r['shallow_0_300ft']['finest_grid_any_depth_m']['value']) == t]
-                 for t in TIER_ORDER}
+    any_depth = defaultdict(int)
+    for r in rows:
+        sh = r['shallow_0_300ft']
+        bounds = [hi for _, hi in sh['grid_spacing_ranges_m']]
+        exact = sh['finest_grid_any_depth_m']['value']
+        if exact is not None:
+            bounds.append(exact)
+        any_depth[tier_of(min(bounds, default=None))] += 1
     deep = {t: [r['id'] for r in rows if r['deeper_than_300ft']['best_tier'] == t] for t in TIER_ORDER}
     status = defaultdict(list)
     for r in rows:
@@ -916,8 +920,9 @@ def summarize(rows):
                                        'threshold; sector assignment by bounding box)') for t, v in tiers.items()},
         'shallow_tier_sectors': tiers,
         'tier_uncertain_sectors': [r['id'] for r in rows if r['shallow_0_300ft']['tier_uncertain']],
-        'finest_grid_any_depth_counts': {t: fig(len(v), 'ESTIMATED', 'sectors by finest catalogued/opened grid at any depth')
-                                         for t, v in any_depth.items()},
+        'finest_grid_any_depth_counts': {
+            t: fig(any_depth[t], 'ESTIMATED', 'sectors by best supported tier at any depth; ranges count at their coarser end')
+            for t in TIER_ORDER},
         'deep_tier_counts': {t: fig(len(v), 'ESTIMATED', 'count of sectors by best deeper-than-300 ft tier; several deep '
                                     'sources have no tabulated depth band') for t, v in deep.items()},
         'review_status_counts': {k: fig(len(v), 'MEASURED', 'review.status per sector') for k, v in sorted(status.items())},
@@ -950,6 +955,11 @@ def tier_text(sh):
     return sh['best_tier'] + (' (VR 1-4 m; may be 2 m)' if sh['tier_uncertain'] else '')
 
 
+def any_depth_text(sh):
+    exact = fmt(sh['finest_grid_any_depth_m'], ' m')
+    return exact + ''.join(f'; reported range: {lo:g}-{hi:g} m' for lo, hi in sh['grid_spacing_ranges_m'])
+
+
 def render_md(inv):
     s = inv['summary']
     rows = inv['sectors']
@@ -969,12 +979,10 @@ def render_md(inv):
         sh = r['shallow_0_300ft']
         if sh['coverage_pct_at_best_tier']['label'] != 'UNKNOWN':
             continue
-        figs = [sh['extent_confirmed_shallow'][k] for k in ('csumb_2m_0_300ft_km2', 'noaa_bag_2m_25_200ft_km2')
-                if k in sh['extent_confirmed_shallow']]
-        total = sum(f['value'] for f in figs)
-        unknown_ext.append((r['name'], round(total, 1 if total >= 1 else 2),
-                            'E' if len(figs) > 1 or any(f['label'] == 'ESTIMATED' for f in figs) else 'M'))
-    unknown_ext.sort(key=lambda x: x[1])
+        extent = sh['extent_confirmed_shallow']
+        figures = ', '.join(f'{family} {fmt(extent[key], " km2") if key in extent else "UNKNOWN"}'
+                            for key, family in EXTENT_2M_FAMILIES.items())
+        unknown_ext.append(f'{r["name"]}: {figures}')
     L += ['# California coast seafloor inventory (COAST-INVENTORY-1)', '',
           f'Generated by `{inv["generator"]}` from repository catalogs only (no downloads). '
           'Machine-readable copy: `catalog/coast-seafloor-inventory.json`. Labels: **M** = MEASURED from catalog '
@@ -988,12 +996,10 @@ def render_md(inv):
           + (f'For {", ".join(names[x] for x in unc)} the tier rests on NOAA grids recorded only as 1-4 m, so it may really be 2 m. '
              if unc else '')
           + 'A 2 m tier means 2 m grids exist for part of the sector, not that the whole sector is mapped at 2 m.',
-          f'- **Counting every grid we hold, whatever its depth (E):** 2 m: {a["2 m"]["value"]} · 5 m: {a["5 m"]["value"]} · '
+          f'- **Best supported tier at any depth (E):** 2 m: {a["2 m"]["value"]} · 5 m: {a["5 m"]["value"]} · '
           f'10 m: {a["10 m"]["value"]} · coarser: {a["coarser"]["value"]} · none: {a["none"]["value"]}. '
-          + ('The difference is opened grids (mostly USGS state-waters 2 m) whose shallow pixels were never counted.'
-             if any(a[k]['value'] != t[k]['value'] for k in TIER_ORDER) else
-             'Same counts as above: the opened USGS state-waters 2 m grids whose shallow pixels were never counted do not '
-             'change any sector\'s tier.'),
+          'Variable-resolution ranges count at their coarser end and do not establish exact spacing. This count also '
+          'includes grids whose shallow pixels were never counted.',
           f'- **Has it all been reviewed? No.** {n("ledger-assessed")} sectors have native grids read **and** assessed reach by '
           f'reach in the seafloor ledger; {n("partly-reviewed")} have some native grids read but no reference area to say what '
           f'share they cover; {n("catalogued-only")} are catalogued only. Fully reviewed (every catalogued lead read): '
@@ -1004,9 +1010,9 @@ def render_md(inv):
           'Ranges, not exact figures: the ledger records one footprint per 10 km reach, not per grid, and its reference band is '
           '0-100 m (about 0-328 ft). No sector has a MEASURED 0-300 ft share.',
           '- **Elsewhere coverage is UNKNOWN**, not zero: the repo has no shallow reference area outside Pigeon Point to '
-          'Point Conception, so pixel counts there cannot be turned into a percentage. What we can say is how much confirmed '
-          '2 m shallow grid exists there (km2, lower bound from NOAA 25-200 ft cells, overlaps not removed): '
-          + '; '.join(f'{nm} {v:g} ({lab})' for nm, v, lab in unknown_ext) + '.',
+          'Point Conception, so pixel counts there cannot be turned into a percentage. Recorded 2 m grid-cell areas are '
+          'listed separately by family and depth band; overlaps are not removed and distinct seafloor area is UNKNOWN: '
+          + '; '.join(unknown_ext) + '.',
           f'- **Deeper than 300 ft:** best native tier by sector (E): ' + ' · '.join(
               f'{k}: {v["value"]}' for k, v in s['deep_tier_counts'].items()) +
           '. "Coarser" means only the statewide GEBCO grid (463 m) is catalogued for deep water there; BlueTopo compilation tiles exist '
@@ -1024,7 +1030,7 @@ def render_md(inv):
           '- Nothing here is a fishing target; grid spacing is not depth accuracy, and no source is yet MLLW-qualified.', '']
 
     L += ['## Sector table (north to south)', '',
-          '| # | Sector | Best confirmed 0-300 ft | Finest grid, any depth | Best source | Release date | Acquired | '
+          '| # | Sector | Best confirmed 0-300 ft | Finest exact spacing, any depth (ranges separate) | Best source | Release date | Acquired | '
           '% of shallow band at best tier | Deeper than 300 ft | Review status | Habitat classes |',
           '|---|---|---|---|---|---|---|---|---|---|---|']
     for r in rows:
@@ -1037,7 +1043,7 @@ def render_md(inv):
         rv = r['review']
         hab = r['habitat']
         best = f'{tier_text(sh)}, finest {fmt(sh["best_confirmed_resolution_m"], " m")}'
-        L.append(f'| {r["order"]} | {r["name"]} | {best} | {fmt(sh["finest_grid_any_depth_m"], " m")} | '
+        L.append(f'| {r["order"]} | {r["name"]} | {best} | {any_depth_text(sh)} | '
                  f'{bs["name"] if bs else "-"} | {fmt(bs["release_date"]) if bs else "-"} | '
                  f'{fmt(bs["acquisition_dates"]) if bs else "-"} | {fmt(sh["coverage_pct_at_best_tier"], "%")} | {deep} | '
                  f'{rv["status"]}, {fmt(rv["native_files_read"])} files read | '
@@ -1051,8 +1057,8 @@ def render_md(inv):
         sh, dp, rv, hab = r['shallow_0_300ft'], r['deeper_than_300ft'], r['review'], r['habitat']
         L.append(f'### {r["order"]}. {r["name"]} (`{r["id"]}`, lat {r["latitude"][0]}-{r["latitude"][1]})')
         L.append('')
-        L.append(f'- 0-300 ft: best confirmed **{tier_text(sh)}** (E; {sh["best_tier_basis"]}); finest grid at any depth '
-                 f'{fmt(sh["finest_grid_any_depth_m"], " m")}; {sh["source_count"]} grids placed in the sector.')
+        L.append(f'- 0-300 ft: best confirmed **{tier_text(sh)}** (E; {sh["best_tier_basis"]}); finest exact spacing at any depth '
+                 f'{any_depth_text(sh)}; {sh["source_count"]} grids placed in the sector.')
         bs = sh['best_source']
         if bs:
             L.append(f'  - Best source: {bs["name"]}; release date {fmt(bs["release_date"])} ({bs["release_date"]["basis"]}); '
@@ -1090,7 +1096,7 @@ def render_md(inv):
     L += ['## Gap list, ranked by value for fishing and dive use', '',
           'Ranking (ESTIMATED): severity first (3 = no confirmed 2 m shallow grid; 2 = 2 m confirmed but coverage UNKNOWN or '
           'its low estimate under 60%; 1 = low estimate 60-89%), then the number of SkipperCast home ports in the sector '
-          '(`dist/data/home-ports.json`) as the use proxy, then the smaller confirmed 2 m extent, then north to south. '
+          '(`dist/data/home-ports.json`) as the use proxy, then north to south. '
           'Candidate sources are named from repo evidence; whether each one covers the sector is unverified until its files '
           'are read.', '',
           '| Rank | Sector | Why | Home ports | Candidate sources | What to do |', '|---|---|---|---|---|---|']

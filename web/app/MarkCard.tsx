@@ -170,7 +170,7 @@ export function MarkDistance({mark}: {mark: Mark}) {
   useEffect(() => { if (failure === 'lines-needed' && id && model && lines === null) void loadLandWaterLines(id); }, [failure, id, model, lines]);
   if (!from || !to) return null;
   const shown = current && routed.result ? routed.result : straightDistance(from, to);
-  return shown ? <p class="ui-mono" data-mark-distance={shown.basis}>{markDistanceLine(from.name, shown, speed, 'en')}</p> : null;
+  return shown ? <p class="ui-mono" data-mark-distance={shown.basis}>{markDistanceLine(from.name, shown, speed, language.value)}</p> : null;
 }
 
 const COPY_REASON = {context: 'mark.copy.reason.context', noPosition: 'mark.copy.reason.noPosition', notChecked: 'mark.copy.reason.notChecked',

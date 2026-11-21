@@ -9,6 +9,7 @@
 // The `edge` slot pins content beside the handle (the hour slider).
 import type {ComponentChildren} from 'preact';
 import {useRef} from 'preact/hooks';
+import {language, t} from '../i18n.ts';
 
 export const DETENTS = ['peek', 'half', 'full'] as const;
 export type Detent = (typeof DETENTS)[number];
@@ -115,7 +116,7 @@ export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, cla
   return (
     <section class={['ui-sheet', cls].filter(Boolean).join(' ')} data-detent={detent} role={landmark ? undefined : 'group'} aria-label={label}>
       <div class="ui-sheet-edge">
-        <button type="button" class="ui-sheet-handle" aria-label={`${detent === 'full' ? 'Collapse' : 'Expand'} ${label}`}
+        <button type="button" class="ui-sheet-handle" aria-label={t(detent === 'full' ? 'shell.sheet.collapse' : 'shell.sheet.expand', language.value, {name: label})}
           aria-expanded={detent !== 'peek'} data-detent={detent} onClick={onClick} onKeyDown={onKeyDown}
           onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
           <span class="ui-sheet-grip" aria-hidden="true"></span>

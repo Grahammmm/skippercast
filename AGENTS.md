@@ -43,6 +43,14 @@ Commit the regenerated files in the same PR as the source change.
 `dist/`, `scripts/`) never imports or runs it; `tests/contract/test_research_boundary.py`
 fails if it does. New audit scripts go in `research/scripts/`, not `scripts/`.
 
+## Feature research for Hermes
+
+Build specs, map-visual inspiration, competitor notes and ingest guides for
+the next product features live in [docs/research/](docs/research/README.md).
+Hermes should start at [docs/research/specs/README.md](docs/research/specs/README.md)
+and follow that roadmap's build order. That folder is separate from `research/`,
+which is the audit tooling above.
+
 ## Before opening a PR
 
 Run what CI runs (Python 3.13 with the survey stack for the full suite; see

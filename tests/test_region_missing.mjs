@@ -42,7 +42,7 @@ test('the reader answers REGION_MISSING only for a 404; a 500 or a body with no 
   assert.equal(await createRegionReader(status(404))('nowhere'), REGION_MISSING);
   assert.equal(await createRegionReader(status(500))('broken'), null);
   assert.equal(await createRegionReader(status(410))('gone'), null, 'only a 404 means the region does not exist');
-  assert.equal(await createRegionReader(async () => new Response(JSON.stringify({map: {center: [1, 2]}})))('nameless'), null);
+  assert.equal(await createRegionReader(async () => new Response(JSON.stringify({id: 'nameless', map: {center: [1, 2]}})))('nameless'), null);
 });
 
 test('loadRegion: a 404 is missing; a 500 and a malformed body stay error', async () => {

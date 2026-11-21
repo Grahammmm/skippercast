@@ -5,7 +5,7 @@
 //   full  full export with the publish-time verdicts (main today)
 //   slim  loadReefTripBrief: the slim file, no outlines
 // Build the input directory with scripts/reef_slim_build.py. Usage: node scripts/reef_slim_parity.mjs <dir> [loads]
-// Exit 0 only when every compared ranking is identical. Region morro-bay (the default region), boundaries dist/data/protected-areas.geojson.
+// Exit 0 only when the rankings match and every reef has the same eligibility in both paths. Region morro-bay, boundaries dist/data/protected-areas.geojson.
 import {readFileSync} from 'node:fs';
 import {initProtectedAreas} from '../dist/protected-areas.js';
 import {loadReefTrip, loadReefTripBrief} from '../dist/reef-trip-data.js';
@@ -59,14 +59,29 @@ for (const c of cases) {
   if (!same) { bad++; console.log('DIFFERENT', JSON.stringify(c), 'old==full', out.old === out.full, 'full==slim', out.full === out.slim); }
 }
 const sum = a => a.reduce((x, y) => x + y, 0);
-// Every reef, not only the ones a ranking picks: the outline-and-point check bestSpots runs against the stored verdict the slim ranking uses.
+// Every reef, not only the ones a ranking picks: use full geometry and the actual slim verdict, joined one-to-one by target ID.
+function indexTargets(targets, label) {
+  const byId = new Map();
+  for (const t of targets) {
+    if (typeof t.id !== 'string' || !t.id.trim()) throw Error(`Missing target ID in ${label} export`);
+    if (byId.has(t.id)) throw Error(`Duplicate ${label} target ID: ${t.id}`);
+    byId.set(t.id, t);
+  }
+  return byId;
+}
+const fullById = indexTargets(full.targets, 'full'), slimById = indexTargets(slim.targets, 'slim');
+for (const id of slimById.keys()) {
+  if (!fullById.has(id)) throw Error(`Unexpected slim target ID: ${id}`);
+}
 let mismatch = 0, refusedOld = 0;
 const areaOf = new Map(full.areas.map(a => [a.id, a.geometry]));
-for (const t of full.targets) {
+for (const [id, t] of fullById) {
+  if (!slimById.has(id)) throw Error(`Missing slim target ID: ${id}`);
+  const verdict = slimById.get(id).protected_place;
   const allowedOld = screen.pointAllowed(t) && t.area_ids.every(id => screen.geometryAllowed(areaOf.get(id)));
-  const allowedSlim = !placeRefused(t.protected_place);
+  const allowedSlim = !placeRefused(verdict);
   if (!allowedOld) refusedOld++;
-  if (allowedOld !== allowedSlim) { mismatch++; console.log('ELIGIBILITY DIFFERS', t.id, 'old allows', allowedOld, 'verdict', JSON.stringify(t.protected_place)); }
+  if (allowedOld !== allowedSlim) { mismatch++; console.log('ELIGIBILITY DIFFERS', id, 'old allows', allowedOld, 'verdict', JSON.stringify(verdict)); }
 }
 console.log(`every reef: ${full.targets.length} checked, ${refusedOld} refused by the run-time outline check, eligibility mismatches ${mismatch}`);
 bad += mismatch;

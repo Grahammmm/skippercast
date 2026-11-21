@@ -19,6 +19,26 @@ ROOT = Path(__file__).resolve().parents[2]
 HOSTS = {'pubs.usgs.gov', 'cmgds.marine.usgs.gov'}
 KINDS = {'bathymetry', 'seafloor-character'}
 MAX_XML = 1_500_000
+METADATA_REVIEW = ROOT / 'catalog/usgs-ds781-metadata-review.json'
+EXPLICIT_REUSE = 'explicit-public-domain-redistribution'
+HOLD = 'requires-review'
+
+# Whole notices from the existing review, limited to the USGS-only forms.
+# Attribution and the non-navigation warning are retained, not new rights.
+_GRANT = ('USGS-authored or produced data and information are in the public domain from the U.S. '
+          'Government and are freely redistributable with proper metadata and source attribution.')
+_CC0 = ' These data are marked with a Creative Commons CC0 1.0 Universal License.'
+_ATTRIBUTION = (' Please recognize and acknowledge the U.S. Geological Survey as the {} of the dataset '
+                'and in products derived from these data.')
+_NAVIGATION = ' This information is not intended for navigation purposes.'
+_USE_NOTICES = {
+    _GRANT + _ATTRIBUTION.format('originator'),
+    _GRANT + _ATTRIBUTION.format('originators') + _NAVIGATION,
+    _GRANT + _ATTRIBUTION.format('originator(s)') + _NAVIGATION,
+    _GRANT + _CC0 + _ATTRIBUTION.format('originator(s)') + _NAVIGATION,
+}
+_RIGHTS_FIELDS = ('map_area', 'kind', 'metadata_url', 'xml_url', 'metadata_sha256',
+                  'access_constraints', 'use_constraints')
 
 
 def official(url):
@@ -37,12 +57,41 @@ def xml_sibling(url):
     return url[:-4] + '.xml' if url.lower().endswith('.txt') else url
 
 
+def reviewed_redistribution_products():
+    """Use the checked-in review, not affirmative labels in incoming receipts."""
+    review = json.loads(METADATA_REVIEW.read_text(encoding='utf-8'))
+    records = review['records']
+    if (review.get('scope') != 'usgs-ds781-original-fgdc-metadata-triage'
+            or len(records) != review['record_count']
+            or len({row['archive_url'] for row in records}) != len(records)):
+        raise ValueError('Invalid checked-in DS781 FGDC review')
+    products = {}
+    for row in records:
+        if row.get('status') != 'reviewed' or row.get('rights_evidence') != EXPLICIT_REUSE:
+            continue
+        if (row.get('access_constraints') not in {None, 'None', 'none', 'No access constraints', 'no access constraints'}
+                or row.get('use_constraints') not in _USE_NOTICES):
+            continue
+        url, digest = row.get('metadata_url'), row.get('metadata_sha256')
+        if (not catalog_metadata_url(url) or row.get('xml_url') != xml_sibling(url)
+                or not isinstance(digest, str) or len(digest) != 64
+                or any(ch not in '0123456789abcdef' for ch in digest)):
+            continue
+        products[row['archive_url']] = tuple(row[key] for key in _RIGHTS_FIELDS)
+    return products
+
+
+def matches_redistribution_review(row, reviewed):
+    return (row.get('status') == 'reviewed' and tuple(row.get(key) for key in _RIGHTS_FIELDS)
+            == reviewed.get(row.get('archive_url')))
+
+
 def fetch(url):
     if not official(url):
         raise ValueError('Metadata URL is outside original USGS XML hosts')
     request = Request(url, headers={'User-Agent': 'SkipperCast original FGDC source review/1.0'})
     with urlopen(request, timeout=35) as response:
-        if response.status != 200 or not official(response.url):
+        if response.status != 200 or response.url != url:
             raise ValueError('Original USGS XML returned unexpected status or redirect')
         raw = response.read(MAX_XML + 1)
     if not raw or len(raw) > MAX_XML:
@@ -66,8 +115,7 @@ def parse_xml(raw):
         raise ValueError('Unexpected metadata spacing dimensions')
     access = text('./idinfo/accconst')
     use = text('./idinfo/useconst')
-    rights = ('explicit-public-domain-redistribution' if 'public domain' in use.lower()
-              and 'freely redistributable' in use.lower() else 'requires-review')
+
     return {'title': title[:250], 'publication_date': text('./idinfo/citation/citeinfo/pubdate') or None,
             'ground_condition_date': text('./idinfo/timeperd/timeinfo/sngdate/caldate') or None,
             'horizontal_spacing_in_metadata': spacing or None,
@@ -76,7 +124,7 @@ def parse_xml(raw):
                                              and resolution_units.lower() in {'meter', 'meters'}),
             'vertical_datum_declared': vertical or None,
             'access_constraints': access[:600] or None, 'use_constraints': use[:1200] or None,
-            'rights_evidence': rights}
+            'rights_evidence': HOLD}
 
 
 def audit(source, *, fetcher=fetch):
@@ -96,6 +144,7 @@ def audit(source, *, fetcher=fetch):
             tasks.append((area['name'], product))
     if len(tasks) < 70:
         raise ValueError('DS 781 bathymetry/character product inventory shrank')
+    reviewed = reviewed_redistribution_products()
 
     def inspect(task):
         name, product = task
@@ -106,9 +155,11 @@ def audit(source, *, fetcher=fetch):
         try:
             xml_url = xml_sibling(row['metadata_url'])
             raw = fetcher(xml_url)
-            return {**row, 'status': 'reviewed', 'xml_url': xml_url,
-                    'metadata_sha256': sha256(raw).hexdigest(),
-                    **parse_xml(raw)}
+            result = {**row, 'status': 'reviewed', 'xml_url': xml_url,
+                      'metadata_sha256': sha256(raw).hexdigest(), **parse_xml(raw)}
+            if matches_redistribution_review(result, reviewed):
+                result['rights_evidence'] = EXPLICIT_REUSE
+            return result
         except (OSError, TimeoutError, ValueError, ET.ParseError) as exc:
             return {**row, 'status': 'fetch-or-parse-failed', 'issue': str(exc)[:180]}
 

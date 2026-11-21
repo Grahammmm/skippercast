@@ -5,12 +5,16 @@ historical context, and a touching tile is not a depth-qualified fishing site.
 """
 import argparse
 from collections import defaultdict
+from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import re
 import sqlite3
 
+from pyproj import CRS
+from pyproj.exceptions import CRSError
 from shapely.geometry import shape
 from shapely import wkb
 
@@ -36,6 +40,45 @@ def gpkg_geometry(raw):
     return geom
 
 
+def checked_scheme_layer(db):
+    try:
+        layers = db.execute("SELECT table_name, srs_id FROM gpkg_contents WHERE data_type='features'").fetchall()
+        if (len(layers) != 1 or not isinstance(layers[0][0], str)
+                or not re.fullmatch(r'Modeling_Tile_Scheme_[A-Za-z0-9_]+', layers[0][0])):
+            raise ValueError('Expected one NOAA NBS Modeling tile scheme feature layer')
+        name, srs = layers[0]
+        columns = db.execute('SELECT column_name, srs_id FROM gpkg_geometry_columns WHERE table_name=?',
+                             (name,)).fetchall()
+        if type(srs) is not int or srs in (-1, 0) or columns != [('geom', srs)]:
+            raise ValueError('Inconsistent scheme SRS or missing geom declaration')
+        rows = db.execute('SELECT organization, organization_coordsys_id, definition '
+                          'FROM gpkg_spatial_ref_sys WHERE srs_id=?', (srs,)).fetchall()
+    except sqlite3.OperationalError as error:
+        raise ValueError('Missing or invalid scheme CRS metadata') from error
+    if len(rows) != 1:
+        raise ValueError('Missing scheme CRS or ambiguous SRS definition')
+    authority, code, definition = rows[0]
+    if not isinstance(definition, str) or not definition.strip():
+        raise ValueError('Invalid scheme CRS definition')
+    try:
+        crs = CRS.from_wkt(definition)
+    except CRSError as error:
+        raise ValueError('Invalid scheme CRS definition') from error
+    # Both the R-tree and the geometry join use GeoJSON longitude/latitude.
+    if (authority, code) != ('EPSG', 4326) or not crs.equals(CRS.from_epsg(4326), ignore_axis_order=True):
+        raise ValueError('NOAA tile scheme has unsupported CRS: expected WGS 84 (EPSG:4326)')
+
+    # Check headers independently of the R-tree: a mismatched tile might be
+    # outside every query window precisely because it uses the wrong CRS.
+    for header, in db.execute(f'SELECT DISTINCT substr(geom, 1, 8) FROM "{name}"'):
+        if not isinstance(header, bytes) or len(header) != 8 or header[:3] != b'GP\x00':
+            raise ValueError('Expected version-zero GeoPackage binary geometry')
+        order = 'little' if header[3] & 1 else 'big'
+        if int.from_bytes(header[4:8], order, signed=True) != srs:
+            raise ValueError('Inconsistent tile SRS in GeoPackage geometry header')
+    return name
+
+
 def inventory(scheme, context_files, sectors):
     if len(context_files) != len(COASTS) or set(context_files) != set(COASTS):
         raise ValueError('All five coast contexts required')
@@ -46,11 +89,9 @@ def inventory(scheme, context_files, sectors):
     selected = defaultdict(lambda: {'coasts': set(), 'source_ids': set(), 'outlines': set(),
                                     'sector_ids': set(), 'url': None, 'rat_url': None,
                                     'resolution': None})
-    with sqlite3.connect(scheme) as db:
-        table = db.execute("SELECT table_name FROM gpkg_contents WHERE data_type='features'").fetchone()
-        if not table or not table[0].startswith('Modeling_Tile_Scheme_'):
-            raise ValueError('Expected reviewed NOAA NBS Modeling tile scheme')
-        name = table[0]
+    with closing(sqlite3.connect(scheme.absolute().as_uri() + '?mode=ro', uri=True)) as db:
+        db.execute('BEGIN')  # Validate and query the same scheme snapshot.
+        name = checked_scheme_layer(db)
         for coast in COASTS:
             path = context_files[coast]
             context = json.loads(path.read_text())
@@ -58,7 +99,9 @@ def inventory(scheme, context_files, sectors):
                     or context.get('scope') != 'generalized-statewide-usgs-hard-bottom-context'
                     or context.get('coast_id') != coast):
                 raise ValueError('Unreviewed USGS hard-bottom display context: ' + coast)
-            features = context['features']
+            # New shards retain centroid ownership in features; discovery needs
+            # the coast-clipped view. Older receipts have only features.
+            features = context.get('regional_features', context['features'])
             references.append({'coast_id': coast, 'path': str(path),
                                'sha256': digest(path), 'display_outlines': len(features)})
             for feature in features:

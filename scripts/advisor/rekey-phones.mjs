@@ -117,11 +117,11 @@ export async function main(argv, {run = spawnSync, env = process.env, log = cons
   if (result.status !== 0) { log('The transaction failed: nothing was changed. The old key is still the live one.'); return result.status ?? 1; }
   write(SQL_FILE, '', {mode: 0o600});   // the file held ciphertexts and hashes only, but nothing needs it now
   const check = await plan(read(), oldKey, newKey);
-  const ok = check.updates.length === 0 && check.failed.length === 0;
-  log(ok ? `Re-keyed ${p.updates.length} contact(s). Now install the new key: wrangler secret put ADVISOR_PHONE_KEY, then gh secret set ADVISOR_PHONE_KEY.`
+  const ready = check.updates.length === 0 && check.failed.length === 0 && check.duplicates.length === 0;
+  log(ready ? `Re-keyed ${p.updates.length} contact(s). Now install the new key: wrangler secret put ADVISOR_PHONE_KEY, then gh secret set ADVISOR_PHONE_KEY.`
     : 'Check after writing found rows still under the old key: run again (a text may have arrived mid-way).');
   summary(check, log);
-  return ok && !check.duplicates.length ? 0 : 1;
+  return ready ? 0 : 1;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {

@@ -214,6 +214,34 @@ async function passkeyFixture(page: Page): Promise<string> {
   return b64url(id);
 }
 
+test('the account menu reuses its settled session after a layout remount', async ({page, v2}) => {
+  await page.setViewportSize({width: 1280, height: 800});
+  await page.clock.install();
+  await page.addInitScript(() => {
+    // Count at fetch invocation, not at route delivery: after the effects run,
+    // a redundant request cannot still be in flight to the Playwright process.
+    const probe = Object.assign(window, {sessionReads: 0});
+    const fetchOriginal = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = new URL(input instanceof Request ? input.url : input, location.href);
+      if (url.origin !== location.origin || url.pathname !== '/api/session') return fetchOriginal(input, init);
+      probe.sessionReads += 1;
+      return Response.json({signIn: '/#account', signedIn: true, user: {display_name: 'Skipper'}});
+    };
+  });
+  const reads = () => page.evaluate(() => (window as unknown as {sessionReads: number}).sessionReads);
+  await v2.open('app', AREA);
+  const desktop = page.locator('.app-masthead .app-account-trigger');
+  await expect(desktop).toHaveText('Skipper');
+  expect(await reads(), 'initial mount reads the session').toBe(1);
+
+  await page.setViewportSize({width: 390, height: 844});
+  await expect(desktop).toHaveCount(0);
+  await expect(page.locator('.app-account-top-trigger')).toHaveAccessibleName('Skipper');
+  await page.clock.runFor(200); // drain mount effects, including the after-paint fallback
+  expect(await reads(), 'settled remount does not read the session again').toBe(1);
+});
+
 test('signing in from the account menu completes the passkey flow and keeps the place', async ({page, pageErrors, v2, isMobile}) => {
   const state = await stubAuth(page, await passkeyFixture(page));
   await v2.open('app', AREA);
@@ -381,16 +409,119 @@ test('signed in, saved-trip alerts save, list, delete and acknowledge through th
   expect(pageErrors).toEqual([]);
 });
 
+const exportFile = 'SkipperCast-private-records.json';
+const privateFixture = {catch_log: [{id: 'synthetic-catch'}], spots: [{id: 'synthetic-spot'}]};
+type PrivacyProbe = {release?: () => void; jsonFiles: number};
+
+for (const obsolete of ['close and reopen', 'confirmed deletion', 'confirmed deletion remount'] as const) {
+  test(`private JSON export: ${obsolete} cancels the old download; a fresh retry works`, async ({page, v2, isMobile}) => {
+    // Hold the first body at the application boundary even if fetch was aborted
+    // after the bytes arrived. This exercises the final check before file creation.
+    await page.addInitScript(() => {
+      const probe: PrivacyProbe = {jsonFiles: 0};
+      Object.assign(window, {privacyProbe: probe});
+      const fetchOriginal = window.fetch.bind(window);
+      let first = true;
+      window.fetch = async (input, init) => {
+        const r = await fetchOriginal(input, init);
+        if (input === '/api/privacy' && init?.method !== 'DELETE' && first) {
+          first = false;
+          const json = r.json.bind(r);
+          r.json = async () => {
+            const body = await json();
+            await new Promise<void>(resolve => { probe.release = resolve; });
+            return body;
+          };
+        }
+        return r;
+      };
+      const create = URL.createObjectURL.bind(URL);
+      URL.createObjectURL = blob => {
+        if (blob instanceof Blob && blob.type === 'application/json') probe.jsonFiles++;
+        return create(blob);
+      };
+    });
+    await v2.feed('**/api/session', {signedIn: true, user: {display_name: 'Skipper'}, publicKey: null});
+    await v2.feed('**/api/trips', {trips: [], events: []});
+    await v2.feed('**/api/comfort', {feedback: []});
+    await v2.feed('**/api/catch-log**', {entries: []});
+    let reads = 0;
+    let deletion: import('@playwright/test').Route | undefined;
+    await page.route('**/api/privacy', route => {
+      if (route.request().method() === 'DELETE') { deletion = route; return; }
+      return ++reads === 2 ? route.fulfill({status: 503, json: {error: 'Synthetic export failure'}})
+        : route.fulfill({json: reads === 1 ? {catch_log: [], spots: []} : privateFixture});
+    });
+    const dialog = page.getByRole('dialog', {name: 'Trip alerts'});
+    const status = dialog.locator('#alert-status');
+    const download = dialog.getByRole('button', {name: 'Export my records'});
+    const open = async () => {
+      await (await accountButton(page, isMobile)).click();
+      await page.getByRole('button', {name: 'Saved-trip alerts'}).click();
+      await dialog.getByText('Privacy & account data').click();
+    };
+    await v2.open('app', AREA);
+    await open();
+    await download.click();
+    await page.waitForFunction(() => !!(window as unknown as {privacyProbe: PrivacyProbe}).privacyProbe.release);
+    if (obsolete === 'close and reopen') {
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#trip-alerts')).toHaveCount(0);
+      await open();
+    } else {
+      await dialog.getByRole('button', {name: 'Delete my account and records'}).click();
+      await dialog.getByRole('button', {name: 'Yes, delete everything'}).click();
+      await expect.poll(() => deletion).toBeDefined();
+      if (obsolete === 'confirmed deletion remount') {
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#trip-alerts')).toHaveCount(0);
+        await open();
+        await expect(download, 'deletion stays locked across sheet remount').toBeDisabled();
+        await expect(dialog.getByRole('button', {name: 'Delete my account and records'})).toBeDisabled();
+        await download.dispatchEvent('click');
+        expect(reads, 'a synthetic click cannot start an export during deletion').toBe(1);
+      }
+    }
+    const files = await page.evaluate(async () => {
+      const probe = (window as unknown as {privacyProbe: PrivacyProbe}).privacyProbe;
+      probe.release!();
+      // Drain the released JSON continuation before reading the synchronous file count.
+      await new Promise(resolve => setTimeout(resolve, 0));
+      return probe.jsonFiles;
+    });
+    expect(files, 'obsolete export must not create a JSON file').toBe(0);
+    if (deletion) {
+      await expect(download).toBeDisabled();
+      await deletion.fulfill({status: 503, json: {error: 'Synthetic deletion failure'}});
+      if (obsolete !== 'confirmed deletion remount') await expect(status).toHaveText('Synthetic deletion failure');
+      await expect(download).toBeEnabled();
+    }
+    await download.click();
+    await expect(status).toHaveText('Synthetic export failure');
+    await expect(download).toBeEnabled();
+    const file = page.waitForEvent('download');
+    await download.click();
+    const saved = await file;
+    expect(saved.suggestedFilename()).toBe(exportFile);
+    let json = '';
+    for await (const chunk of (await saved.createReadStream()).setEncoding('utf8')) json += chunk;
+    expect(JSON.parse(json)).toEqual(privateFixture);
+    expect(await page.evaluate(() => (window as unknown as {privacyProbe: PrivacyProbe}).privacyProbe.jsonFiles)).toBe(1);
+    expect(reads).toBe(3);
+  });
+}
+
 // SC0452-01: the passkey library (vendor/simplewebauthn-browser-14.0.0) is requested when a ceremony starts, not with the map page.
 const UMD = '/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js';
 const UNAVAILABLE = 'Passkeys are unavailable right now. Try again when you are online.';
 
 /** Counts the requests for the library and for the options calls that must not happen without it. */
 function watchPasskeyRequests(page: Page) {
-  const seen = {library: 0, loginOptions: 0, addOptions: 0};
+  const seen = {library: 0, registerOptions: 0, loginOptions: 0, addOptions: 0};
   page.on('request', request => {
     const path = new URL(request.url()).pathname;
     if (path === UMD) seen.library += 1;
+    if (path === '/api/auth/register/options') seen.registerOptions += 1;
     if (path === '/api/auth/login/options') seen.loginOptions += 1;
     if (path === '/api/auth/passkeys/options') seen.addOptions += 1;
   });
@@ -433,6 +564,7 @@ test('the signed-out dialog loads the library for its sign-in and Sign in comple
 test('a library that will not load says passkeys are unavailable, makes no auth request, and the next try loads it', async ({page, v2}) => {
   const state = await stubAuth(page, await passkeyFixture(page));
   const seen = watchPasskeyRequests(page);
+  await page.route('**/api/auth/register/options', route => route.fulfill({status: 204}));
   await page.route('**/vendor/simplewebauthn-browser-14.0.0/**', route => route.abort('failed'));   // offline
   await v2.open('app', AREA);
   await page.evaluate(() => { location.hash = '#account'; });
@@ -450,6 +582,7 @@ test('a library that will not load says passkeys are unavailable, makes no auth 
   await page.locator('#account-create').click();
   await expect(page.locator('#account-status')).toHaveText(UNAVAILABLE);
   expect(await page.evaluate(() => typeof (globalThis as {SimpleWebAuthnBrowser?: unknown}).SimpleWebAuthnBrowser), 'the tampered script never ran').toBe('undefined');
+  expect(seen.registerOptions, 'Create sends no registration options request after integrity failure').toBe(0);
   expect(seen.loginOptions).toBe(0);
 
   await page.unroute('**/vendor/simplewebauthn-browser-14.0.0/**');   // back online
@@ -457,6 +590,11 @@ test('a library that will not load says passkeys are unavailable, makes no auth 
   await page.locator('#account-signin').click();
   await reloaded;
   expect(state.verified, 'the retry loaded the real library and signed in').toBe(1);
+
+  // Prove that the zero above is not a blind spot: this POST is fulfilled by the local route.
+  const status = await page.evaluate(async () => (await fetch('/api/auth/register/options', {method: 'POST'})).status);
+  expect(status).toBe(204);
+  expect(seen.registerOptions, 'the observer counts the synthetic registration POST').toBe(1);
 });
 
 test('Add a passkey loads the library when tapped; a failed load says so and a retry adds the passkey', async ({page, pageErrors, v2}) => {

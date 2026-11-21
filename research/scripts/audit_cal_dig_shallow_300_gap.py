@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import hashlib
 import io
 import json
+import math
 from pathlib import Path
 from urllib.request import Request, urlopen
 
@@ -45,6 +46,7 @@ def summarize(raw, kind):
     in_band = 0
     missing_depth = 0
     invalid_negative = 0
+    invalid_nonfinite = 0
     for row in rows:
         lat, lon = float(row["Latitude"]), float(row["Longitude"])
         if not (-90 <= lat <= 90 and -180 <= lon <= 180):
@@ -53,13 +55,17 @@ def summarize(raw, kind):
             missing_depth += 1
             continue
         depth = float(row["depth_mete"])
+        if not math.isfinite(depth):
+            invalid_nonfinite += 1
+            continue
         if depth < 0:
             invalid_negative += 1
             continue
         depths.append(depth)
         in_band += 60.96 <= depth <= 91.44
-    if not rows or not depths:
-        raise ValueError(f"Cal DIG I {kind} observations missing")
+    if not depths:
+        raise ValueError(f"Cal DIG I {kind} observations missing: no finite nonnegative depths "
+                         f"({invalid_nonfinite} nonfinite rows excluded)")
     if in_band:
         raise ValueError(f"Cal DIG I {kind} now has 200–300 ft observations; spatial review required")
     return {
@@ -68,6 +74,8 @@ def summarize(raw, kind):
         "rows": len(rows),
         "missing_depth_rows": missing_depth,
         "negative_depth_rows_excluded": invalid_negative,
+        # Preserve verification against older receipts when there are no nonfinite rows.
+        **({"nonfinite_depth_rows_excluded": invalid_nonfinite} if invalid_nonfinite else {}),
         "minimum_nonnegative_observation_depth_m": min(depths),
         "maximum_nonnegative_observation_depth_m": max(depths),
         "observations_in_200_300ft_depth_band": in_band,
@@ -106,7 +114,7 @@ def main():
     if args.verify and stable(report) != stable(json.loads(args.verify.read_text())):
         raise SystemExit("Cal DIG I point sources changed; review before promoting")
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2) + "\n")
+    args.output.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
     print("Cal DIG I: zero original ROV observations in 200–300 ft")
 
 

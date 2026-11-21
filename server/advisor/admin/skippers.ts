@@ -2,9 +2,9 @@
 // § Admin, Skippers and Contacts; 05 § Crew, § Verification; TA-W3): the pilot's
 // recruiting tool.
 //
-//   listBoats       every boat with its status, owner channel, last published report,
+//   listBoats       a page of boats with status, last published report,
 //                   published reports in the last 30 days, posts (TA-S1: not rejected), photo
-//                   consent, active crew and the admin's consent note
+//                   consent, active crew count and whether a consent note exists
 //   editBoat        boat fields with the registration's parsers (intake/skippers.ts), a
 //                   verify or reject (the open new_skipper review is decided when there is
 //                   one, else decisions.ts setBoatVerification), and the consent note
@@ -72,70 +72,102 @@ export interface BoatView {
   consent_note: {note: string; at: string} | null; crew: CrewView[]; review_open: boolean;
 }
 
-interface BoatJoin {
+interface BoatRow {
   id: string; slug: string; name: string; landing: string | null; port: string; region: string; instagram: string | null; booking_url: string | null;
   phone_public: string | null; status: string; verified_at: string | null; created_at: string; consent_photos_at: string | null; consent_revoked_at: string | null;
-  owner_contact_id: string | null; o_channel: string | null; o_language: string | null; o_display_name: string | null; o_role: string | null; o_status: string | null;
-  last_report_date: string | null; reports_30d: number; posts: number;
 }
-const BOAT_SQL = `SELECT b.id,b.slug,b.name,b.landing,b.port,b.region,b.instagram,b.booking_url,b.phone_public,b.status,b.verified_at,b.created_at,
-    b.consent_photos_at,b.consent_revoked_at,b.owner_contact_id,
-    o.channel AS o_channel,o.language AS o_language,o.display_name AS o_display_name,o.role AS o_role,o.status AS o_status,
-    (SELECT MAX(r.report_date) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published') AS last_report_date,
-    (SELECT COUNT(*) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published' AND r.report_date>=?) AS reports_30d,
-    (SELECT COUNT(*) FROM advisor_posts p WHERE p.boat_id=b.id AND p.status<>'rejected') AS posts
-  FROM advisor_boats b LEFT JOIN advisor_contacts o ON o.id=b.owner_contact_id`;
+type BoatJoin = BoatRow & Pick<BoatView, 'last_report_date' | 'reports_30d' | 'posts'> & {
+  owner_contact_id: string | null; o_channel: string | null; o_language: string | null; o_display_name: string | null; o_role: string | null; o_status: string | null;
+};
+const BOAT_FIELDS = `b.id,b.slug,b.name,b.landing,b.port,b.region,b.instagram,b.booking_url,b.phone_public,b.status,b.verified_at,b.created_at,
+    b.consent_photos_at,b.consent_revoked_at`;
 
-async function noteOf(db: D1Database, boatId: string): Promise<BoatView['consent_note']> {
-  const raw = (await db.prepare('SELECT value FROM job_state WHERE key=?').bind(NOTE_PREFIX + boatId).first<{value: string}>())?.value;
+function parseNote(raw: string | undefined): BoatView['consent_note'] {
   try { const v = raw ? JSON.parse(raw) : null; return v && typeof v.note === 'string' ? {note: v.note, at: String(v.at ?? '')} : null; } catch { return null; }
 }
 
-async function view(db: D1Database, row: BoatJoin, crew: CrewView[], openReviews: Set<string>): Promise<BoatView> {
+export type BoatSummary = Omit<BoatView, 'consent_note' | 'crew' | 'owner'> & {crew_count: number; has_note: boolean};
+
+function facts(row: BoatRow & Pick<BoatView, 'last_report_date' | 'reports_30d' | 'posts'>, review_open: boolean): Omit<BoatSummary, 'crew_count' | 'has_note'> {
   return {
     id: row.id, slug: row.slug, name: row.name, landing: row.landing, port: row.port, region: row.region, instagram: row.instagram,
     booking_url: row.booking_url, phone_public: row.phone_public, status: row.status, verified_at: row.verified_at, created_at: row.created_at,
-    owner: row.owner_contact_id && row.o_channel ? {id: row.owner_contact_id, channel: row.o_channel, language: row.o_language ?? 'en', display_name: row.o_display_name,
-      role: row.o_role ?? 'angler', status: row.o_status ?? 'active'} : null,
     last_report_date: row.last_report_date, reports_30d: Number(row.reports_30d) || 0,
     posts: Number(row.posts) || 0,   // TA-S1: the boat's social posts that were not rejected (drafts, approved, posted)
     consent: consentState(row), consent_photos_at: row.consent_photos_at, consent_revoked_at: row.consent_revoked_at,
-    consent_note: await noteOf(db, row.id), crew, review_open: openReviews.has(row.id),
+    review_open,
   };
 }
 
-async function crewOf(db: D1Database, boatId: string | null): Promise<Map<string, CrewView[]>> {
-  const rows = (await db.prepare(`SELECT cr.boat_id,cr.contact_id,cr.added_at,c.display_name,c.channel,c.status FROM advisor_crew cr JOIN advisor_contacts c ON c.id=cr.contact_id
-      WHERE cr.removed_at IS NULL${boatId ? ' AND cr.boat_id=?' : ''} ORDER BY cr.added_at`).bind(...(boatId ? [boatId] : []))
-    .all<{boat_id: string; contact_id: string; added_at: string; display_name: string | null; channel: string; status: string}>()).results;
-  const out = new Map<string, CrewView[]>();
-  for (const r of rows) {
-    const list = out.get(r.boat_id) ?? [];
-    list.push({contact_id: r.contact_id, display_name: r.display_name, channel: r.channel, status: r.status, added_at: r.added_at});
-    out.set(r.boat_id, list);
-  }
-  return out;
-}
+const OPEN_SKIPPER = "SELECT ref_id FROM advisor_reviews WHERE kind='skipper' AND reason='new_skipper' AND status='open'";
+const RANK = "CASE b.status WHEN 'pending' THEN 0 WHEN 'verified' THEN 1 ELSE 2 END";
+const IN_PAGE = 'IN (SELECT value FROM json_each(?))'; // one bind even for a full page (D1 caps bind parameters)
 
-async function openSkipperReviews(db: D1Database): Promise<Set<string>> {
-  return new Set((await db.prepare("SELECT ref_id FROM advisor_reviews WHERE kind='skipper' AND reason='new_skipper' AND status='open'").all<{ref_id: string}>()).results.map(r => r.ref_id));
+function boatCursor(cursor?: string | null): {rank: number; at: string; id: string} | null {
+  if (!cursor || !/^[\w-]{1,200}$/.test(cursor)) return null;
+  try {
+    const [rank, at, id, extra] = atob(cursor.replaceAll('-', '+').replaceAll('_', '/')).split('|');
+    return extra === undefined && rank && at && id && /^[012]$/.test(rank) && /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(at) && validId(id)
+      ? {rank: Number(rank), at, id} : null;
+  } catch { return null; }
 }
 
 /** Every boat, pending first, then verified, then rejected; newest first within each. */
-export async function listBoats(db: D1Database, now: number = Date.now()): Promise<{boats: BoatView[]}> {
+export async function listBoats(db: D1Database, now: number = Date.now(), query: {cursor?: string | null} = {}): Promise<{boats: BoatSummary[]; next: string | null}> {
   const since = localDate(now - REPORT_DAYS * DAY);
-  const rows = (await db.prepare(`${BOAT_SQL} ORDER BY CASE b.status WHEN 'pending' THEN 0 WHEN 'verified' THEN 1 ELSE 2 END, b.created_at DESC, b.id LIMIT ?`)
-    .bind(since, BOATS_MAX).all<BoatJoin>()).results;
-  const crew = await crewOf(db, null), open = await openSkipperReviews(db);
-  return {boats: await Promise.all(rows.map(row => view(db, row, crew.get(row.id) ?? [], open)))};
+  const after = boatCursor(query.cursor);
+  const where = after ? `WHERE (${RANK}>? OR (${RANK}=? AND (b.created_at<? OR (b.created_at=? AND b.id>?))))` : '';
+  const rows = (await db.prepare(`SELECT ${BOAT_FIELDS} FROM advisor_boats b ${where} ORDER BY ${RANK}, b.created_at DESC, b.id LIMIT ?`)
+    .bind(...(after ? [after.rank, after.rank, after.at, after.at, after.id] : []), BOATS_MAX + 1).all<BoatRow>()).results;
+  const page = rows.slice(0, BOATS_MAX);
+  if (!page.length) return {boats: [], next: null};
+  const ids = JSON.stringify(page.map(r => r.id));
+  const [crew, notes, open, reports, posts] = await Promise.all([
+    db.prepare(`SELECT boat_id, COUNT(*) AS n FROM advisor_crew WHERE removed_at IS NULL AND boat_id ${IN_PAGE} GROUP BY boat_id`).bind(ids).all<{boat_id: string; n: number}>(),
+    db.prepare(`SELECT key,value FROM job_state WHERE key ${IN_PAGE}`).bind(JSON.stringify(page.map(r => NOTE_PREFIX + r.id))).all<{key: string; value: string}>(),
+    db.prepare(`${OPEN_SKIPPER} AND ref_id ${IN_PAGE}`).bind(ids).all<{ref_id: string}>(),
+    db.prepare(`SELECT boat_id,MAX(report_date) AS last_report_date,COUNT(CASE WHEN report_date>=? THEN 1 END) AS reports_30d
+      FROM advisor_reports WHERE status='published' AND boat_id ${IN_PAGE} GROUP BY boat_id`).bind(since, ids)
+      .all<{boat_id: string; last_report_date: string; reports_30d: number}>(),
+    db.prepare(`SELECT boat_id,COUNT(*) AS n FROM advisor_posts WHERE status<>'rejected' AND boat_id ${IN_PAGE} GROUP BY boat_id`)
+      .bind(ids).all<{boat_id: string; n: number}>(),
+  ]);
+  const counts = new Map(crew.results.map(r => [r.boat_id, r.n]));
+  const noted = new Set(notes.results.filter(r => parseNote(r.value)).map(r => r.key));
+  const reviews = new Set(open.results.map(r => r.ref_id));
+  const reportFacts = new Map(reports.results.map(r => [r.boat_id, r]));
+  const postCounts = new Map(posts.results.map(r => [r.boat_id, r.n]));
+  const last = page.at(-1)!;
+  const rank = last.status === 'pending' ? 0 : last.status === 'verified' ? 1 : 2;
+  const boats = page.map(row => {
+    const report = reportFacts.get(row.id);
+    return {...facts({...row, last_report_date: report?.last_report_date ?? null, reports_30d: report?.reports_30d ?? 0,
+      posts: postCounts.get(row.id) ?? 0}, reviews.has(row.id)), crew_count: counts.get(row.id) ?? 0, has_note: noted.has(NOTE_PREFIX + row.id)};
+  });
+  return {boats,
+    next: rows.length > BOATS_MAX ? btoa(`${rank}|${last.created_at}|${last.id}`).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '') : null};
 }
 
-/** One boat, as listBoats shows it, or null. */
+/** One boat's private admin detail, or null. */
 export async function boatView(db: D1Database, boatId: string, now: number = Date.now()): Promise<BoatView | null> {
   if (!validId(boatId)) return null;
-  const row = await db.prepare(`${BOAT_SQL} WHERE b.id=?`).bind(localDate(now - REPORT_DAYS * DAY), boatId).first<BoatJoin>();
+  const row = await db.prepare(`SELECT ${BOAT_FIELDS},b.owner_contact_id,
+    (SELECT MAX(r.report_date) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published') AS last_report_date,
+    (SELECT COUNT(*) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published' AND r.report_date>=?) AS reports_30d,
+    (SELECT COUNT(*) FROM advisor_posts p WHERE p.boat_id=b.id AND p.status<>'rejected') AS posts,
+    o.channel AS o_channel,o.language AS o_language,o.display_name AS o_display_name,o.role AS o_role,o.status AS o_status
+    FROM advisor_boats b LEFT JOIN advisor_contacts o ON o.id=b.owner_contact_id WHERE b.id=?`)
+    .bind(localDate(now - REPORT_DAYS * DAY), boatId).first<BoatJoin>();
   if (!row) return null;
-  return view(db, row, (await crewOf(db, boatId)).get(boatId) ?? [], await openSkipperReviews(db));
+  const [crew, note, open] = await Promise.all([
+    db.prepare(`SELECT cr.contact_id,c.display_name,c.channel,c.status,cr.added_at FROM advisor_crew cr JOIN advisor_contacts c ON c.id=cr.contact_id
+      WHERE cr.removed_at IS NULL AND cr.boat_id=? ORDER BY cr.added_at`).bind(boatId).all<CrewView>(),
+    db.prepare('SELECT value FROM job_state WHERE key=?').bind(NOTE_PREFIX + boatId).first<{value: string}>(),
+    db.prepare(`${OPEN_SKIPPER} AND ref_id=? LIMIT 1`).bind(boatId).first(),
+  ]);
+  return {...facts(row, Boolean(open)), consent_note: parseNote(note?.value), crew: crew.results,
+    owner: row.owner_contact_id && row.o_channel ? {id: row.owner_contact_id, channel: row.o_channel, language: row.o_language ?? 'en', display_name: row.o_display_name,
+      role: row.o_role ?? 'angler', status: row.o_status ?? 'active'} : null};
 }
 
 // ---- edit -------------------------------------------------------------------------------

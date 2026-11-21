@@ -7,12 +7,13 @@ import test from 'node:test';
 import {signal} from '@preact/signals';
 import {publishedChartFiles} from '../web/chart-files.ts';
 import {
-  CONTOUR_RETRY_MS, DEPTH_EDGE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR, DEPTH_LINE, DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DETAIL_ZOOM, NOTES,
+  CONTOUR_RETRY_MS, DEPTH_EDGE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DETAIL_ZOOM, NOTES,
   contourState, createDepthContours, depthContoursOverviewURL, depthContoursURL,
 } from '../web/map/depth-contours.ts';
 import {ZOOM_OFFSET} from '../web/map/engine.ts';
 import {DEPTH_CONTOURS_SOURCE} from '../web/map/layers.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
+import {PLACE_LABELS} from '../web/map/style.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
 import {configureStore, region, syncFromURL} from '../web/state.ts';
@@ -23,7 +24,7 @@ const FULL = json('dist/regions/morro-bay/depth-contours.geojson');
 const OVERVIEW = json('dist/regions/morro-bay/depth-contours-overview.geojson');
 const T0 = Date.parse('2026-10-20T18:00:00Z');
 const OV = depthContoursOverviewURL('morro-bay'), DETAIL = depthContoursURL('morro-bay');
-const IDS = [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR];
+const IDS = [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL];
 const flush = async () => { for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve)); };
 
 /** `script[path]` answers that path's requests in order ('throw', 'timeout', a status, or a file for a 200); then `files`, else 404. */
@@ -54,7 +55,7 @@ function setup(t, {files = {}, script = {}} = {}) {
   return {asked, calls, move};
 }
 const drawnUnderMPA = calls => calls.filter(c => c[0] === 'overlay' && c[2]).length === 1
-  && calls.some(c => c[0] === 'overlay' && c[2] && c[2].join() === IDS.join() && c[3] === MPA_FILL);
+  && calls.some(c => c[0] === 'overlay' && c[2] && c[2].join() === IDS.join() && c[3]?.join() === [PLACE_LABELS, MPA_FILL].join());
 
 test('a thrown read fails; a move before the back-off asks nothing; the first move after it asks once and draws', async t => {
   assert.equal(CONTOUR_RETRY_MS, 60_000);

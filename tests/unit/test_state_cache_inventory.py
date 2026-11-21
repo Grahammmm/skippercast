@@ -106,7 +106,7 @@ def test_good_inventory_with_matching_file_restores_without_transfer(tmp_path, c
 def test_good_inventory_transfers_a_missing_file(tmp_path, monkeypatch):
     recorded = []
 
-    def fake_restore(s3, bucket, path, digest):
+    def fake_restore(s3, bucket, path, digest, size=None):
         recorded.append((path.relative_to(tmp_path).as_posix(), digest))
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b'abc')

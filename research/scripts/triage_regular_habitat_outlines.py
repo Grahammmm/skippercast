@@ -9,6 +9,7 @@ from collections import Counter
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from skippercast.platform.contracts import atomic_json
@@ -16,6 +17,10 @@ from skippercast.platform.contracts import atomic_json
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _finite(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def triage(context: dict, summary: dict, enc: dict, profile: dict, *, now=None) -> dict:
@@ -47,9 +52,12 @@ def triage(context: dict, summary: dict, enc: dict, profile: dict, *, now=None) 
         props = feature["properties"]
         survey = surveys[props["survey_id"]]
         low, high = props["depth_ft_range"]
+        # Finite numbers only: NaN passes a plain `< 0` area test.
         if (props.get("fishing_target") is not False or props.get("exportable") is not False
                 or props.get("depth_qualified_for_target") is not False
                 or survey["noaa_bag_sha256"] != props["noaa_bag_sha256"]
+                or not all(_finite(v) for v in (low, high, props["max_product_uncertainty_m"],
+                                                props["approx_display_area_m2"]))
                 or not 0 < low <= high <= profile["maximum_original_depth_ft"]
                 or not 0 < props["max_product_uncertainty_m"] <= 2
                 or props["approx_display_area_m2"] < 0):

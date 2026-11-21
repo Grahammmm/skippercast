@@ -296,17 +296,18 @@ class Outcomes:
             self.collect_errors.append(dict(nodeid=report.nodeid, longrepr=str(report.longrepr)))
 
     def pytest_runtest_logreport(self, report):
-        entry = self.reports.setdefault(report.nodeid, dict(outcome='passed', phases={}))
+        entry = self.reports.setdefault(report.nodeid, dict(outcome='incomplete', phases={}))
         state = ('xfailed' if report.skipped else 'xpassed') if hasattr(report, 'wasxfail') else report.outcome
-        entry['phases'][report.when] = state
+        phases = entry['phases']
+        phases[report.when] = state
         if state == 'passed':
-            return
-        if report.when == 'call':
-            if entry['outcome'] == 'passed':
-                entry['outcome'] = state
-        elif state == 'failed':
+            if entry['outcome'] == 'incomplete' and all(
+                phases.get(when) == 'passed' for when in ('setup', 'call', 'teardown')
+            ):
+                entry['outcome'] = 'passed'
+        elif state == 'failed' and report.when != 'call':
             entry['outcome'] = 'error'
-        elif entry['outcome'] == 'passed':
+        elif entry['outcome'] in ('incomplete', 'passed'):
             entry['outcome'] = state
 
 
@@ -435,7 +436,7 @@ def main(argv=None):
             failures.append(f'{len(outcomes.collect_errors)} collection errors')
         not_passed = sorted(node for node, entry in outcomes.reports.items() if entry['outcome'] != 'passed')
         if not_passed:
-            failures.append(f'{len(not_passed)} tests not passed (failed/error/skipped/xfailed): {not_passed}')
+            failures.append(f'{len(not_passed)} tests not passed: {not_passed}')
         if sorted(set(outcomes.collected) - set(outcomes.reports)):
             failures.append('collected tests without a report')
         if counts.get('passed', 0) != expected:

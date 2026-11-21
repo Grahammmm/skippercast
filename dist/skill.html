@@ -11,14 +11,14 @@
     <link rel="stylesheet" href="coast-readable.css" />
   </head>
   <body class="coast-readable">
-    <a class="skip-link" href="#skill-content">Skip to forecast skill</a>
+    <a class="skip-link" href="#skill-content" data-i18n="skill.skip">Skip to forecast skill</a>
     <header>
       <a class="brand" href="./">SkipperCast</a>
-      <nav aria-label="Public information"><a href="./">Back to the map</a><a href="/status">Data status</a><a href="/methodology">Methods</a><a href="/about">About</a></nav>
+      <nav aria-label="Public information" data-i18n-aria="status.nav.public"><a href="./" data-i18n="status.nav.map">Back to the map</a><a href="/status" data-i18n="status.heading">Data status</a><a href="/methodology" data-i18n="status.nav.methods">Methods</a><a href="/about" data-i18n="status.nav.about">About</a></nav>
     </header>
     <main id="skill-content">
-      <h1>Forecast skill</h1>
-      <p>
+      <h1 data-i18n="skill.heading">Forecast skill</h1>
+      <p data-i18n="skill.intro">
         How often our forecast was close to what a buoy then measured, for the
         buoys that stand in for each port. A forecast counts as right when it
         is within the stated tolerance of the reading nearest its valid time.
@@ -28,15 +28,15 @@
         history (30 distinct forecast hours across at least 7 days and 3 model
         runs) it reads &ldquo;not enough data yet&rdquo; and shows no percentage.
       </p>
-      <div id="skill-rows"><p>Loading the published scorecard…</p></div>
-      <noscript><p>This page reads the published scorecard in your browser and needs JavaScript.</p></noscript>
-      <h2>Not scored yet</h2>
-      <p>
+      <div id="skill-rows"><p data-i18n="skill.loading">Loading the published scorecard…</p></div>
+      <noscript><p>This page reads the published scorecard in your browser and needs JavaScript. <span lang="es">Esta página consulta el registro de aciertos publicado en tu navegador y necesita JavaScript.</span></p></noscript>
+      <h2 data-i18n="skill.unscoredHeading">Not scored yet</h2>
+      <p data-i18n="skill.unscored">
         Swell period and water temperature are not scored yet. Neither is checked
         against buoy readings today, so this page makes no claim about how often
         they were right.
       </p>
-      <p>A record of past forecasts at the buoys, not a promise about the next trip. <a href="/status">Data status</a></p>
+      <p data-i18n-lead="skill.disclaimer">A record of past forecasts at the buoys, not a promise about the next trip. <a href="/status" data-i18n="status.heading">Data status</a></p>
     </main>
     <script type="module" src="skill-page.js"></script>
   </body>

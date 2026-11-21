@@ -1,7 +1,9 @@
 """Content-addressed original-file cache; local imports are verified, never trusted."""
 import hashlib
+import os
 from pathlib import Path
 import re
+from tempfile import mkstemp
 from urllib.parse import urlsplit
 
 from skippercast import http
@@ -90,20 +92,21 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
     if local is None and not fetch:
         raise FileNotFoundError('Original source missing; use --fetch or --local')
     cache.mkdir(parents=True, exist_ok=True)
-    temporary = cache / (hashlib.sha256(url.encode()).hexdigest() + '.part')
+    fd, name = mkstemp(dir=cache, suffix='.part')
+    temporary = Path(name)
     try:
-        if local is not None:
-            digest, size = hashlib.sha256(), 0
-            with Path(local).open('rb') as stream, temporary.open('wb') as output:
-                for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-                    size += len(chunk)
-                    if size > max_bytes:
-                        raise ValueError('Original source exceeds byte limit')
-                    digest.update(chunk)
-                    output.write(chunk)
-            actual = digest.hexdigest()
-        else:
-            with temporary.open('wb') as output:
+        with os.fdopen(fd, 'wb') as output:
+            if local is not None:
+                digest, size = hashlib.sha256(), 0
+                with Path(local).open('rb') as stream:
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                        size += len(chunk)
+                        if size > max_bytes:
+                            raise ValueError('Original source exceeds byte limit')
+                        digest.update(chunk)
+                        output.write(chunk)
+                actual = digest.hexdigest()
+            else:
                 try:
                     receipt = (session or http.default_session()).download(
                         url, output, timeout=60, max_bytes=max_bytes,
@@ -112,7 +115,7 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
                     raise ValueError('Original source exceeds byte limit') from error
                 except http.DisallowedHost as error:
                     raise ValueError('Original source redirected outside reviewed publishers') from error
-            actual, size = receipt.sha256, receipt.bytes
+                actual, size = receipt.sha256, receipt.bytes
         if size == 0:
             raise ValueError('Original source is empty')
         if expected != 'unknown' and actual != expected:
@@ -122,14 +125,19 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
         destination = cache / actual / ('source' + extension)
         destination.parent.mkdir(parents=True, exist_ok=True)
         temporary.replace(destination)
-        atomic_json(destination.parent / 'source.json', {'url': url, 'sha256': actual, 'bytes': size})
+        atomic_json(destination.parent / 'source.json', {'url': url, 'sha256': actual, 'bytes': size},
+                    unique_tmp=True)
         return destination, local is None
     finally:
         temporary.unlink(missing_ok=True)
 
 
-def restore_private(s3, bucket, destination, expected, *, max_bytes=2_000_000_000):
-    """Optional private R2 restore; credentials/client are supplied by the job."""
+def restore_private(s3, bucket, destination, expected, *, max_bytes=2_000_000_000, size=None):
+    """Optional private R2 restore; credentials/client are supplied by the job.
+
+    ``size`` is the inventory's declared byte count; when given, the staged file must match
+    it as well as the hash before it replaces ``destination``.
+    """
     if not re.fullmatch(r'[a-f0-9]{64}', expected):
         raise ValueError('Invalid private cache checksum')
     destination = Path(destination)
@@ -138,14 +146,16 @@ def restore_private(s3, bucket, destination, expected, *, max_bytes=2_000_000_00
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         with s3.get_object(Bucket=bucket, Key=key)['Body'] as stream, temporary.open('wb') as output:
-            size = 0
+            received = 0
             for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-                size += len(chunk)
-                if size > max_bytes:
+                received += len(chunk)
+                if received > max_bytes:
                     raise ValueError('Private source exceeds byte limit')
                 output.write(chunk)
         if sha256(temporary) != expected:
             raise ValueError('Private source cache checksum mismatch')
+        if size is not None and received != size:
+            raise ValueError('Private restore size mismatch')
         temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)

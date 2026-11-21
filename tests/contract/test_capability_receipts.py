@@ -274,9 +274,15 @@ class PageCitationTest(unittest.TestCase):
         row = ' '.join(self.rows['Charter grounds'])
         for value in (charter['files'][0]['sha256'], charter['coverage']['from'], charter['coverage']['through']):
             self.assertIn(value, row)
-        row = ' '.join(self.rows['Bite evidence'])
-        for value in (str(bite['run']['databaseId']), bite['run']['conclusion'], bite['health_sha256'],
-                      bite['generated_at'], bite['data_commit']):
+        cells = self.rows['Bite evidence']
+        run = bite['run']
+        # Pending runs must quote their status; a null or empty conclusion is not a label.
+        label = f"status {run['status']}"
+        if run['status'] == 'completed':
+            label += f", conclusion {run['conclusion']}"
+        self.assertIn(f"id {run['databaseId']}, {label},", cells[1])
+        row = ' '.join(cells)
+        for value in (bite['health_sha256'], bite['generated_at'], bite['data_commit']):
             self.assertIn(value, row)
 
     def test_statuses_and_limits_are_unchanged(self):

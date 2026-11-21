@@ -14,7 +14,8 @@ export interface QueueItem {
   id: string; kind: ReviewKind; ref_id: string; reason: string; status: ReviewStatus; note: string | null; opened_at: string; decided_at: string | null;
   detail: Record<string, any> | null;   // the kind's detail (server/advisor/admin/queue.ts reviewDetail)
 }
-export interface QueuePage {items: QueueItem[]; next: string | null}
+export type ReviewSummary = Omit<QueueItem, 'note' | 'detail'>;
+export interface QueuePage {items: ReviewSummary[]; next: string | null}
 export interface DecisionBody {decision: Decision; patch?: Record<string, unknown>; note?: string; reply?: string}
 export interface DecisionResult {review: QueueItem; sends?: number; held?: string; repeated?: boolean}
 export interface Health {
@@ -39,6 +40,7 @@ export interface Boat {
   consent: 'given' | 'revoked' | 'not given'; consent_photos_at: string | null; consent_revoked_at: string | null;
   consent_note: {note: string; at: string} | null; crew: Crew[]; review_open: boolean;
 }
+export type BoatSummary = Omit<Boat, 'owner' | 'crew' | 'consent_note'> & {crew_count: number; has_note: boolean};
 export type BoatFields = Partial<Record<'name' | 'port' | 'landing' | 'instagram' | 'booking_url' | 'phone_public', string | null>>;
 export interface BoatEdit {fields?: BoatFields; status?: 'verified' | 'rejected'; consent_note?: string | null}
 export interface BoatResult {boat: Boat; sends?: number; held?: string}
@@ -62,6 +64,7 @@ export interface Funnel {
   contacts: {new: number; sources: string[]; by_day: {day: string; total: number; by_source: Record<string, number>}[]};
   messages: {inbound: number; by_intent: {intent: string; count: number}[]};
   replies: {outbound: number; contacts: number; per_contact: number | null};
+  unconfirmed_replies: {held: number; sending: number; unknown: number; other: number; pending: number};   // SCA-214
   return_rate: {active: number; returning: number; rate: number | null};
   boats: {verified: number; verified_total: number; pending: number; reports_published: number; boats_reporting: number; reports_per_boat: number | null};
   photos: {submitted: number; approved: number};
@@ -106,7 +109,8 @@ export interface WeekDay {date: string; weekday: string; slots: WeekSlot[]; othe
 export interface CalendarWeek {tz: string; start: string; end: string; days: WeekDay[]}
 /** POST /api/admin/posts/:id/{publish,schedule,retry} (TA-S2). */
 export interface PostActionResult {post: Post; outcome?: string; error?: string}
-export interface PostsPage {posts: Post[]; next: string | null}
+export type PostSummary = Pick<Post, 'id' | 'kind' | 'region' | 'status' | 'ig_media_id' | 'fb_post_id' | 'fb_story_id' | 'collab_status' | 'updated_at'> & {media_count: number};
+export interface PostsPage {posts: PostSummary[]; next: string | null}
 export const POST_STATUSES: readonly string[] = ['all', 'draft', 'approved', 'scheduled', 'publishing', 'posted', 'partial', 'failed', 'rejected'];
 export const POST_KINDS: readonly string[] = ['photo', 'carousel', 'reel', 'story', 'daily', 'roundup'];
 /** The query string for a Posts page. */
@@ -122,10 +126,21 @@ export class ApiError extends Error {
   constructor(status: number, message: string) { super(message); this.status = status; }
 }
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {credentials: 'same-origin', ...init});
-  const data = await response.json().catch(() => ({})) as {error?: string};
-  if (!response.ok) throw new ApiError(response.status, data.error ?? `HTTP ${response.status}`);
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = isObject(data) && typeof data.error === 'string' ? data.error : `HTTP ${response.status}`;
+    throw new ApiError(response.status, message);
+  }
+  if (!isObject(data)) {
+    // An unreadable acknowledgement does not tell us whether a write took effect.
+    throw new ApiError(response.status, init?.method === 'POST'
+      ? 'The server did not confirm the change. Reload to check before trying again.' : 'Invalid admin response');
+  }
   return data as T;
 }
 
@@ -137,15 +152,39 @@ export function queuePath(status: string, kind: string, cursor?: string | null):
   return `/api/admin/reviews?${q}`;
 }
 
-export const getQueue = (status: string, kind: string, cursor?: string | null): Promise<QueuePage> => call(queuePath(status, kind, cursor));
-export const getHealth = (): Promise<Health> => call('/api/admin/health');
+function isReviewSummary(item: unknown): item is ReviewSummary {
+  return isObject(item) && typeof item.id === 'string' && typeof item.ref_id === 'string' &&
+    typeof item.reason === 'string' && typeof item.opened_at === 'string' && KINDS.some(kind => kind === item.kind) &&
+    STATUSES.some(status => status !== 'all' && status === item.status) &&
+    (item.decided_at === null || typeof item.decided_at === 'string');
+}
+
+export async function getQueue(status: string, kind: string, cursor?: string | null): Promise<QueuePage> {
+  const page = await call<Record<string, unknown>>(queuePath(status, kind, cursor));
+  if (!Array.isArray(page.items) || !page.items.every(isReviewSummary) || (page.next !== null && typeof page.next !== 'string')) {
+    throw new Error('Invalid admin queue response');
+  }
+  return {items: page.items, next: page.next};
+}
+export async function getReview(id: string): Promise<QueueItem> {
+  const {review} = await call<{review: QueueItem}>(`/api/admin/reviews/${encodeURIComponent(id)}`);
+  if (!isReviewSummary(review) || review.id !== id || !(review.note === null || typeof review.note === 'string') ||
+    !(review.detail === null || isObject(review.detail))) throw new Error('Invalid admin review response');
+  return review;
+}
+export async function getHealth(): Promise<Health> {
+  const health = await call<Health>('/api/admin/health', {redirect: 'error'});
+  if (health?.enabled !== true || typeof health.checked_at !== 'string') throw new Error('Invalid admin health response');
+  return health;
+}
 export const decide = (id: string, body: DecisionBody): Promise<DecisionResult> =>
   call(`/api/admin/reviews/${encodeURIComponent(id)}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
 
 const postJson = <T>(path: string, data: unknown): Promise<T> =>
   call(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
 
-export const getBoats = (): Promise<{boats: Boat[]}> => call('/api/admin/boats');
+export const getBoats = (cursor?: string | null): Promise<{boats: BoatSummary[]; next: string | null}> => call(`/api/admin/boats${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`);
+export const getBoat = (id: string): Promise<Boat> => call<{boat: Boat}>(`/api/admin/boats/${encodeURIComponent(id)}`).then(r => r.boat);
 export const editBoat = (id: string, edit: BoatEdit): Promise<BoatResult> => postJson(`/api/admin/boats/${encodeURIComponent(id)}`, edit);
 export const removeCrew = (boat: string, contact: string): Promise<{boat: Boat}> =>
   postJson(`/api/admin/boats/${encodeURIComponent(boat)}/crew/${encodeURIComponent(contact)}/remove`, {});
@@ -156,6 +195,7 @@ export const setBlocked = (id: string, blocked: boolean): Promise<{status: strin
 export const getFunnel = (days: 7 | 30): Promise<Funnel> => call(`/api/admin/funnel?days=${days}`);
 export const subscribeWebhooks = (): Promise<{subscribed: boolean; fields: string}> => postJson('/api/admin/meta/subscribe', {});   // TA-S6
 export const getPosts = (status: string, kind: string, cursor?: string | null): Promise<PostsPage> => call(postsPath(status, kind, cursor));
+export const getPost = (id: string): Promise<Post> => call<{post: Post}>(`/api/admin/posts/${encodeURIComponent(id)}`).then(r => r.post);
 export const publishPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/publish`, {});
 export const schedulePost = (id: string, scheduledFor: string | null): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/schedule`, {scheduled_for: scheduledFor});
 export const retryPost = (id: string): Promise<PostActionResult> => postJson(`/api/admin/posts/${encodeURIComponent(id)}/retry`, {});
@@ -198,13 +238,11 @@ export function fleetPath(path: string, query: Record<string, string | null | un
 }
 export const getFleet = <T>(path: string, query?: Record<string, string | null | undefined>): Promise<T> => call(fleetPath(path, query));
 export const postFleet = <T>(path: string, data: unknown): Promise<T> => postJson(fleetPath(path), data);
-/**
- * Whether the fleet admin is on (CF-31). Every /api/admin/fleet/* path answers 404 while
- * FLEET_ENABLED is off (server/routes/fleet.ts), so the open-review list answering is the flag.
- */
+/** Only the private, no-content capability response enables Fleet navigation. */
 export async function getFleetEnabled(): Promise<boolean> {
-  try { await getFleet('reviews', {status: 'open'}); return true; }
-  catch (e) { if (e instanceof ApiError && (e.status === 404 || e.status === 401)) return false; throw e; }
+  const response = await fetch(fleetPath('capability'), {credentials: 'same-origin', redirect: 'error'});
+  if (response.status === 401 || response.status === 403) throw new ApiError(response.status, `HTTP ${response.status}`);
+  return response.status === 204;
 }
 
 // ---- CF-31: fleet reviews and vessels (server/fleet/admin/reviews.ts, vessels.ts) ----

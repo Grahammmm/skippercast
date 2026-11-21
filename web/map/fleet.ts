@@ -29,6 +29,7 @@ import type {Engine, MapView, Overlay} from './engine.ts';
 import {layerEntry} from './layers.ts';
 import {markData} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {paintEdits} from './theme-restyle.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {claimLine, type FleetClaim} from '../fleet.ts';
 
@@ -93,21 +94,26 @@ export function activityCollections(v1: V1, results: Partial<Record<Activity, La
   };
 }
 
-/** Heat under tracks under events, every colour the --fleet token. */
+const activityLayers = (p: Palette): MapLibre.LayerSpecification[] => {
+  const fleet = p.amber;
+  return [
+    {id: HEAT, type: 'fill', source: FLEET_SOURCE.heat, paint: {'fill-color': fleet, 'fill-opacity': ['get', 'opacity'], 'fill-outline-color': fleet}},
+    {id: TRACKS, type: 'line', source: FLEET_SOURCE.tracks, filter: ['!', ['get', 'dashed']], layout: {'line-join': 'round', 'line-cap': 'round'},
+      paint: {'line-color': fleet, 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity']}},
+    {id: TRACKS_DASHED, type: 'line', source: FLEET_SOURCE.tracks, filter: ['get', 'dashed'],
+      paint: {'line-color': fleet, 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity'], 'line-dasharray': [3, 3]}},
+    {id: EVENTS, type: 'circle', source: FLEET_SOURCE.events, paint: {'circle-radius': ['get', 'radius'], 'circle-color': fleet,
+      'circle-opacity': ['case', ['get', 'drift'], 0.55, 0.05], 'circle-stroke-color': fleet, 'circle-stroke-width': ['case', ['get', 'drift'], 1, 2.5],
+      'circle-stroke-opacity': ['case', ['get', 'planning'], 0.45, 1]}},
+  ] as MapLibre.LayerSpecification[];
+};
+
+/** Heat under tracks under events, every colour the --fleet token. A theme switch edits the paints in place; its themePaint reads no feature data (privacy unchanged: admin-only). */
 export function activityOverlay(p: Palette, data: Record<Activity, Collection>): Overlay {
-  const fleet = p.amber, src = (name: Activity) => ({type: 'geojson', data: data[name]} as MapLibre.SourceSpecification);
+  const src = (name: Activity) => ({type: 'geojson', data: data[name]} as MapLibre.SourceSpecification);
   return {
     sources: {[FLEET_SOURCE.heat]: src('heat'), [FLEET_SOURCE.tracks]: src('tracks'), [FLEET_SOURCE.events]: src('events')},
-    layers: [
-      {id: HEAT, type: 'fill', source: FLEET_SOURCE.heat, paint: {'fill-color': fleet, 'fill-opacity': ['get', 'opacity'], 'fill-outline-color': fleet}},
-      {id: TRACKS, type: 'line', source: FLEET_SOURCE.tracks, filter: ['!', ['get', 'dashed']], layout: {'line-join': 'round', 'line-cap': 'round'},
-        paint: {'line-color': fleet, 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity']}},
-      {id: TRACKS_DASHED, type: 'line', source: FLEET_SOURCE.tracks, filter: ['get', 'dashed'],
-        paint: {'line-color': fleet, 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity'], 'line-dasharray': [3, 3]}},
-      {id: EVENTS, type: 'circle', source: FLEET_SOURCE.events, paint: {'circle-radius': ['get', 'radius'], 'circle-color': fleet,
-        'circle-opacity': ['case', ['get', 'drift'], 0.55, 0.05], 'circle-stroke-color': fleet, 'circle-stroke-width': ['case', ['get', 'drift'], 1, 2.5],
-        'circle-stroke-opacity': ['case', ['get', 'planning'], 0.45, 1]}},
-    ] as MapLibre.LayerSpecification[],
+    layers: activityLayers(p), themePaint: q => paintEdits(activityLayers(q)),
   };
 }
 
@@ -159,7 +165,18 @@ export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), pa
   const access = signal<{region: string; fleet: string | null; choices: Record<string, unknown> | null} | null>(null);
   const sessionGeneration = signal(0);
   const bbox = signal<string>('');
-  const results = signal<{key: string; data: Partial<Record<Activity, LayerResult>>} | null>(null);
+  const results = signal<{key: string; data: Partial<Record<Activity, LayerResult>>; status: string} | null>(null);
+  const query = computed(() => {
+    const wanted = entryOn.value && activityAccess.value ? activityOn.value : [], fleet = access.value?.fleet, box = bbox.value, filters = activityFilters.value;
+    if (!wanted.length || !fleet || !box) return null;
+    const key = `${fleet}|${box}|${wanted.join(',')}|${new URLSearchParams(filters as Record<string, string>)}`;
+    return {key, wanted, fleet, box, filters};
+  });
+  // Retain the last accepted result for a return to its query, but never show it under another query.
+  const activeResult = computed(() => {
+    const r = results.value;
+    return r && r.key === query.value?.key ? r : null;
+  });
   let disposed = false;
   let v1: V1 | null = null, controller: AbortController | null = null, drawn = false, drawnOn: Engine | null = null, unwatch: (() => void) | null = null;
   const checks = new Map<string, Promise<{fleet: string; choices: Record<string, unknown>} | null>>();
@@ -205,17 +222,20 @@ export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), pa
     }),
     // Load the options that are on, for the bounds; a newer request aborts the older.
     effect(() => {
-      const wanted = entryOn.value && activityAccess.value ? activityOn.value : [], fleet = access.value?.fleet, box = bbox.value, filters = activityFilters.value;
+      const q = query.value;
       controller?.abort(); controller = null;
-      if (!wanted.length || !fleet || !v1 || !box) { results.value = null; activityStatus.value = ''; return; }
-      const key = `${fleet}|${box}|${wanted.join(',')}|${new URLSearchParams(filters as Record<string, string>)}`;
-      if (results.peek()?.key === key) return;
+      if (!q || !v1) { results.value = null; activityStatus.value = ''; return; }
+      const {key, wanted, fleet, box, filters} = q;
+      const accepted = activeResult.peek();
+      if (accepted) { activityStatus.value = accepted.status; return; }
       const mine = controller = new AbortController(), m = v1, fetchLayer = v1.fetchLayer as unknown as FetchLayer;
       activityStatus.value = 'Loading fleet activity…';
       void Promise.all(wanted.map(name => fetchLayer(name, {...filters}, {region: fleet, bbox: box.split(',').map(Number), fetcher: fetchFn, signal: mine.signal}))).then(loaded => {
         if (mine !== controller) return;
-        results.value = {key, data: Object.fromEntries(wanted.map((name, i) => [name, loaded[i] as LayerResult]))};
-        activityStatus.value = m.statusText(results.value.data);
+        const data = Object.fromEntries(wanted.map((name, i) => [name, loaded[i] as LayerResult]));
+        const status = m.statusText(data);
+        results.value = {key, data, status};
+        activityStatus.value = status;
       }, error => {
         if (mine !== controller || (error as Error)?.name === 'AbortError') return;
         results.value = null;
@@ -223,7 +243,7 @@ export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), pa
       });
     }),
     effect(() => {
-      const e = engine.value, r = results.value;
+      const e = engine.value, r = activeResult.value;
       if (!e) return;
       if (!r || !v1) { if (drawn || e !== drawnOn) e.setOverlay('fleet-activity', null); drawn = false; drawnOn = e; return; }
       const hide = hidePlanning.value, m = v1;
@@ -248,7 +268,7 @@ export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), pa
       activityAccess.value = false; activityChoices.value = null; activityStatus.value = '';
     },
     pick: {layers: [EVENTS, TRACKS, TRACKS_DASHED, HEAT] as const, ordered: true, mark: (layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
-      const name = owner[layer], f = name ? results.peek()?.data[name]?.features.find(x => String(x.properties.id) === properties?.key) : undefined;
+      const name = owner[layer], f = name ? activeResult.peek()?.data[name]?.features.find(x => String(x.properties.id) === properties?.key) : undefined;
       return f && v1 && name ? activityMark(v1, name, f.properties, zone()) : null;
     }},
   };

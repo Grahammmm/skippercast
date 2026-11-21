@@ -254,7 +254,7 @@ class SchemaPath(unittest.TestCase):
         self.assertEqual(validate.ecma_pattern(r'^[a-z]{2}$'), r'^[a-z]{2}\Z')
         self.assertEqual(validate.ecma_pattern(r'^\$[$]$'), r'^\$[$]\Z')
         self.assertEqual(validate.errors('region', mutated(SHAPE_MUTATIONS['id trailing newline']))[:1],
-                         ["id: 'morro-bay\\n' does not match '^[a-z][a-z0-9-]{1,63}$'"])
+                         ["id: value does not match '^[a-z][a-z0-9-]{1,63}$'"])
 
 
 @unittest.skipUnless(HAVE_JSONSCHEMA, NEEDS_JSONSCHEMA)

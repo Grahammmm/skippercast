@@ -31,18 +31,20 @@ SYSTEM_CLOCK = SystemClock()
 
 
 def epoch(clock=None) -> float:
-    """Accept the repository's datetime callable and epoch-clock conventions."""
+    """Accept a datetime instant, datetime callable, or epoch clock."""
     clock = SYSTEM_CLOCK if clock is None else clock
-    if hasattr(clock, "time"):
+    if isinstance(clock, datetime):
+        value = clock
+    elif hasattr(clock, "time"):
         value = clock.time()
     elif hasattr(clock, "timestamp"):
         value = clock.timestamp()
     else:
         value = clock()
-        if isinstance(value, datetime):
-            if value.tzinfo is None:
-                raise ValueError("clock returned a naive datetime")
-            value = value.timestamp()
+    if isinstance(value, datetime):
+        if value.utcoffset() is None:
+            raise ValueError("clock returned a naive datetime")
+        value = value.timestamp()
     value = float(value)
     if not math.isfinite(value):
         raise ValueError("clock must return a finite instant")

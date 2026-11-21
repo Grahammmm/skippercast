@@ -42,6 +42,10 @@ export default defineConfig({
     baseURL: `http://localhost:${port}`,
     timezoneId: 'America/Los_Angeles',
     locale: 'en-US',
+    // MB-04: Auto theme follows the OS scheme, and Playwright emulates `light` by default.
+    // Keep this suite on the dark theme it was written and gated for. Light-theme e2e/axe
+    // coverage arrives with the light overlay and restyle cards (MB-20, MB-21).
+    colorScheme: 'dark',
     trace: 'retain-on-failure',
     // Service workers would answer requests the tests' routing cannot see;
     // only the offline test turns them on.

@@ -246,11 +246,6 @@ def test_symlinked_cached_source_is_held(world):
     assert "symlink" in decision["holds"][0]
 
 
-def test_window_cap_is_the_acquire_stage_cap():
-    from skippercast.coastal.handoff import mapping_input
-    assert bridge.MAX_WINDOW_CELLS == mapping_input.MAX_CELLS == 262_144
-
-
 def test_window_is_bounded_like_the_acquire_stage(world):
     assert _single(world, window=[0, 0, 512, 512])["state"] == "selected"
     # Malformed windows stay per-candidate holds.

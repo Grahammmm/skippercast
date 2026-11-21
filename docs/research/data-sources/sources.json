@@ -1,0 +1,903 @@
+{
+  "generated": "2026-11-19",
+  "bbox": "34.0-37.0N, 123.5-119.5W (Central Coast CA: Monterey Bay to Point Conception)",
+  "bbox_numeric": {
+    "south": 34.0,
+    "north": 37.0,
+    "west": -123.5,
+    "east": -119.5
+  },
+  "repo_checked": "github.com/Grahammmm/skippercast (catalog/sources.json, catalog/candidates, src/skippercast)",
+  "samples": "Each sample value names a file pulled on 2026-11-19. Those files are not in this repository.",
+  "new_sources": [
+    {
+      "id": "cw-goes-west-sst-hourly",
+      "priority": 1,
+      "status": "can ingest now (free/open)",
+      "test": "PASS",
+      "name": "GOES-West (GOES-18) ACSPO hourly SST + fronts",
+      "provider": "NOAA NESDIS STAR / CoastWatch, served by NOAA CoastWatch West Coast Node (PFEG) ERDDAP",
+      "measures": "Observed sub-skin sea surface temperature from geostationary GOES-18 ABI, every hour, cloud-masked.",
+      "variables": "sea_surface_temperature (degC), quality_level, l2p_flags, sses_bias, sses_standard_deviation, dt_analysis, or_number_of_pixels, satellite_zenith_angle",
+      "resolution": "0.02 deg (~2 km) grid",
+      "coverage": "GOES-West disk, covers all of California. Central Coast fully inside.",
+      "temporal": "Hourly",
+      "latency": "Last time stamp 2026-11-19T14:00Z when read at about 18:00Z, so roughly 2-4 h",
+      "horizon": "Observation only (no forecast)",
+      "format": "NetCDF / CSV / PNG via ERDDAP griddap",
+      "license": "GHRSST: free and open. Credit 'NOAA NESDIS STAR / CoastWatch, GOES-18 ACSPO'.",
+      "cost": "Free",
+      "endpoints": [
+        "https://coastwatch.pfeg.noaa.gov/erddap/info/goes_west/index.html",
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/goes_west.html",
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/goes_west_Lon0360.html"
+      ],
+      "auth": "None",
+      "rate": "ERDDAP has no published hard quota. Keep requests small (one bbox, one time step); this node returned HTTP 503 on another dataset during testing, so retry with backoff.",
+      "apps": [
+        "BigBlue (hourly GOES SST)",
+        "Fishare (GOES hourly passes)",
+        "SkeeterCast (GOES-19 imagery, east coast)",
+        "Salty Offshore (GHRSST SST)"
+      ],
+      "layer": "SST (hourly observed, fills the gap between daily MUR / Geo-Polar analyses); also front detection",
+      "snippet": "# Latest hour, Central Coast. Latitude is stored north-to-south, so ask (37):(34)\ncurl -g -o goes_west_latest.nc 'https://coastwatch.pfeg.noaa.gov/erddap/griddap/goes_west.nc?sea_surface_temperature[(last)][(37.0):1:(34.0)][(-123.5):1:(-119.5)]'\n# Last 24 hours, every hour, 0.04 deg (stride 2)\ncurl -g -o goes_west_24h.nc 'https://coastwatch.pfeg.noaa.gov/erddap/griddap/goes_west.nc?sea_surface_temperature[(last-23):1:(last)][(37.0):2:(34.0)][(-123.5):2:(-119.5)]'\n# python\nimport xarray as xr\nds = xr.open_dataset('goes_west_latest.nc'); sst = ds.sea_surface_temperature.where(ds.quality_level>=4) if 'quality_level' in ds else ds.sea_surface_temperature",
+      "cadence": "Hourly at :20 past; keep a rolling 72 h; build a 'last cloud-free value' composite every hour.",
+      "fit": "Fits the existing 'erddap-grid' adapter (same as mur-sst / modis-chlorophyll). Add a catalog/sources.json entry with adapter erddap-grid, dataset goes_west, allowed_hosts coastwatch.pfeg.noaa.gov. Data rights row needed in docs/legal/data-rights-register.md.",
+      "sample": "samples/goes_west_sea_surface_temperature_centralcoast.nc (130 KB; 2026-11-19T14:00Z; 17.2-21.1 degC; only 1% of cells valid because it was a cloudy night. Expect gaps; composite over hours.)"
+    },
+    {
+      "id": "cw-acspo-l3s-leo-daily",
+      "priority": 2,
+      "status": "can ingest now (free/open); already a repo candidate",
+      "test": "PASS",
+      "name": "NOAA ACSPO L3S-LEO daily super-collated SST (VIIRS + AVHRR)",
+      "provider": "NOAA NESDIS STAR; mirrored on CoastWatch PFEG ERDDAP",
+      "measures": "Observed daily SST merged from all polar orbiters (S-NPP, NOAA-20/21 VIIRS, MetOp AVHRR), with thermal fronts.",
+      "variables": "sea_surface_temperature (degC), sses_bias, sses_standard_deviation, l2p_flags, l3s_flags, sst_count, quality_level, sst_source",
+      "resolution": "0.02 deg (~2 km)",
+      "coverage": "Global; Central Coast fully covered",
+      "temporal": "Daily (day+night collated)",
+      "latency": "Last time 2026-11-14T12:00Z when read 2026-11-19, so about 4-5 days",
+      "horizon": "Observation only",
+      "format": "NetCDF via ERDDAP",
+      "license": "GHRSST free and open (NOAA). Credit NOAA/NESDIS/STAR ACSPO.",
+      "cost": "Free",
+      "endpoints": [
+        "https://coastwatch.pfeg.noaa.gov/erddap/info/noaacwLEOACSPOSSTL3SnrtCDaily/index.html",
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/noaacwLEOACSPOSSTL3SnrtCDaily.html",
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/noaacwLEOACSPOSSTL3SCWeeklyNRT.html (7-day composite)"
+      ],
+      "auth": "None",
+      "rate": "As for PFEG ERDDAP above.",
+      "apps": [
+        "FishTrack (AVHRR SST)",
+        "Fishare (VIIRS/AVHRR passes, last 72 h)",
+        "BigBlue (VIIRS/AVHRR)",
+        "Salty Offshore (GHRSST)"
+      ],
+      "layer": "SST (sharp observed field for fronts; 'chart-room' SST next to MUR)",
+      "snippet": "curl -g -o acspo_daily.nc 'https://coastwatch.pfeg.noaa.gov/erddap/griddap/noaacwLEOACSPOSSTL3SnrtCDaily.nc?sea_surface_temperature[(last)][(37.0):1:(34.0)][(-123.5):1:(-119.5)]'",
+      "cadence": "Daily, poll at 12:00 and 20:00 PT.",
+      "fit": "The repo already has catalog/candidates/noaa-acspo-l3s-leo-daily.json and a review (adopt-with-limits, 2026-10-23). That review logged HTTP 404s from coastwatch.noaa.gov and AOML. The PFEG mirror above works (tested 2026-11-19), so point the candidate's allowed_hosts and URL at coastwatch.pfeg.noaa.gov. The review's licence-mapping blocker (licence string not in schemas/source.schema.json enum) still stands; map it to public-domain (NOAA product) after owner sign-off.",
+      "sample": "samples/noaacwLEOACSPOSSTL3SnrtCDaily_sea_surface_temperature_centralcoast.nc (130 KB; 2026-11-17T12:00Z; 16.2-23.4 degC; 44% valid)"
+    },
+    {
+      "id": "noaa-hrrr",
+      "priority": 3,
+      "status": "can ingest now (free/open)",
+      "test": "PASS",
+      "name": "NOAA HRRR 3 km weather model",
+      "provider": "NOAA NCEP; AWS bucket noaa-hrrr-bdp-pds; also served by Open-Meteo (model ncep_hrrr_conus)",
+      "measures": "Convection-allowing short-range weather: 10 m wind, gusts, visibility, precipitation, fog, cloud.",
+      "variables": "UGRD/VGRD 10 m, GUST surface, TMP 2 m, VIS, PRATE, TCDC and ~170 more fields per wrfsfc file",
+      "resolution": "3 km Lambert grid",
+      "coverage": "CONUS incl. Central Coast and nearshore waters",
+      "temporal": "Hourly output, new run every hour",
+      "latency": "~1-1.5 h after cycle",
+      "horizon": "18 h (48 h for 00/06/12/18Z)",
+      "format": "GRIB2 with .idx sidecar (byte-range fetch per variable) / JSON via Open-Meteo",
+      "license": "NOAA public domain. Open-Meteo route: same terms as SkipperCast's existing open-meteo-api entry (CC BY 4.0; free tier non-commercial).",
+      "cost": "Free",
+      "endpoints": [
+        "https://registry.opendata.aws/noaa-hrrr-pds/",
+        "https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.YYYYMMDD/conus/hrrr.tHHz.wrfsfcfFF.grib2 (+ .idx)",
+        "https://api.open-meteo.com/v1/forecast?models=ncep_hrrr_conus"
+      ],
+      "auth": "None",
+      "rate": "S3: none. Open-Meteo: free tier 10,000 calls/day (their published limit) \u2014 reuse SkipperCast's existing Open-Meteo budget.",
+      "apps": [
+        "Windy",
+        "PredictWind",
+        "Buoyweather (NAM + HRRR)",
+        "SkeeterCast"
+      ],
+      "layer": "Wind / Weather (nearshore, short-range detail around points and bays)",
+      "snippet": "T=$(date -u +%Y%m%d); U=https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.$T/conus/hrrr.t00z.wrfsfcf01.grib2\ncurl -s $U.idx | grep -E 'UGRD:10 m above|VGRD:10 m above'      # gives byte offsets\ncurl -r <start_of_UGRD>-<byte_before_next_after_VGRD> -o hrrr_wind10m.grib2 $U\npython -c \"import xarray as xr; print(xr.open_dataset('hrrr_wind10m.grib2', engine='cfgrib'))\"\n# Easiest route (existing adapter):\ncurl 'https://api.open-meteo.com/v1/forecast?latitude=35.37&longitude=-120.86&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m&models=ncep_hrrr_conus&forecast_days=2&wind_speed_unit=kn'",
+      "cadence": "Hourly (point forecasts via Open-Meteo); gridded GRIB every 3 h is enough for a map layer.",
+      "fit": "Fastest: add 'ncep_hrrr_conus' to the model list of the existing open-meteo adapter (src/skippercast/forecast). Gridded map layer: byte-range fetch like the existing GFS_AWS path in src/skippercast/forecast/fetch.py.",
+      "sample": "samples/hrrr_20261119_t00z_f01_wind10m.grib2 (4.8 MB, u10/v10 CONUS) and samples/openmeteo_hrrr_morrobay.json (48 h, knots)"
+    },
+    {
+      "id": "hycom-espc-d-v02",
+      "priority": 4,
+      "status": "can ingest now (free/open)",
+      "test": "PASS",
+      "name": "HYCOM ESPC-D-V02 global ocean forecast (US Navy)",
+      "provider": "HYCOM consortium / US Navy NRL (ESPC-D-V02), tds.hycom.org + ncss.hycom.org",
+      "measures": "Model ocean currents, temperature and salinity at 40 depth levels, sea surface elevation. HYCOM-class model used by apps for 'subsurface temperature' and currents.",
+      "variables": "water_u, water_v (m/s); water_temp (degC); salinity (psu); surf_el (m); 40 depth levels 0-5000 m",
+      "resolution": "1/12 deg (~8 km) horizontal",
+      "coverage": "Global; Central Coast covered (coastline cells masked)",
+      "temporal": "3-hourly (FMRC 'best' time series)",
+      "latency": "Daily run; the ssh aggregate ended 2026-11-17T11:00Z when read 2026-11-19, the FMRC best uv aggregate served 2026-11-19T12:00Z (forecast)",
+      "horizon": "About 7-8 days forecast (FMRC runs)",
+      "format": "NetCDF4 via THREDDS NCSS / OPeNDAP",
+      "license": "US Government work, free; credit 'HYCOM.org / US Navy ESPC'. hycom.org asks users not to bulk-mirror; subset by bbox.",
+      "cost": "Free",
+      "endpoints": [
+        "https://www.hycom.org/dataserver/espc-d-v02/global-analysis",
+        "https://tds.hycom.org/thredds/catalog.html",
+        "https://ncss.hycom.org/thredds/ncss/grid/FMRC_ESPC-D-V02_uv3z/FMRC_ESPC-D-V02_uv3z_best.ncd/dataset.html",
+        "https://ncss.hycom.org/thredds/ncss/grid/ESPC-D-V02/ssh/dataset.html",
+        "https://tds.hycom.org/thredds/dodsC/ESPC-D-V02/ssh (OPeNDAP)"
+      ],
+      "auth": "None",
+      "rate": "NCSS requests took ~40 s; keep to a bbox and few times. Other aggregates: ESPC-D-V02 t3z, s3z, ts3z, uv3z, ssh, ice (see catalog).",
+      "apps": [
+        "Fishare (subsurface temperature, HYCOM-class model)",
+        "Salty Offshore (three NOAA/Navy current models, unverified which)",
+        "PredictWind (ocean-current GRIBs)"
+      ],
+      "layer": "Currents (surface + depth), Subsurface temperature/thermocline, Salinity",
+      "snippet": "T=$(date -u +%Y-%m-%dT12:00:00Z)\ncurl -o hycom_uv.nc \"https://ncss.hycom.org/thredds/ncss/grid/FMRC_ESPC-D-V02_uv3z/FMRC_ESPC-D-V02_uv3z_best.ncd?var=water_u&var=water_v&north=37&south=34&west=-123.5&east=-119.5&vertCoord=0&time=$T&accept=netcdf4\"\n# Time range instead of one time: &time_start=2026-11-19T00:00:00Z&time_end=2026-11-26T00:00:00Z\n# Temperature at depth: FMRC_ESPC-D-V02_t3z / ESPC-D-V02 t3z, var=water_temp, drop vertCoord to get all depths",
+      "cadence": "Daily after ~18:00 PT; keep latest run's 0-168 h.",
+      "fit": "New adapter 'thredds-ncss' (simple HTTP GET with query params \u2192 NetCDF). Output to the same COG/PMTiles path as WCOFS currents. Use as a back-up when WCOFS is late and for depth layers offshore of WCOFS domain.",
+      "sample": "samples/hycom_espc_uv_surface_centralcoast.nc (56 KB; 2026-11-19T12:00Z surface water_u -0.63..0.61 m/s)"
+    },
+    {
+      "id": "noaa-rtofs",
+      "priority": 5,
+      "status": "can ingest now (free/open)",
+      "test": "PASS",
+      "name": "NOAA Global RTOFS (HYCOM-based operational ocean forecast)",
+      "provider": "NOAA NCEP, AWS Open Data bucket noaa-nws-rtofs-pds",
+      "measures": "Operational ocean forecast: SSH, barotropic currents, mixed-layer and surface boundary-layer thickness (2D); temperature, salinity, currents at depth on a US-West subdomain (3D).",
+      "variables": "2ds diag: ssh, u_barotropic_velocity, v_barotropic_velocity, surface_boundary_layer_thickness, mixed_layer_thickness. 3dz US_west: temperature, salinity, u, v on z levels (6-hourly)",
+      "resolution": "1/12 deg tripolar (curvilinear Latitude/Longitude 2D arrays)",
+      "coverage": "Global; US_west subdomain file for 3D",
+      "temporal": "Hourly (2ds), 6-hourly (3dz)",
+      "latency": "Daily 00Z run on S3 by the following day",
+      "horizon": "n-hindcast plus f000-f192 (8 days); f192 confirmed in rtofs.20261118/",
+      "format": "NetCDF4 (HDF5), ~195 MB per 2D global hour, ~280 MB per 3D US_west 6-hourly file",
+      "license": "NOAA, public domain. Credit NOAA/NCEP RTOFS.",
+      "cost": "Free (AWS Open Data, no egress fee to you)",
+      "endpoints": [
+        "https://registry.opendata.aws/noaa-rtofs/",
+        "https://noaa-nws-rtofs-pds.s3.amazonaws.com/?list-type=2&prefix=rtofs.YYYYMMDD/ (listing)",
+        "https://noaa-nws-rtofs-pds.s3.amazonaws.com/rtofs.YYYYMMDD/rtofs_glo_2ds_fHHH_diag.nc",
+        "https://noaa-nws-rtofs-pds.s3.amazonaws.com/rtofs.YYYYMMDD/rtofs_glo_3dz_fHHH_6hrly_hvr_US_west.nc"
+      ],
+      "auth": "None (anonymous S3 / HTTPS)",
+      "rate": "S3, none practical. Read with byte-range (fsspec) to avoid pulling whole files.",
+      "apps": [
+        "PredictWind (RTOFS current GRIBs)",
+        "Salty Offshore (NOAA current models, unverified which)"
+      ],
+      "layer": "Currents, mixed-layer depth (Subsurface), SSH",
+      "snippet": "import fsspec, xarray as xr, numpy as np\nurl = \"https://noaa-nws-rtofs-pds.s3.amazonaws.com/rtofs.20261118/rtofs_glo_2ds_f024_diag.nc\"\nds = xr.open_dataset(fsspec.open(url, block_size=4*2**20).open(), engine=\"h5netcdf\")\n# Central Coast index window found by a coarse search (stable for this grid): Y 1940:2020, X 2020:2100\nsub = ds[[\"ssh\",\"mixed_layer_thickness\",\"u_barotropic_velocity\",\"v_barotropic_velocity\"]].isel(Y=slice(1940,2020), X=slice(2020,2100)).load()\nsub.to_netcdf(\"rtofs_centralcoast.nc\")   # ~110 KB, 4 s from this box",
+      "cadence": "Daily 06:00 PT for previous day's 00Z run; hours 0-192 step 3.",
+      "fit": "New adapter 'rtofs-s3': fsspec range-read + regrid curvilinear \u2192 regular 0.08 deg with xesmf or scipy griddata, then existing raster pipeline. Index window Y1940:2020 X2020:2100 covers 32.9-38.0N, 124.2-117.9W.",
+      "sample": "samples/rtofs_20261118_f024_diag_centralcoast.nc (111 KB; valid 2026-11-19T00Z; ssh 0.11-0.47 m)"
+    },
+    {
+      "id": "open-meteo-more-models",
+      "priority": 6,
+      "status": "can ingest now (free/open) via existing adapter",
+      "test": "PASS",
+      "name": "Open-Meteo extra models: DWD ICON, ECMWF AIFS, UK Met Office, Canadian GEM",
+      "provider": "Open-Meteo (redistributing DWD, ECMWF, UKMO, ECCC)",
+      "measures": "Additional global wind/weather models for multi-model comparison (the 'model spread' view Windy and PredictWind sell).",
+      "variables": "Any Open-Meteo hourly variable, e.g. wind_speed_10m, wind_gusts_10m (AIFS returned null gusts), wind_direction_10m, pressure_msl",
+      "resolution": "ICON ~13 km global (icon_seamless), AIFS 0.25 deg, UKMO ~10 km global, GEM ~15 km",
+      "coverage": "Global incl. Central Coast",
+      "temporal": "Hourly",
+      "latency": "Per model, 3-8 h",
+      "horizon": "ICON 7.5 d, AIFS ~15 d, UKMO ~7 d, GEM ~10 d (Open-Meteo docs; verify per model page)",
+      "format": "JSON",
+      "license": "Open-Meteo CC BY 4.0; free API is non-commercial. Same terms as existing open-meteo-api register entry; commercial plan needed if SkipperCast charges.",
+      "cost": "Free (non-commercial) / paid API plan for commercial",
+      "endpoints": [
+        "https://api.open-meteo.com/v1/forecast?models=icon_seamless,ecmwf_aifs025_single,ukmo_seamless,gem_seamless",
+        "https://open-meteo.com/en/docs"
+      ],
+      "auth": "None (commercial plan uses an apikey param)",
+      "rate": "10,000 calls/day free tier",
+      "apps": [
+        "Windy (ICON, UKV)",
+        "PredictWind (ICON, UKMO, AIFS)",
+        "SeaLegs AI (ICON)",
+        "Orca (ICON)"
+      ],
+      "layer": "Wind / Weather (model comparison)",
+      "snippet": "curl 'https://api.open-meteo.com/v1/forecast?latitude=35.37&longitude=-120.86&hourly=wind_speed_10m,wind_gusts_10m&models=icon_seamless,ecmwf_aifs025_single,ukmo_seamless&forecast_days=3&wind_speed_unit=kn'",
+      "cadence": "Same as current Open-Meteo jobs.",
+      "fit": "One-line change: extend models list in the open-meteo adapter; add catalog entries dwd-icon, ecmwf-aifs, ukmo-global.",
+      "sample": "samples/openmeteo_icon_aifs_ukmo_morrobay.json"
+    },
+    {
+      "id": "nasa-gibs-truecolor",
+      "priority": 7,
+      "status": "can ingest now (free/open)",
+      "test": "PASS",
+      "name": "NASA GIBS VIIRS / MODIS true-colour imagery tiles",
+      "provider": "NASA EOSDIS GIBS",
+      "measures": "Daily corrected-reflectance true-colour satellite images (what the sea and clouds looked like), plus hundreds of other imagery layers.",
+      "variables": "VIIRS_NOAA20_CorrectedReflectance_TrueColor, VIIRS_SNPP_CorrectedReflectance_TrueColor, MODIS_Aqua_CorrectedReflectance_TrueColor (layer names)",
+      "resolution": "250 m",
+      "coverage": "Global; Central Coast",
+      "temporal": "Daily (one overpass per satellite)",
+      "latency": "~3-5 h after overpass (NRT)",
+      "horizon": "Observation only",
+      "format": "JPEG/PNG tiles via WMTS (EPSG:4326 / 3857) or WMS GetMap",
+      "license": "NASA open data, no restrictions; credit 'NASA EOSDIS GIBS / Worldview'.",
+      "cost": "Free",
+      "endpoints": [
+        "https://nasa-gibs.github.io/gibs-api-docs/",
+        "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/{date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg",
+        "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi"
+      ],
+      "auth": "None",
+      "rate": "No key; NASA asks for reasonable use \u2014 cache tiles in R2.",
+      "apps": [
+        "Fishare (NASA VIIRS true colour 250 m)",
+        "BlueFronts (satellite imagery)",
+        "Salty Offshore (water clarity/true colour)"
+      ],
+      "layer": "Raw base / satellite imagery (also shows fog banks, plumes, red tide colour)",
+      "snippet": "D=2026-11-18\ncurl -o tc.png \"https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=VIIRS_NOAA20_CorrectedReflectance_TrueColor&CRS=EPSG:4326&BBOX=34,-123.5,37,-119.5&WIDTH=800&HEIGHT=600&FORMAT=image/png&TIME=$D\"\n# MapLibre raster source (no download needed):\n# tiles: [\"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/2026-11-18/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg\"], maxzoom 9",
+      "cadence": "Daily at 14:00 PT; prefetch z5-9 tiles for the region into R2 for offline packs.",
+      "fit": "No pipeline needed for online use (direct raster source). For offline packs, add a tile prefetch job like the existing goes-frames job.",
+      "sample": "samples/gibs_wms_truecolor_centralcoast_2026-11-18.png (800x600; cloudy day) and samples/gibs_viirs_noaa20_truecolor_2026-11-18.jpg (one WMTS tile)"
+    },
+    {
+      "id": "noaa-mrms-radar",
+      "priority": 8,
+      "status": "can ingest now (free/open)",
+      "test": "PASS",
+      "name": "NOAA MRMS radar mosaic (NEXRAD) + nowCOAST radar WMS",
+      "provider": "NOAA NSSL/NCEP MRMS on AWS (noaa-mrms-pds); NOAA nowCOAST GeoServer",
+      "measures": "Composite weather radar reflectivity (rain/showers approaching), every 2 minutes.",
+      "variables": "MergedBaseReflectivityQC_00.50 (dBZ), PrecipRate, MultiSensor_QPE_01H etc.",
+      "resolution": "0.01 deg (~1 km)",
+      "coverage": "CONUS; coastal radar coverage reaches ~100-200 km offshore (beam height limits)",
+      "temporal": "2 min",
+      "latency": "~2-5 min",
+      "horizon": "Observation only",
+      "format": "GRIB2.gz (MRMS) / PNG (WMS)",
+      "license": "NOAA public domain.",
+      "cost": "Free",
+      "endpoints": [
+        "https://registry.opendata.aws/noaa-mrms-pds/",
+        "https://noaa-mrms-pds.s3.amazonaws.com/?list-type=2&prefix=CONUS/MergedBaseReflectivityQC_00.50/YYYYMMDD/",
+        "https://nowcoast.noaa.gov/geoserver/observations/weather_radar/ows?service=WMS&request=GetCapabilities (layer base_reflectivity_mosaic)"
+      ],
+      "auth": "None",
+      "rate": "None stated.",
+      "apps": [
+        "SkeeterCast (NEXRAD)",
+        "Windy (radar)"
+      ],
+      "layer": "Weather (radar overlay)",
+      "snippet": "curl -o radar.png \"https://nowcoast.noaa.gov/geoserver/observations/weather_radar/ows?service=WMS&version=1.3.0&request=GetMap&layers=base_reflectivity_mosaic&styles=&crs=EPSG:4326&bbox=34,-123.5,37,-119.5&width=800&height=600&format=image/png&transparent=true\"\nK=$(curl -s \"https://noaa-mrms-pds.s3.amazonaws.com/?list-type=2&prefix=CONUS/MergedBaseReflectivityQC_00.50/$(date -u +%Y%m%d)/\" | grep -o '<Key>[^<]*</Key>' | sed 's/<[^>]*>//g' | tail -1)\ncurl -o mrms.grib2.gz https://noaa-mrms-pds.s3.amazonaws.com/$K",
+      "cadence": "Online: WMS directly in MapLibre (no ingest). Offline/animation: every 10 min keep last 2 h.",
+      "fit": "Direct WMS raster source; MRMS GRIB only if we want our own palette.",
+      "sample": "samples/nowcoast_radar_centralcoast.png and samples/mrms_MergedBaseReflectivityQC_latest.grib2.gz (850 KB CONUS)"
+    },
+    {
+      "id": "cw-kd490-water-clarity",
+      "priority": 9,
+      "status": "can ingest now (free/open)",
+      "test": "PASS",
+      "name": "Water clarity Kd490 (MODIS West US 0.0125 deg, VIIRS 4 km, DINEOF gap-filled 2 km)",
+      "provider": "NOAA CoastWatch (PFEG ERDDAP)",
+      "measures": "Diffuse attenuation at 490 nm: how fast light fades = water clarity / 'blue vs green water'.",
+      "variables": "k490 (erdMWk4901day), kd_490 (nesdisVHNkd490Daily, noaacwNPPN20S3AkdSCIDINEOF2kmDaily)",
+      "resolution": "0.0125 deg (~1.4 km) MODIS West US; 4 km VIIRS; 2 km gap-filled",
+      "coverage": "US West Coast / global; Central Coast",
+      "temporal": "Daily (also 3/8/14-day composites erdMWk4903day, erdMWk4908day)",
+      "latency": "MODIS 2026-11-17 (2 d); VIIRS 2026-11-12 (7 d); DINEOF 2026-11-05 (14 d) when read 2026-11-19",
+      "horizon": "Observation only",
+      "format": "NetCDF via ERDDAP",
+      "license": "NOAA: free to use and redistribute (dataset licence text).",
+      "cost": "Free",
+      "endpoints": [
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMWk4901day.html",
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMWk4903day.html",
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisVHNkd490Daily.html",
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/noaacwNPPN20S3AkdSCIDINEOF2kmDaily.html"
+      ],
+      "auth": "None",
+      "rate": "As PFEG ERDDAP.",
+      "apps": [
+        "Salty Offshore (water clarity)",
+        "SatFish / RipCharts / ROFFS show clarity layers without credits (unverified source)"
+      ],
+      "layer": "Chlorophyll / water-colour family (clarity)",
+      "snippet": "# erdMWk4901day has an altitude dim and 0-360 longitudes\ncurl -g -o k490.nc 'https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMWk4903day.nc?k490[(last)][(0.0)][(34.0):1:(37.0)][(236.5):1:(240.5)]'\ncurl -g -o kd490_viirs.nc 'https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisVHNkd490Daily.nc?kd_490[(last)][(0.0)][(34.0):1:(37.0)][(-123.5):1:(-119.5)]'",
+      "cadence": "Daily; use the 3-day composite for display (daily is often fully clouded).",
+      "fit": "Existing 'erddap-grid' adapter; new catalog entries only.",
+      "sample": "samples/erdMWk4901day_k490_centralcoast.nc (2026-11-17, 100% cloud) and samples/nesdisVHNkd490Daily_kd_490_centralcoast.nc (2026-11-12, 0.02-1.68 m^-1, 8% valid)"
+    },
+    {
+      "id": "cencoos-erddap-stations",
+      "priority": 10,
+      "status": "can ingest now (free/open)",
+      "test": "PASS",
+      "name": "CeNCOOS ERDDAP shore stations (Cal Poly Pier, Morro Bay, Monterey Bay)",
+      "provider": "CeNCOOS (Central & Northern California Ocean Observing System) / Axiom Data Science",
+      "measures": "In-water sensors: water temperature, salinity, chlorophyll fluorescence, turbidity, dissolved oxygen, pH at piers and bays.",
+      "variables": "sea_water_temperature, sea_water_practical_salinity, mass_concentration_of_chlorophyll_in_sea_water, sea_water_turbidity, mass_concentration_of_oxygen_in_sea_water_corrected, fractional_saturation_of_oxygen_in_sea_water, sea_water_ph_reported_on_total_scale_external (+ _qc_agg flags)",
+      "resolution": "Point stations",
+      "coverage": "Central Coast: san-luis-bay-cal-poly-pier-shore (CPXC1), edu_calpoly_marine_morro, morro-bay-bs1, monterey-bay-aquarium-seawate, many Monterey Bay sites",
+      "temporal": "~1-10 min",
+      "latency": "Minutes (morro sample last 2026-11-19T17:10Z)",
+      "horizon": "Observation only",
+      "format": "CSV / JSON / NetCDF via ERDDAP tabledap",
+      "license": "IOOS data are free and open; credit CeNCOOS and the station operator (Cal Poly CCPE).",
+      "cost": "Free",
+      "endpoints": [
+        "https://erddap.cencoos.org/erddap/index.html",
+        "https://erddap.cencoos.org/erddap/tabledap/san-luis-bay-cal-poly-pier-shore.html",
+        "https://erddap.cencoos.org/erddap/tabledap/edu_calpoly_marine_morro.html",
+        "https://erddap.cencoos.org/erddap/search/index.html?searchFor=Morro+Bay"
+      ],
+      "auth": "None",
+      "rate": "ERDDAP; poll no faster than every 10 min.",
+      "apps": [
+        "Fish or Pass (credits SCCOOS; same IOOS system, Central Coast is CeNCOOS territory)"
+      ],
+      "layer": "Subsurface / in-situ ground truth (pier water temp, upwelling events, low-oxygen and red-tide flags)",
+      "snippet": "S=$(date -u -d '3 days ago' +%Y-%m-%dT00:00:00Z)\n# NOTE: URL-encode >= as %3E%3D or ERDDAP returns 500\ncurl -g -o pier.csv \"https://erddap.cencoos.org/erddap/tabledap/san-luis-bay-cal-poly-pier-shore.csv?time,sea_water_temperature,sea_water_practical_salinity,mass_concentration_of_chlorophyll_in_sea_water,sea_water_turbidity&time%3E%3D$S\"\n",
+      "cadence": "Every 30 min; keep 30 days.",
+      "fit": "Fits the station/observation path used for NDBC (point time series \u2192 D1). Check the *_qc_agg columns: sample pier temps ~20 degC look high for November, so trust only QC-passed values.",
+      "sample": "samples/cencoos_calpoly_pier_shore.csv (194 KB, 2026-11-16..19) and samples/cencoos_morro_bay_wq.csv (20 KB)"
+    },
+    {
+      "id": "cmems-sealevel-nrt",
+      "priority": 11,
+      "status": "needs registration/API key (free)",
+      "test": "UNTESTED - needs key (dataset IDs and variables verified anonymously with copernicusmarine describe)",
+      "name": "Copernicus Marine L4 NRT sea level (DUACS): SLA, ADT, geostrophic currents",
+      "provider": "Copernicus Marine Service (CMEMS), product SEALEVEL_GLO_PHY_L4_NRT_008_046",
+      "measures": "Merged multi-satellite altimetry: sea-level anomaly and absolute dynamic topography, geostrophic currents. Shows eddies, upwelling fronts, the California Current meanders.",
+      "variables": "sla, adt, ugos, vgos, ugosa, vgosa, err_sla, err_ugosa, err_vgosa, flag_ice",
+      "resolution": "0.125 deg (dataset cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.125deg_P1D); 0.25 deg version also",
+      "coverage": "Global; Central Coast (coast cells masked)",
+      "temporal": "Daily",
+      "latency": "~1 day (time axis ended 2026-11-19 per catalog)",
+      "horizon": "Observation only",
+      "format": "NetCDF / Zarr (ARCO) via toolbox",
+      "license": "Copernicus Marine Service licence: free, commercial use allowed, attribution required ('Generated using E.U. Copernicus Marine Service Information; https://doi.org/<product DOI>').",
+      "cost": "Free",
+      "endpoints": [
+        "https://data.marine.copernicus.eu/product/SEALEVEL_GLO_PHY_L4_NRT_008_046/description",
+        "dataset_id cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.125deg_P1D"
+      ],
+      "auth": "1. Create a free account at https://data.marine.copernicus.eu/register (email + password; no fee; accept the Copernicus Marine licence, which allows commercial use with attribution).\n2. pip install copernicusmarine   (tested here: version 2.5.1)\n3. copernicusmarine login   (stores credentials in ~/.copernicusmarine; or set env COPERNICUSMARINE_SERVICE_USERNAME / COPERNICUSMARINE_SERVICE_PASSWORD in the job's secrets \u2014 never commit them)\n4. Run the subset command below. Docs: https://help.marine.copernicus.eu/en/articles/7970514-copernicus-marine-toolbox-installation",
+      "rate": "No hard published quota for subset; keep bbox small.",
+      "apps": [
+        "RipVision AI (Copernicus SSH altimetry)",
+        "SeaLegs/DeepCast (altimetry for eddies)",
+        "FishTrack (daily altimetry)",
+        "BlueFronts (altimetry)",
+        "Salty Offshore (SSHa)",
+        "SkeeterCast (SSH anomaly)",
+        "Fishare (CMEMS)"
+      ],
+      "layer": "Altimetry / eddies / upwelling proxy (currents layer overlay)",
+      "snippet": "copernicusmarine subset --dataset-id cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.125deg_P1D \\\n  -v sla -v adt -v ugos -v vgos -x -123.5 -X -119.5 -y 34 -Y 37 \\\n  -t $(date -u -d '3 days ago' +%Y-%m-%d) -T $(date -u +%Y-%m-%d) -o . -f cmems_ssh.nc\n# python\nimport copernicusmarine\nds = copernicusmarine.open_dataset(dataset_id=\"cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.125deg_P1D\", variables=[\"sla\",\"ugos\",\"vgos\"], minimum_longitude=-123.5, maximum_longitude=-119.5, minimum_latitude=34, maximum_latitude=37)",
+      "cadence": "Daily 08:00 PT.",
+      "fit": "New adapter 'cmems-toolbox' (shared by all CMEMS entries) writing NetCDF \u2192 existing raster pipeline. Repo has 0 copernicus/cmems references today.",
+      "sample": "none (needs key)"
+    },
+    {
+      "id": "cmems-glo-phy-anfc",
+      "priority": 12,
+      "status": "needs registration/API key (free)",
+      "test": "UNTESTED - needs key (IDs verified)",
+      "name": "Copernicus Marine global physics analysis + 10-day forecast (Mercator 1/12 deg)",
+      "provider": "CMEMS product GLOBAL_ANALYSISFORECAST_PHY_001_024",
+      "measures": "Ocean model: currents, temperature and salinity at depth, mixed-layer depth, bottom temperature, SSH. This is the 'Mercator' current GRIB that PredictWind uses.",
+      "variables": "Hourly surface (cmems_mod_glo_phy_anfc_0.083deg_PT1H-m): uo, vo, thetao, so, zos. Daily 2D (cmems_mod_glo_phy_anfc_0.083deg_P1D-m): mlotst (mixed layer), tob (bottom temp), sob, zos, pbo. Daily 3D: thetao (\u2026thetao_anfc_0.083deg_P1D-m), so (\u2026so_anfc\u2026P1D-m), uo/vo (\u2026cur_anfc\u2026P1D-m, PT6H-i), wo (wcur).",
+      "resolution": "1/12 deg (~8 km), 50 depth levels",
+      "coverage": "Global; Central Coast",
+      "temporal": "Hourly (surface), 6-hourly, daily",
+      "latency": "Daily update",
+      "horizon": "10 days (time axis extended to ~2026-11-28 when read 2026-11-19)",
+      "format": "NetCDF / Zarr via toolbox",
+      "license": "Copernicus Marine Service licence: free, commercial use allowed, attribution required ('Generated using E.U. Copernicus Marine Service Information; https://doi.org/<product DOI>').",
+      "cost": "Free",
+      "endpoints": [
+        "https://data.marine.copernicus.eu/product/GLOBAL_ANALYSISFORECAST_PHY_001_024/description"
+      ],
+      "auth": "1. Create a free account at https://data.marine.copernicus.eu/register (email + password; no fee; accept the Copernicus Marine licence, which allows commercial use with attribution).\n2. pip install copernicusmarine   (tested here: version 2.5.1)\n3. copernicusmarine login   (stores credentials in ~/.copernicusmarine; or set env COPERNICUSMARINE_SERVICE_USERNAME / COPERNICUSMARINE_SERVICE_PASSWORD in the job's secrets \u2014 never commit them)\n4. Run the subset command below. Docs: https://help.marine.copernicus.eu/en/articles/7970514-copernicus-marine-toolbox-installation",
+      "rate": "As above.",
+      "apps": [
+        "Fishare (Copernicus Marine salinity 1/12 deg daily, subsurface temperature)",
+        "RipVision AI (CMEMS mixed-layer depth and surface currents)",
+        "SeaLegs/DeepCast (CMEMS currents)",
+        "PredictWind (Mercator ocean-current GRIBs)",
+        "Salty Offshore (mixed-layer depth, salinity)"
+      ],
+      "layer": "Subsurface (temperature at depth, thermocline/MLD, bottom temp), Salinity, Currents (forecast)",
+      "snippet": "copernicusmarine subset --dataset-id cmems_mod_glo_phy_anfc_0.083deg_PT1H-m -v uo -v vo -v thetao -v so \\\n  -x -123.5 -X -119.5 -y 34 -Y 37 -z 0 -Z 1 -t $(date -u +%Y-%m-%d) -T $(date -u -d '+5 days' +%Y-%m-%d) -o . -f cmems_phy_surface.nc\ncopernicusmarine subset --dataset-id cmems_mod_glo_phy_anfc_0.083deg_P1D-m -v mlotst -v tob -x -123.5 -X -119.5 -y 34 -Y 37 -o . -f cmems_mld.nc\ncopernicusmarine subset --dataset-id cmems_mod_glo_phy-thetao_anfc_0.083deg_P1D-m -v thetao -x -123.5 -X -119.5 -y 34 -Y 37 -z 0 -Z 300 -o . -f cmems_temp_0_300m.nc",
+      "cadence": "Daily 10:00 PT.",
+      "fit": "cmems-toolbox adapter; depth slices feed the Subsurface layer, MLD feeds thermocline view.",
+      "sample": "none (needs key)"
+    },
+    {
+      "id": "cw-nesdis-ssh-1day",
+      "priority": 13,
+      "status": "can ingest now (free/open) but stale",
+      "test": "PASS",
+      "name": "NOAA CoastWatch SSH anomaly + geostrophic currents (experimental)",
+      "provider": "NOAA NESDIS / CoastWatch (PFEG ERDDAP)",
+      "measures": "Sea-level anomaly from altimetry and derived geostrophic currents (eddies, upwelling fronts).",
+      "variables": "sla (m), ugos, vgos (m/s)",
+      "resolution": "0.25 deg",
+      "coverage": "Global; Central Coast (coastal cells masked)",
+      "temporal": "Daily",
+      "latency": "Last time 2026-09-28 when read 2026-11-19 (52 days behind)",
+      "horizon": "Observation only",
+      "format": "NetCDF via ERDDAP",
+      "license": "NOAA free to use/redistribute; labelled EXPERIMENTAL.",
+      "cost": "Free",
+      "endpoints": [
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisSSH1day.html"
+      ],
+      "auth": "None",
+      "rate": "As PFEG ERDDAP.",
+      "apps": [
+        "Same apps as cmems-sealevel-nrt (altimetry layer)"
+      ],
+      "layer": "Altimetry / eddies (fallback only)",
+      "snippet": "curl -g -o ssh.nc 'https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisSSH1day.nc?sla[(last)][(34.0):1:(37.0)][(-123.5):1:(-119.5)],ugos[(last)][(34.0):1:(37.0)][(-123.5):1:(-119.5)],vgos[(last)][(34.0):1:(37.0)][(-123.5):1:(-119.5)]'",
+      "cadence": "Weekly check; use only until CMEMS key exists.",
+      "fit": "erddap-grid adapter. Do not show as 'current' while it lags weeks.",
+      "sample": "samples/nesdisSSH1day_sla_centralcoast.nc, samples/nesdisSSH1day_ugos_centralcoast.nc (2026-09-28)"
+    },
+    {
+      "id": "cmems-oc-chl",
+      "priority": 14,
+      "status": "needs registration/API key (free)",
+      "test": "UNTESTED - needs key (IDs verified)",
+      "name": "Copernicus GlobColour chlorophyll: OLCI 300 m daily + gap-free 4 km daily",
+      "provider": "CMEMS OCEANCOLOUR_GLO_BGC_L3_NRT_009_101 and _L4_NRT_009_102",
+      "measures": "Chlorophyll-a at 300 m from Sentinel-3 OLCI (sharper than MODIS 4 km) and a cloud-free interpolated daily map.",
+      "variables": "CHL, CHL_uncertainty, flags (L3 OLCI 300 m: cmems_obs-oc_glo_bgc-plankton_nrt_l3-olci-300m_P1D); CHL (L4 gapfree: cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D); also transp (KD490/ZSD clarity) datasets",
+      "resolution": "300 m / 4 km",
+      "coverage": "Global; Central Coast",
+      "temporal": "Daily",
+      "latency": "~1 day; L3 300 m keeps a rolling window (~1 week) in NRT",
+      "horizon": "Observation only",
+      "format": "NetCDF / Zarr",
+      "license": "Copernicus Marine Service licence: free, commercial use allowed, attribution required ('Generated using E.U. Copernicus Marine Service Information; https://doi.org/<product DOI>').",
+      "cost": "Free",
+      "endpoints": [
+        "https://data.marine.copernicus.eu/product/OCEANCOLOUR_GLO_BGC_L3_NRT_009_101/description",
+        "https://data.marine.copernicus.eu/product/OCEANCOLOUR_GLO_BGC_L4_NRT_009_102/description"
+      ],
+      "auth": "1. Create a free account at https://data.marine.copernicus.eu/register (email + password; no fee; accept the Copernicus Marine licence, which allows commercial use with attribution).\n2. pip install copernicusmarine   (tested here: version 2.5.1)\n3. copernicusmarine login   (stores credentials in ~/.copernicusmarine; or set env COPERNICUSMARINE_SERVICE_USERNAME / COPERNICUSMARINE_SERVICE_PASSWORD in the job's secrets \u2014 never commit them)\n4. Run the subset command below. Docs: https://help.marine.copernicus.eu/en/articles/7970514-copernicus-marine-toolbox-installation",
+      "rate": "As above.",
+      "apps": [
+        "Fishare (CMEMS)",
+        "Salty Offshore (phytoplankton)",
+        "FishTrack (chlorophyll)"
+      ],
+      "layer": "Chlorophyll (high-res + gap-free)",
+      "snippet": "copernicusmarine subset --dataset-id cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D -v CHL -x -123.5 -X -119.5 -y 34 -Y 37 -o . -f chl_gapfree.nc\ncopernicusmarine subset --dataset-id cmems_obs-oc_glo_bgc-plankton_nrt_l3-olci-300m_P1D -v CHL -x -123.5 -X -119.5 -y 34 -Y 37 -o . -f chl_olci300.nc",
+      "cadence": "Daily.",
+      "fit": "cmems-toolbox adapter. Gap-free product solves the 'all cloud' days seen in the MODIS sample.",
+      "sample": "none (needs key)"
+    },
+    {
+      "id": "nasa-pace-oci",
+      "priority": 15,
+      "status": "needs registration/API key (free)",
+      "test": "UNTESTED - needs key (collection + granule URLs verified in NASA CMR without login)",
+      "name": "NASA PACE OCI ocean colour (hyperspectral) L3 daily",
+      "provider": "NASA OB.DAAC, collection PACE_OCI_L3M_BGC_NRT (C4184125829-OB_CLOUD), v3.2",
+      "measures": "Chlorophyll and other biogeochemical products from PACE's hyperspectral Ocean Color Instrument (successor to MODIS).",
+      "variables": "chlor_a, carbon_phyto, poc and others in the BGC suite (AOP suite: Rrs, Kd)",
+      "resolution": "4 km and 0.1 deg mapped",
+      "coverage": "Global; Central Coast",
+      "temporal": "Daily, 8-day, monthly",
+      "latency": "~1 day (granule PACE_OCI.20261118.L3m.DAY.BGC.V3_2.4km.NRT.nc existed 2026-11-19)",
+      "horizon": "Observation only",
+      "format": "NetCDF4",
+      "license": "NASA open data, no restrictions; credit NASA OB.DAAC.",
+      "cost": "Free",
+      "endpoints": [
+        "https://oceancolor.gsfc.nasa.gov/data/pace/",
+        "https://cmr.earthdata.nasa.gov/search/granules.json?concept_id=C4184125829-OB_CLOUD&bounding_box=-123.5,34,-119.5,37&sort_key=-start_date",
+        "https://obdaac-tea.earthdatacloud.nasa.gov/ob-cumulus-prod-public/PACE_OCI.YYYYMMDD.L3m.DAY.BGC.V3_2.4km.NRT.nc"
+      ],
+      "auth": "1. Free NASA Earthdata Login: https://urs.earthdata.nasa.gov/users/new\n2. pip install earthaccess; earthaccess.login(strategy='netrc') or put 'machine urs.earthdata.nasa.gov login <user> password <pass>' in ~/.netrc (chmod 600) in the job's secret store.\n3. Download granules found via CMR (files are global, ~tens of MB; subset after download).",
+      "rate": "None stated; be gentle.",
+      "apps": [
+        "BigBlue (PACE)"
+      ],
+      "layer": "Chlorophyll (next-gen; plankton community)",
+      "snippet": "import earthaccess, xarray as xr\nearthaccess.login()   # uses ~/.netrc\nres = earthaccess.search_data(short_name=\"PACE_OCI_L3M_BGC_NRT\", bounding_box=(-123.5,34,-119.5,37), count=1, temporal=(\"2026-11-17\",\"2026-11-19\"))\nfiles = earthaccess.download([r for r in res if '4km' in r['umm']['GranuleUR']][:1], \"./pace\")\nds = xr.open_dataset(files[0]).sel(lat=slice(37,34), lon=slice(-123.5,-119.5))",
+      "cadence": "Daily.",
+      "fit": "New 'earthdata' adapter (also unlocks OSCAR, GHRSST L2P, PO.DAAC). Repo has no PACE references.",
+      "sample": "none (needs Earthdata login)"
+    },
+    {
+      "id": "cw-smos-sss",
+      "priority": 16,
+      "status": "can ingest now (free/open), low value",
+      "test": "PASS",
+      "name": "SMOS satellite sea-surface salinity",
+      "provider": "ESA SMOS via NOAA CoastWatch (PFEG ERDDAP)",
+      "measures": "Sea surface salinity from L-band radiometer.",
+      "variables": "sss, sss_dif",
+      "resolution": "0.25 deg",
+      "coverage": "Global, but land contamination masks ~40-60 km from the coast",
+      "temporal": "Daily / 3-day",
+      "latency": "2 days",
+      "horizon": "Observation only",
+      "format": "NetCDF via ERDDAP",
+      "license": "NOAA/ESA free (dataset licence text).",
+      "cost": "Free",
+      "endpoints": [
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/coastwatchSMOSv662SSS1day.html",
+        "https://coastwatch.pfeg.noaa.gov/erddap/griddap/coastwatchSMOSv662SSS3day.html"
+      ],
+      "auth": "None",
+      "rate": "As PFEG ERDDAP.",
+      "apps": [
+        "Fishare (salinity)",
+        "Salty Offshore (salinity)"
+      ],
+      "layer": "Salinity (offshore only)",
+      "snippet": "curl -g -o sss.nc 'https://coastwatch.pfeg.noaa.gov/erddap/griddap/coastwatchSMOSv662SSS3day.nc?sss[(last)][(0.0)][(34.0):1:(37.0)][(-123.5):1:(-119.5)]'",
+      "cadence": "Daily.",
+      "fit": "erddap-grid; only 1% of the Central Coast box had data in the test. Prefer CMEMS/HYCOM model salinity for the map.",
+      "sample": "samples/coastwatchSMOSv662SSS1day_sss_centralcoast.nc (32.2-33.0 psu, 1% valid)"
+    },
+    {
+      "id": "sccoos-erddap",
+      "priority": 17,
+      "status": "can ingest now (free/open) \u2014 not reachable from test box",
+      "test": "UNTESTED - erddap.sccoos.org timed out from this box (HTTP 000)",
+      "name": "SCCOOS ERDDAP (Southern California shore stations, HABs, gliders)",
+      "provider": "SCCOOS (Southern California Coastal Ocean Observing System)",
+      "measures": "Shore station temperature/salinity/chl, harmful algal bloom monitoring; south edge of the box (Pt Conception / Santa Barbara Channel).",
+      "variables": "Station-specific",
+      "resolution": "Points",
+      "coverage": "Southern California; overlaps only the southern edge of the Central Coast box",
+      "temporal": "Minutes",
+      "latency": "Minutes",
+      "horizon": "Observation only",
+      "format": "ERDDAP CSV/NetCDF",
+      "license": "IOOS free and open",
+      "cost": "Free",
+      "endpoints": [
+        "https://erddap.sccoos.org/erddap/index.html"
+      ],
+      "auth": "None",
+      "rate": "ERDDAP",
+      "apps": [
+        "Fish or Pass (credits SCCOOS)"
+      ],
+      "layer": "Subsurface / in-situ ground truth",
+      "snippet": "curl 'https://erddap.sccoos.org/erddap/search/index.csv?searchFor=temperature'",
+      "cadence": "Every 30 min.",
+      "fit": "Same tabledap path as CeNCOOS; retest from the production network.",
+      "sample": "none"
+    },
+    {
+      "id": "cmems-glo-bgc-anfc",
+      "priority": 18,
+      "status": "needs registration/API key (free)",
+      "test": "UNTESTED - needs key (IDs verified)",
+      "name": "Copernicus Marine global biogeochemistry forecast (oxygen, productivity)",
+      "provider": "CMEMS GLOBAL_ANALYSISFORECAST_BGC_001_028",
+      "measures": "Model dissolved oxygen and net primary production at depth; also nutrients, pH, plankton.",
+      "variables": "o2, nppv (cmems_mod_glo_bgc-bio_anfc_0.25deg_P1D-m); no3/po4/si (nut); ph/dissic (car); chl/phyc (pft)",
+      "resolution": "0.25 deg",
+      "coverage": "Global; coarse near coast",
+      "temporal": "Daily",
+      "latency": "Daily",
+      "horizon": "10 days",
+      "format": "NetCDF / Zarr",
+      "license": "Copernicus Marine Service licence: free, commercial use allowed, attribution required ('Generated using E.U. Copernicus Marine Service Information; https://doi.org/<product DOI>').",
+      "cost": "Free",
+      "endpoints": [
+        "https://data.marine.copernicus.eu/product/GLOBAL_ANALYSISFORECAST_BGC_001_028/description"
+      ],
+      "auth": "1. Create a free account at https://data.marine.copernicus.eu/register (email + password; no fee; accept the Copernicus Marine licence, which allows commercial use with attribution).\n2. pip install copernicusmarine   (tested here: version 2.5.1)\n3. copernicusmarine login   (stores credentials in ~/.copernicusmarine; or set env COPERNICUSMARINE_SERVICE_USERNAME / COPERNICUSMARINE_SERVICE_PASSWORD in the job's secrets \u2014 never commit them)\n4. Run the subset command below. Docs: https://help.marine.copernicus.eu/en/articles/7970514-copernicus-marine-toolbox-installation",
+      "rate": "As above.",
+      "apps": [
+        "Salty Offshore (dissolved oxygen, phytoplankton)"
+      ],
+      "layer": "Subsurface (oxygen / hypoxia)",
+      "snippet": "copernicusmarine subset --dataset-id cmems_mod_glo_bgc-bio_anfc_0.25deg_P1D-m -v o2 -v nppv -x -123.5 -X -119.5 -y 34 -Y 37 -z 0 -Z 200 -o . -f cmems_o2.nc",
+      "cadence": "Daily.",
+      "fit": "cmems-toolbox adapter. Low priority; 0.25 deg is coarse for bays \u2014 validate against CeNCOOS DO sensors.",
+      "sample": "none (needs key)"
+    },
+    {
+      "id": "cdse-sentinel-1",
+      "priority": 19,
+      "status": "needs registration/API key (free)",
+      "test": "PARTIAL - STAC search works without login; download needs account",
+      "name": "Sentinel-1 SAR imagery (Copernicus Data Space)",
+      "provider": "ESA / Copernicus Data Space Ecosystem",
+      "measures": "Radar backscatter images through cloud and at night: vessels, oil platforms, slicks, wind streaks, fronts.",
+      "variables": "GRD VV/VH backscatter (COG)",
+      "resolution": "10 m (IW GRD)",
+      "coverage": "Central Coast imaged every few days (S1C/S1D; latest scene 2026-11-19 01:50Z)",
+      "temporal": "Every 2-6 days",
+      "latency": "Hours",
+      "horizon": "Observation only",
+      "format": "Cloud-optimised GeoTIFF (COG) in SAFE",
+      "license": "Copernicus open licence: free, commercial use with attribution ('Contains modified Copernicus Sentinel data <year>').",
+      "cost": "Free",
+      "endpoints": [
+        "https://stac.dataspace.copernicus.eu/v1/collections/sentinel-1-grd",
+        "https://stac.dataspace.copernicus.eu/v1/search",
+        "https://dataspace.copernicus.eu/"
+      ],
+      "auth": "Free account at https://dataspace.copernicus.eu/ ; get an OAuth token (client credentials) for S3/HTTPS downloads.",
+      "rate": "CDSE quotas apply per account (see their docs).",
+      "apps": [
+        "BlueFronts (Sentinel-1 imagery for rigs)"
+      ],
+      "layer": "Satellite imagery (raw base), vessel/rig detection",
+      "snippet": "curl \"https://stac.dataspace.copernicus.eu/v1/search?collections=sentinel-1-grd&bbox=-123.5,34,-119.5,37&limit=5&sortby=-datetime\"\n# then download assets with a CDSE token",
+      "cadence": "On new scene.",
+      "fit": "Low priority; large files. SkipperCast already has AIS for vessels.",
+      "sample": "samples/cdse_s1_stac_search.json (metadata only)"
+    },
+    {
+      "id": "aviso-fsle",
+      "priority": 20,
+      "status": "paid/licensed (registration; free only for scientific/non-profit per handbook)",
+      "test": "UNTESTED - needs AVISO+ account and licence",
+      "name": "AVISO+ FSLE (Finite-Size Lyapunov Exponents) \u2014 Lagrangian fronts",
+      "provider": "CNES / CLS AVISO+",
+      "measures": "Ridges of FSLE = Lagrangian coherent structures: where water masses converge (bait lines/fronts).",
+      "variables": "fsle_max, theta_max (orientation)",
+      "resolution": "1/25 deg",
+      "coverage": "Global",
+      "temporal": "Daily",
+      "latency": "20 days (NRT 'routine production')",
+      "horizon": "Observation only",
+      "format": "NetCDF-4, ~140 MB/file",
+      "license": "Handbook: free for scientific studies or non-profit projects only. Product page: 'any purposes as stated in the licence agreement'. Treat as needing a commercial licence check.",
+      "cost": "Free for non-profit; commercial terms unclear",
+      "endpoints": [
+        "https://www.aviso.altimetry.fr/en/data/products/value-added-products/fsle-finite-size-lyapunov-exponents.html",
+        "https://www.aviso.altimetry.fr/en/data/data-access/registration-form.html",
+        "ftp://ftp-access.aviso.altimetry.fr/value-added/lyapunov (authenticated)",
+        "https://www.aviso.altimetry.fr/fileadmin/documents/data/tools/hdbk_FSLE.pdf"
+      ],
+      "auth": "Register via the AVISO+ form and tick 'Lyapunov Exponents and Orientations products'; sign licence; wait for approval; then authenticated FTP.",
+      "rate": "n/a",
+      "apps": [
+        "Salty Offshore (FSLE)"
+      ],
+      "layer": "Fronts",
+      "snippet": "# Alternative we can own: compute FSLE ourselves from CMEMS geostrophic currents (ugos/vgos) with the GPL 'lagrangian' code (bitbucket.org/cnes_aviso/lagrangian) or py-eddy-tracker \u2014 no AVISO licence needed, same-day latency.",
+      "cadence": "n/a",
+      "fit": "Prefer computing in-house from cmems-sealevel-nrt.",
+      "sample": "none"
+    },
+    {
+      "id": "noaa-rrfs",
+      "priority": 21,
+      "status": "can ingest now (free/open) \u2014 layout unverified",
+      "test": "UNTESTED - bucket exists, rrfs_a/rrfs.20261118/ was empty",
+      "name": "NOAA RRFS (Rapid Refresh Forecast System, NAM/HRRR successor)",
+      "provider": "NOAA NCEP, AWS bucket noaa-rrfs-pds",
+      "measures": "3 km regional weather model replacing NAM.",
+      "variables": "Wind, gust, etc. (GRIB2)",
+      "resolution": "3 km",
+      "coverage": "North America",
+      "temporal": "Hourly",
+      "latency": "Unknown",
+      "horizon": "Up to 60-84 h (NOAA)",
+      "format": "GRIB2",
+      "license": "NOAA public domain",
+      "cost": "Free",
+      "endpoints": [
+        "https://noaa-rrfs-pds.s3.amazonaws.com/?list-type=2&delimiter=/&prefix=rrfs_a/"
+      ],
+      "auth": "None",
+      "rate": "None",
+      "apps": [
+        "Salty Offshore (NOAA RRFS replacing NAM)",
+        "PredictWind (RRFS)"
+      ],
+      "layer": "Wind / Weather",
+      "snippet": "curl 'https://noaa-rrfs-pds.s3.amazonaws.com/?list-type=2&delimiter=/&prefix=rrfs_a/'",
+      "cadence": "Revisit when operational files appear.",
+      "fit": "Same GRIB byte-range path as HRRR. Use HRRR until then.",
+      "sample": "none"
+    },
+    {
+      "id": "noaa-coops-current-predictions",
+      "priority": 22,
+      "status": "can ingest now (free/open) \u2014 no usable Central Coast stations",
+      "test": "FAIL",
+      "name": "NOAA CO-OPS tidal current predictions",
+      "provider": "NOAA CO-OPS",
+      "measures": "Predicted tidal current speed/direction, slack times.",
+      "variables": "Velocity_Major, flood/ebb/slack times",
+      "resolution": "Point stations",
+      "coverage": "Only 3 subordinate stations in the box (PCT0156 Point Pinos, PCT0161 Point Santa Cruz, PCT0166 Ano Nuevo)",
+      "temporal": "6-min / max-slack",
+      "latency": "Predictions",
+      "horizon": "Years",
+      "format": "JSON/CSV",
+      "license": "NOAA public domain",
+      "cost": "Free",
+      "endpoints": [
+        "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=currentpredictions",
+        "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=currents_predictions"
+      ],
+      "auth": "None",
+      "rate": "CO-OPS asks for an application= parameter.",
+      "apps": [
+        "Navionics / Aqua Map / Savvy Navvy (tidal current arrows)"
+      ],
+      "layer": "Currents (tidal)",
+      "snippet": "curl 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=currents_predictions&station=PCT0156&begin_date=20261119&range=48&interval=MAX_SLACK&units=english&time_zone=lst_ldt&format=json&application=skippercast'   # returned 'Currents predictions are not available from the requested station.'",
+      "cadence": "n/a",
+      "fit": "Gap: Central Coast tidal currents are weak and poorly covered; use WCOFS/HF radar (already ingested). Inside harbours, consider CDIP/WCOFS.",
+      "sample": "none (API refused)"
+    }
+  ],
+  "already_ingested": [
+    {
+      "repo_ids": "open-meteo (noaa-gfs, ecmwf-ifs, noaa-gfs-wave, ecmwf-wam, open-meteo-api)",
+      "layer": "Wind, weather, waves",
+      "apps": "Go or No, Fish or Pass, Fishare, Windy, PredictWind, SeaLegs, Orca, SkeeterCast"
+    },
+    {
+      "repo_ids": "ECMWF open data + GFS direct from AWS (src/skippercast/forecast/fetch.py ECMWF_AWS/ECMWF_PORTAL/GFS_AWS)",
+      "layer": "Wind, weather",
+      "apps": "Windy, PredictWind, SeaLegs, Orca"
+    },
+    {
+      "repo_ids": "ndbc-buoys, ndbc-history",
+      "layer": "Wind, gusts, waves, water temp",
+      "apps": "SeaStatus, BlueFronts, Go or No"
+    },
+    {
+      "repo_ids": "cdip-mop (candidate)",
+      "layer": "Nearshore waves",
+      "apps": "Surfline/Buoyweather class apps"
+    },
+    {
+      "repo_ids": "noaa-tides (CO-OPS)",
+      "layer": "Tides",
+      "apps": "SeaStatus, Go or No, Cobia, Navionics, Aqua Map"
+    },
+    {
+      "repo_ids": "nws-weather (api.weather.gov, marine warnings)",
+      "layer": "Weather / warnings",
+      "apps": "SeaStatus, Pathr, SkeeterCast"
+    },
+    {
+      "repo_ids": "mur-sst, noaa-blended-sst (Geo-Polar 5 km)",
+      "layer": "SST",
+      "apps": "RipVision (MUR 0.02), Salty (GHRSST), FishTrack, BigBlue"
+    },
+    {
+      "repo_ids": "modis-chlorophyll, noaa-viirs-merged-chlorophyll",
+      "layer": "Chlorophyll",
+      "apps": "RipVision, BigBlue, Salty, FishTrack, SkeeterCast"
+    },
+    {
+      "repo_ids": "ioos-hfr, noaa-hfr-thredds, noaa-ndbc-hfr-uswc-6km",
+      "layer": "HF-radar surface currents",
+      "apps": "BlueFronts, Salty (currents)"
+    },
+    {
+      "repo_ids": "noaa-wcofs, regional-roms (candidate)",
+      "layer": "Model currents / temperature",
+      "apps": "Salty (NOAA current models, unverified)"
+    },
+    {
+      "repo_ids": "noaa-gefs-members, noaa-gefs-wave-prob",
+      "layer": "Ensembles",
+      "apps": "PredictWind/Windy (ensembles)"
+    },
+    {
+      "repo_ids": "noaa-goes-nowcoast (GOES imagery)",
+      "layer": "Satellite imagery",
+      "apps": "SkeeterCast, Fishare"
+    },
+    {
+      "repo_ids": "gebco-2026-grid, gmrt, noaa-bluetopo, noaa-bag, CUDEM, CoNED, USGS surveys",
+      "layer": "Bathymetry",
+      "apps": "RipVision (GEBCO), Salinity (NOAA survey relief), SkeeterCast, Fish or Pass, Cobia"
+    },
+    {
+      "repo_ids": "noaa-enc-display, noaa-cusp-shoreline, osm-tiles, protomaps-basemap, usgs-naip",
+      "layer": "Charts / base map",
+      "apps": "Pathr, BoatNGo, Fishing Points, Aqua Map, Cobia"
+    },
+    {
+      "repo_ids": "kelpwatch (candidate), cdfw-kelp-2016",
+      "layer": "Kelp canopy",
+      "apps": "Fish or Pass"
+    },
+    {
+      "repo_ids": "noaa-ais, aisstream, gfw-effort",
+      "layer": "AIS / fishing effort",
+      "apps": "Salty Offshore (AIS)"
+    },
+    {
+      "repo_ids": "cdfw-mpas, cdfw-rules, recfin, obis",
+      "layer": "Regulations, MPAs, catch",
+      "apps": "Fish or Pass, Fishbrain"
+    }
+  ],
+  "proprietary": [
+    {
+      "source": "SiriusXM Marine / OceanBytes analyses",
+      "apps": "SiriusXM Fish Mapping",
+      "note": "Satellite-radio delivered SST/chl/altimetry/'fish mapping' \u2014 proprietary feed"
+    },
+    {
+      "source": "Hilton's RT-Nav analyses",
+      "apps": "Hilton's",
+      "note": "Proprietary hand-drawn/automated break analysis"
+    },
+    {
+      "source": "ROFFS analyses",
+      "apps": "ROFFS",
+      "note": "Paid expert analysis charts"
+    },
+    {
+      "source": "Terrafin / RipCharts / Rigline / GulfWire / SatFish / Fishdope imagery",
+      "apps": "RipCharts, Rigline, GulfWire, SatFish, Fishdope",
+      "note": "Unattributed composites; underlying data likely NOAA/NASA/CMEMS (same sources above)"
+    },
+    {
+      "source": "PredictWind PWG / PWE / PWAi",
+      "apps": "PredictWind",
+      "note": "In-house models"
+    },
+    {
+      "source": "Surfline LOTUS / Buoyweather wave model",
+      "apps": "Surfline, Buoyweather, FishTrack",
+      "note": "In-house wave model"
+    },
+    {
+      "source": "Navionics / C-MAP / Garmin charts & SonarChart",
+      "apps": "Navionics, Savvy Navvy, DECKEE, Fishbrain, Wavve",
+      "note": "Licensed chart vendors"
+    },
+    {
+      "source": "meteoblue",
+      "apps": "Windy",
+      "note": "Commercial weather API (paid)"
+    },
+    {
+      "source": "SkeeterCast AI / SeaLegs AI / RipVision AI scoring",
+      "apps": "SkeeterCast, SeaLegs, RipVision",
+      "note": "Derived products on public data"
+    },
+    {
+      "source": "Himawari-9",
+      "apps": "Fishare",
+      "note": "Not relevant to California (West Pacific satellite)"
+    }
+  ]
+}

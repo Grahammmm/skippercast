@@ -86,7 +86,17 @@
     "then": {
       "properties": {"rights": {"properties": {"attribution": {"pattern": "\\S"}}}},
       "if": {"properties": {"rights": {"properties": {"public_display": {"const": "allowed"}}}}},
-      "then": {"properties": {"review_status": {"const": "approved"}, "publication_allowed": {"not": {"const": false}}}}
+      "then": {
+        "description": "allowed needs an approved review with no explicit publication_allowed:false, or the owner's display decision (rights.owner_public_display, G 2026-11-18). Only the owner decision overrides a publication_allowed:false denial.",
+        "anyOf": [
+          {"properties": {"review_status": {"const": "approved"}, "publication_allowed": {"not": {"const": false}}}},
+          {"properties": {"rights": {"required": ["owner_public_display"], "properties": {"owner_public_display": {
+            "type": "object",
+            "required": ["decision", "basis"],
+            "properties": {"decision": {"const": "allowed"}, "basis": {"const": "G decision 2026-11-18 (owner-accepted risk; revisit when paid)"}}
+          }}}}}
+        ]
+      }
     }
   }],
   "additionalProperties": true

@@ -41,7 +41,8 @@ async function withDatabase(ids, run) {
     return await run(readonly);
   } finally { sql.close(); }
 }
-const expected = ids => ids.map(id => ({row: rows.get(id), group: rows.get(id).species_key === 'rockfish'}));
+// SELECT * also returns the migration-backed import_origin column; these rows never set it.
+const expected = ids => ids.map(id => ({row: {...rows.get(id), import_origin: null}, group: rows.get(id).species_key === 'rockfish'}));
 const actual = selected => selected.map(({row, group}) => ({row: {...row}, group}));
 async function select(ids, first = SOUTH) {
   return withDatabase(ids, async db => actual(await speciesRules(db, 'vermilion', first)));

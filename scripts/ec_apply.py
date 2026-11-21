@@ -11,10 +11,13 @@ configurable: if a treated cell got deeper or any untreated cell changed, nothin
 A receipt `bbox` is end-exclusive pixel indices `[col0, row0, col1, row1]` (numpy slices, as ec_detect writes it:
 one cell at row r, col c is `[c, r, c + 1, r + 1]`; see docs/seafloor-ec.md); a hole is the 4-connected invalid (masked,
 nodata, NaN or sentinel) component with exactly that bbox and `cells`, a pit the `cells` deepest water cells in it.
+A spike's bbox and count are matched to the detector's reconstructed components; only their members get the suspect code.
 An input validity mask is kept in corrected.tif. A machine-valid receipt is review-required, not acceptance.
 """
 import argparse
+from collections import Counter
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import sys
@@ -27,6 +30,16 @@ from scipy import ndimage
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / 'src'))
 from skippercast.platform import seafloor_ec as ec  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location('preflight_native_grid', Path(__file__).with_name('preflight_native_grid.py'))
+assert _spec and _spec.loader
+preflight = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(preflight)
+
+_spec = importlib.util.spec_from_file_location('ec_detect', Path(__file__).with_name('ec_detect.py'))
+assert _spec and _spec.loader
+detector = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(detector)
 
 OUTPUTS = ('corrected.tif', 'provenance.tif', 'EC-APPLY.json')
 EIGHT = np.ones((3, 3), dtype=bool)
@@ -104,6 +117,27 @@ def _fill(after, window, comp, value):
     after[window][comp] = value
 
 
+def _mark_shoals(det, z, water, codes):
+    code = 'measured-suspect-shoal'
+    if not det['spikes'] and det['counts'].get(code, 0) == 0:
+        return
+    # EC1 tests outliers on float32, even if the original band has higher precision.
+    v = z.astype(np.float32, copy=False)
+    _, mask, med, dev = detector.outlier_masks(v, water & (v < 0) & (v >= ec.PLAUSIBLE_M[0]))
+    components = detector.outlier_components(mask, med, dev, deepest=False)
+
+    def signatures(entries):
+        return Counter((tuple(entry['bbox']), entry['cells']) for entry in entries)
+
+    if signatures(components) != signatures(det['spikes']):
+        raise Refused('spike component bboxes or cell counts differ from detect receipt')
+    if det['counts'].get(code, 0) != int(mask.sum()):
+        raise Refused('suspect-shoal total differs from detect receipt')
+    if (codes[mask] != ec.CODES['measured']).any():
+        raise Refused('spike component overlaps a non-measured cell')
+    codes[mask] = ec.CODES[code]
+
+
 def apply(path, detect_path, out_dir):
     try:
         raw = Path(detect_path).read_bytes()
@@ -123,6 +157,11 @@ def apply(path, detect_path, out_dir):
 
     with rasterio.open(path) as ds:
         if ds.driver != 'GTiff': raise Refused(f'driver {ds.driver} (GeoTIFF only)')
+        if det['spikes'] and len(ds.files) > 1: raise Refused('spike reconstruction cannot use unhashed sidecars')
+        try:
+            has_unit, has_sign = preflight.check_ec_vertical(ds, require_declared=False)
+        except preflight.Refused as exc:
+            raise Refused(str(exc)) from None
         band, nodata = ds.read(1, masked=True), ds.nodata
         own_mask = MaskFlags.per_dataset in ds.mask_flag_enums[0]  # an explicit validity mask: kept in the output
         z = band.data
@@ -144,9 +183,6 @@ def apply(path, detect_path, out_dir):
 
     codes = np.where(valid, ec.CODES['measured'], ec.CODES['nodata']).astype(np.uint8)
     codes[sentinel] = ec.CODES['masked-sentinel']
-    for spike in det['spikes']:
-        window, inner = _window(spike['bbox'], z.shape)
-        codes[window][inner][water[window][inner]] = ec.CODES['measured-suspect-shoal']
     after, reference, treated, fixes = masked.copy(), masked.copy(), np.zeros(z.shape, dtype=bool), []
     invalid = ~valid
 
@@ -175,6 +211,7 @@ def apply(path, detect_path, out_dir):
         if entry['cells'] > ec.OUTLIER_MAX_CELLS: continue
         window, comp = _pit(entry, z, water)
         treat('pit', window, comp, ec.CODES['filled-pit'], *reversed(_ring(window, comp, z, water)))
+    _mark_shoals(det, z, water, codes)
 
     # No-deepening gate (not configurable): treated cells may only get shallower; nothing else may change.
     index = np.flatnonzero(treated)
@@ -189,8 +226,13 @@ def apply(path, detect_path, out_dir):
     if missing.any(): raise Refused(f'uncorrected {int(missing.sum())} cells', code=3)
 
     out.mkdir(parents=True, exist_ok=True)
-    with rasterio.open(out / 'corrected.tif', 'w', **meta) as dst:
+    # The receipt hashes only the TIFF, so its validity mask must be internal even
+    # when the caller or an older GDAL defaults to external .msk files.
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True), rasterio.open(out / 'corrected.tif', 'w', **meta) as dst:
         dst.write(after, 1)
+        # Carry only declarations actually present; never qualify an unlabeled input by rewriting it.
+        if has_unit: dst.set_band_unit(1, 'm')
+        if has_sign: dst.update_tags(1, vertical_sign='elevation-up')
         if own_mask: dst.write_mask(valid | treated)  # untreated invalid cells stay invalid; only fills promote
     pmeta = {**{k: v for k, v in meta.items() if k != 'predictor'}, 'dtype': 'uint8', 'nodata': 255}
     with rasterio.open(out / 'provenance.tif', 'w', **pmeta) as dst:

@@ -136,7 +136,7 @@ test('digest: Spanish changes the words and the hazard prefix only; stored hazar
     assert.ok(toText(en).includes(word) && text.includes(spanish), word);
   }
   assert.ok(text.includes('something new Nota de peligro: kept'), 'an unknown status stays raw, its note still stored');
-  assert.ok(!text.includes('Nota de peligro: ok'), 'one bad note drops the whole list, as before');
+  assert.ok(text.includes('comprobación incompleta Nota de peligro: ok'), 'one bad note no longer drops the valid ones; the status reads incomplete');
 });
 
 test('UXFIX-07 readableDate: Tue 10 Nov / mar 10 nov in the region zone; the DST day keeps its calendar day; anything unreadable prints as given', () => {

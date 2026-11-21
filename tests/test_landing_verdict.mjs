@@ -101,6 +101,27 @@ const landingOn = (m, entries, now = NOW, opts) => onDevice(entries, async ({rea
 
 const NOW = new Date('2026-10-08T21:00:00Z'); // 2 pm PDT; tomorrow is 9 October
 
+test('a verdict built from a cost-ceiling copy stays labeled saved independently of the page warning', async () => {
+  const m = await load();
+  const fetchFn = feeds(NOW);
+  // Same valid forecast body, with and without its Worker provenance. Without
+  // per-verdict provenance, rendering with no global warning mislabels the saved one.
+  for (const saved of [true, false]) {
+    const v = await m.loadLandingVerdict(async (...args) => {
+      const response = await fetchFn(...args);
+      if (saved && new URL(String(args[0]), PAGE).pathname === '/api/forecast') {
+        response.headers.set('X-SC-Degraded', 'cost-ceiling');
+        response.headers.set('X-SC-Last-Known-At', NOW.toISOString());
+      }
+      return response;
+    }, NOW, PAGE);
+    assert.ok(v);
+    const html = m.render(m.h(m.LiveVerdict, {v, saved: false}));
+    assert.equal(html.includes('data-degraded="cost-ceiling"'), saved);
+    assert.equal(html.includes('From saved copies, not live:'), saved);
+  }
+});
+
 test('the landing shows the app lead\'s own word and sentence for tomorrow, and links to that day', async () => {
   const m = await load();
   for (const now of [NOW, new Date(NOW.getTime() + 24 * HOUR), new Date(NOW.getTime() + 48 * HOUR)]) {
@@ -179,6 +200,29 @@ test('a bound coast report enters the brief as in the app; a failed one leaves i
     globalThis.fetch = async () => new Response('{}', {status: 503});
     const regional = await m.loadLandingVerdict(feeds(now), now, PAGE), app = await appLead(m, now);
     assert.deepEqual([regional.word, regional.sentence], [app.word, app.limit], 'report unavailable: the regional brief, as the app');
+  } finally { globalThis.fetch = real; }
+});
+
+test('a verdict rated from a cost-ceiling coast report stays labeled saved when every other input is live', async () => {
+  // Contract: per-verdict provenance covers the coast report too (it is read through the bridge, not readInput).
+  // Bug caught: only feed/forecast marks set `saved`, so a marked report's verdict lost its label once the page warning cleared.
+  const m = await load();
+  const now = new Date(), body = m.coastReportFixture(now.getTime()), real = globalThis.fetch;
+  try {
+    for (const marked of [true, false]) {
+      globalThis.fetch = async () => {
+        const response = new Response(JSON.stringify(body));
+        if (marked) response.headers.set('X-SC-Degraded', 'cost-ceiling');
+        return response;
+      };
+      const v = await m.loadLandingVerdict(feeds(now), now, PAGE);
+      assert.ok(v);
+      assert.equal(v.saved, marked, marked ? 'the marked report labels its verdict saved' : 'a live report leaves it unlabeled');
+      const html = m.render(m.h(m.LiveVerdict, {v, saved: false}));
+      assert.equal(html.includes('From saved copies, not live:'), marked);
+    }
+    globalThis.fetch = async () => new Response('{}', {status: 503, headers: {'X-SC-Degraded': 'cost-ceiling'}});
+    assert.equal((await m.loadLandingVerdict(feeds(now), now, PAGE)).saved, false, 'a failed marked report supplies no input, so no label');
   } finally { globalThis.fetch = real; }
 });
 

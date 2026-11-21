@@ -7,9 +7,10 @@ area types require method- and date-specific regulatory review.
 import argparse
 from datetime import datetime, timezone
 import hashlib
+from itertools import combinations, groupby, pairwise
 import json
-import math
 from pathlib import Path
+import re
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
@@ -17,6 +18,7 @@ from urllib.request import Request, urlopen
 SERVICE = ('https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/'
            'NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer')
 LAW = 'https://www.ecfr.gov/current/title-50/section-660.70'
+SCOPE = 'noaa-west-coast-groundfish-conservation-areas'
 MAX_BYTES = 5_000_000
 
 
@@ -35,7 +37,135 @@ def fetch_json(url):
     return json.loads(raw), hashlib.sha256(raw).hexdigest()
 
 
-def polygon_valid(geometry):
+def _side(a, b, p):
+    return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
+
+
+def _contacts(a, b, c, d):
+    ab_c, ab_d = _side(a, b, c), _side(a, b, d)
+    cd_a, cd_b = _side(c, d, a), _side(c, d, b)
+    if ab_c * ab_d < 0 and cd_a * cd_b < 0:
+        raise ValueError('Crossing polygon edges')
+    touches = {p for p, u, v, side in ((c, a, b, ab_c), (d, a, b, ab_d),
+                                      (a, c, d, cd_a), (b, c, d, cd_b))
+               if side == 0 and all(min(x, y) <= z <= max(x, y) for z, x, y in zip(p, u, v))}
+    if len(touches) > 1:
+        raise ValueError('Overlapping polygon edges')
+    return touches
+
+
+def _boundary_contacts(rings):
+    edges = sorted((min(a[0], b[0]), max(a[0], b[0]), i, j, a, b)
+                   for i, ring in enumerate(rings) for j, (a, b) in enumerate(pairwise(ring)))
+    cuts = [{} for _ in rings]
+    contacts = {}
+    # Sweep in longitude so only edges with intersecting bounding boxes are compared.
+    for k, (_, right, i, j, a, b) in enumerate(edges):
+        for l in range(k + 1, len(edges)):
+            left, _, m, n, c, d = edges[l]
+            if left > right:
+                break
+            if max(a[1], b[1]) < min(c[1], d[1]) or max(c[1], d[1]) < min(a[1], b[1]):
+                continue
+            touches = _contacts(a, b, c, d)
+            if not touches:
+                continue
+            if i == m:
+                if abs(j - n) not in (1, len(rings[i]) - 2):
+                    raise ValueError('Self-touching polygon ring')
+            else:
+                cuts[i].setdefault(j, set()).update(touches)
+                cuts[m].setdefault(n, set()).update(touches)
+                contacts.setdefault(next(iter(touches)), set()).update((i, m))
+    return cuts, contacts
+
+
+def _arc_samples(ring, cuts):
+    # One midpoint per open arc after splitting at boundary contacts. Use
+    # doubled coordinates so even the midpoints are exact integers.
+    if not cuts:
+        a, b = ring[:2]
+        return [(a[0] + b[0], a[1] + b[1])]
+    return [(u[0] + v[0], u[1] + v[1]) for j, (a, b) in enumerate(pairwise(ring))
+            for u, v in pairwise(sorted({a, b} | cuts.get(j, set())))]
+
+
+def _inside(ring, point2):
+    x2, y2 = point2
+    inside = False
+    for (ax, ay), (bx, by) in pairwise(ring):
+        if (2 * ay > y2) != (2 * by > y2):
+            side = (bx - ax) * (y2 - 2 * ay) - (by - ay) * (x2 - 2 * ax)
+            if (side > 0) == (by > ay):
+                inside = not inside
+    return inside
+
+
+def _connected_interior(component, contacts):
+    # A cycle between rings via distinct contact points disconnects the interior.
+    # A single contact shared by multiple rings is one node, not a cycle.
+    parent = {i: i for i in component}
+
+    def root(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    for touching in contacts.values():
+        group = iter(touching.intersection(parent))
+        first = next(group, None)
+        for i in group:
+            a, b = root(first), root(i)
+            if a == b:
+                return False
+            parent[b] = a
+    return True
+
+
+def _polygon_topology(polygons):
+    rings, areas, components = [], [], []
+    # In the bounded NOAA domain every binary64 ordinate is an exact multiple
+    # of 2**-48. Scale the XY plane once to avoid floating-point cancellation.
+    for polygon in polygons:
+        start = len(rings)
+        for ring in polygon:
+            points = ((int(x * 2**48), int(y * 2**48)) for x, y, *_ in ring)
+            points = [point for point, _ in groupby(points)]  # adjacent duplicates add no edge
+            area = abs(sum(ax * by - bx * ay for (ax, ay), (bx, by) in pairwise(points)))
+            if not area:
+                return False
+            rings.append(points)
+            areas.append(area)
+        components.append(range(start, len(rings)))
+
+    try:
+        cuts, contacts = _boundary_contacts(rings)
+    except ValueError:
+        return False
+    samples = [_arc_samples(ring, cut) for ring, cut in zip(rings, cuts)]
+    for component in components:
+        shell, *holes = component
+        if areas[shell] <= sum(areas[hole] for hole in holes):
+            return False
+        if any(not _inside(rings[shell], p) for hole in holes for p in samples[hole]):
+            return False
+        if any(_inside(rings[target], p) for a, b in combinations(holes, 2)
+               for source, target in ((a, b), (b, a)) for p in samples[source]):
+            return False
+        if not _connected_interior(component, contacts):
+            return False
+
+    for a, b in combinations(components, 2):
+        for source, target in ((a, b), (b, a)):
+            shell, *holes = target
+            if any(_inside(rings[shell], p) and not any(_inside(rings[hole], p) for hole in holes)
+                   for i in source for p in samples[i]):
+                return False
+    return True
+
+
+def polygon_valid(geometry, *, require_topology=True):
     if geometry.get('type') not in ('Polygon', 'MultiPolygon'):
         return False
     polygons = [geometry.get('coordinates')] if geometry['type'] == 'Polygon' else geometry.get('coordinates')
@@ -48,10 +178,10 @@ def polygon_valid(geometry):
             if not isinstance(ring, list) or len(ring) < 4 or ring[0] != ring[-1]:
                 return False
             if any(not isinstance(point, list) or len(point) < 2 or
-                   not all(isinstance(n, (int, float)) and math.isfinite(n) for n in point[:2]) or
+                   not all(isinstance(n, (int, float)) for n in point[:2]) or
                    not (-130 <= point[0] <= -115 and 30 <= point[1] <= 50) for point in ring):
                 return False
-    return True
+    return not require_topology or _polygon_topology(polygons)
 
 
 def selected_layers(layers):
@@ -104,7 +234,8 @@ def collect(getter=fetch_json, now=None):
             props = (feature.get('properties') or {}) if isinstance(feature, dict) else None
             oid = props.get('OBJECTID') if isinstance(props, dict) else None
             if (type(oid) is not int or oid < 0 or oid in seen or
-                    not polygon_valid(feature['geometry'] if isinstance(feature.get('geometry'), dict) else {}) or
+                    not polygon_valid(feature['geometry'] if isinstance(feature.get('geometry'), dict) else {},
+                                      require_topology=category == 'GEA') or
                     props.get('AREA_GROUP') not in ({'GEA', 'Groundfish Exclusion Area'} if category == 'GEA' else {category})):
                 raise ValueError(f'Invalid NOAA polygon or classification for {name}')
             seen.add(oid)
@@ -121,7 +252,7 @@ def collect(getter=fetch_json, now=None):
                         'feature_count': count, 'count_url': count_url, 'count_sha256': count_hash,
                         'geometry_url': geo_url, 'geometry_sha256': geo_hash})
     return {'type': 'FeatureCollection', 'schema_version': 1,
-            'scope': 'noaa-west-coast-groundfish-conservation-areas',
+            'scope': SCOPE,
             'retrieved_at': now.isoformat(), 'status': 'ok', 'service_url': SERVICE,
             'service_response_sha256': service_hash, 'legal_text_url': LAW,
             'source_layers': sources, 'feature_count': len(features),
@@ -132,6 +263,54 @@ def collect(getter=fetch_json, now=None):
             'features': features}
 
 
+def _previous_inventory_error(layers, features):
+    # Reapply the fresh capture's inventory rules, including its minimums,
+    # required GEA layer, and exclusions for aggregates and transit corridors.
+    try:
+        chosen = selected_layers([{'id': row.get('layer_id'), 'name': row.get('layer_name')}
+                                  if isinstance(row, dict) else None for row in layers])
+    except ValueError:
+        return 'invalid source layer inventory'
+    if len(chosen) != len(layers):
+        return 'invalid source layer inventory'
+
+    remaining = {}
+    inventory = {}
+    for (ident, name, category), row in zip(chosen, layers):
+        count = row.get('feature_count')
+        if row.get('area_type') != category or type(count) is not int or not 1 <= count <= 100:
+            return 'invalid source layer category or count'
+        inventory[ident] = (name, category)
+        remaining[ident] = count
+
+    seen = set()
+    for feature in features:
+        if not isinstance(feature, dict) or feature.get('type') != 'Feature':
+            return 'invalid feature'
+        props, geometry = feature.get('properties'), feature.get('geometry')
+        if not isinstance(props, dict) or not isinstance(geometry, dict):
+            return 'invalid feature properties or geometry'
+        ident, key = props.get('source_layer_id'), props.get('id')
+        if type(ident) is not int or ident not in inventory:
+            return 'feature references an unknown source layer'
+        name, category = inventory[ident]
+        if (props.get('source_layer') != name or props.get('area_type') != category
+                or not isinstance(key, str) or not re.fullmatch(rf'noaa-gca-{ident}-(0|[1-9][0-9]*)', key)
+                or key in seen):
+            return 'invalid or duplicate feature identity'
+        if (props.get('groundfish_candidate_exclusion') is not (category == 'GEA')
+                or 'fishing_permission' not in props or props['fishing_permission'] is not None
+                or props.get('exportable_as_fishing_spot') is not False):
+            return 'invalid feature exclusion or permission flags'
+        if not polygon_valid(geometry, require_topology=category == 'GEA'):
+            return 'invalid feature geometry'
+        seen.add(key)
+        remaining[ident] -= 1
+    if any(remaining.values()):
+        return 'source layer feature counts do not match features'
+    return ''
+
+
 def _usable_previous(path):
     try:
         data = json.loads(path.read_text(encoding='utf-8'))
@@ -140,7 +319,7 @@ def _usable_previous(path):
     if not isinstance(data, dict):
         return None, 'not an object'
     count, features = data.get('feature_count'), data.get('features')
-    for bad, reason in ((data.get('scope') != 'noaa-west-coast-groundfish-conservation-areas', 'wrong scope'),
+    for bad, reason in ((data.get('scope') != SCOPE, 'wrong scope'),
                         (data.get('type') != 'FeatureCollection', 'not a FeatureCollection'),
                         (not isinstance(features, list), 'features is not a list'),
                         (type(count) is not int, 'feature_count is not an int'),
@@ -148,7 +327,22 @@ def _usable_previous(path):
                         (not isinstance(data.get('source_layers'), list), 'source_layers is not a list')):
         if bad:
             return None, reason
-    return data, ''
+    if (type(data.get('schema_version')) is not int or data['schema_version'] != 1
+            or data.get('service_url') != SERVICE or data.get('legal_text_url') != LAW):
+        return None, 'wrong capture identity'
+    if data.get('status') not in ('ok', 'retained'):
+        return None, 'invalid capture status'
+    timestamp = data.get('retrieved_at')
+    if not isinstance(timestamp, str):
+        return None, 'invalid retrieval time'
+    try:
+        retrieved_at = datetime.fromisoformat(timestamp)
+    except ValueError:
+        return None, 'invalid retrieval time'
+    if retrieved_at.tzinfo is None:
+        return None, 'retrieval time has no timezone'
+    reason = _previous_inventory_error(data['source_layers'], features)
+    return (None, reason) if reason else (data, '')
 
 
 def main():

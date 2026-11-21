@@ -112,7 +112,7 @@ export interface MarkForecast {
 
 type Series = {latitude?: unknown; longitude?: unknown; hourly?: {time?: unknown}};
 type FeedModel = {data?: unknown; meta?: {last_run_initialisation_time?: unknown; data_end_time?: unknown}};
-type FeedCurrents = {status?: unknown; issued_at?: unknown; resolution_km?: unknown; points?: unknown};
+type FeedCurrents = {status?: unknown; source?: unknown; issued_at?: unknown; resolution_km?: unknown; points?: unknown};
 type Feed = {region_id?: unknown; retrieved?: unknown; requested_points?: unknown; models?: Record<string, FeedModel>; currents?: FeedCurrents};
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -237,9 +237,26 @@ function modelRow(label: 'Wind' | 'Seas', id: string, f: Feed, points: readonly 
   return {label, model: name, grid, value: value.text, gap: '', point, cell: null, validAt: hr, issuedAt: issued, sampled: value.sampled};
 }
 
-/** A WCOFS sample that can be real: five finite numbers, a cell on the globe, a speed of zero or more, a bearing in 0-360. Rejected whole, never repaired. */
-const possibleSample = (s: unknown): s is number[] =>
-  Array.isArray(s) && s.length >= 5 && s.slice(0, 5).every(finite) && Math.abs(s[1]) <= 90 && Math.abs(s[2]) <= 180 && s[3] >= 0 && s[4] >= 0 && s[4] <= 360;
+// [valid time s, cell lat, cell lon, speed kn, toward °, ...unused fields]
+type CurrentSample = [number, number, number, number, number, ...unknown[]];
+function possibleSample(s: unknown): s is CurrentSample {
+  if (!Array.isArray(s)) return false;
+  const [time, lat, lon, speed, toward] = s;
+  return finite(time) && finite(lat) && Math.abs(lat) <= 90 && finite(lon) && Math.abs(lon) <= 180
+    && finite(speed) && speed >= 0 && finite(toward) && toward >= 0 && toward <= 360;
+}
+
+/** Shared feed validation. Only WCOFS rows bound to a requested point can supply a sample. */
+export function readWcofs(c: FeedCurrents | undefined, pointIds: readonly string[]): {issuedAt: number; rows: {index: number; samples: CurrentSample[]}[]} | null {
+  if (c?.status !== 'ok' || c.source !== 'wcofs' || !Array.isArray(c.points)) return null;
+  const rows = c.points.flatMap((p: {point_id?: unknown; samples?: unknown} | null) => {
+    const id = p?.point_id;
+    if (typeof id !== 'string' || !id.trim()) return [];
+    const index = pointIds.indexOf(id);
+    return index < 0 ? [] : [{index, samples: Array.isArray(p?.samples) ? p.samples.filter(possibleSample) : []}];
+  });
+  return {issuedAt: typeof c.issued_at === 'string' ? Date.parse(c.issued_at) : NaN, rows};
+}
 
 /**
  * The surface current row from the feed's WCOFS native-cell samples: the sampled cell nearest the mark within
@@ -248,24 +265,19 @@ const possibleSample = (s: unknown): s is number[] =>
 function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: number}[], mark: LatLon, regional: number, at: number, now: number, tz: string, lang: Language): MarkReading {
   const c = f.currents, name = CURRENT_MODEL, resolution = finite(c?.resolution_km) ? c.resolution_km : null;
   const grid = gridText(resolution === null ? 'unstated' : `about ${km1(resolution)} km`, lang);
-  if (!c || c.status !== 'ok') return gapRow('Current', name, grid, t('markForecast.gap.noCurrent', lang, {model: name, status: typeof c?.status === 'string' && c.status !== 'missing' ? ` (${c.status})` : ''}));
-  const issued = typeof c.issued_at === 'string' && Number.isFinite(Date.parse(c.issued_at)) ? Date.parse(c.issued_at) : null;
-  // Each sample: [valid time s, cell lat, cell lon, speed kn, toward °, km from its point].
-  const samples = (Array.isArray(c.points) ? c.points : []).map(p => {
-    const id = (p as {point_id?: unknown})?.point_id, list = (p as {samples?: unknown})?.samples;
-    const index = points.findIndex(q => q.id === id);
-    return {index, samples: index < 0 || !Array.isArray(list) ? [] : list.filter(possibleSample)};
-  }).filter(p => p.index >= 0);
-  const listed = [...new Set(samples.flatMap(p => p.samples.map(s => s[0]! * 1000)))].sort((a, b) => a - b);
+  const current = readWcofs(c, points.map(p => p.id));
+  if (!current) return gapRow('Current', name, grid, t('markForecast.gap.noCurrent', lang, {model: name, status: typeof c?.status === 'string' && c.status !== 'missing' && c.status !== 'ok' ? ` (${c.status})` : ''}));
+  const issued = finite(current.issuedAt) ? current.issuedAt : null;
+  const listed = [...new Set(current.rows.flatMap(p => p.samples.map(s => s[0] * 1000)))].sort((a, b) => a - b);
   const retrieved = finite(f.retrieved) ? f.retrieved : NaN, pointId = points[regional]!.id;
   const hr = issued === null ? null : forecastTime(listed, issued, retrieved, new Date(at), new Date(now));
   if (hr === null) return gapRow('Current', name, grid, gateGap(name, listed, issued, retrieved, at, now, tz, lang), {point: pointId, issuedAt: issued});
-  const at_t = samples.flatMap(p => p.samples.filter(s => s[0]! * 1000 === hr).map(s => ({index: p.index, point: points[p.index]!.id, s})));
+  const at_t = current.rows.flatMap(p => p.samples.filter(s => s[0] * 1000 === hr).map(s => ({index: p.index, point: points[p.index]!.id, s})));
   const reach = CELL_REACH * (resolution ?? 0);
-  const near = nearestCell(at_t.map(x => ({...x, requested: {lat: points[x.index]!.lat, lon: points[x.index]!.lon}, cell: {lat: x.s[1]!, lon: x.s[2]!}})), mark, reach);
-  const pick: {point: string; s: number[]; km?: number} | null = near ?? at_t.find(x => x.index === regional) ?? null;
+  const near = nearestCell(at_t.map(x => ({...x, requested: {lat: points[x.index]!.lat, lon: points[x.index]!.lon}, cell: {lat: x.s[1], lon: x.s[2]}})), mark, reach);
+  const pick: {point: string; s: CurrentSample; km?: number} | null = near ?? at_t.find(x => x.index === regional) ?? null;
   if (!pick) return gapRow('Current', name, grid, t('markForecast.gap.noCell', lang, {model: name, hour: hourText(hr, tz, lang), km: km1(reach), point: pointId}), {point: pointId, issuedAt: issued});
-  const [, lat, lon, speed, toward] = pick.s as [number, number, number, number, number];
+  const [, lat, lon, speed, toward] = pick.s;
   return {label: 'Current', model: name, grid, value: t('markForecast.towardTrue', lang, {speed: fixed(lang === 'en' ? speed : Number(speed.toFixed(2)), 2, lang), degrees: Math.round(toward)}), gap: '', point: pick.point,
     cell: pick.km === undefined ? null : {lat, lon, km: pick.km}, validAt: hr, issuedAt: issued};
 }

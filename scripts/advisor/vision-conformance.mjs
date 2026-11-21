@@ -11,6 +11,7 @@
 //
 // Checks, each reported PASS, WARN or FAIL:
 //   - GET /v1/health answers 200 {ok: true, models: {...}} (models missing: WARN);
+//   - the declared synthetic images are present, and each vision method is checked;
 //   - a request without the token is refused (401 or 403);
 //   - every image to every endpoint: 200 JSON within 20 s, X-Vision-Model set
 //     (WARN when missing), every field of the method's result type present with
@@ -37,6 +38,7 @@ export const LATENCY_LIMIT_MS = 20_000;
 export const ENDPOINTS = Object.freeze({classify: '/v1/vision/classify', count_board: '/v1/vision/count-board', fish_id: '/v1/vision/fish-id'});
 const USAGE = 'usage: HERMES_VISION_TOKEN=... node scripts/advisor/vision-conformance.mjs --url <https base> [--region <id>]\n       node scripts/advisor/vision-conformance.mjs --mock [--region <id>]';
 const MIME = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg'};
+const REQUIRED_IMAGES = ['blank.png', 'count-board.png', 'deck-person.png', 'fish.png'];
 
 /** argv -> {url, mock, region}; throws with the usage line on anything unexpected. */
 export function parseArgs(argv) {
@@ -174,23 +176,30 @@ export async function runConformance({base, token, region = 'morro-bay', fetcher
     else add('PASS', 'GET /v1/health', `ok (${Object.entries(body.models).map(([k, v]) => `${k}=${v}`).join(', ') || 'no models listed'})`);
   }
 
-  // The token is required.
-  const first = images[0];
-  if (first) {
-    const form = formFor(first, {media_id: 'conformance-noauth', region: null});
-    const r = await timed(`${base}${ENDPOINTS.classify}`, {method: 'POST', headers: {accept: 'application/json'}, body: form});
-    if (r.error) add('WARN', 'a request without the token is refused', `no answer (${r.error.message})`);
-    else if (r.response.status === 401 || r.response.status === 403) add('PASS', 'a request without the token is refused', `HTTP ${r.response.status}`);
-    else add('FAIL', 'a request without the token is refused', `HTTP ${r.response.status}: the service must require Authorization: Bearer <HERMES_VISION_TOKEN>`);
+  const missing = REQUIRED_IMAGES.filter(name => !images.some(i => i.name === name && i.mime === MIME['.png'] && i.bytes?.byteLength > 0));
+  if (missing.length) {
+    add('FAIL', 'required image fixtures', `missing, empty or wrong MIME: ${missing.join(', ')}`);
+    return {results, failed: true};
   }
 
+  // The token is required.
+  const first = images[0];
+  const form = formFor(first, {media_id: 'conformance-noauth', region: null});
+  const unauth = await timed(`${base}${ENDPOINTS.classify}`, {method: 'POST', headers: {accept: 'application/json'}, body: form});
+  if (unauth.error) add('WARN', 'a request without the token is refused', `no answer (${unauth.error.message})`);
+  else if (unauth.response.status === 401 || unauth.response.status === 403) add('PASS', 'a request without the token is refused', `HTTP ${unauth.response.status}`);
+  else add('FAIL', 'a request without the token is refused', `HTTP ${unauth.response.status}: the service must require Authorization: Bearer <HERMES_VISION_TOKEN>`);
+
   // Every image, every endpoint.
+  const methods = Object.entries(ENDPOINTS);
+  const executed = Object.fromEntries(methods.map(([method]) => [method, 0]));
   const seen = {};
   for (const image of images) {
-    for (const [method, path] of Object.entries(ENDPOINTS)) {
+    for (const [method, path] of methods) {
       const meta = {media_id: `conformance-${image.name.replace(/\.\w+$/, '')}`, region: method === 'fish_id' ? region : null, ...(method === 'fish_id' ? {species_keys: keys} : {})};
       const check = `${method} ${image.name}`;
       const r = await timed(`${base}${path}`, {method: 'POST', headers: auth, body: formFor(image, meta)});
+      executed[method]++;
       if (r.error) { add('FAIL', check, r.error.name === 'TimeoutError' ? `no answer within ${LATENCY_LIMIT_MS / 1000} s` : `no answer (${r.error.message})`); continue; }
       if (r.response.status === 503) { add('FAIL', check, 'HTTP 503 (busy or over the deadline; the Worker falls back to Claude)'); continue; }
       if (r.response.status !== 200) { add('FAIL', check, `HTTP ${r.response.status}`); continue; }
@@ -205,6 +214,9 @@ export async function runConformance({base, token, region = 'morro-bay', fetcher
       add(warnings.length ? 'WARN' : 'PASS', check, [`${Math.round(r.ms)} ms`, ...warnings].join('; '));
       (seen[image.name] ??= {})[method] = body;
     }
+  }
+  for (const [method, count] of Object.entries(executed)) {
+    if (count === 0) add('FAIL', `${method} coverage`, 'no image checks executed');
   }
 
   // Loose sense checks on the images whose content is known.

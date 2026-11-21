@@ -3,20 +3,26 @@
 (src/skippercast/seafloor/protected_screen.py) against what the browser's own code answers
 (scripts/protected_screen_oracle.mjs: real `initProtectedAreas` + `screenPlace`) for EVERY reef.
 
-Usage: protected_screen_parity.py <habitat-export.geojson[.gz]> [--oracle out.json] [--limit N] [--workers N]
-  --oracle   reuse an oracle result already written (otherwise node is run first)
+Use --region to select the boundary inputs and --at (ISO 8601 with timezone)
+to replay at a fixed clock. By default the clock is captured once at startup.
+Use --write-oracle to retain the result; --oracle replays it at the same --at.
 Exit 0 only when every compared reef's verdict is identical (inside, name, distanceM, screened) and the
-fingerprints match; any difference is printed and fails the run.
+fingerprints match on the same pinned, current boundary inputs.
 """
 import argparse
+import base64
 import gzip
+import hashlib
 import json
+import re
 import subprocess
 import sys
-import zlib
 import time
+import zlib
 from concurrent.futures import ProcessPoolExecutor
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO/'src'))
@@ -50,26 +56,84 @@ def _read_export(name, path):
     return data
 
 
+def _epoch_ms(text):
+    stamp = datetime.fromisoformat(text)
+    if stamp.utcoffset() is None:
+        raise ValueError('timestamp needs a timezone')
+    return (stamp - datetime(1970, 1, 1, tzinfo=timezone.utc)) // timedelta(milliseconds=1)
+
+
+def _clock(text):
+    try:
+        return _epoch_ms(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError('expected an ISO 8601 timestamp with timezone') from exc
+
+
+def _current(doc, now):
+    try:
+        age = now - _epoch_ms(doc.get('checked_at'))
+    except (TypeError, ValueError):
+        return False
+    return -300_000 <= age <= 36 * 3_600_000
+
+
+def _pin(region, now):
+    if not re.fullmatch('[a-z][a-z0-9-]{1,63}', region):
+        return None
+    config = REPO/'dist/regions'/region/'region.json'
+    if not config.is_file():
+        return None
+    cfg = json.loads(config.read_bytes())
+    bounds = (cfg.get('mpa') or {}).get('bounds')
+    assets = cfg.get('assets') or {}
+    if cfg.get('id', region) != region or not assets.get('protected_areas') or not bounds:
+        return None
+    raw, features, current = {}, [], True
+    for key in ('protected_areas', 'closures'):
+        if path := assets.get(key):
+            if path not in raw:
+                raw[path] = (REPO/'dist'/path).read_bytes()
+            doc = json.loads(raw[path])
+            features.extend(doc['features'])
+            current = _current(doc, now) and current
+    # Node cannot re-read a newer file or select a different regional default.
+    packet = json.dumps({'region': cfg, 'now': now, 'assets': {
+        path: base64.b64encode(data).decode('ascii') for path, data in raw.items()
+    }})
+    return bounds, features, current, packet
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('export')
-    ap.add_argument('--oracle')
+    output = ap.add_mutually_exclusive_group()
+    output.add_argument('--oracle', help='reuse a pinned oracle result (requires the original --at)')
+    output.add_argument('--write-oracle', help='retain the generated oracle result')
     ap.add_argument('--limit', type=_positive)
     ap.add_argument('--workers', type=_positive, default=4)
     ap.add_argument('--region', default='morro-bay')
+    ap.add_argument('--at', type=_clock, help='ISO 8601 replay time with timezone')
     a = ap.parse_args(argv)
-    loaded = ps.load_screen(REPO, a.region)
+    now = a.at if a.at is not None else time.time_ns() // 1_000_000
+    loaded = _pin(a.region, now)
     if loaded is None:
         print(f'protected-screen-parity: no protected screen for region {a.region}', file=sys.stderr)
         sys.exit(2)
-    bounds, boundary, files = loaded
+    bounds, boundary, current, packet = loaded
     export = _read_export('protected-screen-parity', a.export)
     features = export['features'][:a.limit] if a.limit else export['features']
-    oracle_path = Path(a.oracle or f'/tmp/protected-screen-oracle-{a.region}.json')
-    if not a.oracle:
-        cmd = ['node', str(REPO/'scripts/protected_screen_oracle.mjs'), a.export, str(oracle_path)] + (['--limit', str(a.limit)] if a.limit else [])
-        subprocess.run(cmd, check=True)
-    oracle = json.loads(oracle_path.read_text())
+    if a.oracle:
+        oracle = json.loads(Path(a.oracle).read_text())
+    else:
+        with TemporaryDirectory(prefix='protected-screen-oracle-') as scratch:
+            oracle_path = Path(scratch)/'oracle.json'
+            cmd = ['node', str(REPO/'scripts/protected_screen_oracle.mjs'), a.export, str(oracle_path)]
+            if a.limit:
+                cmd += ['--limit', str(a.limit)]
+            if subprocess.run(cmd, input=packet, text=True).returncode:
+                return 1
+            oracle = json.loads(oracle_path.read_text())
     reefs = [(f['properties']['id'], f['geometry'], f['properties']['waypoint']['longitude'], f['properties']['waypoint']['latitude'])
              for f in features]
     t0 = time.time()
@@ -92,7 +156,17 @@ def main(argv=None):
     print(f'differences: {len(diffs)}')
     for rid, mine, theirs in diffs[:20]:
         print('  DIFF', rid, 'python', mine, 'browser', theirs)
-    return 0 if not diffs and fp == oracle['fingerprint'] and len(reefs) == len(oracle['verdicts']) else 1
+    if diffs or fp != oracle['fingerprint'] or len(reefs) != len(oracle['verdicts']):
+        return 1
+    if not current:
+        print('protected-screen-parity: boundary snapshot is not current at the test clock', file=sys.stderr)
+        return 1
+    if oracle.get('inputSha256') != hashlib.sha256(packet.encode('ascii')).hexdigest():
+        print('protected-screen-parity: oracle inputs or test clock do not match', file=sys.stderr)
+        return 1
+    if a.write_oracle:
+        Path(a.write_oracle).write_text(json.dumps(oracle))
+    return 0
 
 
 if __name__ == '__main__':

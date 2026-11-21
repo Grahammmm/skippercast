@@ -521,6 +521,35 @@ def verify_core(core_dir, *, output_dir, max_png_bytes, require_holes=False):
         return not problems, problems or 'no-data stays no-data; supported depths unchanged'
     checks.run('holes_not_interpolated', no_interpolation)
 
+    def mesh_uncertainty():
+        assert mesh is not None  # mesh_npz_readable already passed
+        values = mesh['uncertainty_m']
+        if values.shape != shape or values.dtype.kind not in 'fiu':
+            return False, 'mesh uncertainty must be a numeric terrain-shaped grid'
+        has_raster = 'uncertainty' in acceptance
+        kind = acceptance['uncertainty_kind'] if has_raster else 'unavailable'
+        if not np.array_equal(mesh.get('uncertainty_kind'), kind):
+            return False, 'mesh uncertainty kind differs from acceptance'
+        if not has_raster:
+            ok = 'uncertainty_kind' not in acceptance and bool(np.isnan(values).all())
+            return ok, 'absent uncertainty requires an unavailable, all-NaN grid'
+
+        with rasterio.open(inside(core_dir, acceptance['uncertainty']['path'])) as ds:
+            if (ds.count != 1 or ds.shape != shape or ds.crs.to_string() != terrain_crs
+                    or list(ds.transform) != terrain_transform):
+                return False, 'reviewed uncertainty grid differs from the terrain grid'
+            if ds.units != ('m',) or ds.scales != (1.0,) or ds.offsets != (0.0,):
+                return False, 'reviewed uncertainty must be unpacked metres'
+            reviewed = ds.read(1, masked=True).astype('float64').filled(np.nan)
+        if not np.array_equal(np.isfinite(reviewed), support) or (reviewed[support] < 0).any():
+            return False, 'reviewed uncertainty validity differs from measured support or values are negative'
+        if not np.array_equal(np.isfinite(values), support):
+            return False, 'mesh uncertainty validity differs from the reviewed mask'
+        if not np.array_equal(values[support], reviewed[support]):
+            return False, 'mesh uncertainty values differ from the reviewed raster at supported cells'
+        return True, 'mesh uncertainty matches the reviewed raster on the reviewed support'
+    checks.run('mesh_uncertainty_matches_reviewed_input', mesh_uncertainty)
+
     def vertices():
         rows, cols = np.nonzero(support)
         grid = mesh['grid_pixels']

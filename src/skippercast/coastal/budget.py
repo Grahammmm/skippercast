@@ -247,6 +247,9 @@ class Budget:
         with self._lock():
             state = self._read()
             self._observe(state)
+            # Persist what was observed before any refusal below, as decide()
+            # does, so a refused reservation cannot lose a clock rollback.
+            atomic_json(self.path, state)
             if reservation_id in state["reservations"]:
                 raise ValueError("reservation_id already used; no replay or refund")
             decision = self._decision(state)

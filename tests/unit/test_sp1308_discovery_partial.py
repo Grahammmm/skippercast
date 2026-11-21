@@ -14,8 +14,9 @@ import unittest
 from tests._support import FIXTURES as ALL_FIXTURES
 from skippercast.fleet import ingest, ops
 from skippercast.fleet.adapters.base import Candidate, RunContext
-from skippercast.fleet.refresh import detect, discovery_history
+from skippercast.fleet.refresh import detect, listing_history
 from skippercast.fleet.resolve import Snapshot
+from skippercast.fleet.runs import Run
 
 FIXTURES = ALL_FIXTURES / "sp1308_discovery_partial"
 AT = "2026-10-05T09:47:00Z"
@@ -185,13 +186,13 @@ class HistoryTests(SyntheticCase):
                           "last_seen_at": "2026-08-01T09:47:00Z", "offerings": []}])
 
     def history(self, flags):
-        region_dir = self.root / f"history-{self.sequence}"
-        for index, complete in enumerate(flags):
-            run = region_dir / "runs" / f"synthetic-{index}"
-            run.mkdir(parents=True)
-            (run / "discover.json").write_text(json.dumps({"at": f"2026-09-{index + 1:02d}T09:47:00Z",
-                                                          "complete": complete}), encoding="utf-8")
-        return discovery_history(region_dir)
+        var = self.root / f"history-{self.sequence}"
+        for day, complete in enumerate(flags, 1):
+            run = Run("CA", f"202609{day:02d}T094700Z-000001", var=var)
+            run.step_started("ingest", "staging")
+            run.step_finished("ingest", {"registry_at": f"2026-09-{day:02d}T09:47:00Z",
+                                         "listing_complete": int(complete)})
+        return listing_history(var / "CA", sink="staging")
 
     def check_vanished(self, out):
         self.assertEqual([op["op"] for op in out], ["review.open", "change.record"])

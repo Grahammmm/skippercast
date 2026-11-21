@@ -73,6 +73,7 @@ dbTest('rekey --apply: every number re-hashed and re-encrypted under the new key
   assert.equal(h.files.get(R.SQL_FILE), '', 'the SQL file is emptied afterwards');
   assert.equal(h.w.calls.filter(a => a.includes('--file')).length, 1, 'one file, one transaction');
   assert.match(h.lines.join('\n'), /Re-keyed 3 contact\(s\)/);
+  assert.match(h.lines.join('\n'), /Now install the new key/);
   const again = harness(sql);
   assert.equal(await R.main(['--apply'], again.deps), 0);
   assert.match(again.lines.join('\n'), /contacts to re-key: 0; already under the new key: 3/);
@@ -96,12 +97,23 @@ dbTest('rekey refuses to write when a row decrypts with neither key, and a faile
 dbTest('rekey reports a contact made with the old key during the switch as a duplicate instead of colliding', async () => {
   const {sql} = await seed();
   assert.equal(await R.main(['--apply'], harness(sql).deps), 0);
-  // A text arrived before the Worker had the new key: a second contact for +18055550101 under the old key.
+  // A text arrived before the Worker had the new key: a second contact for the first number under the old key.
   const old = await deriveKeys(OLD);
-  sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,last_seen_at,created_at,updated_at) VALUES('dup',?,?,'sms','x','x','x')`).run(await phoneHash(old, NUMBERS[0]), await encryptPhone(old, NUMBERS[0]));
+  const insert = sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,last_seen_at,created_at,updated_at) VALUES(?,?,?,'sms','x','x','x')`);
+  insert.run('dup', await phoneHash(old, NUMBERS[0]), await encryptPhone(old, NUMBERS[0]));
   const h = harness(sql);
   assert.equal(await R.main(['--apply'], h.deps), 1);
   assert.match(h.lines.join('\n'), /contact dup is a duplicate of c1/);
+
+  // A successful write of an unrelated contact must not green-light a cutover while the duplicate remains.
+  const number = '+12025550104';
+  insert.run('late', await phoneHash(old, number), await encryptPhone(old, number));
+  const mixed = harness(sql);
+  assert.equal(await R.main(['--apply'], mixed.deps), 1);
+  assert.deepEqual(mixed.w.calls.map(args => args.includes('--file')), [false, true, false]);
+  const log = mixed.lines.join('\n');
+  assert.match(log, /contacts to re-key: 0; already under the new key: 4; duplicates: 1; cannot read: 0/);
+  assert.doesNotMatch(log, /install the new key|secret (put|set)/i);
 });
 
 test('rekey: argument and SQL guards', () => {

@@ -77,8 +77,8 @@ class QualificationPlanTests(unittest.TestCase):
     def test_new_deep_waypoint_requires_manual_reconciliation(self):
         original = plan.load
 
-        def changed(root, relative):
-            data = original(root, relative)
+        def changed(root, relative, *, source_sha256):
+            data = original(root, relative, source_sha256=source_sha256)
             if relative == "dist/data/central-coverage-ledger-v1.json":
                 data = copy.deepcopy(data)
                 data["totals"]["qualified_targets_200_to_300ft"] = 1
@@ -91,8 +91,8 @@ class QualificationPlanTests(unittest.TestCase):
     def test_point_buchon_datum_change_requires_review(self):
         original = plan.load
 
-        def changed(root, relative):
-            data = original(root, relative)
+        def changed(root, relative, *, source_sha256):
+            data = original(root, relative, source_sha256=source_sha256)
             if relative == "dist/data/point-buchon-original-paired-200-300ft-review.json":
                 data = copy.deepcopy(data)
                 data["native_depth_datum"] = "MLLW"
@@ -105,8 +105,8 @@ class QualificationPlanTests(unittest.TestCase):
     def test_point_buchon_geologic_topology_change_requires_review(self):
         original = plan.load
 
-        def changed(root, relative):
-            data = original(root, relative)
+        def changed(root, relative, *, source_sha256):
+            data = original(root, relative, source_sha256=source_sha256)
             if relative == "dist/data/point-buchon-cmecs-block-review.json":
                 data = copy.deepcopy(data)
                 data["groups"]["original_csumb_depth"]["invalid_polygons_with_possible_block_bbox_hit"] = 0
@@ -119,8 +119,8 @@ class QualificationPlanTests(unittest.TestCase):
     def test_pigeon_lander_lead_cannot_silently_become_spot_evidence(self):
         original = plan.load
 
-        def changed(root, relative):
-            data = original(root, relative)
+        def changed(root, relative, *, source_sha256):
+            data = original(root, relative, source_sha256=source_sha256)
             if relative == "catalog/candidates/tnc-mlml-pigeon-video-lander.json":
                 data = copy.deepcopy(data)
                 data["spatial"]["w00614_cell_overlap_verified"] = True
@@ -133,8 +133,8 @@ class QualificationPlanTests(unittest.TestCase):
     def test_mare_report_cannot_silently_become_candidate_scale_evidence(self):
         original = plan.load
 
-        def changed(root, relative):
-            data = original(root, relative)
+        def changed(root, relative, *, source_sha256):
+            data = original(root, relative, source_sha256=source_sha256)
             if relative == "catalog/candidates/cdfw-mare-ciap-2016-central-original-rov.json":
                 data = copy.deepcopy(data)
                 data["spatial"]["candidate_cell_overlap_verified"] = True

@@ -12,13 +12,13 @@ import {PORT_IDS, portName, portRegion} from '../links.ts';
 import {resolvePort, landingNames} from '../answers/resolve.ts';
 import {regionConfig} from '../answers/regions.ts';
 import {dailyFeed, feedReader} from '../answers/feeds.ts';
-import {reportEvidence, targetSpecies} from '../answers/confidence.ts';
+import {isFreshDailyFeed, reportEvidence, targetSpecies} from '../answers/confidence.ts';
 import type {LandingReport} from '../answers/confidence.ts';
 import {addDays, daysBetween, localDate, PACIFIC} from '../answers/time.ts';
 // TA-I1: the verified/unverified contract (05 § Verification) is shared with get_trips.
 import {publicBoat} from '../intake/skippers.ts';
 // TA-A1: the day's answer.
-import {dailyAnswer} from '../answers/reports.ts';
+import {dailyAnswer, landingUnavailableText} from '../answers/reports.ts';
 import {t} from '../strings.ts';
 
 export const MAX_SKIPPER_REPORTS = 5, MAX_REPORT_AGE_DAYS = 14, MAX_LANDING_REPORTS = 6;
@@ -64,7 +64,7 @@ export const getPortReport: AdvisorTool = {
     // Landing reports (the scraped daily feed, cited as the landing's): this port's names, the last seven days.
     let landing: Record<string, unknown> = {available: false};
     const feed = region ? await dailyFeed(region, feedReader(ctx.deps)) : null;
-    if (feed && region) {
+    if (feed && region && isFreshDailyFeed(feed, ctx.now)) {
       const names = new Set(landingNames(port).map(n => n.toLowerCase()));
       const portFeed = {...feed, reports: (feed.reports as LandingReport[]).filter(r => names.has(String(r.port ?? '').toLowerCase()))};
       const targets = [...new Set(region.species.filter(t => t !== 'dungeness'))];
@@ -78,7 +78,7 @@ export const getPortReport: AdvisorTool = {
         reports: recent.map(r => ({date: r.date, age: ago(today, String(r.date)), boat: r.boat, trip_type: r.trip_type ?? null,
           catches: (r.catches ?? []).filter(c => (c.count ?? 0) > 0).slice(0, 8).map(c => ({label: (c as {label?: string}).label ?? c.species, count: c.count}))})),
       };
-    }
+    } else if (feed) landing.note = landingUnavailableText(ctx.language);
 
     const answer = await dailyAnswer(ctx.env.DB ? ctx.env : {...ctx.env, DB: ctx.db}, port, today, ctx.language, {...ctx.deps, clock: ctx.deps.clock ?? (() => ctx.now)}, {generate: false});
     return {result: {

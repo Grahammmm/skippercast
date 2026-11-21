@@ -8,10 +8,10 @@
 // other scheduled or posted posts). Per-post stats come with TA-S7.
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
-import {POST_KINDS, POST_STATUSES, getCalendar, getPosts} from './api.ts';
-import type {CalendarWeek, DecisionResult, Post, QueueItem, WeekPost} from './api.ts';
+import {POST_KINDS, POST_STATUSES, getCalendar, getPost, getPosts, when} from './api.ts';
+import type {CalendarWeek, DecisionResult, Post, PostSummary, QueueItem, WeekPost} from './api.ts';
 import {PostActions, PostDetail} from './post-card.tsx';
-import {ReviewCard} from './queue.tsx';
+import {AdminDisclosure, ReviewCard} from './queue.tsx';
 
 /** A draft with an open review as the queue item its card decides. */
 export const draftItem = (post: Post): QueueItem => ({id: post.review_id!, kind: 'post', ref_id: post.id, reason: 'social_draft', status: 'open', note: null,
@@ -23,7 +23,7 @@ const dayLabel = (date: string): string => new Intl.DateTimeFormat('en-US', {wee
 const postLine = (p: WeekPost): string => `${COPY.postKinds[p.kind] ?? p.kind} · ${COPY.postStatuses[p.status] ?? p.status}${p.boat ? ` · ${p.boat}` : ''}`;
 
 /** The week grid (TA-S4): one column per day, its slots in time order with their posts, empty ones marked, then unslotted posts. */
-export function WeekCalendar({refresh}: {refresh: unknown}) {
+export function WeekCalendar({revision}: {revision: number}) {
   const [start, setStart] = useState<string | null>(null);
   const [week, setWeek] = useState<CalendarWeek | null>(null);
   const [failed, setFailed] = useState(false);
@@ -31,7 +31,7 @@ export function WeekCalendar({refresh}: {refresh: unknown}) {
     let live = true;
     getCalendar(start).then(w => { if (live) { setWeek(w); setFailed(false); } }).catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
-  }, [start, refresh]);
+  }, [start, revision]);
   if (failed) return <p class="admin-error" role="alert">{COPY.calendarFailed}</p>;
   if (!week) return <p>{COPY.loading}</p>;
   const empty = week.days.reduce((n, d) => n + d.slots.filter(s => s.empty && !s.past).length, 0);
@@ -73,8 +73,16 @@ export function WeekCalendar({refresh}: {refresh: unknown}) {
   );
 }
 
-interface PostsPage {key: string; posts: Post[]; next: string | null; state: 'loading' | 'ready' | 'failed'}
-const NO_POSTS: Post[] = [];
+type ListedPost = PostSummary | Post;
+interface PostsPage {key: string; posts: ListedPost[]; next: string | null; state: 'loading' | 'ready' | 'failed'}
+const NO_POSTS: ListedPost[] = [];
+
+function OpenPost({post, decided, changed}: {post: Post; decided: (result: DecisionResult) => void; changed: (post: Post, message: string) => void}) {
+  return post.status === 'draft' && post.review_id ? <ReviewCard item={draftItem(post)} onDecided={decided} /> : <>
+    <PostDetail post={post} />
+    <PostActions post={post} onChanged={changed} />
+  </>;
+}
 
 export function PostsView() {
   const [status, setStatus] = useState('draft');
@@ -82,6 +90,7 @@ export function PostsView() {
   const key = `${status}\u0000${kind}`;
   const [page, setPage] = useState<PostsPage>({key, posts: NO_POSTS, next: null, state: 'loading'});
   const [notice, setNotice] = useState('');
+  const [calendarRevision, setCalendarRevision] = useState(0);
   // Request ownership: the rendered filter scope, a generation bumped on every scope change and a sequence bumped on every load, so only
   // the newest request of the current scope may publish (a late old-filter response, even draft -> approved -> draft, is refused).
   const own = useRef({key, gen: 0, seq: 0, live: true});
@@ -107,6 +116,10 @@ export function PostsView() {
   useEffect(() => { void load(); }, [status, kind]);
 
   function decided(result: DecisionResult): void {
+    // A successful approval/edit can put a draft on the calendar, even if its list filter has since changed.
+    if (own.current.live && !result.repeated && (result.review.status === 'approved' || result.review.status === 'edited')) {
+      setCalendarRevision(n => n + 1);
+    }
     if (!own.current.live || own.current.key !== key || own.current.gen !== generation) return;
     setNotice(result.repeated ? COPY.alreadyDecided(COPY.statuses[result.review.status].toLowerCase()) : COPY.decided(COPY.statuses[result.review.status].toLowerCase()));
     void load();
@@ -114,6 +127,7 @@ export function PostsView() {
   }
 
   function changed(post: Post, message: string): void {
+    if (own.current.live) setCalendarRevision(n => n + 1);
     if (!own.current.live || own.current.key !== key || own.current.gen !== generation) return;
     setPage(p => (p.key === key ? {...p, posts: p.posts.map(x => (x.id === post.id ? post : x))} : p));
     setNotice(message);
@@ -123,7 +137,7 @@ export function PostsView() {
     <section class="admin-view" aria-labelledby="posts-heading">
       <h1 id="posts-heading" tabIndex={-1}>{COPY.postsHeading}</h1>
       <p class="admin-hint">{COPY.postsHelp}</p>
-      <WeekCalendar refresh={posts} />
+      <WeekCalendar revision={calendarRevision} />
       <div class="admin-filters">
         <label>
           <span>{COPY.statusLabel}</span>
@@ -144,16 +158,17 @@ export function PostsView() {
         <ol class="admin-queue">
           {posts.map(post => (
             <li key={post.id}>
-              {post.status === 'draft' && post.review_id ? <ReviewCard item={draftItem(post)} onDecided={decided} /> : (
-                <article class="admin-card is-post" aria-labelledby={`post-${post.id}-title`}>
-                  <header class="admin-card-head">
-                    <h2 id={`post-${post.id}-title`}>{COPY.postKinds[post.kind] ?? post.kind} <span class="admin-reason">{COPY.postStatuses[post.status] ?? post.status}</span></h2>
-                    <p class="admin-meta">{post.boat?.name ?? COPY.angler}</p>
-                  </header>
-                  <PostDetail post={post} />
-                  <PostActions post={post} onChanged={changed} />
-                </article>
-              )}
+              <article class="admin-card is-post" aria-labelledby={`post-${post.id}-title`}>
+                <header class="admin-card-head">
+                  <h2 id={`post-${post.id}-title`}>{COPY.postKinds[post.kind] ?? post.kind} <span class="admin-reason">{COPY.postStatuses[post.status] ?? post.status}</span></h2>
+                  <p class="admin-meta">{post.region} · {when(post.updated_at)}</p>
+                </header>
+                {'media' in post ? <OpenPost post={post} decided={decided} changed={changed} /> : (
+                  <AdminDisclosure key={`${generation}:${post.updated_at}:${post.status}`} load={() => getPost(post.id)}>
+                    {detail => <OpenPost post={detail} decided={decided} changed={changed} />}
+                  </AdminDisclosure>
+                )}
+              </article>
             </li>
           ))}
         </ol>

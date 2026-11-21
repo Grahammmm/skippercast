@@ -35,8 +35,14 @@ trips.patch('/api/trips', async c => {
   const row = await d.prepare('SELECT * FROM trips WHERE id=? AND owner=?').bind(id, owner).first<TripRow>();
   if (!row) return json({error: 'Not found'}, 404);
   const region = regionById(row.region); if (!region) return json({error: RETIRED_AREA}, 409);
-  const current = publicTrip(row);
+  // Same contract as the saved-place edit: an edit that names a field it cannot change, or no field at
+  // all, is refused (400) instead of answering 200 and bumping updated_at while the old value stays.
+  // Ownership and the retired-area answer come first, so they never depend on the body.
+  const unsupported = Object.keys(input).filter(k => k !== 'id' && !(PLAN_COLUMNS as readonly string[]).includes(k));
+  if (unsupported.length) throw new ClientError(`only ${PLAN_COLUMNS.join(', ')} can be changed; the alert fields are fixed at save time, so save a new trip to change them`);
   const sent = PLAN_COLUMNS.filter(k => Object.hasOwn(input, k));
+  if (!sent.length) throw new ClientError(`send ${PLAN_COLUMNS.join(', ')} (at least one)`);
+  const current = publicTrip(row);
   const next = validateTripPlan({launch_point: sent.includes('launch_point') ? input.launch_point : current.launch_point, targets: sent.includes('targets') ? input.targets : current.targets, plan: sent.includes('plan') ? input.plan : current.plan, status: sent.includes('status') ? input.status : row.status}, region, row.species);
   // Only the sent columns are written (names come from PLAN_COLUMNS, never from the request), so a
   // concurrent change to an omitted field survives; the answer is the row as stored after the write.

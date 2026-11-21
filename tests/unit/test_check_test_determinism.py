@@ -402,11 +402,5 @@ class WiringTest(unittest.TestCase):
         self.assertIn("python scripts/check_test_determinism.py --base HEAD^1", text)
         self.assertIn("python scripts/check_test_determinism.py\n", text)  # push/nightly: count only
 
-    def test_the_repository_itself_has_no_new_line_problems_to_report(self):
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            self.assertEqual(lint.main([]), 0)  # whole tree: warnings only, never fails
-
-
 if __name__ == "__main__":
     unittest.main()

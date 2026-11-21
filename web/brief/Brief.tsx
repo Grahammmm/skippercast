@@ -45,11 +45,15 @@ import {loadSkill, skillFile, skillLine, skillSummary} from './skill.ts';
 import {activeBoatFactors, savedBoat} from '../../dist/boat-handling.js';
 import {boatBasisName, boatRangeNote, REFERENCE_BOAT_NAME, type SavedBoatLike} from '../boat-range.ts';
 import {language, localeOf, num, shortDate, t, type Language, type StringId} from '../i18n.ts';
+import {reportDay} from '../reports-copy.ts';
 import {boatSaved} from '../boat-entry.ts';
 import type {BoatFactors} from '../score.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {dockPending} from '../dock-selection.ts';
+import {session} from '../account.ts';
+import {openBriefAlerts} from '../brief-alerts.ts';
+import {homePortOrigin, plannerPort, regionPorts, savedPortId} from '../ports.ts';
 import {dailyPartPath} from '../../dist/offline-core.js';
 import './brief-print.css';
 import {validDailyPart} from '../map/habitat.ts';
@@ -851,14 +855,25 @@ const clock = (iso: string | number, tz: string, lang: Language = 'en') => new I
 /** The quietest window the model screened, labelled lower exposure; none is said plainly. */
 export function LowerExposure({brief}: {brief: BriefModel | null}) {
   if (!brief) return null;
-  const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, w = brief.windows[0], lang = language.value;
+  const shown = shownRegion(), tz = shown?.timezone ?? DEFAULT_ZONE, w = brief.windows[0], lang = language.value;
+  const id = region.value, p = brief.profile;
   // The safety caveat stays visible; a window the user's looser limits decided adds that note after it.
   const own = w?.reasons.find(reason => reason.startsWith('Using your limits')), caveat = w?.reasons.find(reason => reason !== own);
   return (
-    <p class="app-window">
+    <><p class="app-window">
       <span class="ui-eyebrow">{t('brief.lower', lang)}</span>{' '}
       {w ? <><span class="ui-mono">{clock(w.start, tz, lang)}–{clock(w.end, tz, lang)}</span> · {w.label}. {[caveat, own].filter(Boolean).join('. ')}</> : t(brief.limits?.custom ? 'brief.lower.custom' : 'brief.lower.none', lang)}
     </p>
+    {w && id && (!shown || shown.id === id) && p === profile.value && session.value.state === 'signed-in'
+      ? <Button class="app-window-alert app-print-button" type="button" size="sm" variant="quiet" onClick={event => {
+        const planned = plannerPort.peek();
+        const home = homePortOrigin(id, regionPorts.peek(), planned?.region === id ? planned.id : null, savedPortId());
+        const {wind, gust, seas} = limitsFor(p);
+        openBriefAlerts({region: id, profile: p, date: brief.date, start: Date.parse(w.start), end: Date.parse(w.end),
+          port: home ? {lat: home.latitude, lon: home.longitude} : null,
+          target: species.peek() ?? PROFILE_TABLE[p].defaultTarget, ownLimits: hasOwnLimits(p) ? {wind, gust, seas} : null}, event.currentTarget);
+      }}>{t('brief.lower.alert', lang)}</Button> : null}
+    </>
   );
 }
 
@@ -901,10 +916,13 @@ export const Caveat = ({brief}: {brief: BriefModel | null}) => <p class="app-cav
 /** The beach notice link, the fleet line and the local-report line, each only when the model has it. */
 export function BriefLinks({brief}: {brief: BriefModel | null}) {
   if (!brief) return null;
+  const {fleet} = brief, lang = language.value;
   return (
     <ul class="app-brief-links">
-      {brief.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">{t('brief.notice', language.value, {name: brief.notice.name})}</a></li> : null}
-      {brief.fleet ? <li><a href={brief.fleet.href}>{brief.fleet.text}</a></li> : null}
+      {brief.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">{t('brief.notice', lang, {name: brief.notice.name})}</a></li> : null}
+      {fleet ? <li>{'notAvailable' in fleet ? (fleet.lastSourceDay
+        ? t('reports.evidence.not_available_since', lang, {date: reportDay(fleet.lastSourceDay, lang)})
+        : t('reports.evidence.not_available', lang)) : <a href={fleet.href}>{fleet.text}</a>}</li> : null}
       <li class="app-local" data-available={String(brief.localReport.available)}>{brief.localReport.text}</li>
     </ul>
   );
