@@ -47,7 +47,13 @@ def compile_sectors(root=REPO):
     root = Path(root)
     source = read_json(root / 'catalog/coastal-sectors.json')
     coasts = read_json(root / 'catalog/coasts.json')['regions']
-    packages = {p['id']: p for p in read_json(root / 'dist/regions/index.json')['regions']}
+    index_path = 'dist/regions/index.json'
+    packages = {}
+    for package in read_json(root / index_path)['regions']:
+        package_id = package['id']
+        if package_id in packages:
+            raise ValueError(f'coastal-sectors: {index_path}: duplicate package id {package_id!r}')
+        packages[package_id] = package
     if source.get('schema_version') != 1 or not source.get('reviewed_at'):
         raise ValueError('Invalid coastal sector catalog')
     _check_source(source)

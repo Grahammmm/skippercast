@@ -56,6 +56,9 @@ def _release_and_qa(root: Path, region: str, gen: str, *, expected: dict | None 
     qa = package.decode_document(raw)
     if qa.get('status') != 'PASS' or qa.get('release_sha256') != release_ref['sha256']:
         raise ReleaseError('QA must PASS and quote the current release sha256')
+    failures = qa.get('failures')
+    if isinstance(failures, list) and failures:
+        raise ReleaseError('QA PASS report lists failures')
     return release, release_ref, qa_ref, layers
 
 
