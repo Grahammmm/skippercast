@@ -43,17 +43,17 @@ export interface ProfileSemantics {
 export const PROFILE_TABLE: Readonly<Record<Profile, ProfileSemantics>> = {
   boat: {
     id: 'boat', label: 'Boat', defaultTarget: 'lingcod', maxDepthFt: 300, method: 'boat', fixedSpecies: [],
-    whereToLook: 'reef-fit', swellTile: 'offshore', defaultLayers: ['seafloor', 'currents'],
+    whereToLook: 'reef-fit', swellTile: 'offshore', defaultLayers: ['fleet'],
     caveat: 'Habitat describes a place to look; fish presence is unverified.',
   },
   shore: {
     id: 'shore', label: 'Shore', defaultTarget: 'surfperch', maxDepthFt: null, method: 'shore', fixedSpecies: ['surfperch', 'halibut'],
-    whereToLook: 'shore-runs', swellTile: 'nearshore', defaultLayers: ['swell', 'water-temp'],
+    whereToLook: 'shore-runs', swellTile: 'nearshore', defaultLayers: ['fleet'],
     caveat: 'Offshore seas do not measure breakers at your beach; check surf, access and water quality.',
   },
   spear: {
     id: 'spear', label: 'Spear', defaultTarget: 'cabezon-shallow-reef', maxDepthFt: 60, method: 'dive', fixedSpecies: [],
-    whereToLook: 'reef-shallow', swellTile: 'nearshore', defaultLayers: ['seafloor', 'swell'],
+    whereToLook: 'reef-shallow', swellTile: 'nearshore', defaultLayers: ['fleet'],
     caveat: 'In-water visibility is unverified; surface currents cannot clear a dive.',
   },
   // Kayak fishes the boat plans from a paddle craft: the reef-fit ranking within
@@ -62,7 +62,7 @@ export const PROFILE_TABLE: Readonly<Record<Profile, ProfileSemantics>> = {
   // coast experience and saved preferences know boat, shore and spear.
   kayak: {
     id: 'kayak', label: 'Kayak', defaultTarget: 'lingcod', maxDepthFt: 120, method: 'boat', fixedSpecies: [],
-    whereToLook: 'reef-fit', swellTile: 'offshore', defaultLayers: ['seafloor', 'currents'],
+    whereToLook: 'reef-fit', swellTile: 'offshore', defaultLayers: ['fleet'],
     caveat: 'Wind, offshore drift and surf at the launch set a kayak day; a forecast cannot clear a paddle.',
   },
 };
@@ -71,10 +71,10 @@ export const DEFAULT_PROFILE: Profile = 'boat';
 
 /** What each profile changes, in one line (the first-run choices on the landing and in the app); the semantics are the table's. */
 export const PROFILE_NOTES: Readonly<Record<Profile, string>> = {
-  boat: 'Reef marks and seafloor to 300 ft; seafloor and currents on the map.',
-  shore: 'Sandy-shore runs with access and rules; swell and water temp on the map.',
-  spear: 'Reef within 60 ft, nearest fresh nearshore site first; seafloor and swell on the map.',
-  kayak: 'Reef marks within 120 ft, with a wind-first paddling reading; seafloor and currents on the map.',
+  boat: 'Reef marks and seafloor to 300 ft; depth lines and spots on the map.',
+  shore: 'Sandy-shore runs with access and rules; depth lines and spots on the map.',
+  spear: 'Reef within 60 ft, nearest fresh nearshore site first; depth lines and spots on the map.',
+  kayak: 'Reef marks within 120 ft, with a wind-first paddling reading; depth lines and spots on the map.',
 };
 
 export function isProfile(value: unknown): value is Profile {
