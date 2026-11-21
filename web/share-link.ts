@@ -8,9 +8,9 @@ import {gradeParam, parseGrade} from './grade.ts';
 import {dockTime, horizonDays, localParts} from './hour.ts';
 import {currentPort, type Port} from './ports.ts';
 import {isProfile, PROFILE_TABLE, type Profile} from './profile.ts';
-import {parsePort} from './state.ts';
+import {parsePort, parseSstRange, readSstRangeParam, sstRangeParam} from './state.ts';
 
-/** View keys a link keeps when the address already has them, in this order, after region, port, profile, day, hour and target. */
+/** Plain view keys a link copies in this order, after region, port, profile, day, hour and target. */
 export const SHARED_VIEW_KEYS = ['view', 'layers', 'base', 'presentation', 'current', 'habitat', 'spot'] as const;
 
 /** A carried view value: 1-200 characters, no whitespace, control character or `#`. */
@@ -85,6 +85,8 @@ export function shareLink({href, origin, ports, region, savedId, profile, now, t
     const value = single(from, key, PLAIN);
     if (value) p.set(key, value);
   }
+  const range = sstRangeParam(parseSstRange(readSstRangeParam(from)));
+  if (range) p.set('sstRange', range);
   const grade = gradeParam(parseGrade(from.get('grade')));
   if (grade) p.set('grade', grade);
   const title = [port?.name, shareDayText(day ?? localParts(new Date(shown.at), tz).day), isProfile(profile) ? PROFILE_TABLE[profile].label : null]
