@@ -173,8 +173,8 @@ function RangeControl({measured}: {measured: string | undefined}) {
   return (
     <>
       <Button variant="ghost" size="sm" class="app-where-range" aria-haspopup="dialog" data-reach={nm ?? undefined} onClick={() => setOpen(true)}
-        title={nm === null ? t('where.range.setTitle', lang) : t('where.range.title', lang, {nm: nmText(nm), basis, from})}>
-        {nm === null ? t('where.range.set', lang) : t('where.range.value', lang, {nm: nmText(nm)})}
+        title={nm === null ? t('where.range.setTitle', lang) : t('where.range.title', lang, {nm: nmText(nm, lang), basis, from})}>
+        {nm === null ? t('where.range.set', lang) : t('where.range.value', lang, {nm: nmText(nm, lang)})}
       </Button>
       <LimitsDialog open={open} onClose={() => setOpen(false)} title={t('where.limits', lang, {profile: label})}>
         <LimitsForm profile={p} focusReach onDone={() => setOpen(false)} />
