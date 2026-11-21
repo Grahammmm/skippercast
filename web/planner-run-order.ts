@@ -1,4 +1,5 @@
 import {distanceM} from '../dist/geo-screen.js';
+import {M_PER_NMI} from './units.ts';
 
 type Point = {lat: number; lon: number};
 type Stop = Point & {id: string};
@@ -21,7 +22,7 @@ export function shorterRunOrder(stops: readonly Stop[], start: Point | null): {
   const leg = (a: number, b: number): number => {
     const from = a === -1 ? origin : points[a]!;
     const to = b === -1 ? origin : points[b]!;
-    return from && to ? distanceM(from, to)! / 1852 : 0;
+    return from && to ? distanceM(from, to)! / M_PER_NMI : 0;
   };
   const total = (order: readonly number[]) => {
     let nm = 0, previous = -1;
