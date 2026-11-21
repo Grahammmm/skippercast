@@ -1,4 +1,5 @@
 """R5c: build the public mapping zone and contributor detail labels."""
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -39,16 +40,37 @@ def plan(ctx):
     return receipts.Plan(inputs, {'coarse_source': ctx.args.coarse_source, 'coarse_date': ctx.args.coarse_date})
 
 
+def _read_selected_json(ctx, filename):
+    path = ctx.region.dir / 'select' / filename
+    recorded = ctx.region.record(path)
+    for row in ctx.upstream['select']['outputs']:
+        if row['path'] == recorded:
+            break
+    else:
+        raise receipts.ReceiptError(f'select does not attest {filename}')
+
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise receipts.ReceiptError(f'cannot read selected {filename}') from exc
+    if receipts.sha256_bytes(data) != row['sha256']:
+        raise receipts.ReceiptError(f'select output hash changed: {filename}')
+    return json.loads(data.decode('utf-8'))
+
+
 def build(ctx, out):
     args = ctx.args
-    selection = mosaic.read_json(mosaic.selected(ctx, 'selection.json'))
+    selection = _read_selected_json(ctx, 'selection.json')
     if selection['region'] != ctx.region.id or selection['scope'] != 'public':
         raise receipts.ReceiptError('expected this region’s public selection')
     # DL-2 reports decisions in `files` and carries the display labels in `sources.json`.
     # MB-09 wants a public label row per contributor, not the selection's cache paths.
     included = {r['id'] for r in selection['files'] if r['decision'] == 'included' and r['rights_class'] == 'public'}
+    sources = _read_selected_json(ctx, 'sources.json')
+    if sources['scope'] != 'public' or any(row['rights_class'] != 'public' for row in sources['sources']):
+        raise receipts.ReceiptError('expected the public selection')
     labels = []
-    for row in mosaic.sources(ctx):
+    for row in sources['sources']:
         if row['id'] not in included:
             raise receipts.ReceiptError(f'no public selection decision for {row["id"]}')
         label = {k: row[k] for k in ('id', 'rights_class', 'label', 'name', 'date', 'provenance') if k in row}
