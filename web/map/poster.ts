@@ -36,8 +36,10 @@ export function parsePoster(text: string, region: string): Poster | null {
   const d = /<path d="([^"]*)"\s*\/>/.exec(text)?.[1];
   if (!head || !d || !PATH.test(d)) return null;
   const box = attr(head, 'viewBox')?.split(' ') ?? [];
+  // MapStage redraws with the build's literal 0 0 origin.
+  if (box.length !== 4 || box[0] !== '0' || box[1] !== '0') return null;
   const values = [box[2], box[3], attr(head, 'data-zoom'), attr(head, 'data-west'), attr(head, 'data-north')];
-  if (box.length !== 4 || !values.every(v => v !== undefined && v !== null && NUMBER.test(v))) return null;
+  if (!values.every(v => v !== undefined && v !== null && NUMBER.test(v))) return null;
   const [width, height, zoom, west, north] = values.map(Number) as [number, number, number, number, number];
   if (![width, height, zoom, west, north].every(Number.isFinite)) return null;
   if (!(width > 0 && height > 0) || Math.abs(north) > 85 || Math.abs(west) > 180) return null;

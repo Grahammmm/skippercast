@@ -247,7 +247,9 @@ def _render(source, manifest, rows, bounds, out, label, baked):
         lower, products, cells = [], [], {}
         for i, (row, ds) in enumerate(grids):
             cell = ds.res[0]
-            if ds.transform.b or ds.transform.d or not math.isclose(cell, ds.res[1], rel_tol=1e-6):
+            transform = ds.transform
+            if (transform.a <= 0 or transform.e >= 0 or transform.b or transform.d
+                    or not math.isclose(cell, ds.res[1], rel_tol=1e-6)):
                 raise ValueError('nearshore expects north-up square cells')
             cells['mosaic' if row is None else f'native:{row["id"]}'] = cell
             cap = 13 if row is None else min(builder.source_maxzoom(row), baked.native_max_zoom(cell))

@@ -8,7 +8,7 @@
 // Erasable syntax only: Node tests import it.
 import {signal} from '@preact/signals';
 
-/** The published list for the region whose region.json last loaded; `files` is null when it named none.
+/** The published list for the region whose region.json last loaded; `files` is null when unknown.
  * `pending` (RF0850-2): App.tsx is loading this region's region.json, so its list is not known yet. */
 export const publishedChartFiles = signal<{readonly region: string; readonly files: readonly string[] | null; readonly pending?: boolean} | null>(null);
 
@@ -19,9 +19,26 @@ export function chartFilesPending(region: string): boolean {
   return published?.region === region && published.pending === true;
 }
 
-/** A frozen copy of `raw` when it is an array of strings, else null. */
+// Match the chart_files enum in schemas/region.schema.json.
+export const CHART_FILE_NAMES: readonly string[] = Object.freeze([
+  'depth-contours-overview.geojson',
+  'depth-contours.geojson',
+  'land-water-lines.json',
+  'land-water.json',
+  'poster.svg',
+  'shoreline-overview.geojson',
+  'shoreline.geojson',
+]);
+
+/** A frozen copy of a valid manifest list, or null if the whole list is unknown. */
 export function chartFilesOf(raw: unknown): readonly string[] | null {
-  return Array.isArray(raw) && raw.every(name => typeof name === 'string') ? Object.freeze([...raw] as string[]) : null;
+  if (!Array.isArray(raw)) return null;
+  const names = new Set<string>();
+  for (const name of raw) {
+    if (typeof name !== 'string' || !CHART_FILE_NAMES.includes(name) || names.has(name)) return null;
+    names.add(name);
+  }
+  return Object.freeze([...names]);
 }
 
 /** False only when `region`'s published list is known and lacks `name`; true otherwise (fail open). */
