@@ -227,12 +227,14 @@ class RealReceiptOnThisMachine(unittest.TestCase):
     @pytest.mark.host_archive
     def test_rule_over_the_real_candidate_table(self):
         path = PRESCAN / "prescan-receipt.json"
-        if not path.is_file():
-            return
+        try:
+            data = path.read_bytes()
+        except FileNotFoundError:
+            self.skipTest("Historical four128 pre-scan receipt absent")
         scan = load_scan()
         try:
-            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), scan.RECEIPT_SHA256)
-            doc = json.loads(path.read_bytes())
+            self.assertEqual(hashlib.sha256(data).hexdigest(), scan.RECEIPT_SHA256)
+            doc = json.loads(data)
             records = doc["candidates"] + doc["reference_fixed_windows"]
             by_window = {tuple(r["window"][:2]): r for r in records}
             for w in LARGER_WINDOWS:
