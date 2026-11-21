@@ -168,6 +168,51 @@ for (const consent of ['revoked', 'given']) {
   });
 }
 
+// Contract: collapsing cannot swallow a pending decision's error by unmounting its card; idle collapse still clears detail.
+test('Queue preserves a failed decision when collapse is attempted during submission', async t => {
+  const review = {id: 'pending-review', ref_id: 'example-item', kind: 'rule', status: 'open', reason: 'synthetic',
+    opened_at: '2026-01-01T00:00:00Z', decided_at: null, note: 'Synthetic detail-only note', detail: null};
+  const decision = Promise.withResolvers();
+  const error = 'Synthetic decision conflict';
+  const fetch = t.mock.method(globalThis, 'fetch', async (path, init) => {
+    if (path === queuePath && !init.method) {
+      const {note, detail, ...summary} = review;
+      return Response.json({items: [summary], next: null});
+    }
+    assert.equal(path, `/api/admin/reviews/${review.id}`);
+    if (!init.method) return Response.json({review});
+    assert.equal(init.method, 'POST');
+    assert.deepEqual(JSON.parse(init.body), {decision: 'approve'});
+    return decision.promise;
+  });
+  globalThis.document = {
+    createElement: name => new Element(name), createElementNS: (_, name) => new Element(name),
+    createTextNode: data => new Element('#text', String(data)),
+  };
+  const root = new Element('div');
+  const click = label => act(() => {
+    const button = find(root, node => node.localName === 'button' && node.textContent === label);
+    if (!Object.hasOwn(button.attrs, 'disabled')) button.handlers.click.call(button, {type: 'click'});
+  });
+  try {
+    await act(() => render(h(Queue), root));
+    await flush();
+    await click('Details');
+    await flush();
+    assert.ok(root.textContent.includes(review.note));
+    await click(COPY.done);
+    assert.equal(fetch.mock.callCount(), 3, 'the decision is in flight');
+    await click('Details');
+    decision.resolve(Response.json({error}, {status: 409}));
+    await flush();
+    assert.equal(find(root, node => node.attrs.role === 'alert')?.textContent, error);
+    await click('Details');
+    assert.ok(!find(root, node => node.localName === 'article'));
+    assert.ok(!root.textContent.includes(review.note));
+    assert.equal(fetch.mock.callCount(), 3);
+  } finally { render(null, root); delete globalThis.document; }
+});
+
 // Contract: after a decision, focus lands where the A/E/R handler lives. Bug caught: focusing only the outer
 // list item leaves an already-expanded next review without keyboard shortcuts (they are on the nested card).
 test('focusReview focuses the expanded ReviewCard, else the list item, else the heading', () => {
