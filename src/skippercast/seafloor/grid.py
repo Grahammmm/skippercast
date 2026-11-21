@@ -117,8 +117,10 @@ def mosaic_reference(config, tiles, sampled):
             source_transform = Affine(*sample['transform'])
             crs = CRS.from_wkt(str(sample['crs'])).to_2d().to_wkt()
             h, w = elevation.shape
-            source_bounds = (source_transform.c, source_transform.f + source_transform.e * h,
-                             source_transform.c + source_transform.a * w, source_transform.f)
+            # Shear or rotation can put the extremes at any pixel-edge corner.
+            xs, ys = zip(*(source_transform @ corner
+                           for corner in ((0, 0), (w, 0), (0, h), (w, h))))
+            source_bounds = (min(xs), min(ys), max(xs), max(ys))
             bounds = transform_bounds(crs, 3310, *source_bounds, densify_pts=21)
             raw = from_bounds(*bounds, transform=affine)
             left, top = max(0, math.floor(raw.col_off)), max(0, math.floor(raw.row_off))
