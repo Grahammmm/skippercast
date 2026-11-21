@@ -185,6 +185,48 @@ test('a rejected contour load is refused with retry and asked again on the next 
   p.dispose();
 });
 
+// SAS0744-12 follow-up: the plan key does not change at UTC midnight, so a GPX prepared with contour tracks
+// before their review lapsed must not be handed over after it. Bug caught: Download/Share reuse the
+// <60 s prepared bytes past `review_expires` with no check at the handoff. The exporter reads the real
+// clock, so the file's day is far in the future and only the planner's clock crosses it.
+const CONTOURS = {type: 'FeatureCollection', features: [], provenance: {region_id: REGION.id, units: 'ft', interval_ft: 30, review_expires: '2099-12-31',
+  sources: [{source_id: 's', name: 'Survey', survey_date: '2008', vertical_datum: 'MLLW'}], sources_omitted: []}};
+async function handoff(contours, prepareAt, deliverAt) {
+  const oldDoc = globalThis.document, oldNav = Object.getOwnPropertyDescriptor(globalThis, 'navigator'), oldTimeout = globalThis.setTimeout;
+  const handed = {saves: 0, shares: 0};
+  globalThis.document = {createElement: () => ({click() { handed.saves++; }, remove() {}}), body: {append() {}}};
+  globalThis.setTimeout = (fn, ms, ...args) => ms === 60000 ? {unref() {}} : oldTimeout(fn, ms, ...args);
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {canShare: () => true, share() { handed.shares++; return Promise.resolve(); }}});
+  let clock = new Date(prepareAt);
+  const p = make({loadPorts: source({ports: [P1]}), loadContours: source(contours ?? {collection: null}), now: () => clock});
+  try {
+    p.setResearch(true); p.toggleSpot('old-1', true);
+    if (contours) p.setContourTracks(true);
+    await settle(); await settle();
+    assert.equal(p.summary.value.ok, true, p.summary.value.message);
+    clock = new Date(deliverAt);
+    await p.deliver('share'); const status = p.actionStatus.value; await p.deliver('gpx');
+    return {...handed, status};
+  } finally { p.dispose(); globalThis.document = oldDoc; globalThis.setTimeout = oldTimeout; if (oldNav) Object.defineProperty(globalThis, 'navigator', oldNav); else delete globalThis.navigator; }
+}
+
+test('contour tracks prepared at 23:59:59Z are refused at 00:00:00Z with the exporter\'s message; nothing is saved or shared, then or on the next tap', async () => {
+  const {buildExport} = await import('../dist/trip-export.js');
+  const exporter = (() => { try { buildExport({atlas: ATLAS, screen: SCREEN, ids: ['old-1'], region: REGION, bounds: REGION.mpa.bounds, allowResearch: true, now: new Date('2100-01-01T00:00:00Z'), contours: {collection: CONTOURS}}); } catch (e) { return e.message; } })();
+  const r = await handoff({collection: CONTOURS}, '2099-12-31T23:59:59Z', '2100-01-01T00:00:00Z');
+  assert.deepEqual(r, {saves: 0, shares: 0, status: exporter});
+  assert.match(exporter, /source review expired or undated/);
+});
+
+test('same-day delivery, tracks off and a region without contours still hand over the prepared file across midnight', async () => {
+  const same = await handoff({collection: CONTOURS}, '2099-12-31T23:59:00Z', '2099-12-31T23:59:59Z');
+  assert.equal(same.saves + same.shares, 2, same.status);
+  for (const contours of [null, {collection: null}]) {
+    const r = await handoff(contours, '2099-12-31T23:59:59Z', '2100-01-01T00:00:00Z');
+    assert.equal(r.saves + r.shares, 2, `${JSON.stringify(contours)}: ${r.status}`);
+  }
+});
+
 test('loadContourFile marks a thrown fetch, 429 and 5xx for retry; 404, other statuses and a failed check are not', async () => {
   const page = () => 'https://skippercast.test/app/';
   const reply = (status, body = {}) => async () => ({status, ok: status >= 200 && status < 300, json: async () => body});
