@@ -96,7 +96,10 @@ export function reachRing(origin: {latitude: number; longitude: number}, nm: num
 }
 
 /** "12 nm", "2.5 nm". */
-export const nmText = (nm: number): string => `${Number(nm.toFixed(1))} nm`;
+export const nmText = (nm: number, lang: import('./i18n.ts').Language = 'en'): string => {
+  const rounded = Number(nm.toFixed(1));
+  return `${lang === 'es' ? rounded.toLocaleString('es', {maximumFractionDigits: 1, useGrouping: false}) : rounded} nm`;
+};
 
 // Spear (#644, slice 5 part 2): the diver's own deepest dive, where they dive
 // from, and how far from shore they will swim when diving from shore. Kept
