@@ -252,15 +252,42 @@ function imageGrid(field: SurfaceField) {
   return {width, height, coordinates, view, samples};
 }
 
+/** Index range [first, last] of the cells of `values` (monotonic centres, either order) whose extent meets [a, b], or null when none does. */
+function bracket(values: readonly number[], a: number, b: number): [number, number] | null {
+  const n = values.length;
+  if (!n) return null;
+  const asc = n < 2 || values[n - 1]! >= values[0]!;
+  const at = (k: number): number => values[asc ? k : n - 1 - k]!;
+  const half = n < 2 ? Infinity : Math.abs(at(n - 1) - at(0)) / (n - 1) / 2;
+  if (a > at(n - 1) + half || b < at(0) - half) return null;
+  let first = n, last = -1;
+  for (let k = 0; k < n; k++) {
+    if (first === n && at(k) >= a) first = k;
+    if (at(k) <= b) last = k;
+  }
+  const lo = Math.max(0, first - 1), hi = Math.min(n - 1, last + 1);
+  return asc ? [lo, hi] : [n - 1 - hi, n - 1 - lo];
+}
+
+/**
+ * The display samples of the cells whose extent meets the viewport (nw to se): the columns and rows whose centres
+ * lie inside it plus the bracketing one outside each side, so a viewport narrower than one cell still reads its cell.
+ * At least one sample whenever the viewport overlaps the raster; none when it does not.
+ */
+export function visibleSamples(view: {lon: readonly number[]; lat: readonly number[]}, samples: Float64Array, width: number, nw: {lon: number; lat: number}, se: {lon: number; lat: number}): Float64Array {
+  const x = bracket(view.lon, nw.lon, se.lon), y = bracket(view.lat, se.lat, nw.lat);
+  if (!x || !y) return new Float64Array(0);
+  const out = new Float64Array((x[1] - x[0] + 1) * (y[1] - y[0] + 1));
+  let i = 0;
+  for (let r = y[0]; r <= y[1]; r++) for (let c = x[0]; c <= x[1]; c++) out[i++] = samples[r * width + c]!;
+  return out;
+}
+
 function visibleWater(e: Engine, raster: ReturnType<typeof imageGrid>) {
   if (!e.view) return raster.samples;
   const {width, height} = e.view.size();
   if (!width || !height) return raster.samples;
-  const nw = e.view.unproject(0, 0), se = e.view.unproject(width, height);
-  const {view} = raster;
-  const columns = view.lon.map((lon, x) => lon >= nw.lon && lon <= se.lon ? x : -1).filter(x => x >= 0);
-  const rows = view.lat.map((lat, y) => lat <= nw.lat && lat >= se.lat ? y : -1).filter(y => y >= 0);
-  return Float64Array.from(rows.flatMap(y => columns.map(x => raster.samples[y * raster.width + x]!)));
+  return visibleSamples(raster.view, raster.samples, raster.width, e.view.unproject(0, 0), e.view.unproject(width, height));
 }
 
 export interface WaterTempOptions {
@@ -335,6 +362,8 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       const e = engine.value, a = status.value.drawn, generation = e ? a?.sst ?? null : null;
       if (generation === painted && e === drawnOn) return;
       if (generation !== painted) withdraw();
+      // The legend never shows the previous analysis's band over the new analysis.
+      if (generation !== painted) bandState.value = null;
       painted = null; drawnOn = e; raster = undefined; restyleBands = undefined;
       if (!e) return;
       if (!a) { bandState.value = null; e.setOverlay(REGISTRY_ID, null); return; }
@@ -345,7 +374,16 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       raster = imageGrid(a.field);
       restyleBands = (pal: Palette): void => {
         const grid = raster, band = bandState.peek();
-        if (!grid || !band) return;
+        if (!grid) return;
+        if (!band) {
+          // No supported water in the viewport: blank this analysis's pixels, never leave an earlier one's.
+          if (paintedKey === 'none') return;
+          paintedKey = 'none'; edgeKey = '';
+          const {width, height, coordinates} = grid;
+          e.setImage(SST_SOURCE, {width, height, coordinates, data: new Uint8ClampedArray(width * height * 4)});
+          e.setData(SST_BAND_SOURCE, {type: 'FeatureCollection', features: []});
+          return;
+        }
         const bounds = [band.low, band.high, band.step].join();
         const ramp = sstRamp(pal), key = [bounds, ...ramp].join();
         if (key === paintedKey) return;
