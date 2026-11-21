@@ -29,15 +29,18 @@ export const REFERENCE = {name: 'Reference 23 ft deep-V walkaround', loa_ft: 23,
   displacement_lb: 4500, deadrise_deg: 20, hull: 'deep-v', layout: 'walkaround', cruise_kn: 20};
 
 const LIMITS = {loa_ft: [8, 70], beam_ft: [3, 24], displacement_lb: [150, 60000], dry_weight_lb: [100, 50000],
-  deadrise_deg: [0, 30], cruise_kn: [2, 60], max_hp: [0, 3000], fuel_gal: [0, 1500]};
+  deadrise_deg: [0, 30], cruise_kn: [2, 60], max_hp: [0, 3000], fuel_gal: [0, 1500], burn_gph: [0.5, 200]};
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const num = (v, [lo, hi]) => (typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : null);
 
-/** Validate a profile (from a person or an AI lookup); unknown or implausible values become null. */
+/** Validate a profile; unknown or implausible values become null except optional burn_gph, which is omitted. */
 export function normalizeBoat(input = {}) {
   const out = {name: typeof input.name === 'string' ? input.name.trim().slice(0, 80) : ''};
-  for (const [key, range] of Object.entries(LIMITS)) out[key] = num(input[key] === '' ? null : Number(input[key] ?? NaN), range);
+  for (const [key, range] of Object.entries(LIMITS)) {
+    const value = num(input[key] === '' ? null : Number(input[key] ?? NaN), range);
+    if (key !== 'burn_gph' || value !== null) out[key] = value;
+  }
   out.hull = HULLS[input.hull] ? input.hull : null;
   out.layout = LAYOUTS[input.layout] ? input.layout : null;
   if (out.beam_ft && out.loa_ft && out.beam_ft > out.loa_ft * 0.6) out.beam_ft = null;

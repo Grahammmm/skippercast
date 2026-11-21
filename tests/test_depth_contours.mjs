@@ -500,7 +500,7 @@ test('ft-v2 refuses wrong region, units, expiry, unsupported detail, or wrong in
     ['metres', f => { f.provenance.units = 'm'; }],
     ['impossible date', f => { f.provenance.review_expires = '2026-11-31'; }],
     ['held', f => { f.provenance.publication_held = true; }],
-    ['unknown set', f => { f.provenance.set = 'ft-v3'; f.provenance.interval_ft = 30; }],
+    ['unknown set', f => { f.provenance.set = 'ft-v4'; f.provenance.interval_ft = 30; }],
     ['ambiguous legacy interval', f => { f.provenance.interval_ft = 30; }],
     ['wrong table', f => { f.provenance.intervals[3].minzoom = 14; }],
     ['deeper than 300 ft', f => { f.features.find(x => x.properties.depth_ft === 300).properties.depth_ft = 330; }],
@@ -512,6 +512,49 @@ test('ft-v2 refuses wrong region, units, expiry, unsupported detail, or wrong in
     const data = clone(fixture); edit(data);
     assert.deepEqual(assessContours(data, 'morro-bay', TODAY), FAILED_SHAPE, what);
   }
+});
+
+function pointer(name) { return json(`tests/fixtures/relief/pointer-style/${name}.json`); }
+
+function v3Fixture() {
+  const {features, provenance} = v2Fixture();
+  const line = features.find(f => f.properties.kind === 'contour');
+  const make = (tier, minzoom, depth_ft, index, native_cell_m, maxzoom) => ({...line,
+    properties: {...line.properties, tier, minzoom, depth_ft, index, native_cell_m, ...(maxzoom ? {maxzoom} : {})}});
+  line.properties = {...line.properties}; delete line.properties.maxzoom;
+  return {type: 'FeatureCollection', provenance: {...provenance, set: 'ft-v3', contours: pointer('v1').style.contours},
+    features: [make('z13', 13, 50, true, 2, 15), make('z13', 13, 40, false, 2, 15),
+      make('z15', 15, 5, false, 2), make('pier', 16, 10, true, 1)]};
+}
+
+// A baked-only roll and rollback must follow the contours digest, never the baked key or previous.style.
+test('ft-v3 validates against the current producer pointer, not the look or rollback lineage', () => {
+  const file = v3Fixture(), assess = (data, p) => assessContours(data, 'morro-bay', TODAY, p).status;
+  for (const name of ['v1', 'v1_1-prev-v1', 'v1']) assert.equal(assess(file, pointer(name)), 'drawn');
+  for (const name of ['v1-no-contours', 'legacy']) {
+    assert.equal(assess(file, pointer(name)), 'failed');
+    assert.equal(assess(v2Fixture(), pointer(name)), 'drawn');
+  }
+  const wrong = pointer('v1_1-prev-v1'); wrong.style.contours = 'f'.repeat(64);
+  assert.equal(assess(file, wrong), 'failed');
+  for (const props of [{minzoom: 15}, {tier: 'z15'}, {index: false}, {native_cell_m: 5}]) {
+    const mismatch = clone(file); Object.assign(mismatch.features[0].properties, props);
+    assert.equal(assess(mismatch, pointer('v1')), 'failed');
+  }
+});
+
+// Without the held vector layer, even a valid certified pier feature must never reach paint or picking.
+test('ft-v3 swaps tier visibility, labels only indices, and does not expose pier tracks on Chart', async t => {
+  const file = v3Fixture(), url = depthContoursURL('morro-bay');
+  const {layer, visible} = setup(t, {files: {[url]: file, 'catalog/relief/morro-bay.json': pointer('v1')}});
+  camera.value = {...camera.value, zoom: 13}; await flush();
+  assert.deepEqual(visible().map(f => f.properties.depth_ft), [50, 40]);
+  const {data} = assessContours(file, 'morro-bay', TODAY, pointer('v1'));
+  assert.deepEqual(contoursOverlay(sentinel, data).layers.find(l => l.id === DEPTH_LABEL).filter,
+    ['all', ['==', ['get', 'kind'], 'contour'], ['==', ['get', 'index'], true]]);
+  camera.value = {...camera.value, zoom: 16}; await flush();
+  assert.deepEqual(visible().map(f => f.properties.depth_ft), [5]);
+  assert.equal(layer.pick.mark(DEPTH_HIT, file.features.at(-1).properties), null);
 });
 
 // MSK-2 contract: contour paint is G's nearshore kit, read through the generated module for both contour sets and both

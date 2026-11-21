@@ -397,6 +397,25 @@ test('loadContourFile to GPX exports only the finest ft-v2 index tracks with sou
   assert.equal(onlySuperseded.counts.contours, 0, 'coarse lines are not a fallback when native lines miss the bounds');
 });
 
+// The planner must validate the pointer before export, and the GPX must not include minors or held pier lines.
+test('ft-v3 planner export uses only the finest ordinary index tracks', async () => {
+  const pointer = JSON.parse(fs.readFileSync(new URL('./fixtures/relief/pointer-style/v1.json', import.meta.url), 'utf8'));
+  const file = feetV2Fixture(), sample = file.features[0];
+  file.provenance = {...file.provenance, set: 'ft-v3', contours: pointer.style.contours};
+  const feature = (tier, minzoom, depth_ft, index, native_cell_m, maxzoom) => {
+    const props = {...sample.properties, tier, minzoom, depth_ft, index, native_cell_m};
+    delete props.maxzoom;
+    return {...sample, properties: maxzoom ? {...props, maxzoom} : props};
+  };
+  file.features = [feature('z13', 13, 50, true, 2, 15), feature('z15', 15, 10, true, 2),
+    feature('z15', 15, 5, false, 2), feature('pier', 16, 20, true, 1)];
+  const contours = await loadContourFile(MORRO_REGION.id, '2026-09-22', async url =>
+    new Response(JSON.stringify(url.endsWith('.geojson') ? file : pointer)), () => 'https://skippercast.test/app/');
+  assert.ok(contours.collection, contours.refused);
+  const result = buildExport(contourRequest({contours}));
+  assert.deepEqual(result.contours.map(track => track.name), ['10 ft contour · native']);
+});
+
 test('ft-v2 exports native and complementary coarse fallback for one index depth', () => {
   const collection = feetV2Fixture();
   const fallback = structuredClone(collection.features[0]);

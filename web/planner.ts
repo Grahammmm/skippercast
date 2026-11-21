@@ -39,7 +39,7 @@ import {session} from './account.ts';
 import {verdictLine} from './waypoint-placement.ts';
 import {launchPoints, loadLaunchPoints, type LaunchPoint} from './launches.ts';
 import {launchChoice} from './reach.ts';
-import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
+import {assessContourResponse, depthContoursURL, NOTES} from './map/depth-contours.ts';
 import {chartFileListed} from './chart-files.ts';
 import {loadPorts, plannerPort, portChoice} from './ports.ts';
 import {activeBoatFactors, savedBoat} from '../dist/boat-handling.js';
@@ -156,7 +156,7 @@ export async function loadContourFile(id: string, today: string, fetchFn: typeof
     const response = await fetchFn(new URL(depthContoursURL(id), page()).href);
     if (response.status === 404) return {collection: null};
     if (!response.ok) return refused(NOTES.failed, response.status === 429 || (response.status >= 500 && response.status < 600));
-    const json: unknown = await response.json(), status = assessContours(json, id, today).status;
+    const json: unknown = await response.json(), status = (await assessContourResponse(json, id, today, fetchFn, page())).status;
     return status === 'drawn' ? {collection: json} : refused(NOTES[status]);
   } catch { return refused(NOTES.failed, true); }
 }

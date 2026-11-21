@@ -165,10 +165,11 @@ class LedgerReadCost(unittest.TestCase):
 class PreservedAttempt5Ledger(unittest.TestCase):
     @pytest.mark.host_archive
     def test_attempt5_ledger_is_accepted_unchanged(self):
-        """Read-only check of the preserved ledger, if available on the maintainer machine."""
-        if not ATTEMPT5_LEDGER.is_file():
-            return
-        before = ATTEMPT5_LEDGER.stat()
+        """Read-only; the synthetic ledger checks run with or without this evidence."""
+        try:
+            before = ATTEMPT5_LEDGER.stat()
+        except FileNotFoundError:
+            self.skipTest("Preserved attempt-5 coastal ledger absent")
         data = ATTEMPT5_LEDGER.read_bytes()
         self.assertEqual(hashlib.sha256(data).hexdigest(), ATTEMPT5_SHA256)
         ledger = json.loads(data)

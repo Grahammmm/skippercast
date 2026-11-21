@@ -10,6 +10,7 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {num, t, type Language} from '../i18n.ts';
+import {sharedFetch} from '../shared-fetch.ts';
 import {sharedStation, sourceStation, stationText} from '../station-label.ts';
 import {FT_PER_M, KT_PER_MS} from '../units.ts';
 
@@ -173,7 +174,7 @@ export function feedState(feed: unknown, now = Date.now()): FeedState {
 export interface Readout {readonly readings: Reading[]; readonly feed: FeedState; /** The region the stations are read for (region.json `name`). */ readonly place?: string}
 
 /** Load the default region's readings; every failure becomes an unavailable tile, never an error. */
-export async function loadReadout(fetchFn: typeof fetch = fetch, region = DEFAULT_REGION, now: () => number = Date.now, lang: Language = 'en'): Promise<Readout> {
+export async function loadReadout(fetchFn: typeof fetch = sharedFetch, region = DEFAULT_REGION, now: () => number = Date.now, lang: Language = 'en'): Promise<Readout> {
   const json = async (url: string): Promise<unknown> => {
     const response = await fetchFn(url, {signal: AbortSignal.timeout(10000)});
     if (!response.ok) throw Error(`${url} ${response.status}`);

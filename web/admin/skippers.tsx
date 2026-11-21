@@ -59,7 +59,11 @@ export function Skippers() {
                 <Field label={COPY.consent}>{COPY.consentState[boat.consent]}</Field>
                 <Field label={COPY.crew}>{boat.crew_count}</Field>
               </dl>
-              <AdminDisclosure load={() => getBoat(boat.id)}>
+              <AdminDisclosure load={() => getBoat(boat.id)} onLoaded={detail => {
+                // Refresh only the summary's consent fields; the private detail stays in the disclosure.
+                const {consent, consent_photos_at, consent_revoked_at} = detail;
+                setBoats(all => all.map(b => b.id === detail.id ? {...b, consent, consent_photos_at, consent_revoked_at} : b));
+              }}>
                 {detail => <BoatCard initial={detail} onChanged={(updated, text) => {
                   const {owner, crew, consent_note, ...summary} = updated;
                   setBoats(all => all.map(b => b.id === updated.id ? {...summary, crew_count: crew.length, has_note: Boolean(consent_note)} : b));

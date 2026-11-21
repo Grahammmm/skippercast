@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "monterey-point-sur",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "monterey-harbor-z13", "center": [-121.888, 36.605], "size_m": 4000, "zoom": 13},
+    {"id": "monterey-peninsula-z15", "center": [-121.96, 36.6], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}
