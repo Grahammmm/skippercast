@@ -12,8 +12,11 @@ from skippercast.relief import mosaic, package, receipts, render_config, tiles
 from tests._support import ROOT
 
 
+# Spell out the full report rather than deriving the expectation from the CLI.
+# Nearshore vectors are reported too, but do not count as a heavy rebuild.
 KEYS = ('select', 'mosaic.public', 'tiles.public', 'zone.public', 'digests',
-        'inventory', 'contours', 'package', 'shots', 'qa', 'envelope')
+        'inventory', 'contours', 'package', 'shots', 'qa', 'envelope',
+        'nearshore_vectors.public')
 STAMP = '1' * 64
 
 
