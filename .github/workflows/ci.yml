@@ -87,13 +87,13 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
-    # Every event uses the same parallel parts: the two slowest coast modules
-    # alone, everything else in `rest` (AUD-SC7). The gate
+    # Every event uses the same parallel parts: the two dedicated coast modules
+    # together, everything else in `rest`. The gate
     # reads the aggregate result, which is success only when every leg passes.
     strategy:
       fail-fast: false
       matrix:
-        part: [close-safety, segment-close, rest]
+        part: [coast, rest]
     env:
       REPORT: pytest-survey-${{ matrix.part }}
     steps:
@@ -141,8 +141,7 @@ jobs:
         # `rest` ignores exactly the files the other parts run, so a new test file lands in it.
         run: |
           case "$PART" in
-            close-safety) args="tests/gis/test_coast_close_safety.py" ;;
-            segment-close) args="tests/gis/test_coast_segment_close.py" ;;
+            coast) args="tests/gis/test_coast_close_safety.py tests/gis/test_coast_segment_close.py" ;;
             rest) args="--ignore=tests/gis/test_coast_close_safety.py --ignore=tests/gis/test_coast_segment_close.py" ;;
             *) echo "::error::Unknown full-suite part '$PART'"; exit 1 ;;
           esac
