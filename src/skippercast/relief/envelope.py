@@ -23,6 +23,17 @@ class VerifiedRelease:
     release: dict
 
 
+@dataclass(frozen=True)
+class VerifiedArtifacts:
+    """One verified generation's artifact bindings, without approval authority."""
+    generation: str
+    envelope_sha256: str
+    release_sha256: str
+    qa_sha256: str
+    layers: list[dict]
+    release: dict
+
+
 def _paths(gen: str) -> tuple[str, str]:
     return f'release/{gen}/release.json', f'qa/{gen}/qa.json'
 
@@ -68,6 +79,38 @@ def _check_layers(root: Path, layers: list[dict]) -> None:
             raise ReleaseError(f'layer hash or size changed: {row["path"]}')
 
 
+def _read_envelope(envelope: Path) -> tuple[Path, str, str, bytes]:
+    path = Path(envelope)
+    if len(path.parents) < 3 or path.name != 'envelope.json' or path.parent.parent.name != 'review':
+        raise ReleaseError('expected review/<generation>/envelope.json')
+    root, gen = path.parents[2], path.parent.name
+    receipts.check_names('envelope', region=root.name)
+    if not package.is_sha256(gen):
+        raise ReleaseError('invalid release generation')
+    envelope_ref, raw = _record(root, f'review/{gen}/envelope.json')
+    return root, gen, envelope_ref['sha256'], raw
+
+
+def _verify_artifacts(root: Path, gen: str, digest: str, raw: bytes) -> VerifiedArtifacts:
+    doc = package.decode_document(raw)
+    if (doc.keys() != {'schema', 'region', 'generation', 'release', 'qa', 'layers'}
+            or doc['schema'] != ENVELOPE_SCHEMA or doc['region'] != root.name or doc['generation'] != gen):
+        raise ReleaseError('envelope identity does not match its region and generation')
+    release, release_ref, qa_ref, layers = _release_and_qa(root, root.name, gen, expected=doc)
+    _check_layers(root, layers)
+    return VerifiedArtifacts(gen, digest, release_ref['sha256'], qa_ref['sha256'], layers, release)
+
+
+def verify_artifacts(envelope: Path) -> VerifiedArtifacts:
+    """Verify the envelope and its pinned artifacts read-only; never consult approval."""
+    try:
+        return _verify_artifacts(*_read_envelope(envelope))
+    except ReleaseError:
+        raise
+    except (OSError, ValueError) as exc:
+        raise ReleaseError(str(exc)) from exc
+
+
 def verify_chain(approval: Path, envelope: Path) -> VerifiedRelease:
     """Verify local approval and every pinned artifact; raise ReleaseError on refusal.
 
@@ -76,26 +119,13 @@ def verify_chain(approval: Path, envelope: Path) -> VerifiedRelease:
     """
     try:
         approval_doc = package.decode_document(Path(approval).read_bytes())
-        path = Path(envelope)
-        if len(path.parents) < 3 or path.name != 'envelope.json' or path.parent.parent.name != 'review':
-            raise ReleaseError('expected review/<generation>/envelope.json')
-        root, gen = path.parents[2], path.parent.name
-        receipts.check_names('envelope', region=root.name)
-        if not package.is_sha256(gen):
-            raise ReleaseError('invalid release generation')
-        envelope_ref, raw = _record(root, f'review/{gen}/envelope.json')
-        digest = envelope_ref['sha256']
+        root, gen, digest, raw = _read_envelope(envelope)
         if digest != approval_doc.get('envelope_sha256'):
             raise ReleaseError('envelope sha256 does not match approval')
         if approval_doc.get('verdict') != f'APPROVED release {root.name} envelope={digest}':
             raise ReleaseError('approval lacks the exact release verdict')
-        doc = package.decode_document(raw)
-        if (doc.keys() != {'schema', 'region', 'generation', 'release', 'qa', 'layers'}
-                or doc['schema'] != ENVELOPE_SCHEMA or doc['region'] != root.name or doc['generation'] != gen):
-            raise ReleaseError('envelope identity does not match its region and generation')
-        release, release_ref, _, layers = _release_and_qa(root, root.name, gen, expected=doc)
-        _check_layers(root, layers)
-        return VerifiedRelease(root, digest, release_ref['sha256'], release)
+        verified = _verify_artifacts(root, gen, digest, raw)
+        return VerifiedRelease(root, digest, verified.release_sha256, verified.release)
     except ReleaseError:
         raise
     except (OSError, ValueError) as exc:
