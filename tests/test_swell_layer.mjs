@@ -24,7 +24,7 @@ import {CONTRAST_LAYER} from '../web/map/contrast.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {WAVE_MODEL, latticePoints, loadForecast, parseForecast, sample, swellPoints} from '../web/map/forecast-grid.ts';
 import {forecastTime} from '../web/map/frames.ts';
-import {railNotes} from '../web/map/layers.ts';
+import {railNotes, zBefore} from '../web/map/layers.ts';
 import {DEPTH_BOTTOM, contoursOverlay} from '../web/map/depth-contours.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
 import {PLACE_LABELS} from '../web/map/style.ts';
@@ -390,7 +390,7 @@ test('toggling Swell adds the texture, isolines and strokes only; off removes th
   await flush();
   assert.deepEqual(asked, ['https://s.test/api/forecast?region=morro-bay']);
   assert.deepEqual(e.calls, [['overlay', [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER]], ['image', SWELL_SOURCE], ['data', ISOLINE_SOURCE], ['data', STROKE_SOURCE]]);
-  assert.deepEqual(e.before, ['wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL], 'under wind, depth contours, place labels and protected areas (§ 9 order)');
+  assert.deepEqual(e.before, zBefore(SWELL_LAYER), 'MSKL-3: the top colour field of the kit z_order, under the depth contours and every slot above');
   assert.equal(railNotes.value.swell, 'valid Fri 1 pm · run 12 h old');
   assert.equal(swellState.value.drawn.field.quads.length, 4);
   chartMark.value = s.reading({lon: -121.5, lat: 35.3});
@@ -491,8 +491,8 @@ test('in the stack the water temperature sits under the swell field, and both un
   const swellIds = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER], sstIds = [SST_LAYER, SST_BAND_EDGE, CONTOUR_LAYER, CONTOUR_LABELS];
   // The `before` lists the layers pass (sst.ts, swell.ts, depth-contours.ts), in every order they can arrive.
   const contours = contoursOverlay(sentinel, {type: 'FeatureCollection', features: []}), contourIds = contours.layers.map(l => l.id);
-  const draw = {sst: e => e.setOverlay('water-temp', waterTempOverlay(sentinel), [CONTRAST_LAYER, 'chlorophyll', SWELL_LAYER, DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]),
-    swell: e => e.setOverlay('swell', swellOverlay(sentinel), [DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]), contours: e => e.setOverlay('depth-contours', contours, [PLACE_LABELS, MPA_FILL])};
+  const draw = {sst: e => e.setOverlay('water-temp', waterTempOverlay(sentinel), zBefore('water-temp')),
+    swell: e => e.setOverlay('swell', swellOverlay(sentinel), zBefore(SWELL_LAYER)), contours: e => e.setOverlay('depth-contours', contours, zBefore(DEPTH_BOTTOM))};
   const orders = [['sst', 'swell', 'contours'], ['sst', 'contours', 'swell'], ['swell', 'sst', 'contours'], ['swell', 'contours', 'sst'], ['contours', 'sst', 'swell'], ['contours', 'swell', 'sst']];
   for (const order of orders) {
     const eng = createEngine(module, {host: {}, style: {version: 8, sources: {}, layers: [{id: 'water'}, {id: PLACE_LABELS}, {id: MPA_FILL}, {id: 'coastline'}]},

@@ -19,14 +19,11 @@ import type {StringId} from '../i18n.ts';
 import {cp, esFixed} from '../mark-copy.ts';
 import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
-import {DEPTH_BOTTOM} from './depth-contours.ts';
 import type {Engine, Overlay} from './engine.ts';
-import {FRONTS_SOURCE, layerEntry, setRailNote} from './layers.ts';
-import {MPA_FILL} from './mpa.ts';
+import {FRONTS_SOURCE, layerEntry, setRailNote, zBefore} from './layers.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {shownPresentation} from './stage.ts';
 import {sp, type StatusCopy} from './status-copy.ts';
-import {SWELL_LAYER} from './swell.ts';
 import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'sst-fronts' as const;
@@ -231,7 +228,7 @@ export function createFronts(o: FrontsOptions): {reading(at: {lon: number; lat: 
       painted = null; drawnOn = e;
       if (!e) return;
       if (!d) { e.setOverlay(REGISTRY_ID, null); return; }
-      e.setOverlay(REGISTRY_ID, frontsOverlay(palette()), [SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
+      e.setOverlay(REGISTRY_ID, frontsOverlay(palette()), zBefore(FRONTS_BAND_LAYER));
       e.setData(FRONTS_SOURCE, frontFeatures(d));
       painted = d.fronts;
     }),

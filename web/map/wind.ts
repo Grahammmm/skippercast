@@ -5,9 +5,7 @@ import {day, hour, layers, region} from '../state.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {loadForecast, sample, type WaveForecast} from './forecast-grid.ts';
 import {forecastTime} from './frames.ts';
-import {layerEntry} from './layers.ts';
-import {MPA_FILL} from './mpa.ts';
-import {DEPTH_BOTTOM} from './depth-contours.ts';
+import {layerEntry, zBefore} from './layers.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
@@ -130,7 +128,7 @@ export function createWind(o: {engine: ReadonlySignal<Engine | null>; zone: () =
       if (drawnOn === e && drawnKey === key) return;
       drawnOn = e; drawnKey = key;
       if (!f) { e.setOverlay('wind', null); return; }
-      e.setOverlay('wind', windOverlay(palette()), [DEPTH_BOTTOM, MPA_FILL]);
+      e.setOverlay('wind', windOverlay(palette()), zBefore('wind-casing'));
       const data = windGeometry(f);
       e.setData(WIND_ARROWS, data.arrows); e.setData(WIND_LABELS, data.labels);
     }),

@@ -6,11 +6,12 @@ import {readPalette, PALETTE_TOKENS} from '../../web/map/palette.ts';
 
 const {values: args} = parseArgs({options: {
   case: {type: 'string'}, in: {type: 'string'}, out: {type: 'string'}, now: {type: 'string'},
-  'palette-override': {type: 'string', multiple: true},
+  'palette-override': {type: 'string', multiple: true}, 'stacking-only': {type: 'boolean'},
 }});
 const folder = new URL('./export_cases/', import.meta.url);
-const module = `${args.case}.mjs`;
-if (!args.in || !args.out || !(await readdir(folder)).includes(module)) {
+// MSKL-3: --stacking-only answers every case from the stacking engine (export_cases/_stacking.mjs).
+const module = args['stacking-only'] ? '_stacking.mjs' : `${args.case}.mjs`;
+if (!args.in || !args.out || !args.case || !(await readdir(folder)).includes(module)) {
   throw new Error('expected --case <installed case> --in <input directory> --out <output directory>');
 }
 const css = await readFile(new URL('../../web/tokens.css', import.meta.url), 'utf8');

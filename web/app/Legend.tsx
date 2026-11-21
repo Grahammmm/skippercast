@@ -41,6 +41,7 @@
 // Depth contours (CI6-13) are always on, Chart only: while they draw, their row keys
 // the contour and the dashed survey edge and names each survey, its date and datum;
 // withheld or failed contours say so, and a region without any shows no row.
+// MSKL-3: a switched-on kit layer with no live source yet (web/map/kit-layers) reads "<layer>: no data yet", with no key.
 import {Button, IconButton} from '../ui/Button.tsx';
 import {current, grade, layers, profile, region, species} from '../state.ts';
 import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
@@ -56,7 +57,8 @@ import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} fr
 import {currentsState} from '../map/currents.ts';
 import {contourState} from '../map/depth-contours.ts';
 import {chartOnly, drawsIn, layerCopy, layerEntry} from '../map/layers.ts';
-import {contourCopy, lookDepthKey, nearshoreRows, surveyDetailChips, SURVEY_DETAIL_TITLE_ID} from '../map/legend-model.ts';
+import {contourCopy, kitRow, lookDepthKey, nearshoreRows, surveyDetailChips, SURVEY_DETAIL_TITLE_ID} from '../map/legend-model.ts';
+import {KIT_LAYER_MODULES} from '../map/kit-layers/index.ts';
 import {reliefDrawn, reliefFeatures, reliefLook, reliefSurveyView} from './MapStage.tsx';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CDFW_MPA_PAGE, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
@@ -424,6 +426,20 @@ const PlainRow = ({id, label, reason}: {id: string; label: string; reason: strin
   <li class="app-legend-plain">{label}<p class="app-legend-note" data-reason={id}>{reason}</p></li>
 );
 
+/**
+ * MSKL-3: the kit layers with their own module (web/map/kit-layers) that are switched on. A layer with no live source yet
+ * reads "<layer>: no data yet" with no key, since nothing draws; a layer card's real module brings its own state.
+ */
+function KitRows({on}: {on: readonly string[]}) {
+  const lang = language.value;
+  return <>{Object.values(KIT_LAYER_MODULES).filter(m => on.includes(m.id)).map(m => {
+    const row = kitRow(m.id, m.state === 'no-data' ? {kind: 'no-data'} : {kind: 'drawn'}), label = t(row.labelId as StringId, lang);
+    return <li key={m.id} class="app-legend-plain" data-kit={m.id}>{row.noteId === 'legend.skl.noData' ? null : label}
+      {row.noteId ? <p class="app-legend-note" data-reason={m.id}>{t(row.noteId as StringId, lang, {...row.vars, layer: label})}</p> : null}
+    </li>;
+  })}</>;
+}
+
 /** The Shore runs row: says that runs awaiting their first owner review are left off the Chart, never as expired or current. */
 function ShoreRow() {
   const lang = language.value, note = shownPresentation.value === 'chart' ? unreviewedNote(shoreState.value.unreviewed) : '';
@@ -486,6 +502,7 @@ export function Legend() {
       <ul>
         <ReliefRow />
         {on.map(e => <Fragment key={e.id}>{legendRow(e, shown, lang)}{drawsIn(e.id, shown) ? <Cadence id={e.id} lang={lang} /> : null}</Fragment>)}
+        <KitRows on={layers.value} />
         <PreviewLegendRows />
         <PlanningRouteRow />
         <RankedRow />
