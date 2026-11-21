@@ -1012,7 +1012,7 @@ test('Charter fleet draws the charter grounds from the committed file, opens a g
   await sourcesLinkOnly(page);
   await v2.a11y('v2-map-fleet');
 
-  await page.getByRole('button', {name: /^Charter fleet/}).click();
+  await page.getByRole('button', {name: /^Spots & charter activity/}).click();   // MB-13: the Charter fleet entry's menu name
   await expect.poll(() => params(page).layers ?? '').not.toContain('fleet');
   await expect(row).toHaveCount(0);
   expect(pageErrors).toEqual([]);
@@ -1124,7 +1124,9 @@ test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile 
   await holdCoastData(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor,currents'});
   await showLayers(page);
-  await expect.poll(() => pressedEntries(page)).toEqual(['Seafloor', 'Currents']);
+  // MB-13 (D5): Depth shading is always on, and Depth lines and Spots draw unless the list carries their off markers, so a link
+  // from before the menu (no marker) shows all three on beside its own entries.
+  await expect.poll(() => pressedEntries(page)).toEqual(['Depth shading', 'Depth lines', 'Seafloor type', 'Spots & charter activity', 'Currents']);
   expect(params(page).current, 'the link names no source: its list turns on the forecast (#482)').toBeUndefined();
   await expect(page.locator('.app-legend-seafloor')).toBeVisible();
   await expect(page.locator('.app-legend-currents')).toBeVisible();
@@ -1137,13 +1139,13 @@ test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile 
   await page.locator('[aria-label="Profile"] button', {hasText: 'Shore'}).click();
   await expect.poll(() => params(page).profile).toBe('shore');
   expect(params(page).layers, 'a switch drops the link\'s list').toBeUndefined();
-  await expect.poll(() => pressedEntries(page)).toEqual(['Water temp', 'Swell + wind']);
+  await expect.poll(() => pressedEntries(page)).toEqual(['Depth shading', 'Depth lines', 'Spots & charter activity']);   // MB-13 (D5): every profile opens with just the defaults
   await page.locator('[aria-label="Profile"] button', {hasText: 'Boat'}).click();
-  await expect.poll(() => pressedEntries(page), 'Boat\'s own list comes back').toEqual(['Seafloor', 'Currents']);
+  await expect.poll(() => pressedEntries(page), 'Boat\'s own list (the link\'s) comes back').toEqual(['Depth shading', 'Depth lines', 'Seafloor type', 'Spots & charter activity', 'Currents']);
 
   await v2.open('app', {place: 'morro', layer: 'temperature'});
   await showLayers(page);
-  await expect.poll(() => pressedEntries(page), 'Fish\'s layer=temperature').toEqual(['Water temp']);
+  await expect.poll(() => pressedEntries(page), 'Fish\'s layer=temperature').toEqual(['Depth shading', 'Depth lines', 'Spots & charter activity', 'Water temp']);   // MB-13 (D5): the defaults beside the Fish layer
   await expect(page.locator('.app-location')).toHaveAttribute('data-region', 'morro-bay');
   expect(pageErrors).toEqual([]);
 });
@@ -1158,7 +1160,7 @@ test('in 3D the Chart\'s entries and the base read "Chart only" and never toggle
     await expect(page.locator('.ui-rail-item', {hasText: name}).locator('.ui-rail-note'), name).toHaveText('Chart only');
   }
   await expect(railToggle(page, 'Currents'), 'Currents draw in the terrain too').toBeEnabled();
-  await expect(railToggle(page, 'Charter fleet'), 'FE-82: the charter grounds drape on the terrain').toBeEnabled();
+  await expect(railToggle(page, 'Spots & charter activity'), 'FE-82: the charter grounds drape on the terrain').toBeEnabled();
   await expect(page.locator('.app-legend-mpa'), 'FE-82: the protected areas drape on the terrain').toBeVisible();
   await expect(baseSelect(page)).toBeDisabled();
   await expect(page.locator('#app-rail-base-note')).toHaveText('Chart only');
@@ -1652,10 +1654,10 @@ test('desktop: a short rail scrolls vertically to its last controls, with a long
     const rail = page.locator(RAIL);
     await expect(rail).toHaveCSS('overflow-y', 'scroll');
     await expect(rail).toHaveCSS('scrollbar-gutter', 'stable');
-    const trigger = rail.locator('summary[aria-label="Seafloor basis"]');
+    const trigger = rail.locator('summary[aria-label="Seafloor type basis"]');
     await trigger.focus();
     await page.keyboard.press('Enter');
-    const body = rail.locator('.ui-popover:has(> summary[aria-label="Seafloor basis"]) .ui-popover-body');
+    const body = rail.locator('.ui-popover:has(> summary[aria-label="Seafloor type basis"]) .ui-popover-body');
     await expect(body).toBeVisible();
     const fit = await body.evaluate(element => {
       const rail = element.closest('.app-rail')!, box = rail.getBoundingClientRect(), left = box.left + rail.clientLeft, lines: {left: number; right: number}[] = [];
@@ -1673,6 +1675,11 @@ test('desktop: a short rail scrolls vertically to its last controls, with a long
     const scrolls = await rail.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollHeight > element.clientHeight; });
     expect(scrolls, `${width}x${height}: a long rail scrolls`).toBe(true);
     const base = rail.locator('.app-rail-base').getByRole('combobox', {name: 'Base'});
+    // MB-13: the menu's last row is now the Map theme row, below the Base; at the end of the scroll the last theme button is the control in view, and the Base
+    // is one scroll up (the rail is only ~124 px tall here). Both must be reachable inside the rail, never clipped.
+    const lastTheme = rail.locator('.app-rail-theme button').last();
+    await expect(lastTheme).toBeInViewport({ratio: 1});
+    await base.scrollIntoViewIfNeeded();
     await expect(base).toBeInViewport({ratio: 1});
     const box = (await base.boundingBox())!, railBox = (await rail.boundingBox())!;
     expect(box.y).toBeGreaterThanOrEqual(railBox.y);
@@ -1707,7 +1714,7 @@ for (const [presentation, controls] of [['chart', '.app-chart .maplibregl-ctrl-b
         await expect(page.locator('.app-first-answer')).toBeVisible();
         await page.evaluate(() => { const app = document.querySelector('.app'); if (app) app.scrollTop = app.scrollHeight; });
         if (phase === 'scrolled') await rail.evaluate(element => { element.scrollTop = element.scrollHeight; });
-        if (phase === 'basis') { await rail.locator('summary[aria-label="Seafloor basis"]').click(); await rail.evaluate(element => { element.scrollTop = element.scrollHeight; }); }
+        if (phase === 'basis') { await rail.locator('summary[aria-label="Seafloor type basis"]').click(); await rail.evaluate(element => { element.scrollTop = element.scrollHeight; }); }
         const [mine] = await rects(page, RAIL), others = [...await rects(page, controls), ...await rects(page, '.app-presentation .ui-segmented')];
         expect(others.length).toBeGreaterThan(1);
         for (const other of others) expect(railApart(mine, other), `${presentation} ${width}x${height} ${phase}: rail clear of "${other.label.slice(0, 30)}"`).toBe(true);
