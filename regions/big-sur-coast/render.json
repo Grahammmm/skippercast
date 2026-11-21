@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "big-sur-coast",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "monterey-harbor-distant-planning-origin-z13", "center": [-121.888, 36.605], "size_m": 4000, "zoom": 13},
+    {"id": "big-sur-north-z15", "center": [-121.99, 36.27], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}
