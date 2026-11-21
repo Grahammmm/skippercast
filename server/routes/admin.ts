@@ -279,6 +279,9 @@ export function adminRoutes(deps: AdminDeps = {}): Hono<AppEnv> {
   admin.post('/api/admin/posts/:id/schedule', async c => postAnswer(await schedulePost(c.env, c.req.param('id'), await body(c.req.raw, 1024), now())));
   admin.post('/api/admin/posts/:id/retry', async c => postAnswer(await retryPost(c.env, c.req.param('id'), publishDeps())));
 
+  // Navigation only: the fleet gate (routes/fleet.ts) and admin middleware have already admitted this request.
+  admin.get('/api/admin/fleet/capability', () => new Response(null, {status: 204, headers: {'Cache-Control': 'private, no-store'}}));
+
   // ---- CF-34: fleet /go/ click counts (the FLEET_ENABLED gate runs first, in routes/fleet.ts) ----
   admin.get('/api/admin/fleet/clicks', async c => {
     const query = clickQuery(c.req.query('days'), c.req.query('region'));

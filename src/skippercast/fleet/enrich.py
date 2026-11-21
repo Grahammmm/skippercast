@@ -27,12 +27,13 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
 from .adapters import RunContext
 from .adapters.file_import import FileImport, FileImportError
 from .adapters.google_places import GooglePlaces, places_purge_ops
 from .adapters.operator_site import OperatorSite
+from .runs import _atomic_text, _write_jsonl
 
 ENRICHERS = {"operator-site": OperatorSite, "google-places": GooglePlaces}
 IMPORTERS = {"file-import": FileImport}
@@ -52,15 +53,6 @@ def load_vessels(run_dir: Path) -> list[dict]:
         if isinstance(ident, str) and ident:
             vessels.append({**row, "vessel_id": ident})
     return vessels
-
-
-def _write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
-    count = 0
-    with path.open("w", encoding="utf-8") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, sort_keys=True) + "\n")
-            count += 1
-    return count
 
 
 def enrich_code(ctx: RunContext, sink, vessels: list[Mapping[str, Any]] | None = None,
@@ -106,7 +98,8 @@ def enrich_code(ctx: RunContext, sink, vessels: list[Mapping[str, Any]] | None =
                                   if ctx.region.binding(b).adapter == "google-places")),
     }
     report["counts"] = counts
-    (ctx.run_dir / "enrich-code.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with _atomic_text(ctx.run_dir / "enrich-code.json") as handle:
+        handle.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return counts
 
 

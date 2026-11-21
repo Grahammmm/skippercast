@@ -40,6 +40,22 @@ def _write_json(path: Path, doc: Any) -> None:
     tmp.replace(path)
 
 
+def _atomic_text(path: Path):
+    # Ingest also imports enrich, which uses these run-file helpers.
+    from .ingest import _atomic_output
+
+    return _atomic_output(path, lambda fd: os.fdopen(fd, "w", encoding="utf-8"))
+
+
+def _write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
+    count = 0
+    with _atomic_text(path) as handle:
+        for row in rows:
+            handle.write(json.dumps(row, sort_keys=True) + "\n")
+            count += 1
+    return count
+
+
 class Run:
     """One run of one region; reopening the same run id resumes it."""
 
@@ -82,12 +98,7 @@ class Run:
         return number
 
     def write_jsonl(self, name: str, rows: Iterable[Mapping[str, Any]]) -> int:
-        count = 0
-        with (self.dir / name).open("w", encoding="utf-8") as handle:
-            for row in rows:
-                handle.write(json.dumps(row, sort_keys=True) + "\n")
-                count += 1
-        return count
+        return _write_jsonl(self.dir / name, rows)
 
     def read_jsonl(self, name: str) -> list[dict]:
         path = self.dir / name
