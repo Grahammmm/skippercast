@@ -130,12 +130,12 @@ def _aligned_depth(ds, transform, crs, shape, builder, *, native):
     return dest
 
 
-def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chunk=None):
-    """Bake at source spacing on a fixed grid. Halo elevations cannot add output support."""
+def assemble_windows(ds, lower, baked, builder, *, native=False, detail=None, chunk=None):
+    """Yield buffered engine windows and the original support mask of each output core."""
     import numpy as np
     from rasterio.transform import array_bounds
     from rasterio.windows import Window
-    from skippercast.relief.nearshore import Nearshore, to_bytes
+    from skippercast.relief.nearshore import Nearshore
 
     chunk = CHUNK if chunk is None else chunk
     cell = ds.res[0]
@@ -178,11 +178,22 @@ def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chun
                                               cell, bounds, baked), weight)
                 z = np.where(elev != builder.NODATA, elev, np.nan)
             image = Nearshore(z, cell, bounds, baked, sky_view_join=sky_view_join)
-            for variant, output in outputs.items():
-                rgba = np.zeros((4, h, w), dtype='uint8')
-                rgba[:3, valid] = to_bytes(image.base(variant)[core])[valid].T
-                rgba[3, valid] = 255
-                output.write(rgba, window=Window(x, y, w, h))
+            yield x, y, w, h, core, valid, image
+
+
+def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chunk=None):
+    """Bake at source spacing on a fixed grid. Halo elevations cannot add output support."""
+    import numpy as np
+    from rasterio.windows import Window
+    from skippercast.relief.nearshore import to_bytes
+
+    for x, y, w, h, core, valid, image in assemble_windows(
+            ds, lower, baked, builder, native=native, detail=detail, chunk=chunk):
+        for variant, output in outputs.items():
+            rgba = np.zeros((4, h, w), dtype='uint8')
+            rgba[:3, valid] = to_bytes(image.base(variant)[core])[valid].T
+            rgba[3, valid] = 255
+            output.write(rgba, window=Window(x, y, w, h))
 
 
 def _tile(ds, z, x, y, builder):
