@@ -42,6 +42,9 @@ class _Element:
         # Be conservative when inline declarations hide a subtree: even an
         # overridden display:none must not be used as proof of public credit.
         style = self.attrs.get('style') or ''
+        # CSS comments can appear between declaration tokens, including after
+        # the value. Remove them before checking for hidden display declarations.
+        style = re.sub(r'/\*.*?\*/', '', style, flags=re.S)
         hidden_display = re.search(r'(?:^|;)\s*display\s*:\s*none\s*(?:!\s*important\s*)?(?:;|$)', style, re.I)
         return ('hidden' not in self.attrs and not hidden_display
                 and self.tag not in {'script', 'style', 'template'})
