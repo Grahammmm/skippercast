@@ -70,6 +70,8 @@ def test_region_and_sector_readiness_count_only_affirmative_targets(tmp_path, mo
         packet[field] = hashlib.sha256((tmp_path / source).read_bytes()).hexdigest()
         contracts.atomic_json(path, packet)
 
+    # These build collaborators receive the shared catalog snapshot; keep the
+    # readiness assertions isolated from catalog and coastal compilation I/O.
     monkeypatch.setattr(build, 'load_region', lambda *_, catalogs=None: dict(region))
     monkeypatch.setattr(build, 'load_catalogs', lambda *_: ({}, {}))
     monkeypatch.setattr(build, 'requirement_report', lambda *_, catalogs=None: report)
