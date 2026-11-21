@@ -164,3 +164,99 @@ test('a probe that cannot read the site throws, and the command line reports bla
   assert.ok(run.stdout.includes('rules-card-blank'), run.stdout);
   assert.notEqual(BLANK_EXIT, 0);
 });
+
+const PROBE_SCRIPT = fileURLToPath(new URL('../scripts/rules_status_probe.mjs', import.meta.url));
+const CHECKED = '2026-09-21T18:00:00Z';
+const RETRIEVED = '2026-09-21T17:59:00Z';
+
+function alarmFixture() {
+  const now = Date.now();
+  const year = new Date(now).getUTCFullYear();
+  const regs = registry(now);
+  regs.valid_from = `${year - 1}-01-01`;
+  regs.valid_through = `${year + 1}-12-31`;
+  const region = {...REGION, id: 'fixture-alarm', species: ['salmon', 'dungeness']};
+  const template = regs.species.salmon.source_ids[0];
+  for (const id of [...region.species, 'shared']) {
+    regs.sources[`fixture-${id}`] = {...regs.sources[template]};
+    regs.checks[`fixture-${id}`] = {...regs.checks[template]};
+  }
+  for (const id of region.species) {
+    regs.species[id].windows = [];
+    regs.species[id].source_ids = [`fixture-${id}`, 'fixture-shared'];
+  }
+  return {regs, region};
+}
+
+async function runAlarm(t, {regs, region}) {
+  const fetchFixture = site(regs, region);
+  const server = createServer(async (req, res) => {
+    const response = await fetchFixture(new URL(req.url, BASE));
+    res.writeHead(response.status, {'Content-Type': 'application/json'});
+    res.end(await response.text());
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const run = await promisify(execFile)(process.execPath, [PROBE_SCRIPT, '--region', region.id, '--base', `http://127.0.0.1:${server.address().port}`], {timeout: 60000}).catch(e => e);
+  return {code: run.code ?? 0, stdout: run.stdout};
+}
+
+test('C1: attribute a shared changed page to both affected species, not healthy pages', async t => {
+  const f = alarmFixture();
+  Object.assign(f.regs.checks['fixture-shared'], {status: 'changed', checked_at: CHECKED, data_retrieved_at: RETRIEVED});
+  assert.deepEqual(await runAlarm(t, f), {code: 3, stdout: 'region: fixture-alarm\n'
+    + 'salmon: unknown (rules.reason.sourceChanged)\n  source: fixture-shared (changed)\n'
+    + 'dungeness: unknown (rules.reason.sourceChanged)\n  source: fixture-shared (changed)\n'
+    + 'rules-card-blank\n'
+    + `re-review: fixture-shared (changed; last checked ${CHECKED}; data retrieved ${RETRIEVED}) blanks salmon, dungeness\n`});
+});
+
+test('C1: report both reef members’ source issues under reef, without duplicating a shared page', async t => {
+  const f = alarmFixture();
+  f.region.species = ['reef'];
+  f.regs.species.lingcod.source_ids = ['fixture-salmon', 'fixture-shared'];
+  f.regs.species.rockfish.source_ids = ['fixture-shared'];
+  f.regs.species.lingcod.windows = f.regs.species.rockfish.windows = [];
+  f.regs.checks['fixture-salmon'] = {};
+  f.regs.checks['fixture-shared'] = {status: 'changed'};
+  assert.deepEqual(await runAlarm(t, f), {code: 3, stdout: 'region: fixture-alarm\n'
+    + 'reef: unknown (rules.reason.sourceChanged)\n  source: fixture-salmon (unknown)\n  source: fixture-shared (changed)\n'
+    + 'rules-card-blank\n'
+    + 're-review: fixture-salmon (unknown; last checked unknown; data retrieved never) blanks reef\n'
+    + 're-review: fixture-shared (changed; last checked unknown; data retrieved never) blanks reef\n'});
+});
+
+test('C2: distinguish missing or invalid times from a missing check record', async t => {
+  const f = alarmFixture();
+  // Despite the stored status, an invalid retrieval time is still a source issue.
+  Object.assign(f.regs.checks['fixture-salmon'], {checked_at: 'invalid', data_retrieved_at: 'invalid'});
+  f.regs.checks['fixture-shared'] = {status: 'unavailable'};
+  delete f.regs.checks['fixture-dungeness'];
+  assert.deepEqual(await runAlarm(t, f), {code: 3, stdout: 'region: fixture-alarm\n'
+    + 'salmon: unknown (rules.reason.checkOld)\n  source: fixture-salmon (unchanged)\n  source: fixture-shared (unavailable)\n'
+    + 'dungeness: unknown (rules.reason.checkOld)\n  source: fixture-dungeness (no check record)\n  source: fixture-shared (unavailable)\n'
+    + 'rules-card-blank\n'
+    + 're-review: fixture-salmon (unchanged; last checked unknown; data retrieved never) blanks salmon\n'
+    + 're-review: fixture-shared (unavailable; last checked unknown; data retrieved never) blanks salmon, dungeness\n'
+    + 're-review: fixture-dungeness (no check record) blanks dungeness\n'});
+});
+
+test('C3: preserve crash output and exit 1 without contacting a site', () => {
+  const {status, stdout} = spawnSync(process.execPath, [PROBE_SCRIPT, '--region'], {encoding: 'utf8', timeout: 60000});
+  assert.deepEqual({status, stdout}, {status: 1, stdout: 'probe crashed: TypeError\nrules-card-blank\n'});
+});
+
+test('C3: preserve the exact errors when the region cannot be selected or read', async () => {
+  const noDefault = async () => Response.json({});
+  await assert.rejects(probe(BASE, noDefault, NOW), {name: 'Error', message: 'regions/index.json names no default_region'});
+  await assert.rejects(probe(BASE, noDefault, NOW, 'unlisted'), {name: 'Error', message: 'region is not listed in regions/index.json'});
+  await assert.rejects(probe(BASE, site(null, {...REGION, id: 'empty', species: []}), NOW, 'empty'),
+    {name: 'Error', message: 'region.json for empty lists no species'});
+  await assert.rejects(probe(BASE, async () => new Response(null, {status: 404}), NOW),
+    {name: 'Error', message: 'HTTP 404 for regions/index.json'});
+});
+
+test('C4: all-ok CLI output is byte-identical, with exit 0', async t => {
+  assert.deepEqual(await runAlarm(t, alarmFixture()), {code: 0, stdout: 'region: fixture-alarm\n'
+    + 'salmon: closed (rules.reason.outsideSeason)\ndungeness: closed (rules.reason.outsideSeason)\nrules-card-ok\n'});
+});

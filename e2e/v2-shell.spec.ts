@@ -119,7 +119,11 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
     if (isMobile) {
       await page.locator('.ui-sheet-handle').focus();
       await page.keyboard.press('End');
-      await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
+      const sheet = page.locator('.ui-sheet');
+      await expect(sheet).toHaveAttribute('data-detent', 'full');
+      // The attribute changes before the 220 ms transform settles. A click on
+      // the moving chips can land on the map instead on a busy runner.
+      await expect.poll(() => sheet.evaluate(el => getComputedStyle(el).transform)).toBe('matrix(1, 0, 0, 1, 0, 0)');
     }
     const tomorrow = page.locator('[aria-label="Day"] button').nth(1);
     await tomorrow.click();

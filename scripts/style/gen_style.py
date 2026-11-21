@@ -193,6 +193,20 @@ def look_table(index, tokens_by_version):
     return web, colours, coast
 
 
+def contour_table(index, tokens_by_version):
+    """Data-validation rules by contours digest, independent of the baked look and paint."""
+    keys = ("name", "min_zoom", "minor_ft", "index_ft", "index_every_ft", "max_cell_m")
+    return {
+        entry["digests"]["contours"]: {
+            "pier": tokens_by_version[version]["pier_view"]["contours_tier"],
+            "tiers": [{k: row[k] for k in keys if k in row}
+                      for row in sorted(tokens_by_version[version]["contours"]["tiers"], key=lambda r: r["min_zoom"])],
+        }
+        for version, entry in index["versions"].items()
+        if not entry.get("legacy") and entry.get("status") in LOOK_STATUSES
+    }
+
+
 def pointer_look(item):
     """The look key a pointer (or its `previous` lineage entry) was baked with; ValueError if its style is invalid."""
     style = item.get("style")
@@ -208,7 +222,7 @@ def pointer_look(item):
     return style["baked"]
 
 
-def check_pointers(root, web_looks):
+def check_pointers(root, web_looks, contour_tiers):
     """A version cannot leave index.json while a pointer, or the lineage it can roll back to, names its look."""
     for path in sorted((root / "catalog/relief").glob("*.json")):
         if path.name.endswith(".schema.json"):
@@ -224,6 +238,10 @@ def check_pointers(root, web_looks):
                 raise ValueError(f"{path.relative_to(root)}: {label} {exc}") from None
             if key not in web_looks:
                 raise ValueError(f"{path.relative_to(root)}: {label} look {key} is missing from LOOKS "
+                                 "(keep its version active or rolling in style/index.json)")
+            digest = (item.get("style") or {}).get("contours")
+            if digest is not None and digest not in contour_tiers:
+                raise ValueError(f"{path.relative_to(root)}: {label} contours {digest} is missing from CONTOUR_TIERS "
                                  "(keep its version active or rolling in style/index.json)")
 
 
@@ -247,13 +265,15 @@ def layer_web_tokens(tokens):
 
 
 def layer_projections(directory, index):
+    from typing import Any
+
     version = index["layers_default"]
     entry = index["layers"][version]
     tokens = load_layers(version, root=directory)
     colours = {}
     css_hex = re.compile(r"#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})")
 
-    def project(value, path=()):
+    def project(value: object, path=()) -> Any:
         if isinstance(value, Mapping):
             return {key: project(item, path if not path and key == "layers" else (*path, key))
                     for key, item in value.items()}
@@ -272,10 +292,31 @@ def layer_projections(directory, index):
     css = (f"  /* skl:begin {header} */\n"
            + "".join(f"  --{name}: {value};\n" for name, value in colours.items())
            + "  /* skl:end */\n")
+    sst = web["layers"]["sst-fill"]
+    stretch = sst["stretch"]
+    edge = sst["band_edge"]
+    # Emit independent literals so using an SST token does not bundle the full kit table.
+    sst_exports = {
+        "MAX_AGE_H": sst["data_age"]["max_age_h"],
+        "ZOOM": sst["zoom"],
+        "PICK": sst["pick"],
+        "RAMP_STOPS": sst["ramp_stops"],
+        "BAND_STEPS": sst["band_step_f_by_zoom"],
+        "BAND_COLORS_RULE": sst["band_colors_rule"],
+        "STRETCH": [stretch[key] for key in ("low_pct", "high_pct", "method", "round", "user_lock")],
+        "OPACITY": sst["opacity"],
+        "BAND_EDGE": [edge[key] for key in ("color", "width_pt", "opacity", "hide_when_any_on")],
+        "WATER_ONLY": sst["water_only"],
+        "DISPLAY_SAMPLING": web["display_sampling"],
+        "LEGEND_TITLE": sst["legend"]["title"],
+        "BASE_DESATURATION": web["stacking"]["base_desaturation_when_field_on"] if sst["desaturates_base"] else 0,
+    }
     ts = (f"// {header}\n"
           f"export const LAYERS_STYLE_VERSION = {json.dumps(version)};\n"
           f"export const LAYERS_STYLE = {pretty(web)} as const;\n"
-          f"export const SKL_PALETTE_TOKENS = {pretty({name: name for name in colours})} as const;\n")
+          f"export const SKL_PALETTE_TOKENS = {pretty({name: name for name in colours})} as const;\n"
+          + "".join(f"export const SST_{name} = {json.dumps(value, ensure_ascii=False)} as const;\n"
+                    for name, value in sst_exports.items()))
     # The fragment contains immutable mappings from the loader. Convert them only at serialization.
     doc = fragment(tokens)
     canonical = json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False, default=dict)
@@ -302,8 +343,10 @@ def generate(root, check):
             entry["digests"] = digests
 
     looks = look_table(index, tokens_by_version)
-    check_pointers(root, looks[0])
+    contour_tiers = contour_table(index, tokens_by_version)
+    check_pointers(root, looks[0], contour_tiers)
     css, ts, coast = projections(tokens_by_version[default], default, index["versions"][default]["digests"], looks)
+    ts += f"export const CONTOUR_TIERS = {pretty(contour_tiers)} as const;\n"
     css_path = root / "web/tokens.css"
     coast_path = root / "packages/coast/src/palette.ts"
     css_source = without_block(css_path.read_bytes().decode(), r"  /\* skn:begin ", r"  /\* skn:end \*/")

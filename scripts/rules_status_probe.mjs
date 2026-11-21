@@ -12,8 +12,8 @@
 //
 // Usage: node scripts/rules_status_probe.mjs [--region ID] [--base URL]
 // Defaults: the index's default region; FEEDS_PUBLIC_BASE, then the workers.dev host.
-// Prints one line per species ("<species>: <status> (<reason id>)") and a final `rules-card-blank` or
-// `rules-card-ok` line. Prints no response body, header or token.
+// Prints each species' status and any source issues, then `rules-card-blank` or `rules-card-ok`
+// and any sources to re-review. Prints no response body, header or token.
 import {pathToFileURL} from 'node:url';
 import {loadRegs, regsData, regulationState, resetRegs} from '../web/regs.ts';
 
@@ -23,6 +23,9 @@ export const BLANK_EXIT = 3;
 
 /** True when a state reads "Check rules": unknown for want of rules, not for a season that needs a location. */
 export const isBlank = state => state.status === 'unknown' && state.labelId === 'rules.label.unknown';
+
+const sourceBlocked = state => state.reasonId === 'rules.reason.sourceChanged' || state.reasonId === 'rules.reason.checkOld';
+const timeOr = (value, fallback) => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : fallback;
 
 /** Per-species rule states and the verdict, from a fetch bound to the live site (or to a fixture). */
 export async function probe(base, fetchFn = fetch, now = Date.now(), regionId = null) {
@@ -47,7 +50,18 @@ export async function probe(base, fetchFn = fetch, now = Date.now(), regionId = 
   const data = regsData.value?.region === region.id ? regsData.value.data : null;
   const species = region.species.map(name => {
     const state = regulationState(data, name, region, now);
-    return {species: name, status: state.status, label: state.label, reason: state.reasonId ?? null, blank: isBlank(state)};
+    const blank = isBlank(state);
+    // Reuse the app's sourceIssues result, including both rule profiles for reef.
+    const issues = blank ? (state.members ?? [state]).filter(sourceBlocked).flatMap(s => s.issues) : [];
+    const sources = [...new Set(issues)].map(id => {
+      const check = Object.hasOwn(data.checks, id) ? data.checks[id] : null;
+      return {id, check: check ? {
+        status: check.status ?? 'unknown',
+        checkedAt: timeOr(check.checked_at, 'unknown'),
+        retrievedAt: timeOr(check.data_retrieved_at, 'never'),
+      } : null};
+    });
+    return {species: name, status: state.status, label: state.label, reason: state.reasonId ?? null, blank, sources};
   });
   return {region: id, species, blank: species.some(s => s.blank)};
 }
@@ -65,8 +79,20 @@ async function main(argv) {
     const base = options['--base'] ?? (process.env.FEEDS_PUBLIC_BASE || DEFAULT_BASE);
     const result = await probe(base, fetch, Date.now(), options['--region'] ?? null);
     console.log(`region: ${result.region}`);
-    for (const s of result.species) console.log(`${s.species}: ${s.status} (${s.reason ?? 'registry wording'})`);
+    const reReview = new Map();
+    for (const s of result.species) {
+      console.log(`${s.species}: ${s.status} (${s.reason ?? 'registry wording'})`);
+      for (const {id, check} of s.sources) {
+        console.log(`  source: ${id} (${check?.status ?? 'no check record'})`);
+        if (!reReview.has(id)) reReview.set(id, {check, species: new Set()});
+        reReview.get(id).species.add(s.species);
+      }
+    }
     console.log(result.blank ? 'rules-card-blank' : 'rules-card-ok');
+    for (const [id, {check, species}] of reReview) {
+      const detail = check ? `${check.status}; last checked ${check.checkedAt}; data retrieved ${check.retrievedAt}` : 'no check record';
+      console.log(`re-review: ${id} (${detail}) blanks ${[...species].join(', ')}`);
+    }
     return result.blank ? BLANK_EXIT : 0;
   } catch (e) {
     // Fail safe: not knowing is not healthy. Name the error class only.

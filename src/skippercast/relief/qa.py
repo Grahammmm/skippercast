@@ -26,7 +26,7 @@ import struct
 import warnings
 
 from skippercast.paths import repo_root
-from skippercast.platform.depth_contours import FT_V2, V2_MINZOOM, V2_NATIVE_ZOOM
+from skippercast.platform.depth_contours import FT_V2, FT_V3, V2_MINZOOM, V2_NATIVE_ZOOM, v3_rule, v3_view
 from skippercast.relief import package, receipts
 from skippercast.seafloor.rough_first import read_tiles
 
@@ -64,15 +64,23 @@ def _contour_counts(root, region):
     doc = _json(package.artifact_path(root, CONTOURS))
     provenance = doc.get('provenance', {})
     metric = 'contour_count_by_interval_ft'
+    contour_set = provenance.get('set')
     if (doc.get('type') != 'FeatureCollection' or provenance.get('region_id') != region
-            or provenance.get('set') != FT_V2 or provenance.get('units') != 'ft'
+            or contour_set not in (FT_V2, FT_V3) or provenance.get('units') != 'ft'
             or provenance.get('publication_held') or not isinstance(doc.get('features'), list)):
-        raise ValueError(f'{metric}: expected public regional ft-v2 contours')
+        raise ValueError(f'{metric}: expected public regional ft-v2 or ft-v3 contours')
+    view = v3_view(provenance.get('contours')) if contour_set == FT_V3 else None
     intervals = {8: '60', 11: '30', 13: '10', 15: '5'}
     counts = Counter()
     for feature in doc['features']:
         props = feature['properties']
         if props.get('kind') in ('survey-edge', 'unresolved-area'):
+            continue
+        if view is not None:
+            tier = v3_rule(props, view) if props.get('kind') == 'contour' else None
+            if tier is None:
+                raise ValueError(f'{metric}: invalid ft-v3 tier or depth')
+            counts[str(tier['minor_ft'])] += 1
             continue
         depth = props.get('depth_ft')
         start = V2_MINZOOM.get(depth) if type(depth) is int else None
@@ -169,11 +177,23 @@ def _fine_pixels(ds, grid):
     return (cls == 3) & (depth >= -20) & (depth <= 0) & (spacing > 0) & (spacing <= 1)
 
 
+def _on_tile(ds, grid, dtype, nodata):
+    import numpy as np
+    import rasterio
+    from rasterio.warp import Resampling, reproject
+
+    # Match the producer's exact nearest-neighbour lattice; an approximate
+    # transform can pick a different source cell at a land or contributor edge.
+    dest = np.full((256, 256), nodata, dtype=dtype)
+    reproject(rasterio.band(ds, 1), dest, dst_transform=grid, dst_crs='EPSG:3857',
+              dst_nodata=nodata, resampling=Resampling.nearest, tolerance=0)
+    return dest
+
+
 def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
     import numpy as np
     from rasterio.errors import NotGeoreferencedWarning
     from rasterio.io import MemoryFile
-    from rasterio.vrt import WarpedVRT
     from rasterio.warp import transform_bounds
 
     sizes = defaultdict(list)
@@ -224,9 +244,7 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
                         rgb = tile.read([1, 2, 3])
                         opaque = tile.read(4) != 0 if tile.count == 4 else tile.dataset_mask() != 0
                 grid = _tile_grid(z, x, y)
-                with WarpedVRT(elevation, crs='EPSG:3857', transform=grid, width=256, height=256,
-                               dtype='float32', nodata=float('nan')) as vrt:
-                    elevation_m = vrt.read(1)
+                elevation_m = _on_tile(elevation, grid, 'float32', float('nan'))
                 # Nodata and cells outside the evidence grid warp to NaN, which is neither land nor
                 # sea. Such paint has no land-mask proof and fails on its own, instead of silently
                 # counting as non-land.
@@ -246,9 +264,7 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
                     proof = _fine_pixels(fine.get(z), grid) if z in (16, 17) else False
                     uncertified += int(np.count_nonzero(opaque & ~np.asarray(proof)))
                 if z == seam_zoom:
-                    with WarpedVRT(contributor, crs='EPSG:3857', transform=grid, width=256, height=256,
-                                   nodata=0) as vrt:
-                        codes = vrt.read(1)
+                    codes = _on_tile(contributor, grid, contributor.dtypes[0], 0)
                     light = np.where(opaque, _lstar(rgb), np.nan)
                     step((codes[:-1], light[:-1]), (codes[1:], light[1:]))
                     step((codes[:, :-1], light[:, :-1]), (codes[:, 1:], light[:, 1:]))

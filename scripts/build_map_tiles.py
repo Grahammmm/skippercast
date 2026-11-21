@@ -46,6 +46,9 @@ def build_vector_archive(tool, layers, output, *, title, attribution, descriptio
             subprocess.run([str(Path(tool).resolve().with_name('tile-join')), '--quiet',
                             '--force', '--no-tile-size-limit', '-o', str(joined),
                             str(low), str(high)], check=True)
+            with joined.open('rb') as stream:
+                if stream.read(8) != b'PMTiles\x03':
+                    raise ValueError('tile-join did not produce PMTiles v3')
             temporary = output.with_suffix('.part')
             shutil.copyfile(joined, temporary)
             temporary.replace(output)

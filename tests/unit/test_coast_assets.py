@@ -222,7 +222,8 @@ class FetchAndUploadTests(unittest.TestCase):
         def fake_get(path, origin=pa.ORIGIN, headers=None):
             start, end = map(int, headers['Range'][6:].split('-'))
             seen.append((path, start, end))
-            return 206, {}, data[start:end + 1]
+            total = 300 if 'region=cambria-san-simeon' in path else len(data)
+            return 206, {'Content-Range': f'bytes {start}-{end}/{total}'}, data[start:end + 1]
         with patch.object(pa, 'get', fake_get):
             body, stored = pa.fetch('/api/habitat/tiles?region=morro-bay', entry)
         self.assertEqual(body, data)

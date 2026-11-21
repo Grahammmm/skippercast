@@ -92,9 +92,10 @@ def write_pmtiles(
 
     Consume ((z, x, y), png_bytes) pairs from a single-pass iterable, or pass
     `tiles.items()` for an existing mapping. Input can be in any order, but
-    coordinates must be unique. Only the tile index and directories grow in
-    memory; temporary disk usage can reach input plus output size. Distinct
-    contents are stored in order of first Hilbert occurrence.
+    coordinates must be unique and tile zooms must be within the inclusive
+    [minzoom, maxzoom] range. Only the tile index and directories grow in memory;
+    temporary disk usage can reach input plus output size. Distinct contents
+    are stored in order of first Hilbert occurrence.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -103,6 +104,8 @@ def write_pmtiles(
         for zxy, data in tiles:
             if not data:
                 raise ValueError(f'empty tile payload at {zxy}')
+            if not minzoom <= zxy[0] <= maxzoom:
+                raise ValueError(f'tile {zxy} outside PMTiles zoom range [{minzoom}, {maxzoom}]')
             records.append((_tile_id(*zxy), spool.tell(), len(data), hashlib.sha256(data).digest()))
             spool.write(data)
         records.sort()

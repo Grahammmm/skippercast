@@ -33,11 +33,20 @@ def _safe_path(path, *, exists=True):
     return path
 
 
+def _unique_members(pairs):
+    obj = {}
+    for name, value in pairs:
+        if name in obj:
+            raise ValueError('Input contains a duplicate JSON member')
+        obj[name] = value
+    return obj
+
+
 def _json(path):
     _safe_path(path)
     if not path.is_file():
         raise ValueError('JSON input must be a regular file')
-    return json.loads(path.read_text(encoding='utf-8'))
+    return json.loads(path.read_text(encoding='utf-8'), object_pairs_hook=_unique_members)
 
 
 def _sanitize(value):

@@ -35,15 +35,17 @@ export function reliefVerifier(archive: {object_key: string; digest_root_sha256:
     return doc.chunks;
   }
 
-  async function loadChunk(path: string, expected: string, blockX: number, blockY: number) {
+  async function loadChunk(path: string, expected: string, z: number, blockX: number, blockY: number) {
     const rows = await read(path, expected);
     if (!Array.isArray(rows)) throw new Error('Invalid relief digest chunk');
+    const matrixSize = 2 ** z;
     const entries = new Map<string, string>();
     for (const row of rows) {
       if (!Array.isArray(row) || row.length !== 3) throw new Error('Invalid relief digest row');
       const [x, y, digest] = row, key = `${x}/${y}`;
-      if (!Number.isInteger(x) || Math.floor(x / blockSize) !== blockX || !Number.isInteger(y) ||
-          Math.floor(y / blockSize) !== blockY || typeof digest !== 'string' || !sha256.test(digest) || entries.has(key)) {
+      if (!Number.isInteger(x) || x < 0 || x >= matrixSize || Math.floor(x / blockSize) !== blockX ||
+          !Number.isInteger(y) || y < 0 || y >= matrixSize || Math.floor(y / blockSize) !== blockY ||
+          typeof digest !== 'string' || !sha256.test(digest) || entries.has(key)) {
         throw new Error('Invalid relief digest row');
       }
       entries.set(key, digest);
@@ -61,7 +63,7 @@ export function reliefVerifier(archive: {object_key: string; digest_root_sha256:
       if (typeof expected !== 'string' || !sha256.test(expected)) throw new Error('Invalid relief chunk digest');
       let chunk = chunks.get(path);
       if (!chunk) {
-        chunk = loadChunk(path, expected, blockX, blockY);
+        chunk = loadChunk(path, expected, z, blockX, blockY);
         chunks.set(path, chunk);
       }
       digest = (await chunk).get(`${x}/${y}`);

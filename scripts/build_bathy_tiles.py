@@ -785,7 +785,8 @@ def build(source, output, minzoom=MINZOOM, maxzoom=None, log=print, variant='med
             raise ValueError(f'expected one band in EPSG:3310, got {ds.crs} with {ds.count} bands')
         nodata = ds.nodata if ds.nodata is not None else NODATA
         elevation = ds.read(1).astype(np.float32)
-        elevation[~np.isfinite(elevation) | (elevation == np.float32(nodata)) | (elevation > LAND_LIMIT_M)] = NODATA
+        elevation[(ds.read_masks(1) == 0) | ~np.isfinite(elevation)
+                  | (elevation == np.float32(nodata)) | (elevation > LAND_LIMIT_M)] = NODATA
         src_transform, src_crs = ds.transform, ds.crs
         bounds = transform_bounds(ds.crs, 'EPSG:4326', *ds.bounds, densify_pts=21)
     if clip_bounds is not None:

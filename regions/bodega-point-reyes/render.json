@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "bodega-point-reyes",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "bodega-harbor-z13", "center": [-123.05, 38.33], "size_m": 4000, "zoom": 13},
+    {"id": "bodega-nearshore-z15", "center": [-123.18, 38.32], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}

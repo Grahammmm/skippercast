@@ -130,12 +130,12 @@ def _aligned_depth(ds, transform, crs, shape, builder, *, native):
     return dest
 
 
-def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chunk=None):
-    """Bake at source spacing on a fixed grid. Halo elevations cannot add output support."""
+def assemble_windows(ds, lower, baked, builder, *, native=False, detail=None, chunk=None):
+    """Yield buffered engine windows and the original support mask of each output core."""
     import numpy as np
     from rasterio.transform import array_bounds
     from rasterio.windows import Window
-    from skippercast.relief.nearshore import Nearshore, to_bytes
+    from skippercast.relief.nearshore import Nearshore
 
     chunk = CHUNK if chunk is None else chunk
     cell = ds.res[0]
@@ -178,11 +178,22 @@ def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chun
                                               cell, bounds, baked), weight)
                 z = np.where(elev != builder.NODATA, elev, np.nan)
             image = Nearshore(z, cell, bounds, baked, sky_view_join=sky_view_join)
-            for variant, output in outputs.items():
-                rgba = np.zeros((4, h, w), dtype='uint8')
-                rgba[:3, valid] = to_bytes(image.base(variant)[core])[valid].T
-                rgba[3, valid] = 255
-                output.write(rgba, window=Window(x, y, w, h))
+            yield x, y, w, h, core, valid, image
+
+
+def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chunk=None):
+    """Bake at source spacing on a fixed grid. Halo elevations cannot add output support."""
+    import numpy as np
+    from rasterio.windows import Window
+    from skippercast.relief.nearshore import to_bytes
+
+    for x, y, w, h, core, valid, image in assemble_windows(
+            ds, lower, baked, builder, native=native, detail=detail, chunk=chunk):
+        for variant, output in outputs.items():
+            rgba = np.zeros((4, h, w), dtype='uint8')
+            rgba[:3, valid] = to_bytes(image.base(variant)[core])[valid].T
+            rgba[3, valid] = 255
+            output.write(rgba, window=Window(x, y, w, h))
 
 
 def _tile(ds, z, x, y, builder):
@@ -211,6 +222,19 @@ def _tile(ds, z, x, y, builder):
     out[valid, :3] = np.clip(np.rint(dest[:3, valid].T * (255 / dest[3, valid, None])), 0, 255).astype('uint8')
     out[valid, 3] = 255
     return out
+
+
+def _mosaic_evidence(bg, background, z, x, y, builder):
+    """Sample the masked mosaic at exact tile pixel centers, without blending."""
+    import numpy as np
+    from rasterio.warp import Resampling, reproject
+
+    transform, _ = builder.tile_grid(z, x, y, pad=0)
+    evidence = np.full((builder.TILE, builder.TILE), builder.NODATA, dtype=bg.dtype)
+    reproject(bg, evidence, src_transform=background.transform, src_crs=background.crs,
+              src_nodata=builder.NODATA, dst_transform=transform, dst_crs='EPSG:3857',
+              dst_nodata=builder.NODATA, resampling=Resampling.nearest, tolerance=0)
+    return evidence != builder.NODATA
 
 
 def _render(source, manifest, rows, bounds, out, label, baked):
@@ -247,7 +271,9 @@ def _render(source, manifest, rows, bounds, out, label, baked):
         lower, products, cells = [], [], {}
         for i, (row, ds) in enumerate(grids):
             cell = ds.res[0]
-            if ds.transform.b or ds.transform.d or not math.isclose(cell, ds.res[1], rel_tol=1e-6):
+            transform = ds.transform
+            if (transform.a <= 0 or transform.e >= 0 or transform.b or transform.d
+                    or not math.isclose(cell, ds.res[1], rel_tol=1e-6)):
                 raise ValueError('nearshore expects north-up square cells')
             cells['mosaic' if row is None else f'native:{row["id"]}'] = cell
             cap = 13 if row is None else min(builder.source_maxzoom(row), baked.native_max_zoom(cell))
@@ -290,6 +316,7 @@ def _render(source, manifest, rows, bounds, out, label, baked):
                 measured = np.zeros(rgba.shape[:2], dtype=bool)
                 native_core = np.zeros_like(measured)
                 used = []
+                has_evidence = _mosaic_evidence(bg, background, z, x, y, builder) if z > 13 else None
                 if z > 15:
                     background_core, _ = builder.warp_window(bg, background.transform, background.crs, z, x, y, pad=0)
                 for row, image in eligible:
@@ -302,6 +329,9 @@ def _render(source, manifest, rows, bounds, out, label, baked):
                         native_core |= valid
                         measured[valid] = (cert[valid] == 1) & pixels[valid]
                         pixels &= valid
+                    if has_evidence is not None:
+                        # Clip paint without changing the certification test above.
+                        pixels &= has_evidence
                     if tile is not None and pixels.any():
                         rgba[pixels] = tile[pixels]
                         if row is not None:

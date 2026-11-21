@@ -21,12 +21,14 @@ on:
 # unchanged: PRs still select affected core/web areas on Python 3.11 and 3.13.
 # Obsolete PR revisions are cancelled. Per G (2026-11-19), main pushes share
 # one running slot (not cancelled by concurrency) and one pending slot (newest
-# queued wins). Merge groups, schedules and dispatches keep their own run groups.
+# queued wins) on their first attempt. Reruns are isolated so an old revision
+# cannot replace the newest pending tip. Other events keep their own run groups.
 # PR drafts skip every job (review before CI, G 2026-11-19); required CI runs on ready_for_review and on later pushes to a non-draft PR.
 concurrency:
   group: >-
     ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        && format('ci-main-{0}', github.ref)
+        && ((github.run_attempt == '1' && format('ci-main-{0}', github.ref))
+            || format('ci-main-rerun-{0}-{1}', github.run_id, github.run_attempt))
         || format('{0}-{1}-{2}', github.workflow, github.event_name, github.event.pull_request.number || github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -61,6 +63,11 @@ jobs:
   # `check` legs and every part of `survey-tests` to pass.
   # Missing/failed/cancelled prerequisites remain non-success in an active run.
   survey-science:
+    # A skipped draft must not publish the required context. GitHub may leave a
+    # skipped job's name expression unevaluated; neither form is the bare name.
+    name: >-
+      ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == true
+          && 'survey-science (draft: not run)' || 'survey-science' }}
     needs: [changes, survey-tests, check]
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
@@ -87,13 +94,13 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
-    # Every event uses the same parallel parts: the two slowest coast modules
-    # alone, everything else in `rest` (AUD-SC7). The gate
+    # Every event uses the same parallel parts: the two dedicated coast modules
+    # together, everything else in `rest`. The gate
     # reads the aggregate result, which is success only when every leg passes.
     strategy:
       fail-fast: false
       matrix:
-        part: [close-safety, segment-close, rest]
+        part: [coast, rest]
     env:
       REPORT: pytest-survey-${{ matrix.part }}
     steps:
@@ -141,8 +148,7 @@ jobs:
         # `rest` ignores exactly the files the other parts run, so a new test file lands in it.
         run: |
           case "$PART" in
-            close-safety) args="tests/gis/test_coast_close_safety.py" ;;
-            segment-close) args="tests/gis/test_coast_segment_close.py" ;;
+            coast) args="tests/gis/test_coast_close_safety.py tests/gis/test_coast_segment_close.py" ;;
             rest) args="--ignore=tests/gis/test_coast_close_safety.py --ignore=tests/gis/test_coast_segment_close.py" ;;
             *) echo "::error::Unknown full-suite part '$PART'"; exit 1 ;;
           esac

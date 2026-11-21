@@ -1,0 +1,12 @@
+{
+  "schema": "sc-render/1",
+  "region": "southern-california",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "san-diego-reference-harbor-z13", "center": [-117.22, 32.72], "size_m": 4000, "zoom": 13},
+    {"id": "border-z15", "center": [-117.25, 32.6], "size_m": 1200, "zoom": 15},
+    {"id": "channel-islands-north-z13", "center": [-119.95, 34.0], "size_m": 4000, "zoom": 13},
+    {"id": "outer-islands-borderland-z13", "center": [-118.975, 33.175], "size_m": 4000, "zoom": 13}
+  ],
+  "piers": []
+}

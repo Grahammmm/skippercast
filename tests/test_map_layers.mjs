@@ -92,7 +92,7 @@ test('MSK-2: nearshore slot IDs match generated draw_order, including reserved l
 });
 
 // A stale constant or unshifted kit zoom would draw the wrong opacity at the same camera.
-test('MSK-2: all three colour fields use the generated opacity curve at MapLibre zooms', () => {
+test('MSK-2: chlorophyll and swell use the nearshore opacity curve at MapLibre zooms', () => {
   const pairs = NEARSHORE_STYLE.overlays.field_opacity_by_zoom;
   const stops = pairs.map(([zoom]) => zoom - ZOOM_OFFSET);
   assert.deepEqual(stops, [7, 10, 12, 14], 'web kit z8/11/13/15 on the 512px MapLibre zoom scale');
@@ -100,7 +100,6 @@ test('MSK-2: all three colour fields use the generated opacity curve at MapLibre
   const empty = {type: 'FeatureCollection', features: []};
   const checkPaint = curve => {
     for (const [overlay, id, property] of [
-      [waterTempOverlay(sentinel), 'water-temp', 'raster-opacity'],
       [chlorophyllOverlay({}, sentinel, empty), 'chlorophyll', 'fill-opacity'],
       [swellOverlay(sentinel), 'swell', 'raster-opacity'],
     ]) assert.deepEqual(overlay.layers.find(layer => layer.id === id)?.paint[property], curve, id);

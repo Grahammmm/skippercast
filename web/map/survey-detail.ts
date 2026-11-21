@@ -21,8 +21,41 @@ type FootprintProperties = {tier: Tier; grid_m?: number; source?: string; source
 function surveyDetailText(p: Record<string, unknown>): string | null {
   if (p.tier === 'none') return 'No survey';
   if (!finite(p.grid_m) || p.grid_m <= 0 || !text(p.source)) return null;
-  if (p.tier === 'estimated') return `estimated (${p.grid_m} m grid, ${p.source})`;
+  if (p.tier === 'estimated') return `estimated (${p.grid_m} m grid)`;
   return measured(p.tier) && p.grid_m <= maximumGrid[p.tier] ? measuredLabel[p.tier] : null;
+}
+
+// Every finite binary64 is an integer multiple of 2^-1074. Keeping that
+// common scale makes the signed area exact, even for retraced or tiny rings.
+function exactCoordinate(value: number, bits: DataView): bigint {
+  bits.setFloat64(0, value);
+  const raw = bits.getBigUint64(0);
+  const exponent = Number((raw >> 52n) & 0x7ffn);
+  const fraction = raw & ((1n << 52n) - 1n);
+  const magnitude = exponent === 0 ? fraction : (fraction | (1n << 52n)) << BigInt(exponent - 1);
+  return raw >> 63n ? -magnitude : magnitude;
+}
+
+function validRing(ring: unknown): boolean {
+  if (!Array.isArray(ring) || ring.length < 4) return false;
+  for (const pt of ring) {
+    if (!Array.isArray(pt) || pt.length !== 2 ||
+        !finite(pt[0]) || Math.abs(pt[0]) > 180 || !finite(pt[1]) || Math.abs(pt[1]) > 90) return false;
+  }
+  const [x0, y0] = ring[0];
+  const [lastX, lastY] = ring[ring.length - 1];
+  if (x0 !== lastX || y0 !== lastY) return false;
+
+  const bits = new DataView(new ArrayBuffer(8));
+  let twiceArea = 0n;
+  let previousX = exactCoordinate(x0, bits), previousY = exactCoordinate(y0, bits);
+  for (let i = 1; i < ring.length; i++) {
+    const x = exactCoordinate(ring[i][0], bits), y = exactCoordinate(ring[i][1], bits);
+    twiceArea += previousX * y - previousY * x;
+    previousX = x;
+    previousY = y;
+  }
+  return twiceArea !== 0n;
 }
 
 /** MB-09 writes Polygon or MultiPolygon with holes. Retain the actual geometry,
@@ -43,10 +76,7 @@ export function decodeSurveyDetail(region: string, value: unknown, reviewedSourc
     if (p.grid_tier !== undefined && (p.grid_tier !== '4-16m-compiled' || p.tier !== 'estimated')) return null;
     const coordinates = g.coordinates;
     function polygon(value: unknown): value is number[][][] {
-      return Array.isArray(value) && value.length > 0 && value.every(ring =>
-        Array.isArray(ring) && ring.length >= 4 && ring.every(pt => Array.isArray(pt) && pt.length === 2 &&
-          finite(pt[0]) && Math.abs(pt[0]) <= 180 && finite(pt[1]) && Math.abs(pt[1]) <= 90) &&
-        ring[0][0] === ring.at(-1)[0] && ring[0][1] === ring.at(-1)[1]);
+      return Array.isArray(value) && value.length > 0 && value.every(validRing);
     }
     const geometry = g.type === 'Polygon' && polygon(coordinates) ? {type: 'Polygon' as const, coordinates}
       : g.type === 'MultiPolygon' && Array.isArray(coordinates) && coordinates.length && coordinates.every(polygon)
@@ -107,7 +137,7 @@ export function surveyDetailLayers(source: string, id: string, pattern: string, 
     {id: `${id}-outline`, source, type: 'line',
       paint: {'line-color': p.mapSurveyInk, 'line-width': 1.4, 'line-dasharray': [4, 3]}},
     {id: `${id}-label`, source, type: 'symbol',
-      layout: {'text-field': ['case', ['==', tier, 'estimated'], 'estimated', ['get', 'label']],
+      layout: {'text-field': ['get', 'label'],
         'text-font': [LABEL_FONT], 'text-size': 11},
       paint: {'text-color': p.mapSurveyInk, 'text-halo-color': p.mapSurveyHalo, 'text-halo-width': 1.4}},
   ];

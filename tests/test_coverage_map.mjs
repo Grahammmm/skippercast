@@ -7,6 +7,67 @@ import {coverageModel, renderMap, renderList} from '../dist/coverage-map.js';
 const index = JSON.parse(readFileSync(new URL('../dist/regions/index.json', import.meta.url), 'utf8'));
 const region = (id, bounds, extra = {}) => ({id, name: id, status: 'preview', fishing_bounds: bounds, ...extra});
 const hrefs = html => [...html.matchAll(/<a href="([^"]+)">/g)].map(m => m[1]);
+const bounds = [-123, 35, -122, 36];
+const tick = () => new Promise(resolve => setImmediate(resolve));
+const json = body => new Response(JSON.stringify(body));
+const pointer = id => ({
+  region: id, status: 'reviewed', private: false, bounds, minzoom: 13, maxzoom: 13,
+  sha256: 'a'.repeat(64), bytes: 4096, digest_root_sha256: 'b'.repeat(64),
+  release_sha256: 'c'.repeat(64), envelope_sha256: 'd'.repeat(64),
+  sources: [{id: 'fixture-survey', attribution: 'Fictional Survey Institute', label: 'measured',
+    vertical_datum: 'NAVD88', survey_dates: ['2025-01-01'], rights_class: 'public', rights: {public_display: 'allowed'}}],
+  detail_summary: {mask: 'transparent-nodata', depth_bands: [
+    {source_id: 'fixture-survey', min_depth_m: 0, max_depth_m: 20, resolution_m: 2, support_class: 3}]},
+  native_support_by_zoom: {13: {tiles: 1, limit_m: 91.44, sources: []}},
+});
+
+// Model only the DOM boundary of the page: installing markup creates the row
+// labels, and updating their contents leaves each surrounding row intact.
+function listHost() {
+  let html = '', labels = [];
+  return {
+    set innerHTML(value) {
+      html = value;
+      labels = [...html.matchAll(/<span data-depth-region="([^"]+)">([^<]*)<\/span>/g)]
+        .map(([, id, initial]) => {
+          let contents = initial;
+          return {
+            dataset: {depthRegion: id},
+            set textContent(value) { contents = value; },
+            get textContent() { return contents.replace(/<[^>]+>/g, ''); },
+            set innerHTML(value) { contents = value; },
+            get innerHTML() { return contents; },
+          };
+        });
+    },
+    get innerHTML() {
+      let i = 0;
+      return html.replace(/(<span data-depth-region="[^"]+">)[^<]*/g, (_, open) => open + labels[i++].innerHTML);
+    },
+    querySelectorAll: selector => selector === '[data-depth-region]' ? labels : [],
+    states: () => labels.map(label => [label.dataset.depthRegion, label.textContent]),
+  };
+}
+
+async function loadPage(mock, name, fetcher, {lang = 'en', heading, list = listHost()} = {}) {
+  const nodes = {'coverage-map': {}, 'coverage-list': list};
+  const doc = {documentElement: {lang: 'en'}, getElementById: id => nodes[id],
+    querySelectorAll: selector => selector === '[data-i18n]' && heading ? [heading] : []};
+  const original = {document: globalThis.document, location: globalThis.location};
+  globalThis.document = doc;
+  globalThis.location = {search: `?lang=${lang}`};
+  mock.method(globalThis, 'fetch', fetcher);
+  try {
+    await import(`../dist/coverage-map.js?${name}`);
+    await tick();
+    return {doc, svg: nodes['coverage-map'].innerHTML, list};
+  } finally {
+    for (const [key, value] of Object.entries(original)) {
+      if (value === undefined) delete globalThis[key];
+      else globalThis[key] = value;
+    }
+  }
+}
 
 test('published regions are sorted, mapped within the viewBox, and linked exactly', () => {
   const model = coverageModel(index);
@@ -109,32 +170,88 @@ test('page uses the public index and handles network and HTTP failures in the co
   }
 });
 
-test('coverage_page_spanish: localizes the page and map without renaming regions', {timeout: 2000}, async ({mock}) => {
+// A forgotten catalogue projection or fall-through to English breaks the translated row states.
+test('C1: Spanish Coverage localizes the Sources link and keeps region names', async ({mock}) => {
   const page = readFileSync(new URL('../dist/coverage.html', import.meta.url), 'utf8');
   const heading = {textContent: 'Coverage', getAttribute: () => page.match(/<h1 data-i18n="([^"]+)"/)?.[1]};
-  const rendered = Promise.withResolvers(), nodes = {'coverage-map': {}, 'coverage-list': {set innerHTML(value) { rendered.resolve(value); }}};
-  const doc = {documentElement: {lang: 'en'}, getElementById: id => nodes[id],
-    querySelectorAll: selector => selector === '[data-i18n]' && heading.getAttribute() ? [heading] : []};
-  mock.method(globalThis, 'fetch', async () => ({ok: true, json: async () => ({regions: [
-    region('point-reyes', [-123, 37, -122, 38], {name: 'Point Reyes'}), null]})}));
-  const location = globalThis.location;
-  try {
-    globalThis.location = {search: '?lang=es'};
-    globalThis.document = doc;
-    await import('../dist/coverage-map.js?spanish');
-    const list = await rendered.promise;
-    assert.equal(doc.documentElement.lang, 'es');
-    assert.equal(heading.textContent, 'Cobertura');
-    assert.match(page, /<noscript>.*lang="es"/);
-    assert.match(nodes['coverage-map'].innerHTML, /<title>Point Reyes — Vista previa<\/title>/);
-    assert.match(list, /Point Reyes — Vista previa \(revisión incompleta; consulta el aviso\)/);
-    assert.match(list, /Regiones que no se pudieron dibujar: 1/);
-    assert.match(renderList(coverageModel(null), 'es'), /No se pudo leer la lista de regiones/);
-  } finally { globalThis.location = location; delete globalThis.document; }
+  const {doc, svg, list} = await loadPage(mock, 'spanish', async url => {
+    if (url === '/regions/index.json') return json({regions: [region('point-reyes', bounds, {name: 'Point Reyes'}), region('other', bounds), null]});
+    if (url === '/catalog/relief/point-reyes.json') return json(pointer('point-reyes'));
+    return new Response(null, {status: 404});
+  }, {lang: 'es', heading});
+  assert.equal(doc.documentElement.lang, 'es');
+  assert.equal(heading.textContent, 'Cobertura');
+  assert.match(page, /<noscript>.*lang="es"/);
+  assert.match(svg, /<title>Point Reyes — Vista previa<\/title>/);
+  assert.match(list.innerHTML, /Point Reyes — Vista previa \(revisión incompleta; consulta el aviso\)/);
+  assert.match(list.innerHTML, /Regiones que no se pudieron dibujar: 1/);
+  assert.match(renderList(coverageModel(null), 'es'), /No se pudo leer la lista de regiones/);
+  assert.deepEqual(list.states(), [['point-reyes', 'Mapa de profundidad: disponible — Fuentes'], ['other', 'Mapa de profundidad: aún no disponible']]);
+  assert.deepEqual(hrefs(list.innerHTML), ['/map?region=point-reyes', '/sources#region-point-reyes', '/map?region=other']);
 });
 
-test('coverage_english_identical', () => {
+// A 200 response alone is not readiness; transport and JSON exceptions also need a final state.
+test('C1: English Coverage links only decoder-ready pointers to their credits', async ({mock}) => {
+  const cases = {
+    ready: () => json(pointer('ready')),
+    missing: () => new Response(null, {status: 404}),
+    failed: () => new Response(null, {status: 503}),
+    offline: () => { throw new TypeError('offline'); },
+    malformed: () => new Response('{bad json'),
+    null: () => json(null),
+    wrong: () => json(pointer('ready')),
+    held: () => json({...pointer('held'), status: 'held', previous: pointer('held')}),
+    private: () => json({...pointer('private'), private: true}),
+    identity: () => json({...pointer('identity'), digest_root_sha256: 'invalid'}),
+    metadata: () => json({...pointer('metadata'), detail_summary: null}),
+    resolution: () => json({...pointer('resolution'), native_support_by_zoom: {}}),
+  };
+  const ids = Object.keys(cases);
+  const {list} = await loadPage(mock, 'english-states', async url => {
+    if (url === '/regions/index.json') return json({regions: ids.map(id => region(id, bounds))});
+    return cases[url.match(/^\/catalog\/relief\/([a-z]+)\.json$/)?.[1]]();
+  });
+  assert.deepEqual(list.states(), [['ready', 'Depth map: live — Sources'], ...ids.slice(1).map(id => [id, 'Depth map: not yet'])]);
+  assert.deepEqual(hrefs(list.innerHTML), ['/map?region=ready', '/sources#region-ready', ...ids.slice(1).map(id => `/map?region=${id}`)]);
+});
+
+// Hold the first fetch open: a sequential or all-or-nothing implementation stalls the other label.
+test('C2: render before parallel GETs and make no additional requests for credits', async ({mock}) => {
+  const first = Promise.withResolvers(), list = listHost(), requests = [];
+  const {svg} = await loadPage(mock, 'parallel', async (url, options) => {
+    requests.push([url, options?.method ?? 'GET', options?.redirect, hrefs(list.innerHTML)]);
+    if (url === '/regions/index.json') return json({regions: [
+      region('north', bounds), region('south', bounds), region('north', bounds), region('retired', bounds, {status: 'retired'})]});
+    if (url === '/catalog/relief/north.json') return first.promise;
+    throw new TypeError('offline');
+  }, {list});
+  const links = ['/map?region=north', '/map?region=south', '/map?region=north'];
+  const expected = [
+    ['/regions/index.json', 'GET', undefined, []],
+    ['/catalog/relief/north.json', 'GET', 'error', links],
+    ['/catalog/relief/south.json', 'GET', 'error', links],
+  ];
+  assert.deepEqual(requests, expected);
+  assert.deepEqual(list.states(), [['north', 'Depth map: checking…'], ['south', 'Depth map: not yet'], ['north', 'Depth map: checking…']]);
+  assert.deepEqual(hrefs(svg), []);
+  first.resolve(json(pointer('north')));
+  await tick();
+  assert.deepEqual(requests, expected);
+  assert.deepEqual(list.states(), [['north', 'Depth map: live — Sources'], ['south', 'Depth map: not yet'], ['north', 'Depth map: live — Sources']]);
+  assert.deepEqual(hrefs(list.innerHTML), ['/map?region=north', '/sources#region-north', '/map?region=south', '/map?region=north', '/sources#region-north']);
+});
+
+// A valid pointer carries attribution; rendering that payload instead of just its state leaks it here.
+test('C2: Coverage shows a generic credits link without source names or IDs', async ({mock}) => {
+  const {svg, list} = await loadPage(mock, 'no-sources', async url => url === '/regions/index.json'
+    ? json({regions: [region('port', bounds)]}) : json(pointer('port')));
+  assert.equal(list.innerHTML, '<ul><li><a href="/map?region=port">port — Preview (not fully reviewed; see its banner)</a> — <span data-depth-region="port">Depth map: live — <a href="/sources#region-port">Sources</a></span></li></ul>');
+  assert.doesNotMatch(svg, /Fictional Survey Institute|fixture-survey/);
+});
+
+test('coverage English map, region links and messages retain their existing copy', () => {
   const models = [coverageModel({regions: [region('port', [-123, 35, -122, 36], {name: 'Port & Bay', status: 'active'}), region('preview', [-123, 36, -122, 37]), null]}), coverageModel(null), coverageModel({regions: []})];
-  const html = models.map(m => renderMap(m, {lang: 'en'}) + renderList(m, 'en')).join('\n');
+  const html = models.map(m => renderMap(m, {lang: 'en'}) + renderList(m, 'en')).join('\n')
+    .replaceAll(/ — <span data-depth-region="[^"]+">Depth map: checking…<\/span>/g, '');
   assert.equal(createHash('sha256').update(html).digest('hex'), 'e12561220690ddb4f77f49598ce2a3a56fddfec2cfac4c83c261e51aad6716c0');
 });

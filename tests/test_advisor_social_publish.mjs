@@ -257,6 +257,32 @@ dbTest('a story: STORIES with the derived story.jpg and no caption; the Page pho
   assert.deepEqual([row.status, row.fb_story_id, row.fb_post_id], ['posted', '100000000000501', null]);
 });
 
+// H8 #13 contract: a Story's insights window runs from Instagram's own success, not the first surface's: an Instagram Story that
+// succeeds 25 h after the Page Story is still read for its 24 h, and posted_at (first success) is unchanged for other consumers.
+// Bug caught: both Story eligibility checks used posted_at, so a late Instagram success was already 'too old' when it went up.
+dbTest('a Story whose Instagram success comes 25 h after the Page Story keeps posted_at and is read by both Story insights checks for its own 24 h', async () => {
+  const I = await import('../server/advisor/social/insights.ts');
+  let failIg = true;
+  const s = setup(), fake = graphFake({on: {[`POST /${IG}/media`]: () => (failIg ? jsonResponse(fixture('error-unknown-field'), 400) : null)}});
+  addMedia(s.sql, 'm1'); addPost(s.sql, {kind: 'story'});
+  assert.equal((await quiet(() => P.publish(s.env, 'p1', deps(s, fake).deps))).value.outcome, 'partial', 'the Page Story went up at T0; Instagram failed');
+  failIg = false;
+  const late = deps(s, fake);
+  late.clock.t = T0 + 25 * HOUR;
+  assert.equal((await quiet(() => P.publish(s.env, 'p1', late.deps, {retry: true}))).value.outcome, 'posted');
+  const reads = [];
+  const insights = {fetcher: async url => { reads.push(new URL(url).pathname); return jsonResponse(fixture('insights-story')); }, sleep: async () => {}};
+  const tick = await quiet(() => I.storyInsightsTick(s.env, T0 + 26 * HOUR, insights));
+  assert.deepEqual(tick.value, {posts: 1, instagram: 1, facebook: 0, failed: 0}, 'the hourly Story tick reads it 1 h after Instagram took it');
+  const slot = await quiet(() => I.collectInsights(s.env, T0 + 27 * HOUR, insights));
+  assert.deepEqual([slot.value.instagram, slot.value.failed], [1, 0], 'the 03:00 slot does not treat it as expired either');
+  assert.equal(reads.filter(p => p.endsWith('/17890000000000202/insights')).length, 2);
+  const row = postRow(s.sql);
+  assert.deepEqual([row.posted_at, row.ig_posted_at, row.ig_media_id], [iso(T0), iso(T0 + 25 * HOUR), '17890000000000202'], 'first success unchanged; Instagram\'s own time kept');
+  // Past Instagram's own 24 h it is no longer read.
+  assert.equal(await I.storyInsightsTick(s.env, T0 + 49 * HOUR + 1, insights), 'idle');
+});
+
 // ---- quota -------------------------------------------------------------------------------------------
 
 dbTest('quota used up: no container, back to approved an hour later (from now for a past time, from the time when it is later), recorded', async () => {
@@ -337,6 +363,107 @@ dbTest('both surfaces failing is failed; a retry tries both again', async () => 
   assert.equal(fake.count('POST', `/${IG}/media`), 2);
   assert.equal(fake.count('POST', `/${PAGE}/photos`), 2);
 });
+
+/** A D1 that goes away at the post's Page-id write (the run stops after Meta accepted the create): that write and everything after it fail. */
+function lostAckDb(db) {
+  let down = false;
+  const gone = () => { down = true; throw Error('D1_ERROR: network connection lost'); };
+  return {
+    prepare(q) {
+      const st = db.prepare(q), lost = /SET fb_(post|story)_id=/.test(q);
+      return {
+        bind(...a) { st.bind(...a); return this; },
+        async first() { return down ? gone() : st.first(); },
+        async all() { return down ? gone() : st.all(); },
+        async run() { return down || lost ? gone() : st.run(); },
+      };
+    },
+    async batch(queries) { return down ? gone() : db.batch(queries); },
+  };
+}
+const publishState = (sql, id = 'p1') => JSON.parse(sql.prepare('SELECT value FROM job_state WHERE key=?').get(`advisor.publish.${id}`)?.value ?? 'null');
+
+// H8 #1 contract: a Page create is never issued twice for one post when Meta accepted it but the run lost the acknowledgement
+// (restart or admin retry holds it for reconciliation); a definite rejection still allows the retry. Bug caught: the create
+// runs before anything durable records it, so a resumed `publishing` post creates a second public Page post.
+dbTest('a Page create accepted by Meta whose id write is lost is held for reconciliation on restart and retry, never created twice; a definite rejection may retry', async () => {
+  const s = setup(), fake = graphFake();
+  addMedia(s.sql, 'm1'); addPost(s.sql, {targets: ['facebook']});
+  const lost = await quiet(() => P.publish({...s.env, DB: lostAckDb(s.db)}, 'p1', deps(s, fake).deps));
+  assert.equal(lost.value.outcome, 'error');
+  assert.equal(fake.count('POST', `/${PAGE}/photos`), 1, 'Meta accepted the create');
+  assert.deepEqual([postRow(s.sql).status, postRow(s.sql).fb_post_id], ['publishing', null], 'neither the id nor an outcome was stored');
+  // The restart (the lease has expired): the cron resumes the `publishing` post.
+  const restart = deps(s, fake);
+  restart.clock.t = T0 + P.LEASE_MS + 60000;
+  const resumed = await quiet(() => P.publishDue(s.env, restart.clock.t, restart.deps));
+  assert.deepEqual(resumed.value.outcomes, ['failed']);
+  assert.equal(fake.count('POST', `/${PAGE}/photos`), 1, 'no second Page post');
+  assert.match(postRow(s.sql).error, /^facebook: Page create outcome unknown after an interrupted photo create; reconcile before retrying$/);
+  assert.equal(publishState(s.sql).fb_uncertain, true);
+  // An admin retry does not create it either.
+  await quiet(() => P.publish(s.env, 'p1', restart.deps, {retry: true}));
+  assert.equal(fake.count('POST', `/${PAGE}/photos`), 1);
+  assert.equal(postRow(s.sql).status, 'failed');
+
+  // Control: a definite rejection leaves no marker, and the admin retry creates the post once.
+  let reject = true;
+  const d = setup(), page = graphFake({on: {[`POST /${PAGE}/photos`]: () => (reject ? jsonResponse(fixture('error-page-photo'), 400) : null)}});
+  addMedia(d.sql, 'm1'); addPost(d.sql, {targets: ['facebook']});
+  assert.equal((await quiet(() => P.publish(d.env, 'p1', deps(d, page).deps))).value.outcome, 'failed');
+  assert.deepEqual([publishState(d.sql).fb_pending, publishState(d.sql).fb_uncertain], [undefined, undefined]);
+  reject = false;
+  assert.equal((await quiet(() => P.publish(d.env, 'p1', deps(d, page).deps, {retry: true}))).value.outcome, 'posted');
+  assert.deepEqual([page.count('POST', `/${PAGE}/photos`), postRow(d.sql).fb_post_id], [2, '100000000000001_100000000000302']);
+  assert.equal(publishState(d.sql), null, 'the per-post state is cleared once posted');
+});
+
+// H8 #1: a lost or unusable acknowledgement of a final Page publish must hold for reconciliation.
+// Without the hold, an admin retry can create a second Story or Reel. Definite failures must still allow retry.
+for (const [kind, phase, label, respond, uncertain] of [
+  ['reel', 'finish', '500', () => jsonResponse({}, 500), true],
+  ['reel', 'finish', 'network failure', () => { throw new TypeError('synthetic connection loss'); }, true],
+  ['story', undefined, '500', () => jsonResponse({}, 500), true],
+  ['story', undefined, '200 without post_id', () => jsonResponse({success: true}), true],
+  ['story', undefined, 'definite Graph 400', () => jsonResponse(fixture('error-page-photo'), 400), false],
+  ['reel', 'start', '500', () => jsonResponse({}, 500), false],
+  // Explicit rejection must permit retry: checking the ID alone holds the first case and falsely publishes the second.
+  ['story', undefined, '200 success:false without post_id', () => jsonResponse({success: false}), false],
+  ['story', undefined, '200 success:false with post_id', () => jsonResponse({success: false, post_id: `${PAGE}_100000000000399`}), false],
+]) {
+  const reel = kind === 'reel', edge = reel ? 'video_reels' : 'photo_stories';
+  dbTest(`H8 #1 Page ${kind} ${phase ?? 'create'}: ${label} ${uncertain ? 'holds for reconciliation' : 'permits retry'}`, async () => {
+    const s = setup(), path = `/${PAGE}/${edge}`;
+    let reject = true, failures = 0;
+    const fake = graphFake({on: {[`POST ${path}`]: ({params}) => {
+      if (!reject || params.upload_phase !== phase) return;
+      failures++;
+      return respond();
+    }}});
+    addMedia(s.sql, 'm1', {kind: reel ? 'video' : 'image'});
+    addPost(s.sql, {kind, targets: [reel ? 'facebook' : 'facebook_story']});
+    const {value: first} = await quiet(() => P.publish(s.env, 'p1', deps(s, fake).deps));
+    assert.equal(first.outcome, 'failed');
+    assert.ok(first.error, 'the run reports a Page publish error');
+    assert.ok(failures > 0, 'the intended provider phase failed');
+    const {fb_pending, fb_uncertain} = publishState(s.sql);
+    const before = fake.count('POST', path);
+    reject = false;
+    const {value: retry} = await quiet(() => P.publish(s.env, 'p1', deps(s, fake).deps, {retry: true}));
+    const retryPosts = fake.count('POST', path) - before;
+    if (uncertain) {
+      assert.deepEqual({pending: fb_pending?.op, uncertain: fb_uncertain, retryPosts, retryOutcome: retry.outcome},
+        {pending: kind, uncertain: true, retryPosts: 0, retryOutcome: 'failed'}, 'retain the hold and issue no Page POST on retry');
+      assert.equal(failures, 1, 'the ambiguous final POST is not retried within the first run either');
+      assert.match(first.error, /reconcile before retrying/);
+      assert.deepEqual(publishState(s.sql).fb_pending, fb_pending, 'the admin retry leaves the marker intact');
+    } else {
+      assert.deepEqual([fb_pending, fb_uncertain], [undefined, undefined], 'no reconciliation hold for a definite failure');
+      assert.equal(retry.outcome, 'posted');
+      assert.equal(retryPosts, reel ? 2 : 1, 'the admin retry issues a new publish');
+    }
+  });
+}
 
 // ---- idempotency --------------------------------------------------------------------------------------------------
 

@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "fort-bragg-point-arena",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "noyo-harbor-z13", "center": [-123.805, 39.425], "size_m": 4000, "zoom": 13},
+    {"id": "noyo-outer-z15", "center": [-123.87, 39.425], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}

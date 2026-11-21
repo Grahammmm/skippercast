@@ -175,3 +175,74 @@ dbTest('real code: failed counts retain per-metric measurements or report unavai
   const recovered = await s.latest();
   for (const m of METRICS) assert.deepEqual(recovered[m], {value: 0, stale: false, measuredAt: iso(T0 + DAY + HOUR)});
 });
+
+// ---- H8 #6 / #7: legacy history and overlapping writers ---------------------------------------------------------
+
+function postDb() {
+  const {sql, db} = advisorDatabase();
+  sql.prepare(`INSERT INTO advisor_posts(id,kind,region,media_json,caption,targets_json,status,fb_post_id,created_by,posted_at,created_at,updated_at)
+    VALUES('p1','photo','morro-bay','[]','c','["facebook"]','posted',?,'engine',?,?,?)`).run(FB_POST, iso(T0 - 3 * DAY), iso(T0 - 3 * DAY), iso(T0 - 3 * DAY));
+  return {sql, db};
+}
+const engagementOf = async db => {
+  const fb = (await I.postStats(db, {id: 'p1', ig_media_id: null})).facebook;
+  return {reach: fb.reach, ...Object.fromEntries(METRICS.map(m => [m, {value: fb[m], ...fb.engagement[m]}]))};
+};
+
+// H8 #6 contract: a latest legacy row missing a metric shows the latest EARLIER measured value (a measured zero stays 0) with its
+// measurement time; a metric the latest row measured is left alone. Bug caught: only the latest row is consulted, so the metric reads unavailable.
+dbTest('legacy rows: an absent metric resolves to the latest earlier measured value with its time; a measured zero is not missing; newer values stay', async () => {
+  const {sql, db} = postDb();
+  const legacy = sql.prepare('INSERT INTO advisor_post_stats(post_id,platform,day,reach,likes,comments,shares,raw_json,fetched_at) VALUES(?,?,?,?,?,?,?,?,?)');
+  legacy.run('p1', 'facebook', '2026-10-02', 700, 40, 3, 2, JSON.stringify({metrics: {post_impressions_unique: 700, reactions: 40, comments: 3, shares: 2}}), iso(T0 - 3 * DAY));
+  legacy.run('p1', 'facebook', '2026-10-03', 760, 57, 0, 2, JSON.stringify({metrics: {post_impressions_unique: 760, reactions: 57, comments: 0}}), iso(T0 - 2 * DAY));
+  legacy.run('p1', 'facebook', '2026-10-04', 812, 0, 0, 9, JSON.stringify({metrics: {post_impressions_unique: 812, shares: 9}, notes: ['reactions: not returned', 'comments: not returned']}), iso(T0 - DAY));
+  assert.deepEqual(await engagementOf(db), {
+    reach: 812,
+    likes: {value: 57, stale: true, measuredAt: iso(T0 - 2 * DAY)},       // the latest earlier measurement, not the oldest
+    comments: {value: 0, stale: true, measuredAt: iso(T0 - 2 * DAY)},     // a measured zero, not unavailable and not the older 3
+    shares: {value: 9, stale: false, measuredAt: iso(T0 - DAY)},          // measured in the latest row: left alone
+  });
+});
+
+/** Facebook readings as readFacebook returns them; an omitted metric was not returned. */
+const fbReading = ({reach, likes, comments, shares}) => {
+  const metrics = {post_impressions_unique: reach, ...(likes === undefined ? {} : {reactions: likes}), ...(comments === undefined ? {} : {comments}), ...(shares === undefined ? {} : {shares})};
+  return {columns: {views: 0, reach, likes: likes ?? 0, comments: comments ?? 0, saved: 0, shares: shares ?? 0, follows: 0, profile_visits: 0, link_taps: 0}, metrics, notes: []};
+};
+/** A D1 where `between` runs once, just before the first advisor_post_stats write: another run's write landing between our lookup and our write. */
+function interleaved(db, between) {
+  let fired = false;
+  return {
+    prepare(q) {
+      const st = db.prepare(q);
+      if (fired || !/^\s*(INSERT INTO|UPDATE) advisor_post_stats/.test(q)) return st;
+      return {bind(...a) { st.bind(...a); return this; }, first: () => st.first(), all: () => st.all(),
+        async run() { if (!fired) { fired = true; await between(); } return st.run(); }};
+    },
+    batch: queries => db.batch(queries),
+  };
+}
+
+// H8 #7 contract: per-metric measured state survives overlapping sparse and complete reads in either landing order, and a reading
+// older than everything stored changes nothing. Bug caught: lookup and upsert outside one atomic step, so the later write drops
+// (or the stale-row guard discards) the measurement the other run wrote in between.
+dbTest('overlapping sparse and complete reads keep every metric\'s newest measurement in both orders; a genuinely stale reading is rejected', async () => {
+  const complete = fbReading({reach: 800, likes: 58, comments: 7, shares: 4}), sparse = fbReading({reach: 820, likes: 60, shares: 5});
+  const t1 = T0 + HOUR, t2 = T0 + 2 * HOUR;
+  const expected = {reach: 820, likes: {value: 60, stale: false, measuredAt: iso(t2)}, comments: {value: 7, stale: true, measuredAt: iso(t1)},
+    shares: {value: 5, stale: false, measuredAt: iso(t2)}};
+  // The newer sparse run looked up first; the older complete run's write lands before the sparse write.
+  const a = postDb();
+  await I.saveReading(interleaved(a.db, () => I.saveReading(a.db, 'p1', 'facebook', complete, t1)), 'p1', 'facebook', sparse, t2);
+  assert.deepEqual(await engagementOf(a.db), expected, 'sparse write after an interleaved complete write');
+  // The reverse: the older complete run looked up first; the newer sparse write lands before it.
+  const b = postDb();
+  await I.saveReading(interleaved(b.db, () => I.saveReading(b.db, 'p1', 'facebook', sparse, t2)), 'p1', 'facebook', complete, t1);
+  assert.deepEqual(await engagementOf(b.db), expected, 'complete write after an interleaved sparse write: the same result');
+  assert.equal(a.sql.prepare('SELECT COUNT(*) AS n FROM advisor_post_stats').get().n, 1);
+  // Genuinely stale: a reading older than every stored measurement leaves the row byte-for-byte unchanged.
+  const before = {...b.sql.prepare('SELECT * FROM advisor_post_stats').get()};
+  await I.saveReading(b.db, 'p1', 'facebook', fbReading({reach: 1, likes: 1, comments: 1, shares: 1}), T0);
+  assert.deepEqual({...b.sql.prepare('SELECT * FROM advisor_post_stats').get()}, before);
+});

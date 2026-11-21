@@ -3,17 +3,20 @@ from collections import defaultdict
 import contextlib
 from importlib.util import module_from_spec, spec_from_file_location
 import json
+import logging
+import math
 
 from skippercast.paths import repo_root
 from skippercast.platform import depth_contours as dc
 from skippercast.platform.contracts import atomic_json, load_catalogs, load_region, owner_display_cleared
-from skippercast.relief import package, receipts
+from skippercast.relief import package, receipts, render_config
 
 UPSTREAM = ('select', 'mosaic:public')
 TARGET = 'layers/contours'
 SCRIPT = 'scripts/build_depth_contours.py'
 CODE_FILES = (SCRIPT, 'scripts/preflight_native_grid.py', 'skippercast.platform.depth_contours',
-              'skippercast.platform.contracts', 'skippercast.relief.package')
+              'skippercast.platform.contracts', 'skippercast.relief.package', 'skippercast.style',
+              'skippercast.relief.render_config')
 MOSAIC = 'mosaic/public'
 
 # Morro Bay's measured 10 m lattice is 130,452,268 cells. Larger regions that
@@ -167,7 +170,15 @@ def plan(ctx):
             inputs.append(receipts.Input(support, f'support:{tile}'))
         entries.append((row, grid, sidecar, side_pin, support))
     ctx.contour_job = (tool, region, sources, entries, {r['id'] for r in native}, manifest, manifest_path.parent)
-    return receipts.Plan(inputs, {'set': 'ft-v2', 'refused_sources': refused})
+    version, tokens = render_config.resolve_style(ctx.region.id)
+    params = {'set': dc.FT_V2, 'refused_sources': refused}
+    ctx.contour_view = tokens.view('contours') if tokens is not None else None
+    if ctx.contour_view is not None:
+        digest = ctx.contour_view.digest('contours')
+        entry = read(render_config.repo_root() / 'style/index.json')['versions'][version]
+        ctx.contour_style = {'built_with': version, 'sha256': entry['sha256'], 'contours': digest}
+        params.update(set=dc.FT_V3, contours=digest)
+    return receipts.Plan(inputs, params)
 
 
 def mosaic_samples(elevation, contributor, feather):
@@ -287,7 +298,7 @@ def trace(job):
         ident, (original, datum) = row['source_id'], identities[i]
         src = sources[ident]
         entry = listed.setdefault(ident, {'source_id': ident, 'name': src['name'], 'url': src['documentation_url'],
-                                          'attribution': src['rights']['attribution'], 'survey_date': str(src['survey_year']),
+                                          'attribution': src['rights']['attribution'], 'survey_date': dc.selected_survey_date(src),
                                           'vertical_datum': datum, 'native_cell_m': None, 'supported_blocks': 0,
                                           'original_sha256s': set()})
         if datum != entry['vertical_datum']:
@@ -340,19 +351,88 @@ def trace(job):
             'provenance': provenance}, {'native_fallbacks': fallback, 'mosaic_gap_blocks': int(gaps.sum())}
 
 
+def trace_v3(job, view):
+    tool, region, sources, entries, native_ids, _, _ = job
+    listed, features = {}, []
+    for i, (row, path, sidecar, side_pin, support) in enumerate(entries):
+        ident = row['source_id']
+        source = sources[ident]
+        convention = row['value_convention']
+        if convention not in ('elevation_positive_up', 'depth_positive_down'):
+            raise ValueError(f'{ident}: unknown value_convention {convention!r}')
+        if receipts.sha256_file(path) != row['sha256']:
+            raise ValueError(f'{ident}: selected grid hash changed')
+        with tool.open_geotiff(path, normalized=True) as grid, contextlib.ExitStack() as stack:
+            original, datum = row['sha256'], source.get('vertical_datum')
+            measured = None
+            if sidecar is not None:
+                if receipts.sha256_file(sidecar) != side_pin or receipts.sha256_file(support) != row['support_sha256']:
+                    raise ValueError(f'{ident}: selected sidecar or support hash changed')
+                original, _, datum = tool.normalized_identity(ident, grid, sidecar, datum)
+                tool.verify_support_binding(ident, sidecar, support)
+                measured = stack.enter_context(tool.open_geotiff(support, normalized=True))
+            if row['vertical_datum'] not in ('unstated', datum):
+                raise ValueError(f'{ident}: selected datum differs from the reviewed original')
+            common = {'source_id': ident, 'survey_date': dc.selected_survey_date(source),
+                      'vertical_datum': datum or dc.UNVERIFIED_DATUM}
+            certified = (row['id'] in native_ids and row.get('support_class_cap') == 3
+                         and (row.get('max_zoom') or 0) >= 16)
+            # The selection/sidecar checks above bind the original identity. A normalized
+            # tile's resolution describes its output pixels, not the original sampling.
+            map_key = 'native_resolution_m_by_original_sha256'
+            if map_key in source:
+                reviewed = source[map_key]
+                native = (reviewed.get(original) if isinstance(reviewed, dict)
+                          and 'native_resolution_m' not in source else None)
+            else:
+                native = source.get('native_resolution_m')
+            if not (isinstance(native, (int, float)) and not isinstance(native, bool) and 0 < native < math.inf):
+                logging.getLogger(__name__).warning(
+                    '%s/%s: missing or invalid reviewed original native resolution; withholding ft-v3 contours',
+                    ident, row['id'])
+                native = None
+            lines = list(tool.v3_grid(grid, region, view, common, native, support=measured, certified=certified,
+                                      positive_down=convention == 'depth_positive_down'))
+            if not lines:
+                continue
+            entry = listed.setdefault(ident, {**common, 'name': source['name'], 'url': source['documentation_url'],
+                                              'attribution': source['rights']['attribution'], 'hashes': set(),
+                                              'native_cell_m': grid.res[0]})
+            if entry['vertical_datum'] != common['vertical_datum']:
+                raise ValueError(f'{ident}: selected tiles disagree on vertical datum')
+            entry['hashes'].add(original)
+            entry['native_cell_m'] = max(entry['native_cell_m'], grid.res[0])
+            for feature in lines:
+                feature['id'] += f'-{i}'
+            features.extend(lines)
+    for entry in listed.values():
+        hashes = sorted(entry.pop('hashes'))
+        entry['sha256'] = hashes[0]
+        if len(hashes) > 1:
+            entry['original_sha256s'] = hashes
+    omitted = dc.omitted_selected_sources({row['source_id'] for row, *_ in entries}, sources, listed)
+    return tool.v3_collection(region, view, features, list(listed.values()), omitted)
+
+
 def build(ctx, out):
     _, region, sources, entries, *_ = ctx.contour_job
     if not entries:
         raise receipts.Held('no selected source is cleared and bound for public contours')
     try:
-        collection, metrics = trace(ctx.contour_job)
+        if ctx.contour_view is None:
+            collection, metrics = trace(ctx.contour_job)
+        else:
+            collection = trace_v3(ctx.contour_job, ctx.contour_view)
+            metrics = {'style': ctx.contour_style}
     except SystemExit as exc:
         raise receipts.ReceiptError(str(exc)) from None
     overview = dc.overview_contours(collection)
+    full_budget, overview_budget = dc.size_budgets(collection)
     selected = {row['source_id'] for row, *_ in entries}
-    for filename, value, budget in (('contours.geojson', collection, dc.MAX_BYTES),
-                                     ('contours-overview.geojson', overview, dc.OVERVIEW_MAX_BYTES)):
-        dc.check_selected_contours(value, region, sources, selected)
-        if atomic_json(out / filename, value)['bytes'] > budget:
-            raise receipts.ReceiptError(f'{filename} exceeds its byte budget')
+    for filename, value, budget in (('contours.geojson', collection, full_budget),
+                                    ('contours-overview.geojson', overview, overview_budget)):
+        dc.check_selected_contours(value, region, sources, selected, view=ctx.contour_view)
+        size = atomic_json(out / filename, value)['bytes']
+        if size > budget:
+            raise receipts.ReceiptError(f'{filename} exceeds its byte budget ({size} bytes, budget {budget} bytes)')
     return metrics

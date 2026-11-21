@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "south-big-sur-san-simeon",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "morro-bay-distant-planning-origin-z13", "center": [-120.868, 35.3667], "size_m": 4000, "zoom": 13},
+    {"id": "piedras-outer-z15", "center": [-121.48, 35.69], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}

@@ -62,6 +62,37 @@ def latest_file(client, now):
     return path, url
 
 
+def dated_file(client, date):
+    """Return (dataset path, catalog URL) for one exact UTC calendar date."""
+    if date > client.now.astimezone(timezone.utc).date():
+        raise ValueError(f"NOAA blended SST date {date} is in the future")
+    url = f"{CATALOG}/{date.year}/catalog.xml"
+    try:
+        root = ElementTree.fromstring(client.get(url))
+    except http.HTTPStatusError as exc:
+        if exc.status != 404:
+            raise
+        raise ValueError(f"No NOAA blended SST file for {date} in official catalog") from exc
+
+    found = None
+    for entry in root.iter():
+        path = entry.attrib.get("urlPath", "")
+        match = FILE.fullmatch(path.rsplit("/", 1)[-1])
+        if not match or path != f"{PATH}/{date.year}/{match.group(0)}":
+            continue
+        try:
+            day = datetime.strptime(match.group(1), "%Y%m%d%H%M%S").date()
+        except ValueError:
+            continue
+        if day == date:
+            if found is not None:
+                raise ValueError(f"Ambiguous NOAA blended SST file for {date} in official catalog")
+            found = path
+    if found is None:
+        raise ValueError(f"No NOAA blended SST file for {date} in official catalog")
+    return found, url
+
+
 def read_subset(body, bounds, path):
     if not body.startswith(b"CDF\x01"):
         raise ValueError("NOAA subset is not NetCDF classic")
@@ -110,6 +141,18 @@ def read_subset(body, bounds, path):
 def fetch(client, bounds):
     west, south, east, north = _bounds(bounds)
     path, catalog_url = latest_file(client, client.now)
+    query = urlencode({"var": ["analysed_sst", "analysis_error", "mask"], "north": north,
+                       "south": south, "west": west, "east": east, "accept": "netcdf"}, doseq=True)
+    url = f"{HOST}/thredds/ncss/grid/{path}?{query}"
+    result = read_subset(client.get(url, as_binary=True), bounds, path)
+    result.update(catalog_url=catalog_url, query_url=url, requested_bounds=bounds)
+    return result
+
+
+def fetch_for_date(client, bounds, date):
+    """Read the regional subset for exactly this UTC date, without fallback."""
+    west, south, east, north = _bounds(bounds)
+    path, catalog_url = dated_file(client, date)
     query = urlencode({"var": ["analysed_sst", "analysis_error", "mask"], "north": north,
                        "south": south, "west": west, "east": east, "accept": "netcdf"}, doseq=True)
     url = f"{HOST}/thredds/ncss/grid/{path}?{query}"

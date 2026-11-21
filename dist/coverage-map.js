@@ -1,4 +1,5 @@
-// The public coverage page reads only the published region index.
+// The public coverage page reads the published index and reviewed relief pointers, never tiles.
+import {resolveRelief} from '../web/map/relief-data.ts';
 import {publicPageText, readPublicPageLanguage} from './public-page-language.js';
 const t = (id, lang, vars) => publicPageText('coverage.' + id, lang, vars);
 const text = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -47,8 +48,17 @@ export function renderMap(model, {width = 360, lang = 'en'} = {}) {
 
 export function renderList(model, lang = 'en') {
   if (model.error) return `<p>${text(t('unreadable', lang))}</p>`;
-  const list = model.rows.length ? `<ul>${model.rows.map(r => `<li><a href="${link(r)}">${text(r.name)} — ${text(t(r.status + 'Detail', lang))}</a></li>`).join('')}</ul>` : model.skipped ? '' : `<p>${text(t('empty', lang))}</p>`;
+  const list = model.rows.length ? `<ul>${model.rows.map(r => `<li><a href="${link(r)}">${text(r.name)} — ${text(t(r.status + 'Detail', lang))}</a> — <span data-depth-region="${r.id}">${text(t('depthChecking', lang))}</span></li>`).join('')}</ul>` : model.skipped ? '' : `<p>${text(t('empty', lang))}</p>`;
   return list + (model.skipped ? `<p>${text(t('skipped', lang, {n: model.skipped}))}</p>` : '');
+}
+
+async function depthState(region) {
+  try {
+    // Same deployed pointer and selection as the Chart, without opening the archive.
+    const response = await fetch(`/catalog/relief/${encodeURIComponent(region)}.json`, {redirect: 'error'});
+    if (response.ok && resolveRelief(region, await response.json()).status === 'ready') return 'depthLive';
+  } catch { /* a failed pointer read does not affect the region list */ }
+  return 'depthNotYet';
 }
 
 async function main() {
@@ -60,6 +70,20 @@ async function main() {
   } catch { /* render the unreadable state */ }
   const model = coverageModel(index);
   document.getElementById('coverage-map').innerHTML = renderMap(model, {lang});
-  document.getElementById('coverage-list').innerHTML = renderList(model, lang);
+  const list = document.getElementById('coverage-list');
+  list.innerHTML = renderList(model, lang);
+  if (!model.rows.length) return;
+  const checks = new Map();
+  for (const label of list.querySelectorAll('[data-depth-region]')) {
+    const region = label.dataset.depthRegion;
+    if (!checks.has(region)) checks.set(region, depthState(region));
+    checks.get(region).then(state => {
+      if (state === 'depthLive') {
+        label.innerHTML = `${text(t(state, lang))} — <a href="/sources#region-${text(region)}">${text(publicPageText('status.nav.sources', lang))}</a>`;
+      } else {
+        label.textContent = t(state, lang);
+      }
+    });
+  }
 }
 if (typeof document !== 'undefined' && document.getElementById('coverage-map') && document.getElementById('coverage-list')) main();

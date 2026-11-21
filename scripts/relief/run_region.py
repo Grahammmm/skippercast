@@ -9,7 +9,7 @@
 
 Runs ``region.py <stage> --region <region> --out <OUT>`` through the requested stage::
 
-    select mosaic tiles zone digests inventory contours package shots qa envelope
+    select mosaic tiles zone digests inventory contours nearshore_vectors package shots qa envelope
 
 Normalize separately, per source. Select reads the resulting cache. Package reads the
 inventory and its public producer receipts, including the unscoped contours receipt
@@ -72,8 +72,9 @@ import sys
 import time
 
 DEFAULT_NORM = '/mnt/agentorange-backup/seafloor-relief-cache/_norm'  # select's --cache default
-SCOPED_STAGES = ('mosaic', 'tiles', 'zone')
-STAGES = ('select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'package', 'shots', 'qa', 'envelope')
+SCOPED_STAGES = ('mosaic', 'tiles', 'zone', 'nearshore_vectors')
+STAGES = ('select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'nearshore_vectors',
+          'package', 'shots', 'qa', 'envelope')
 STAGE_INPUTS = {'zone': ('coarse', 'water', 'coarse-source'), 'shots': ('basemap',)}
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 HEX64 = re.compile(r'[0-9a-f]{64}')
@@ -201,7 +202,8 @@ def stage_extras(args, out):
         'status': ['--json'],
         'qa': ['--generation', '<generation>', '--release-sha256', '<release-sha256>',
                '--elevation', str(mosaic / 'elevation.tif'), '--contributor', str(mosaic / 'contributor.tif'),
-               '--upstream', 'mosaic:public', '--shots', str(root / 'shots/<shots-generation>/shots.json')],
+               '--upstream', 'mosaic:public', '--upstream', 'nearshore_vectors:public',
+               '--shots', str(root / 'shots/<shots-generation>/shots.json')],
         'envelope': ['--generation', '<generation>'],
     }
     for stage in SCOPED_STAGES:
