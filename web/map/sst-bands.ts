@@ -1,23 +1,26 @@
 // SST-B display model, shared by the Chart and its offline case exporter.
 import type * as MapLibre from 'maplibre-gl';
-import {LAYERS_STYLE} from './layers-style.gen.ts';
+import {
+  SST_BAND_COLORS_RULE, SST_BAND_EDGE as SST_EDGE_TOKENS, SST_BAND_STEPS, SST_BASE_DESATURATION,
+  SST_DISPLAY_SAMPLING, SST_LEGEND_TITLE, SST_OPACITY, SST_RAMP_STOPS, SST_STRETCH, SST_WATER_ONLY,
+} from './layers-style.gen.ts';
 import {kitZoom} from './nearshore-paint.ts';
 import {sklColor, type Palette} from './palette.ts';
 import {fieldColor} from './surface-field.js';
 
-export const SST_STYLE = LAYERS_STYLE.layers['sst-fill'];
 export const SST_BAND_EDGE = 'skl-sst-band-edge';
 export const SST_BAND_SOURCE = 'sst-bands';
 export const SST_FILL = 'skl-sst-fill-fill';
 export const SST_FILL_SOURCE = 'sst-texture';
-export const sstRamp = (p: Palette): string[] => SST_STYLE.ramp_stops.map(color => sklColor(p, color));
+export const sstRamp = (p: Palette): string[] => SST_RAMP_STOPS.map(color => sklColor(p, color));
+const [low_pct, high_pct, method, round, user_lock] = SST_STRETCH;
 
 export function sstBandStep(zoom: number): number {
-  return SST_STYLE.band_step_f_by_zoom.findLast(([z]) => zoom >= z)?.[1] ?? SST_STYLE.band_step_f_by_zoom[0][1];
+  return SST_BAND_STEPS.findLast(([z]) => zoom >= z)?.[1] ?? SST_BAND_STEPS[0][1];
 }
 
 export function sstOpacity(zoom: number): number {
-  const stops = SST_STYLE.opacity;
+  const stops = SST_OPACITY;
   for (let i = 1; i < stops.length; i++) {
     const [z1, v1] = stops[i]!;
     if (zoom <= z1) {
@@ -36,13 +39,13 @@ export function sstBandModel(visible: Float64Array, zoom: number) {
     return values[j]! + (values[Math.ceil(i)]! - values[j]!) * (i - j);
   };
   const step = sstBandStep(zoom);
-  const low = Math.floor(percentile(SST_STYLE.stretch.low_pct) / step) * step;
-  const high = Math.max(low + step, Math.ceil(percentile(SST_STYLE.stretch.high_pct) / step) * step);
+  const low = Math.floor(percentile(low_pct) / step) * step;
+  const high = Math.max(low + step, Math.ceil(percentile(high_pct) / step) * step);
   const count = Math.round((high - low) / step);
   return {
     step, low, high, count, mean: values.reduce((sum, v) => sum + v, 0) / values.length,
-    opacity: sstOpacity(zoom), legend: SST_STYLE.legend.title.replace('{step}', String(step)),
-    baseDesaturation: SST_STYLE.desaturates_base ? LAYERS_STYLE.stacking.base_desaturation_when_field_on : 0,
+    opacity: sstOpacity(zoom), legend: SST_LEGEND_TITLE.replace('{step}', String(step)),
+    baseDesaturation: SST_BASE_DESATURATION,
   };
 }
 
@@ -62,17 +65,18 @@ export function sstBandPixels(samples: Float64Array, bands: Bands, ramp: string[
 
 /** Canonical kit fragment projection; Chart mounts these same paints on its active sources. */
 export function sstBandLayers(p: Palette, fragment = false) {
-  const edge = SST_STYLE.band_edge;
-  const opacity = fragment ? ['interpolate', ['linear'], ['zoom'], ...SST_STYLE.opacity.flat()] : kitZoom(SST_STYLE.opacity);
+  const [edgeColor, edgeWidth, edgeOpacity, hideWhen] = SST_EDGE_TOKENS;
+  const opacity = fragment ? ['interpolate', ['linear'], ['zoom'], ...SST_OPACITY.flat()] : kitZoom(SST_OPACITY);
   const layout = fragment ? {layout: {visibility: 'none' as const}} : {};
   return [
     {id: SST_FILL, type: 'raster', source: SST_FILL_SOURCE, ...layout,
       paint: {'raster-opacity': opacity as MapLibre.ExpressionSpecification, 'raster-resampling': 'linear', 'raster-fade-duration': 0},
-      metadata: {'skippercast:ramp': {ramp_stops: sstRamp(p), band_step_f_by_zoom: SST_STYLE.band_step_f_by_zoom, stretch: SST_STYLE.stretch, rule: SST_STYLE.band_colors_rule},
-        'skippercast:water_only': SST_STYLE.water_only, 'skippercast:gaps': LAYERS_STYLE.display_sampling,
+      metadata: {'skippercast:ramp': {ramp_stops: sstRamp(p), band_step_f_by_zoom: SST_BAND_STEPS,
+        stretch: {method, low_pct, high_pct, round, user_lock}, rule: SST_BAND_COLORS_RULE},
+        'skippercast:water_only': SST_WATER_ONLY, 'skippercast:gaps': SST_DISPLAY_SAMPLING,
         'skippercast:z': 'color-field', 'skippercast:layer': 'sst-fill'}, ...(fragment ? {_token: 'layers.sst-fill.ramp_stops'} : {})},
     {id: SST_BAND_EDGE, type: 'line', source: SST_BAND_SOURCE, ...layout,
-      paint: {'line-color': sklColor(p, edge.color), 'line-width': edge.width_pt, 'line-opacity': edge.opacity},
-      metadata: {'skippercast:hide_when_any_on': edge.hide_when_any_on, 'skippercast:z': 'isolines', 'skippercast:layer': 'sst-fill'}, ...(fragment ? {_token: 'layers.sst-fill.band_edge'} : {})},
+      paint: {'line-color': sklColor(p, edgeColor), 'line-width': edgeWidth, 'line-opacity': edgeOpacity},
+      metadata: {'skippercast:hide_when_any_on': hideWhen, 'skippercast:z': 'isolines', 'skippercast:layer': 'sst-fill'}, ...(fragment ? {_token: 'layers.sst-fill.band_edge'} : {})},
   ] as const satisfies readonly (MapLibre.LayerSpecification & {_token?: string})[];
 }

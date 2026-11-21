@@ -40,7 +40,7 @@ import {CONTRAST_LAYER} from './contrast.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {isolines, mercatorDisplay, sampleDisplay, textureSize, type Corners} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
-import {LAYERS_STYLE} from './layers-style.gen.ts';
+import {SST_MAX_AGE_H, SST_ZOOM} from './layers-style.gen.ts';
 import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {COAST_NOT_SAVED, COAST_OFFLINE_COPY, NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY, watchOffline} from './offline.ts';
 import {pair, sp, type StatusCopy} from './status-copy.ts';
@@ -49,7 +49,7 @@ import {kitMinZoom} from './nearshore-paint.ts';
 import {NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {camera, shownPresentation, terrainHour} from './stage.ts';
-import {sstBandLayers, sstBandModel, sstBandPixels, sstRamp, SST_BAND_SOURCE, SST_STYLE} from './sst-bands.ts';
+import {sstBandLayers, sstBandModel, sstBandPixels, sstRamp, SST_BAND_SOURCE} from './sst-bands.ts';
 import {LABEL_FONT, PLACE_LABELS} from './style.ts';
 import {surfaceField, temperatureRange, type SurfaceField} from './surface-field.js';
 import {SWELL_LAYER} from './swell.ts';
@@ -63,7 +63,7 @@ export const CONTOUR_LAYER = 'water-temp-contours';
 export const CONTOUR_LABELS = 'water-temp-labels';
 const HOUR = 3_600_000;
 /** fish's `live(…, 72)`: an analysis, and its retrieval, under 72 hours old and at most 5 minutes ahead. */
-export const MAX_AGE_MS = LAYERS_STYLE.layers['sst-fill'].data_age.max_age_h * HOUR;
+export const MAX_AGE_MS = SST_MAX_AGE_H * HOUR;
 const AHEAD_MS = 5 * 60_000;
 
 /** An analysis that passed the gate, with its grid. */
@@ -364,7 +364,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       painted = a.sst;
     }),
     effect(() => {
-      const e = engine.value, a = status.value.drawn, zoom = camera.value?.zoom ?? SST_STYLE.zoom;
+      const e = engine.value, a = status.value.drawn, zoom = camera.value?.zoom ?? SST_ZOOM;
       void resized.value;
       if (!e || !a || e !== drawnOn || a.sst !== painted || !raster) return;
       const band = sstBandModel(visibleWater(e, raster), zoom);
