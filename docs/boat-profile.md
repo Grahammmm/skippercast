@@ -8,11 +8,22 @@ SkipperCast's comfort and drift-control ratings were tuned on one boat: a 23 ft,
 2. Check every field. Numbers from the lookup carry an **AI estimate** tag until you edit them, and the builder sources it used are linked.
 3. **Save boat.** The profile stays in this browser. The header then shows the boat's length, and every hourly and daily rating uses it. **Use reference boat** clears it.
 
+### Profile fields
+
+- `burn_gph`: optional fuel burn in gallons per hour at cruise. Manual entry only, from 0.5 to 200 inclusive. A missing or implausible value is left out of the saved profile. The Boat form does not have a burn-rate input yet.
+
+### Fuel estimate
+
+The Boat brief does not show a fuel estimate line yet. The calculation requires a water route with a positive distance (not a straight-line fallback) and valid values for both `cruise_kn` (cruise speed in knots) and `burn_gph`.
+
+Round-trip gallons = 2 × `nm` / `cruise_kn` × `burn_gph`, where `nm` is the one-way water-route distance in nautical miles. The gallon result is rounded up to a whole gallon. With `fuel_gal` (tank capacity in gallons), the thirds rule reads **OK** if the unrounded estimate is at most 2/3 of tank capacity, or **check fuel** otherwise. Without `fuel_gal`, the calculation returns only the gallons, with no thirds rating. This is an estimate, not a fuel plan.
+
 ## AI lookup
 
 `POST /api/boat/lookup` asks a Claude model (`claude-sonnet-5` by default, or `BOAT_AI_MODEL`) with web search to find the builder's specification sheet or a reputable boat test. The model returns JSON: length, beam, dry and loaded weight, deadrise, hull type, layout, cruise speed, horsepower, fuel, confidence, inferred fields, notes and sources.
 
 The Worker applies the same range checks as manual entry (`normalizeBoat`) and discards implausible values. Lookups:
+- never fill `burn_gph`;
 - need sign-in;
 - are limited to 20 per person per day, and to `BOAT_LOOKUP_GLOBAL_DAILY_LIMIT` (default 500) across everyone per UTC day; either limit answers 429;
 - are cached for 30 days per boat name;
@@ -43,5 +54,7 @@ This is a disclosed heuristic based on planing-hull rules of thumb. It is not a 
 - heading relative to the seas;
 - loading and trim;
 - skipper experience.
+
+Sea state, load and detours change fuel use.
 
 The in-app comfort feedback (`/api/comfort`) is the path to calibrating it against real trips. AI lookups can match the wrong variant or model year; the saved numbers are whatever you confirm.
