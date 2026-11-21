@@ -370,12 +370,16 @@ export function headingRating(
   if (!rating) return {course, relative, sector, score: null, factor, limited: true};
 
   const {costs, limited} = rating;
-  const roll = sector === 'beam' && isNum(h.swell_period) && h.swell_period <= T.rollPeriodFactor * boat.chopPeriod
+  const roll = isNum(h.swell_period) && h.swell_period <= T.rollPeriodFactor * boat.chopPeriod
     && rating.sea >= T.rollSeaStart * boat.sea ? T.rollPenalty : 0;
   // Calibration groups the bow and stern quarters with head and following seas, respectively.
   const group = sector === 'bow' ? 'head' : sector === 'stern' ? 'following' : sector;
-  const wave = Math.max(costs.seas * factor, costs.chop * factor);
-  const score = clamp(10 - combinedBurden(costs.wind, wave) - costs.crossing - costs.short - roll + (offset?.[group] ?? 0));
+  const wave = Math.max(costs.seas, costs.chop);
+  const burden = combinedBurden(costs.wind, wave * factor) + (sector === 'beam' ? roll : 0);
+  // Keep the full beam roll charge, but do not rate uncalibrated head seas as easier.
+  const beamFactor = T.sectors.find(({sector: name}) => name === 'beam')!.factor;
+  const orderedBurden = sector === 'head' ? Math.max(burden, combinedBurden(costs.wind, wave * beamFactor) + roll) : burden;
+  const score = clamp(10 - orderedBurden - costs.crossing - costs.short + (offset?.[group] ?? 0));
   return {course, relative, sector, score: limited ? Math.min(THRESHOLDS.capLimited, score) : score, factor, limited};
 }
 

@@ -40,6 +40,24 @@ test('heading scales seas or chop, never wind, gust, crossing or short-chop char
   assert.deepEqual(scores(windOnly, [0, 45, 90, 135, 180]), [8.7, 8.7, 8.7, 8.7, 8.7]);
 });
 
+test('head comfort does not exceed beam comfort when beam roll is charged', () => {
+  const boat = {sea: 1.5, wind: 1, chopPeriod: 5};
+  const h = {...hour, wind: 2, other_wind: 2, gust: 3, other_gust: 3, sea: 2.9, other_sea: 3, chop: 0.2, swell: 1, swell_period: 7.5};
+  const [head, beam, following] = [0, 90, 180].map(course => headingRating(h, course, boat).score);
+  assert.ok(head <= beam, `head ${head} exceeds beam ${beam}`);
+  assert.ok(beam <= following, `beam ${beam} exceeds following ${following}`);
+  assert.equal(beam, 9.1); // Preserve the specified full beam-roll charge.
+  // Different wind overlap, wave heights, and limited inputs keep the same uncalibrated ordering.
+  for (const sea of [3, 4, 7]) for (const wind of [2, 12, 20]) for (const chop of [0.2, 3]) {
+    for (const other_wind of [wind, null]) {
+      const sample = {...h, sea, other_sea: sea, wind, other_wind, gust: wind + 1, other_gust: wind + 1, chop};
+      const scores = [0, 90, 180].map(course => headingRating(sample, course, boat).score);
+      assert.ok(scores[0] <= scores[1] && scores[1] <= scores[2], `unordered scores ${scores}`);
+    }
+  }
+  assert.equal(headingRating(h, 0, boat, {head: 1}).score, 10); // Offsets remain independent.
+});
+
 test('beam roll is a flat charge only at sufficient combined seas and short enough swell period', () => {
   const boat = {sea: 1.5, wind: 1, chopPeriod: 5};
   const beam = {...hour, wind: 2, other_wind: 2, gust: 3, other_gust: 3, sea: 2.9, other_sea: 3, chop: 0.2, swell: 1, swell_period: 7.5};
