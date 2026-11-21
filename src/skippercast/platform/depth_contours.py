@@ -60,6 +60,50 @@ SHELF_LIMIT_FT = 600
 CELL_M = 16
 DECIMALS = 5
 FT_V2 = 'ft-v2'
+FT_V3 = 'ft-v3'
+
+
+def v3_levels(tier):
+    """Index levels can fall between the ordinary minor multiples."""
+    limit = V2_SHELF_LIMIT_FT
+    index = (range(tier['index_every_ft'], limit + 1, tier['index_every_ft'])
+             if 'index_every_ft' in tier else tier['index_ft'])
+    index = {d for d in index if 0 < d <= limit}
+    return {d: d in index for d in sorted(index | set(range(tier['minor_ft'], limit + 1, tier['minor_ft'])))}
+
+
+def v3_tiers(view, cell, *, certified):
+    pier = view['pier_view']['contours_tier']
+    eligible = sorted((t for t in view['contours']['tiers'] if t['name'] != pier and cell <= t['max_cell_m']),
+                      key=lambda t: t['min_zoom'])
+    for i, tier in enumerate(eligible):
+        yield tier, eligible[i + 1]['min_zoom'] if i + 1 < len(eligible) else None
+    if certified and cell <= 1:
+        yield from ((t, None) for t in view['contours']['tiers'] if t['name'] == pier and cell <= t['max_cell_m'])
+
+
+def v3_view(digest):
+    from skippercast import style
+    if not isinstance(digest, str) or not SHA256.fullmatch(digest):
+        raise ValueError('invalid contours digest')
+    for version, entry in style._read_index(style._STYLE_DIR)['versions'].items():
+        if entry.get('status') in ('active', 'rolling') and entry.get('digests', {}).get('contours') == digest:
+            return style.load(version).view('contours')
+    raise ValueError('unknown contours digest')
+
+
+def v3_rule(props, view):
+    """The tier of a valid depth line, or None for a mismatched claim."""
+    cell, depth = props.get('native_cell_m'), props.get('depth_ft')
+    if type(cell) not in (int, float) or not 0 < cell or type(depth) is not int:
+        return None
+    for tier, stop in v3_tiers(view, cell, certified=True):
+        if props.get('tier') == tier['name'] and props.get('minzoom') == tier['min_zoom']:
+            levels = v3_levels(tier)
+            if (depth in levels and props.get('index') is levels[depth] and props.get('estimated') is True
+                    and (props.get('maxzoom') == stop if stop is not None else 'maxzoom' not in props)):
+                return tier
+    return None
 V2_SHELF_LIMIT_FT = 300
 V2_CELL_M = 10
 V2_NATIVE_MAX_CELL_M = 2
@@ -300,15 +344,15 @@ def omitted_selected_sources(selected, sources, listed):
             for ident in sorted(set(selected).difference(listed))]
 
 
-def check_selected_contours(collection, region, sources, selected):
-    """Check R5b contours against the attested selection; dates may be explicitly unstated."""
+def check_selected_contours(collection, region, sources, selected, *, view=None):
+    """Check selected R5b contours; survey dates may be explicitly unstated."""
     _require_not_held(collection, region)
 
     def selected_bathymetry(ident, source, bound, allowed):
         return (ident in bound and 'bathymetry' in source.get('needs', ())
                 and (source.get('review_status') in allowed or owner_display_cleared(source.get('rights') or {})))
 
-    _check(collection, region, sources, {'approved'}, binding=selected_bathymetry, selected=set(selected))
+    _check(collection, region, sources, {'approved'}, binding=selected_bathymetry, selected=set(selected), view=view)
     for entry in collection['provenance'].get('sources', []):
         ident = str(entry.get('source_id'))
         source = sources[ident]
@@ -326,32 +370,38 @@ def held_sources(collection, sources):
     return [{'source_id': ident, 'review_status': status} for ident, status in statuses if status != 'approved']
 
 
-def check_held_contours(collection, region, sources):
+def check_held_contours(collection, region, sources, *, view=None):
     """Raise ValueError unless `collection` is a held (private, never published) contour set.
 
     The same shape checks as check_contours, except a listed source may be `approved` or `candidate`;
     public-display clearance is not required. The provenance must say `publication_held: true`
     and list every non-approved source in `held_sources`.
     """
-    _check(collection, region, sources, {'approved', 'candidate'})
+    _check(collection, region, sources, {'approved', 'candidate'}, view=view)
     provenance = collection['provenance']
     if provenance.get('publication_held') is not True or provenance.get('held_sources') != held_sources(collection, sources):
         raise ValueError(f"Depth contours for {region['id']} do not state their publication hold and held sources")
 
 
-def _check(collection, region, sources, allowed, *, binding=_bound_bathymetry, selected=None):
+def _check(collection, region, sources, allowed, *, binding=_bound_bathymetry, selected=None, view=None):
     """Shared shape checks; by default use the region's static bathymetry bindings."""
     provenance = collection.get('provenance') or {}
     if collection.get('type') != 'FeatureCollection' or provenance.get('region_id') != region['id']:
         raise ValueError(f"Depth contours for {region['id']} are not its FeatureCollection")
     v2 = provenance.get('set') == FT_V2
-    if 'set' in provenance and not v2:
+    v3 = provenance.get('set') == FT_V3
+    if 'set' in provenance and not (v2 or v3):
         raise ValueError(f"Depth contours for {region['id']} have an unknown contour set")
-    intervals_ok = (provenance.get('intervals') == v2_intervals() and provenance.get('index_depths_ft') == list(V2_INDEX_FT)
-                    if v2 else provenance.get('interval_ft') == INTERVAL_FT)
+    if v3:
+        view = view if view is not None else v3_view(provenance.get('contours'))
+        intervals_ok = provenance.get('contours') == view.digest('contours')
+    elif v2:
+        intervals_ok = provenance.get('intervals') == v2_intervals() and provenance.get('index_depths_ft') == list(V2_INDEX_FT)
+    else:
+        intervals_ok = provenance.get('interval_ft') == INTERVAL_FT
     if provenance.get('features') != len(collection['features']) or not intervals_ok:
         raise ValueError(f"Depth contours for {region['id']} have incomplete provenance")
-    if provenance.get('shelf_limit_ft') != (V2_SHELF_LIMIT_FT if v2 else SHELF_LIMIT_FT) or provenance.get('units') != 'ft':
+    if provenance.get('shelf_limit_ft') != (V2_SHELF_LIMIT_FT if v2 or v3 else SHELF_LIMIT_FT) or provenance.get('units') != 'ft':
         raise ValueError(f"Depth contours for {region['id']} do not state feet and the shelf limit")
     bound = set(region.get('source_bindings', {}).get('bathymetry', [])) if selected is None else selected
     listed = {str(s.get('source_id')): s for s in provenance.get('sources', [])}
@@ -391,7 +441,9 @@ def _check(collection, region, sources, allowed, *, binding=_bound_bathymetry, s
             continue
         if p['kind'] == 'contour':
             depth = p.get('depth_ft')
-            if not v2 and (not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0 or depth % INTERVAL_FT
+            if v3 and v3_rule(p, view) is None:
+                raise ValueError(f"Depth contour {feature.get('id')} has an invalid ft-v3 tier or depth")
+            if not (v2 or v3) and (not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0 or depth % INTERVAL_FT
                            or depth > SHELF_LIMIT_FT or p.get('index') is not (depth % INDEX_FT == 0)):
                 raise ValueError(f"Depth contour {feature.get('id')} is not a {INTERVAL_FT} ft shelf contour")
             # A filled or verified run says so in its id; a measured run (or one without provenance) never does.
@@ -459,9 +511,15 @@ def overview_contours(collection, tolerance_m=OVERVIEW_TOLERANCE_M):
     west, south, east, north = collection['provenance']['bounds']
     scale = (111_320 * math.cos(math.radians((south + north) / 2)), 110_540)
     features = []
+    v3 = collection['provenance'].get('set') == FT_V3
     for feature in collection['features']:
-        if collection['provenance'].get('set') == FT_V2 and feature['properties']['minzoom'] >= OVERVIEW_MAX_ZOOM + 1:
+        if collection['provenance'].get('set') in (FT_V2, FT_V3) and feature['properties']['minzoom'] >= OVERVIEW_MAX_ZOOM + 1:
             continue  # app zoom is one more than MapLibre zoom; these features need only the full form.
+        if v3:
+            # Native clipping must survive the overview projection; an unconstrained
+            # simplification could reconnect a contour across a masked or dry cell.
+            features.append(feature)
+            continue
         if feature['geometry']['type'] in ('Polygon', 'MultiPolygon'):
             # An unresolved area: rings simplified alike; a polygon spanning less than OVERVIEW_MIN_SPAN_M is left out.
             polys = feature['geometry']['coordinates']
@@ -482,6 +540,9 @@ def overview_contours(collection, tolerance_m=OVERVIEW_TOLERANCE_M):
     provenance = {**collection['provenance'], 'features': len(features), 'coordinate_decimals': OVERVIEW_DECIMALS,
                   'overview': {'tolerance_m': tolerance_m, 'min_span_m': OVERVIEW_MIN_SPAN_M, 'max_zoom': OVERVIEW_MAX_ZOOM,
                                'note': 'Drawn below max_zoom only; the full contours load at and above it.'}}
+    if v3:
+        provenance.pop('coordinate_decimals', None)
+        provenance['overview'] = {'max_zoom': OVERVIEW_MAX_ZOOM}
     return {**collection, 'provenance': provenance, 'features': features}
 
 

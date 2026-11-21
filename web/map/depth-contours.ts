@@ -27,7 +27,8 @@ import {ZOOM_OFFSET, type Engine, type Overlay} from './engine.ts';
 import {DEPTH_CONTOURS_SOURCE, layerEntry} from './layers.ts';
 import {MPA_FILL} from './mpa.ts';
 import {kitZoom, type NearshoreStyle} from './nearshore-paint.ts';
-import {NEARSHORE_STYLE} from './nearshore-style.gen.ts';
+import {CONTOUR_TIERS, NEARSHORE_STYLE} from './nearshore-style.gen.ts';
+import {reliefLook} from './relief-data.ts';
 import {readPalette, sknColor, type Palette} from './palette.ts';
 import {camera} from './stage.ts';
 import {LABEL_FONT, PLACE_LABELS, mapControl} from './style.ts';
@@ -55,6 +56,11 @@ export const INDEX_FT = 150;
 // MB-03's ft-v2 contract uses app zooms, not MapLibre zooms. At z14 native
 // lines replace the corresponding coarse runs; other coarse runs stay visible.
 const FT_V2 = 'ft-v2';
+const FT_V3 = 'ft-v3';
+type TierRule = {name: string; min_zoom: number; minor_ft: number; max_cell_m: number;
+  index_ft?: readonly number[]; index_every_ft?: number};
+type TierSet = {pier: string; tiers: readonly TierRule[]};
+const tiersByDigest: Readonly<Partial<Record<string, TierSet>>> = CONTOUR_TIERS;
 const V2_INDEX = [60, 150, 300];
 const V2_NATIVE = 14, V2_FINE = 15, V2_NATIVE_CELL = 2, V2_LIMIT = 300;
 const V2_INTERVALS = [
@@ -89,7 +95,8 @@ export interface ContourSource {
   readonly source_id: string; readonly name: string; readonly url: string; readonly attribution: string;
   readonly survey_date: string; readonly vertical_datum: string;
 }
-export interface ContourCollection {readonly type: 'FeatureCollection'; readonly features: readonly Json[]; readonly set?: typeof FT_V2}
+export interface ContourCollection {readonly type: 'FeatureCollection'; readonly features: readonly Json[];
+  readonly set?: typeof FT_V2 | typeof FT_V3; readonly tierSet?: TierSet}
 /** A bound survey the file does not draw, with its catalog review_status (provenance `sources_omitted`). */
 export interface OmittedSource {readonly source_id: string; readonly review_status: string}
 /** drawn: checked and current; none: the region publishes none; withheld: past its age limit; failed: did not load or failed its check. */
@@ -163,12 +170,18 @@ const area = (g: Json | null): boolean => {
  * listed source with survey date and datum on every line, line geometry, and `review_expires`. Past that date
  * the contours are withheld; any other gap fails the whole file (nothing partial draws).
  */
-export function assessContours(data: unknown, id: string, today: string): ContourAssessment {
+export function assessContours(data: unknown, id: string, today: string, pointer?: unknown): ContourAssessment {
   const failed = FAILED;
   const d = obj(data), p = obj(d?.provenance), list = d?.features;
   if (d?.type !== 'FeatureCollection' || !p || p.region_id !== id || p.units !== 'ft' || !Array.isArray(list)) return failed;
   const v2 = p.set === FT_V2;
-  if (v2 ? p.shelf_limit_ft !== V2_LIMIT || p.publication_held === true || p.interval_ft !== undefined
+  const v3 = p.set === FT_V3;
+  const anchor = obj(pointer);
+  const digest = anchor?.region === id && anchor.private === false && anchor.status === 'reviewed' && reliefLook(anchor) !== null
+    ? obj(anchor.style)?.contours : null;
+  const tierSet = v3 && typeof digest === 'string' && Object.hasOwn(tiersByDigest, digest) ? tiersByDigest[digest] : undefined;
+  if (v3 ? !tierSet || p.contours !== digest || p.shelf_limit_ft !== V2_LIMIT || p.publication_held === true
+    : v2 ? p.shelf_limit_ft !== V2_LIMIT || p.publication_held === true || p.interval_ft !== undefined
     || !sameNumbers(p.index_depths_ft, V2_INDEX) || !v2IntervalsMatch(p.intervals)
     : p.set !== undefined || p.interval_ft !== INTERVAL_FT) return failed;
   const expires = text(p.review_expires);
@@ -189,7 +202,8 @@ export function assessContours(data: unknown, id: string, today: string): Contou
     // The kind is matched exactly, as the layer filters match it: a padded kind would pass here and draw nowhere.
     if (!props || !s || !KINDS.includes(props.kind as string) || props.survey_date !== s.survey_date || props.vertical_datum !== s.vertical_datum) return false;
     const depth = props.depth_ft;
-    if (v2 ? !validV2Feature(props, nativeCells.get(s.source_id))
+    if (tierSet ? !validV3Feature(props, tierSet)
+      : v2 ? !validV2Feature(props, nativeCells.get(s.source_id))
       : props.kind === 'contour' && !(Number.isInteger(depth) && (depth as number) > 0 && (depth as number) % INTERVAL_FT === 0)) return false;
     if (props.provenance !== undefined && !PROVENANCE.includes(props.provenance as string)) return false;
     // An unresolved area is a polygon with a known reason; only a conflict carries the shallower reading.
@@ -201,7 +215,16 @@ export function assessContours(data: unknown, id: string, today: string): Contou
   });
   if (!valid) return failed;
   if (today > expires) return {status: 'withheld', data: null, sources, expires, omitted};
-  return {status: 'drawn', data: {type: 'FeatureCollection', features: list as Json[], ...v2 ? {set: FT_V2} : {}}, sources, expires, omitted};
+  return {status: 'drawn', data: {type: 'FeatureCollection', features: list as Json[],
+    ...tierSet ? {set: FT_V3, tierSet} : v2 ? {set: FT_V2} : {}}, sources, expires, omitted};
+}
+
+/** Fetch the pointer only for v3; the live v2 path has no dependency on relief. */
+export async function assessContourResponse(data: unknown, id: string, today: string, fetchFn: typeof fetch, page: string): Promise<ContourAssessment> {
+  if (obj(obj(data)?.provenance)?.set !== FT_V3) return assessContours(data, id, today);
+  const response = await fetchFn(new URL(`catalog/relief/${encodeURIComponent(id)}.json`, page).href,
+    {signal: AbortSignal.timeout(20000), cache: 'no-cache'});
+  return assessContours(data, id, today, response.ok ? await response.json() : undefined);
 }
 
 const sameNumbers = (got: unknown, want: readonly number[]): boolean =>
@@ -224,11 +247,26 @@ function validV2Feature(p: Json, cell: unknown): boolean {
   return start < V2_NATIVE && p.minzoom === start && (p.maxzoom === undefined || native && p.maxzoom === V2_NATIVE);
 }
 
-const visibleV2 = (p: Json, zoom: number): boolean =>
+function validV3Feature(p: Json, set: TierSet): boolean {
+  if (p.kind !== 'contour') return p.minzoom === set.tiers[0]?.min_zoom && p.index === false && p.maxzoom === undefined;
+  const tier = set.tiers.find(t => t.name === p.tier), cell = p.native_cell_m, depth = p.depth_ft;
+  if (!tier || typeof cell !== 'number' || !(cell > 0 && cell <= (tier.name === set.pier ? Math.min(tier.max_cell_m, 1) : tier.max_cell_m))
+    || typeof depth !== 'number' || !Number.isInteger(depth) || depth <= 0 || depth > V2_LIMIT
+    || p.minzoom !== tier.min_zoom || p.estimated !== true) return false;
+  const index = tier.index_ft?.includes(depth) ?? (tier.index_every_ft !== undefined && depth % tier.index_every_ft === 0);
+  const next = tier.name === set.pier ? undefined : set.tiers.find(t => t.name !== set.pier && t.min_zoom > tier.min_zoom && cell <= t.max_cell_m);
+  return p.index === index && (index || depth % tier.minor_ft === 0) && p.maxzoom === next?.min_zoom;
+}
+
+const visibleAt = (p: Json, zoom: number): boolean =>
   zoom >= (p.minzoom as number) && (p.maxzoom === undefined || zoom < (p.maxzoom as number));
-function contoursAt(data: ContourCollection, zoom: number): ContourCollection {
+function contoursAt(data: ContourCollection, zoom: number, inPierWindow?: (feature: Json) => boolean): ContourCollection {
   // One projection for paint, labels and picking. Only rerun at a zoom tier, not on every pan or fractional camera change.
-  return {...data, features: data.features.filter(f => visibleV2(f.properties as Json, zoom))}; // checked by assessContours
+  const {tierSet, ...collection} = data;
+  return {...collection, features: data.features.filter(f => {
+    const p = f.properties as Json; // checked by assessContours
+    return visibleAt(p, zoom) && (!tierSet || p.tier !== tierSet.pier || inPierWindow?.(f) === true);
+  })};
 }
 
 /** Unresolved areas (muted, dashed outline), survey edge (dashed), minor then index contours (verified heavier, filled dashed),
@@ -287,11 +325,11 @@ const UNRESOLVED_READING = new Map([
 
 /** The card for a clicked line, from its own properties and its listed survey: depth, interval, survey, date and datum,
  * then any bound survey the file does not draw (`omittedNote`). */
-export function contourMark(properties: Record<string, unknown> | null | undefined, sources: readonly ContourSource[], omitted: readonly OmittedSource[] = [], v2Zoom?: number): ChartMark | null {
+export function contourMark(properties: Record<string, unknown> | null | undefined, sources: readonly ContourSource[], omitted: readonly OmittedSource[] = [], v2Zoom?: number, tierSet?: TierSet): ChartMark | null {
   const p = properties ?? {}, s = sources.find(x => x.source_id === p.source_id);
   if (!s || !KINDS.includes(p.kind as string)) return null;
   const v2 = v2Zoom !== undefined;
-  if (v2 && !visibleV2(p, v2Zoom)) return null;
+  if (v2 && !visibleAt(p, v2Zoom) || tierSet && p.tier === tierSet.pier) return null;
   const source = `Surveyed ${s.survey_date} · ${s.vertical_datum}`;
   // The v1 basis describes 16 m blocks and the old 600 ft shelf limit; neither applies to v2.
   const basis = v2 ? 'Not for navigation.' : layerEntry(REGISTRY_ID).basis;
@@ -320,12 +358,13 @@ export function contourMark(properties: Record<string, unknown> | null | undefin
   };
   const depth = Number(p.depth_ft);
   if (!Number.isInteger(depth) || depth <= 0) return null;
-  const index = !v2 && depth % INDEX_FT === 0;
+  const index = tierSet ? p.index === true : !v2 && depth % INDEX_FT === 0;
   // In v2 the index depths are not equally spaced. State the active contour
   // interval in the tapped depth band rather than implying an index interval.
-  const interval = v2 ? v2Zoom < 11 ? 60 : v2Zoom < 13 || depth > 100 ? 30
+  const interval = tierSet ? tierSet.tiers.find(t => t.name === p.tier)?.minor_ft : v2 ? v2Zoom < 11 ? 60 : v2Zoom < 13 || depth > 100 ? 30
     : v2Zoom >= V2_FINE && (p.minzoom as number) >= V2_NATIVE && depth <= 30 ? 5 : 10
     : index ? INDEX_FT : INTERVAL_FT;
+  if (interval === undefined) return null;
   const name = index ? 'Index contour' : 'Depth contour';
   const reading = v2 ? `Estimated: ${depth} ft below the survey's ${s.vertical_datum}; not a sounding or a chart depth.`
     : `${depth} ft below the survey's ${s.vertical_datum}, traced from 16 m averaged blocks of the survey grid; not a sounding or a chart depth.`;
@@ -361,6 +400,9 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
 
   const tier = computed(() => {
     const zoom = camera.value?.zoom ?? 0;
+    const result = loaded.value?.result;
+    const rules = result && result !== 'none' ? result.data?.tierSet : undefined;
+    if (rules) return Math.max(0, ...rules.tiers.filter(t => t.min_zoom <= zoom).map(t => t.min_zoom));
     return V2_ZOOMS.find(z => z <= zoom) ?? 0;
   });
   let asked = '', detailRegion: string | null = null, drawn = false, drawnOn: Engine | null = null, alive = true, stopIdle: (() => void) | null = null;
@@ -371,7 +413,7 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       const response = await fetchFn(new URL(path, page()).href, {signal: AbortSignal.timeout(20000)});
       if (response.status === 429 || (response.status >= 500 && response.status <= 599)) retryAt = now() + CONTOUR_RETRY_MS;
       result = response.status === 404 ? 'none' : !response.ok ? FAILED
-        : assessContours(await response.json(), id, new Date(now()).toISOString().slice(0, 10));
+        : await assessContourResponse(await response.json(), id, new Date(now()).toISOString().slice(0, 10), fetchFn, page());
     } catch { result = FAILED; retryAt = now() + CONTOUR_RETRY_MS; }
     if (alive && region.peek() === id && asked === path) loaded.value = {region: id, path, result, retryAt};
   }
@@ -412,7 +454,8 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       if (!e) return;
       const data = l && l.region === id && l.result !== 'none' && l.result.status === 'drawn' ? l.result.data : null;
       if (!data) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
-      const visible = data.set === FT_V2 ? contoursAt(data, tier.value) : data;
+      // No pier vector layer is delivered in this batch, so no pier window qualifies.
+      const visible = data.set ? contoursAt(data, tier.value) : data;
       // § 9 draw order: above the water temperature, chlorophyll and swell fields, under the basemap's place labels (the kit's top slot) and the protected areas.
       if (!drawn || e !== drawnOn || lastSet !== data.set) {
         // A different set is a different file: install it afresh.
@@ -435,7 +478,7 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
     pick: {layers: [DEPTH_HIT, DEPTH_UNRESOLVED_FILL] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
       const l = loaded.peek();
       return l && l.region === region.peek() && l.result !== 'none' && l.result.status === 'drawn'
-        ? contourMark(properties, l.result.sources, l.result.omitted, l.result.data?.set === FT_V2 ? tier.peek() : undefined) : null;
+        ? contourMark(properties, l.result.sources, l.result.omitted, l.result.data?.set ? tier.peek() : undefined, l.result.data?.tierSet) : null;
     }},
   };
 }
