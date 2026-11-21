@@ -6,7 +6,11 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import util from 'node:util';
 import {existsSync, readFileSync} from 'node:fs';
+import {registerHooks} from 'node:module';
+import {resolve} from 'node:path';
 import test from 'node:test';
+import {fileURLToPath, pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
 import {RAIL_IDS} from '../web/profile.ts';
 import * as registry from '../web/map/layers.ts';
 import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, NEARSHORE_DRAW_ORDER, attributionFor, reliefWanted, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
@@ -34,6 +38,7 @@ import {effect, signal} from '@preact/signals';
 import {publishedChartFiles} from '../web/chart-files.ts';
 import {settlePicks} from './helpers/pick-settle.mjs';
 import {fieldOpacity as stackOpacity, resolveStack} from '../web/map/stacking.ts';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -514,6 +519,105 @@ test('live Chart keeps the replaced SST layer installed and restores it when swe
   camera.value = {...camera.value, zoom: 13};
   assert.equal(map.visibility['water-temp-contours'], 'visible');
   assert.equal(map.paint['water-temp']['raster-opacity'], stackOpacity(resolveStack([{id: 'sst-fill'}], 13)));
+});
+
+let reliefBinding;
+async function loadReliefBinding() {
+  if (reliefBinding) return reliefBinding;
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const {outputFiles: [bundle]} = await build({
+    stdin: {resolveDir: root, loader: 'ts', contents: `
+      export {watchBottomRelief} from './web/app/MapStage.tsx';
+      export {fieldValues} from './web/map/bottom-relief.ts';`},
+    bundle: true, format: 'esm', platform: 'node', write: false, jsx: 'automatic', jsxImportSource: 'preact',
+    plugins: [{name: 'relief-binding', setup(b) {
+      // Share the live Chart fixture's signals across the TSX bundle boundary.
+      b.onResolve({filter: /(?:^|\/)(?:chart|layers|stage|state)\.ts$/}, a => ({path: pathToFileURL(resolve(a.resolveDir, a.path)).href, external: true}));
+      b.onResolve({filter: /^@preact\/signals$/}, () => ({path: import.meta.resolve('@preact/signals'), external: true}));
+      b.onLoad({filter: /\/web\/app\/MapStage\.tsx$/}, a => ({contents: `${readFileSync(a.path, 'utf8')}\nexport {watchBottomRelief};`, loader: 'tsx'}));
+      b.onResolve({filter: /\/bottom-relief\.ts$/}, () => ({path: 'bottom-relief', namespace: 'relief-fixture'}));
+      // Observe the actual binding reactively as bottom-relief does, without regional archives or paint fixtures.
+      b.onLoad({filter: /.*/, namespace: 'relief-fixture'}, () => ({resolveDir: root, contents: `
+        import {computed, effect} from '@preact/signals';
+        export const fieldValues = [];
+        export function attachBottomRelief({fieldOn}) {
+          const enabled = computed(fieldOn);
+          return {destroy: effect(() => {fieldValues.push(enabled.value);})};
+        }`}));
+    }}, ...rendererPlugins],
+  });
+  reliefBinding = await import(`data:text/javascript;base64,${Buffer.from(bundle.text).toString('base64')}`);
+  return reliefBinding;
+}
+
+const reliefPage = selected => `${PAGE}?region=morro-bay&presentation=chart&layers=${selected}`;
+async function chartWithReliefBinding(t, selected, initialOverlay) {
+  const {watchBottomRelief, fieldValues} = await loadReliefBinding();
+  fieldValues.length = 0;
+  browser(reliefPage(selected));
+  t.mock.method(console, 'warn', () => {});
+  let engine;
+  const {stage, fake} = chartStage({layers: [eng => {
+    const destroy = effect(() => {
+      engine = eng.value;
+      if (engine && initialOverlay) engine.setOverlay(selected, initialOverlay(sentinel));
+    });
+    const relief = watchBottomRelief(eng);
+    return {destroy() { relief.destroy(); destroy(); }};
+  }]});
+  t.after(() => stage.destroy());
+  await tick(); await tick();
+  const [map] = fake.maps;
+  assert.ok(map, 'the Chart mounted');
+  map.fire('style.load');
+  assert.ok(fieldValues.length, 'MapStage attached the reactive relief binding');
+  return {engine, fieldValues, map};
+}
+
+// Selection alone misses other drawn fields and falsely desaturates under selected, undrawn SST.
+test('relief field binding: swell alone desaturates when drawn', async t => {
+  const {fieldValues, map} = await chartWithReliefBinding(t, 'swell', swellOverlay);
+  assert.equal(map.visibility.swell, 'visible');
+  assert.equal(fieldValues.at(-1), true);
+});
+
+test('relief field binding: selected SST without data does not desaturate', async t => {
+  const {fieldValues, map} = await chartWithReliefBinding(t, 'water-temp');
+  assert.equal(registry.chartStack.value.find(row => row.id === 'sst-fill').status, 'no-data');
+  assert.equal(map.getLayer('water-temp'), undefined);
+  assert.equal(fieldValues.at(-1), false);
+});
+
+// The last field can stop drawing before the rail selection changes; neither that removal nor deselection may leave paint stale.
+test('relief field binding: removing the last drawn SST restores saturation reactively', async t => {
+  const {engine, fieldValues, map} = await chartWithReliefBinding(t, 'water-temp', waterTempOverlay);
+  assert.equal(map.visibility['water-temp'], 'visible');
+  assert.equal(fieldValues.at(-1), true);
+  engine.setOverlay('water-temp', null);
+  assert.equal(map.getLayer('water-temp'), undefined);
+  const afterRemoval = fieldValues.at(-1);
+  engine.setOverlay('water-temp', waterTempOverlay(sentinel));
+  assert.equal(fieldValues.at(-1), true, 'SST desaturates again when it resumes drawing');
+  syncFromURL(reliefPage('none'));
+  assert.equal(map.visibility['water-temp'], 'none');
+  assert.equal(fieldValues.at(-1), false, 'deselection leaves relief saturated');
+  assert.equal(afterRemoval, false, 'stopping the draw restores saturation even before deselection');
+});
+
+test('relief field binding: an unavailable stacking chunk preserves the legacy selection rule', async t => {
+  const chartUrl = new URL('../web/map/chart.ts', import.meta.url).href;
+  const hooks = registerHooks({resolve(specifier, context, next) {
+    if (specifier === './stacking.ts' && context.parentURL === chartUrl) {
+      return {url: 'data:text/javascript,throw new Error("fixture stacking chunk unavailable")', shortCircuit: true};
+    }
+    return next(specifier, context);
+  }});
+  t.after(() => hooks.deregister());
+  const {fieldValues} = await chartWithReliefBinding(t, 'water-temp');
+  assert.deepEqual(registry.chartStack.value, [], 'there is no resolved stack');
+  assert.equal(fieldValues.at(-1), true);
+  syncFromURL(reliefPage('swell'));
+  assert.equal(fieldValues.at(-1), false);
 });
 
 test('the Chart mounts on its first view with the basemap and coastline, and follows the shared camera both ways', async t => {

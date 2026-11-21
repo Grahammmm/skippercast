@@ -46,7 +46,7 @@ import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './s
 import {BASEMAP_MANIFEST, BASEMAP_SOURCE, basemapArchive, basemapStyle} from './style.ts';
 import {camera, cameraParam, parseCamera, shownPresentation, terrainPick, type Camera} from './stage.ts';
 import {basemapThemePaint, paintEdits} from './theme-restyle.ts';
-import {applyChartStack, chartRep, chartStack, LAYERS, overlayKitId, selectedKitLayers, zBefore} from './layers.ts';
+import {applyChartStack, chartBaseDesaturation, chartRep, chartStack, LAYERS, overlayKitId, selectedKitLayers, zBefore} from './layers.ts';
 // Types only: the stacking engine and the generated token table it reads load with the Chart's MapLibre (mount), not first paint.
 import type {Rep, resolveStack} from './stacking.ts';
 import {dataState} from './kit-layers/no-data.ts';
@@ -191,6 +191,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     const veil = stack.layers.find(row => row.id === 'clouds')?.opacity.veil ?? 0;
     for (const [id, alpha] of cloudAlphas) e.setPaint(id, 'raster-opacity', Math.min(alpha, veil));
     chartStack.value = stack.layers;
+    chartBaseDesaturation.value = stack.baseDesaturation;
   };
   const mpas = signal<MpaResult['data'] | null>(null);
   let mpaTicket = 0;
@@ -454,6 +455,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       engine.peek()?.destroy();
       engine.value = null;
       chartStack.value = [];
+      chartBaseDesaturation.value = null;
       chartMark.value = null;
       unavailable.value = [];
       mpaState.value = IDLE;

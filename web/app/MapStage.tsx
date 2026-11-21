@@ -36,7 +36,7 @@ import {createSwell} from '../map/swell.ts';
 import {createPreviewLayers, previewOn} from '../map/preview-layers.ts';
 import type {Engine} from '../map/engine.ts';
 import type {SurveyDetailView} from '../map/bottom-relief.ts';
-import {BOTTOM_RELIEF, reliefWanted} from '../map/layers.ts';
+import {BOTTOM_RELIEF, chartBaseDesaturation, reliefWanted} from '../map/layers.ts';
 import {lookDepthKey, type NearshoreFlags} from '../map/legend-model.ts';
 import {createStations} from '../map/stations.ts';
 import {dailyFeed, verdictEpoch} from '../brief/Brief.tsx';
@@ -88,8 +88,11 @@ function watchBottomRelief(engine: ReadonlySignal<Engine | null>) {
       if (cancelled) return;
       handle = relief.attachBottomRelief({engine: e, region: id,
         seafloorOn: () => layers.value.includes('seafloor'),
-        fieldOn: () => layers.value.includes('water-temp') || layers.value.includes('chlorophyll') ||
-          previewOn.value.some(layer => layer === 'sst' || layer === 'chlorophyll'),
+        fieldOn: () => {
+          const d = chartBaseDesaturation.value;
+          return (d === null ? (layers.value.includes('water-temp') || layers.value.includes('chlorophyll')) : d > 0) ||
+            previewOn.value.some(layer => layer === 'sst' || layer === 'chlorophyll');
+        },
         surveyView: view => { reliefSurveyView.value = view; },
         ready: look => {
           // MSK-2: an unknown look is said once, here; the legend then shows no depth colour key for it.

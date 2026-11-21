@@ -346,6 +346,7 @@ export function selectedKitLayers(on: readonly string[], currentsOn: boolean): K
 }
 
 export const chartStack = signal<readonly StackedLayer[]>([]);
+export const chartBaseDesaturation = signal<number | null>(null);
 export const overlayKitId = (id: string) => kitLayer(id)?.noData ? kitLayer(id)?.id : KIT_LAYERS.find(k => k.appIds.includes(id))?.id;
 
 /** The parts actually implemented by the live Chart, not the kit's future wind fill or particles. */
