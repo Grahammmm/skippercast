@@ -77,7 +77,7 @@ class GitCli:
 
 def write_branch(
     repo_dir: str | Path, region: str, state: Mapping[str, bytes | None], *,
-    branch: str, run: Callable[[list[str]], bytes],
+    branch: str, run: Callable[[list[str]], bytes], message: str | None = None,
 ) -> None:
     """Commit a local rollback. Use a repo-root runner like ``GitCli(repo_dir).run``."""
     paths = _region_paths(region)
@@ -116,7 +116,9 @@ def write_branch(
             # Stage the raw bytes; git add could renormalize them via clean filters.
             oid = run(['git', 'hash-object', '-w', '--no-filters', '--', path]).decode('ascii').strip()
             run(['git', 'update-index', '--add', '--cacheinfo', f'100644,{oid},{path}'])
-    run(['git', 'commit', '-s', '--allow-empty', '-m', f'Roll back relief release for {region}'])
+    if message is None:
+        message = f'Roll back relief release for {region}'
+    run(['git', 'commit', '-s', '--allow-empty', '-m', message])
 
 
 def main(argv: Sequence[str] | None = None) -> int:
