@@ -19,6 +19,7 @@ from tests._support import ROOT
 REGION = 'fixture-bay'
 GENERATION = 'a' * 64
 POINTER = f'catalog/relief/{REGION}.json'
+CONTOURS = f'regions/{REGION}/depth-contours.geojson'
 PAYLOAD = b'synthetic-tile'
 
 
@@ -157,8 +158,8 @@ def test_C1_dispatch_fetches_new_descendant_and_proves_merge_not_head(checkout, 
     assert (result.returncode, result.stdout, result.stderr) == (0, '', '')
     assert checkout.merge not in (checkout.side, checkout.head)
     assert json.loads(checkout.report.read_bytes()) == report(
-        checkout, site, checkout.deployed, verified(release), 'PASS', 7)
-    assert site.requests == trace('deploy.json', POINTER, release.archive, release.root, *release.chunks)
+        checkout, site, checkout.deployed, verified(release) + [row('contours', 'none-merged', key=CONTOURS)], 'PASS', 8)
+    assert site.requests == trace('deploy.json', POINTER, release.archive, release.root, *release.chunks, CONTOURS)
 
 
 @pytest.mark.parametrize('which, reason', [('merge', 'equal'), ('stale', 'stale'),
@@ -177,9 +178,11 @@ def test_C1_deploy_commit_relations(checkout, release, site, which, reason):
     passed = which == 'merge'
     assert live_check.main(argv(checkout, site)) == (0 if passed else 1)
     checks = verified(release, reason) if passed else [row('deploy', reason, fail=True)]
+    if passed:
+        checks.append(row('contours', 'none-merged', key=CONTOURS))
     assert json.loads(checkout.report.read_bytes()) == report(
-        checkout, site, deployed, checks, 'PASS' if passed else 'FAIL', 7 if passed else 2)
-    tail = (POINTER, release.archive, release.root, *release.chunks) if passed else ()
+        checkout, site, deployed, checks, 'PASS' if passed else 'FAIL', 8 if passed else 2)
+    tail = (POINTER, release.archive, release.root, *release.chunks, CONTOURS) if passed else ()
     assert site.requests == trace('deploy.json', *tail)
 
 
@@ -290,7 +293,7 @@ def test_C2_run_leaves_entire_clone_byte_unchanged(checkout, release, site):
     assert git(checkout.repo, 'rev-parse', 'refs/remotes/origin/main') == checkout.head
     assert snapshot() == before
     assert json.loads(checkout.report.read_bytes()) == report(
-        checkout, site, checkout.deployed, verified(release), 'PASS', 7)
+        checkout, site, checkout.deployed, verified(release) + [row('contours', 'none-merged', key=CONTOURS)], 'PASS', 8)
     assert not list(checkout.out.glob('relief-history-*'))
 
 
@@ -353,7 +356,8 @@ def test_C2_atomic_report_replacement(checkout, release, site, monkeypatch, fail
     """C2: Readers see the old complete receipt until replacement; failed replacement leaves it intact."""
     checkout.report.parent.mkdir(parents=True)
     checkout.report.write_bytes(b'old receipt')
-    expected = report(checkout, site, checkout.deployed, verified(release), 'PASS', 7)
+    expected = report(checkout, site, checkout.deployed,
+                      verified(release) + [row('contours', 'none-merged', key=CONTOURS)], 'PASS', 8)
     actual_replace = Path.replace
     observed = []
 
@@ -381,7 +385,7 @@ def test_C3_remaining_allowance_and_twentieth_request(checkout, release, site, m
         site.responses[key] = 200, {}, b'x'
 
     def larger_chain(pointer, fetch, *, budget):
-        assert (pointer, budget) == (release.pointer, 17)
+        assert (pointer, budget) == (release.pointer, 16)
         for key in keys:
             body = fetch(key, max_bytes=1)
             assert body is not None and b''.join(body) == b'x'
