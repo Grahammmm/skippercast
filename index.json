@@ -1,0 +1,40 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-11-21T14:01:46Z",
+ "box": {
+  "south": 32,
+  "north": 43,
+  "west": -127,
+  "east": -116
+ },
+ "models": {
+  "gfs_global": {
+   "status": "ok",
+   "state": "built",
+   "cycle": "2026-11-21T06:00:00Z",
+   "built_at": "2026-11-21T14:01:20Z",
+   "tiles": 73
+  },
+  "ecmwf_ifs025": {
+   "status": "ok",
+   "state": "current",
+   "cycle": "2026-11-21T00:00:00Z",
+   "built_at": "2026-11-21T08:17:18Z",
+   "tiles": 69
+  },
+  "ncep_gfswave016": {
+   "status": "ok",
+   "state": "built",
+   "cycle": "2026-11-21T06:00:00Z",
+   "built_at": "2026-11-21T14:01:45Z",
+   "tiles": 66
+  },
+  "ecmwf_wam": {
+   "status": "ok",
+   "state": "current",
+   "cycle": "2026-11-21T00:00:00Z",
+   "built_at": "2026-11-21T08:29:11Z",
+   "tiles": 66
+  }
+ }
+}
