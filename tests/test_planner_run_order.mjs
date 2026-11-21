@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {shorterRunOrder} from '../web/planner-run-order.ts';
-import {tripLegs} from '../web/trip-legs.ts';
+import {distanceM} from '../dist/geo-screen.js';
+
+const geometry = ({lat, lon}) => ({type: 'Point', coordinates: [lon, lat]});
+const legNm = (a, b) => distanceM(geometry(a), geometry(b)) / 1852;
 
 const point = (id, lat, lon) => Object.freeze({id, lat, lon});
 const start = {lat: 0, lon: 0};
@@ -9,12 +12,22 @@ const fixture = Object.freeze([
   point('a', 0, 1), point('b', 2, 3), point('c', 1, 0),
   point('d', 0, 3), point('e', 3, 0), point('f', 3, 3),
 ]);
-const plannerTotal = (stops, origin = start) => tripLegs(
-  origin && {...origin, name: 'Origin'}, stops.map(stop => ({...stop, name: stop.id})), null,
-).totalNm;
+const plannerTotal = (stops, origin = start) => {
+  let total = 0, previous = origin;
+  for (const stop of stops) {
+    if (previous) total += legNm(previous, stop);
+    previous = stop;
+  }
+  return origin && stops.length ? total + legNm(previous, origin) : total;
+};
+
+test('C1: a single leg uses distanceM rather than spherical distance', () => {
+  const stop = point('a', 2, 3);
+  assert.equal(shorterRunOrder([stop], start).totalNm, 2 * legNm(start, stop));
+});
 
 test('C1: the returned round trip sums the planner straight legs including the return', () => {
-  const ids = ['a', 'd', 'b', 'f', 'e', 'c'];
+  const ids = ['c', 'e', 'f', 'b', 'd', 'a'];
   const ordered = ids.map(id => fixture.find(stop => stop.id === id));
   assert.deepEqual(shorterRunOrder(fixture, start), {ids, totalNm: plannerTotal(ordered), improved: true});
 });
@@ -61,7 +74,7 @@ test('C3: non-finite coordinates preserve the entire input rather than dropping 
 test('C4: six stops beat both rank order and the nearest-neighbour-only tour', () => {
   const result = shorterRunOrder(fixture, start);
   assert.deepEqual({...result, totalNm: result.totalNm.toFixed(3)}, {
-    ids: ['a', 'd', 'b', 'f', 'e', 'c'], totalNm: '720.239', improved: true,
+    ids: ['c', 'e', 'f', 'b', 'd', 'a'], totalNm: '718.635', improved: true,
   });
   assert.ok(result.totalNm < plannerTotal(fixture));
   const nearest = [0, 2, 4, 5, 1, 3].map(i => fixture[i]);

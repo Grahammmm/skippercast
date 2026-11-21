@@ -1,9 +1,9 @@
-import {distanceNm} from '../dist/spot-ranking.js';
+import {distanceM} from '../dist/geo-screen.js';
 
 type Point = {lat: number; lon: number};
 type Stop = Point & {id: string};
 const finite = ({lat, lon}: Point) => Number.isFinite(lat) && Number.isFinite(lon);
-const coordinates = ({lat, lon}: Point) => ({latitude: lat, longitude: lon});
+const coordinates = ({lat, lon}: Point) => ({type: 'Point', coordinates: [lon, lat]});
 
 /** Shorten the straight-line itinerary without changing the chosen stops. */
 export function shorterRunOrder(stops: readonly Stop[], start: Point | null): {
@@ -21,7 +21,7 @@ export function shorterRunOrder(stops: readonly Stop[], start: Point | null): {
   const leg = (a: number, b: number): number => {
     const from = a === -1 ? origin : points[a]!;
     const to = b === -1 ? origin : points[b]!;
-    return from && to ? distanceNm(from, to) : 0;
+    return from && to ? distanceM(from, to)! / 1852 : 0;
   };
   const total = (order: readonly number[]) => {
     let nm = 0, previous = -1;
