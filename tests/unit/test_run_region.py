@@ -24,7 +24,7 @@ def _load():
 
 
 RR = _load()
-STAGE_ORDER = ['select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'package',
+STAGE_ORDER = ['select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'nearshore_vectors', 'package',
                'status', 'shots', 'status', 'qa', 'envelope']
 ZONE_ARGS = ['--coarse', '/in/coarse.tif', '--water', '/in/water.geojson', '--coarse-source', 'src-1']
 GEN = 'a' * 64
@@ -127,13 +127,15 @@ def test_chain_order_and_stage_arguments(box, capsys):
     extras = {
         'select': ['--cache', RR.DEFAULT_NORM],
         'mosaic': ['--scope', 'public'], 'tiles': ['--scope', 'public'], 'zone': ['--scope', 'public', *ZONE_ARGS],
+        'nearshore_vectors': ['--scope', 'public'],
         'package': ['--manifest', str(root / 'inventory/manifest.json'), '--upstream', 'tiles:public',
                     '--upstream', 'digests', '--upstream', 'zone:public', '--upstream', 'inventory',
                     '--upstream', 'contours'],
         'status': ['--json'], 'shots': ['--basemap', str(box.basemap)],
         'qa': ['--generation', GEN, '--release-sha256', hashlib.sha256(RELEASE).hexdigest(),
                '--elevation', str(mosaic / 'elevation.tif'), '--contributor', str(mosaic / 'contributor.tif'),
-               '--upstream', 'mosaic:public', '--shots', str(root / 'shots' / SHOT_GEN / 'shots.json')],
+               '--upstream', 'mosaic:public', '--upstream', 'nearshore_vectors:public',
+               '--shots', str(root / 'shots' / SHOT_GEN / 'shots.json')],
         'envelope': ['--generation', GEN],
     }
     assert box.calls() == [[stage, '--region', 'morro-bay', '--out', str(box.out), *extras.get(stage, [])]
@@ -653,7 +655,7 @@ def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
     assert [line.split()[3] for line in lines] == ['select', 'mosaic']  # '<n>. python region.py <stage>'
     assert '--scope public' in lines[1] and '--scope' not in lines[0]
-    assert 'not run: tiles, zone, digests, inventory, contours, package, shots, qa, envelope' in text
+    assert 'not run: tiles, zone, digests, inventory, contours, nearshore_vectors, package, shots, qa, envelope' in text
     for name in ('stop-file', 'cpu-pressure', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap'):
         assert f'ok     {name}' in text
     assert 'a real run would start' in text
