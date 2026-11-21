@@ -56,6 +56,12 @@
       "items": {"type": "string", "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$"}
     },
     "bounds": {"$ref": "common.schema.json#/$defs/bbox"},
+    "native_resolution_m_by_original_sha256": {
+      "description": "Reviewed original product-grid spacing in metres, keyed by original raster SHA-256. Mutually exclusive with native_resolution_m.",
+      "type": "object",
+      "propertyNames": {"minLength": 64, "maxLength": 64, "pattern": "^[0-9a-f]{64}$"},
+      "additionalProperties": {"type": "number", "exclusiveMinimum": 0}
+    },
     "max_age_hours": {"type": ["number", "null"]},
     "request": {
       "description": "Scheduled grid request (settings.settings merges it into the job).",
@@ -98,6 +104,6 @@
         ]
       }
     }
-  }],
+  }, {"not": {"required": ["native_resolution_m", "native_resolution_m_by_original_sha256"]}}],
   "additionalProperties": true
 }

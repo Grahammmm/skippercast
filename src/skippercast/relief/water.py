@@ -1,6 +1,16 @@
-"""Offline regional ocean masks using the reviewed north-B shoreline opening."""
+"""Offline regional ocean masks using the reviewed north-B shoreline opening.
 
+Also the receipted region stage ``region.py water --region ID --out OUT
+--shoreline-manifest FILE [--region-config FILE]``. It reads one admitted CUSP
+custody manifest and only the tiles it lists as served (sha256-checked against
+their rows; it never fetches), decodes their shoreline accuracies with the
+merged importer, and writes ``water.geojson`` and its report ``water.json``.
+"""
+
+from importlib.util import module_from_spec, spec_from_file_location
+import json
 from math import ceil, floor, isfinite
+from pathlib import Path
 from typing import Iterable, cast
 
 import numpy as np
@@ -8,10 +18,23 @@ import shapely
 from pyproj import Transformer
 from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPolygon, Point, Polygon, box, mapping
 
+from skippercast.paths import repo_root
+from skippercast.platform import shoreline
+from skippercast.relief import mosaic, receipts
+
 _QUAD_SEGS = 8
 _FRAME_GRID = 100_000
 _FRAME_SEGMENT_DEG = 0.005
 _OUTPUT_GRID = 0.000001
+
+# Reviewed north-B builder (scratch/sc-map-goal/north-b-inputs/water/build_water.py:67,
+# sha256 5b17edd6b5e48d8617d754dd8af157cefef4cf8e864026a6fb909ad8ac338a00). Its rule is
+# CLOSE_M = max stated HOR_ACC (:16, :581); 18.0 is that maximum in all three north-B
+# regions. The stage applies the rule per region and keeps the connectivity constant.
+CLOSE_M = 18.0
+CONNECT_M = 250.0
+CUSP_SCRIPT = 'scripts/shoreline/import_cusp.py'
+CODE_FILES = (CUSP_SCRIPT, 'skippercast.platform.shoreline')
 
 
 def _project(geometry, transformer):
@@ -211,3 +234,151 @@ def to_geojson(geometry: Polygon | MultiPolygon, region: str) -> dict:
         "properties": {"region_id": region},
         "geometry": mapping(shapely.orient_polygons(geometry)),
     }]}
+
+
+# --- region.py water ---------------------------------------------------------------------------
+
+def add_arguments(parser):
+    mosaic.add_region_config(parser)
+    parser.add_argument('--shoreline-manifest', type=Path, required=True,
+                        help='admitted CUSP custody manifest listing the held shoreline tiles')
+
+
+def plan(ctx):
+    manifest = ctx.args.shoreline_manifest
+    inputs = [receipts.Input(manifest, 'shoreline-manifest'), receipts.Input(mosaic.region_config(ctx), 'region')]
+    # close_m follows from the listed tiles, which are inputs; build records the value it used.
+    params = {'close_m': 'max stated HOR_ACC', 'connect_m': CONNECT_M}
+    ctx.water_job = None
+    if manifest.is_file():  # Otherwise the runner reports the missing input.
+        data = manifest.read_bytes()
+        try:
+            doc = json.loads(data)
+            rows = {row['tile']: row for row in doc['tiles']}
+            served = [(tile, manifest.parent / row['path'], row['sha256'])
+                      for tile, row in sorted(rows.items()) if row['status'] == 'served']
+        except (ValueError, KeyError, TypeError) as exc:
+            ctx.water_job = exc
+        else:
+            # Unavailable rows have no bytes by design: they are not inputs.
+            ctx.water_job = (receipts.sha256_bytes(data), doc, rows, served)
+            inputs.extend(receipts.Input(path, 'shoreline-tile') for _, path, _ in served)
+    return receipts.Plan(inputs, params)
+
+
+def _cusp():
+    """The merged CUSP importer; the stage uses its decoder with held bytes, never its fetch."""
+    spec = spec_from_file_location('import_cusp', repo_root() / CUSP_SCRIPT)
+    assert spec is not None and spec.loader is not None  # A tracked file of this checkout.
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _accuracy(properties, feature_id):
+    raw = properties.get('HOR_ACC')
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        value = float('nan')
+    if not (isfinite(value) and value > 0):
+        raise receipts.Held(f'shoreline feature {feature_id} states no positive HOR_ACC: {raw!r}')
+    return value
+
+
+def _manifest_accuracies(cusp, held, frame_max):
+    """Scan verified tile features before spatial clipping can discard them."""
+    accuracies = set()
+    support = None
+    maximum = frame_max
+    for tile, body in held.items():
+        tile_id = tile.replace('/', '-')
+        for layer in cusp.decode_tile(body):
+            for index, feature in enumerate(layer['features']):
+                if feature['type'] != 2:  # MVT LineString
+                    continue
+                accuracy = _accuracy(feature['properties'], f'cusp-{tile_id}-{index}')
+                accuracies.add(accuracy)
+                if accuracy > maximum:
+                    maximum = accuracy
+                    support = (tile, layer['extent'], feature['geometry'])
+    return accuracies, support
+
+
+def build(ctx, out_dir):
+    job, region_id = ctx.water_job, ctx.region.id
+    if isinstance(job, Exception):
+        raise ValueError(f'unreadable shoreline manifest: {type(job).__name__}: {job}')
+    manifest_sha, doc, rows, served = job
+    config = mosaic.read_json(mosaic.region_config(ctx))
+    if config['id'] != region_id:
+        raise receipts.ReceiptError('region config id differs from the requested region')
+    bounds = config['bounds']
+    entry = doc.get('regions', {}).get(region_id)
+    covered = entry.get('bounds') if isinstance(entry, dict) else None
+    if not (isinstance(covered, list) and len(covered) == 4 and covered[0] <= bounds[0]
+            and covered[1] <= bounds[1] and bounds[2] <= covered[2] and bounds[3] <= covered[3]):
+        raise receipts.Held(f'shoreline manifest does not cover region {region_id}: '
+                            f'manifest bounds {covered}, region bounds {bounds}')
+
+    held, pins = {}, []
+    for tile, path, expected in served:
+        data = path.read_bytes()
+        observed = receipts.sha256_bytes(data)
+        if observed != expected:
+            raise receipts.Held(f'SHA-256 mismatch for shoreline tile {tile}: expected {expected}, observed {observed}')
+        held[tile] = data
+        pins.append({'tile': tile, 'sha256': expected})
+
+    cusp = _cusp()
+    frame = _frame_bounds(bounds)
+    needed = ['/'.join(map(str, tile)) for tile in cusp.tiles_for(frame)]
+    unavailable = {tile for tile, row in rows.items() if row['status'] == 'unavailable'}
+    unlisted = [tile for tile in needed if tile not in held and tile not in unavailable]
+    if unlisted:
+        raise receipts.Held(f'shoreline manifest lists no served or unavailable row for frame tiles {unlisted}')
+
+    # As the reviewed builder: the importer's extract, then the platform check and published form.
+    collection = cusp.extract(region_id, frame, get=lambda tile: held.get('/'.join(map(str, tile))))
+    frame_region = {'id': region_id, 'bounds': frame}
+    shoreline.check_shoreline(collection, frame_region)
+    published = shoreline.slim_shoreline(collection)
+    shoreline.check_shoreline(published, frame_region)
+    frame_accuracies = [_accuracy(feature['properties'], feature['id']) for feature in published['features']]
+    lines = [(line, accuracy) for feature, accuracy in zip(published['features'], frame_accuracies)
+             for line in map(LineString, shoreline.feature_lines(feature['geometry'])) if line.length]
+    frame_max = max((accuracy for _, accuracy in lines), default=0.0)
+    accuracies, support = _manifest_accuracies(cusp, held, frame_max)
+    close_m = max(accuracies, default=0.0)
+    if close_m > CONNECT_M:
+        raise receipts.Held(f'maximum stated HOR_ACC {close_m} m exceeds connect_m {CONNECT_M} m')
+    if not lines:
+        raise receipts.Held(f'no shoreline lines in the frame of region {region_id}')
+    if support is not None:
+        # The public API requires the maximum to be carried by real shoreline.
+        # Keep the frame extract and include the source feature supplying the higher radius.
+        tile, extent, geometry = support
+        z, x, y = map(int, tile.split('/'))
+        for points in cusp.lines(geometry):
+            line = LineString([(cusp.tile_lon(x + px / extent, z), cusp.tile_lat(y + py / extent, z))
+                               for px, py in points])
+            if line.length:
+                lines.append((line, close_m))
+    try:
+        water, report = ocean_polygon(lines, frame, close_m=close_m, connect_m=CONNECT_M)
+    except ValueError as exc:  # For example no west-connected ocean, or an east leak after the cuts.
+        raise receipts.Held(str(exc)) from None
+
+    (out_dir / 'water.geojson').write_bytes(receipts.canonical(to_geojson(water, region_id)) + b'\n')
+    (out_dir / 'water.json').write_bytes(receipts.canonical({
+        'region': region_id, 'region_bounds_wgs84': bounds, 'frame_wgs84': list(frame),
+        'close_m': close_m, 'connect_m': CONNECT_M, 'hor_acc_values_m': sorted(accuracies),
+        'unavailable_tiles': sorted(unavailable),
+        'report': report, 'inputs': {'manifest_sha256': manifest_sha, 'tiles': pins},
+    }) + b'\n')
+    beyond = report['unlisted_beyond_bound']
+    if beyond:
+        # The runner keeps out_dir, with water.json and its report, as the held attempt's failed_dir.
+        raise receipts.Held(f"{len(beyond)} boundary samples lie beyond {report['displacement_bound_m']} m "
+                            f"of the shoreline and are not at a listed cut")
+    return {'close_m': close_m, 'connect_m': CONNECT_M}
