@@ -65,8 +65,46 @@ def migration_paths(tracked):
             (p.startswith('drizzle/') and p.count('/') == 1 and p.endswith('.sql'))}
 
 
+JOURNAL = 'drizzle/meta/_journal.json'
+
+
+def frozen_journal_bytes(root, frozen_count):
+    """The journal as it was frozen: header plus its first `frozen_count` entries.
+
+    drizzle-kit writes the journal as 2-space-indented JSON with no final newline and only
+    ever appends entries, so re-serializing the frozen prefix reproduces the frozen bytes
+    exactly. Any edit to the header or to a frozen entry changes this digest.
+    """
+    raw = (root / JOURNAL).read_bytes()
+    data = json.loads(raw)
+    if json.dumps(data, indent=2).encode() != raw:
+        return raw  # Reformatted or otherwise non-canonical bytes never match the pin.
+    head = dict(data)
+    head['entries'] = data['entries'][:frozen_count]
+    return json.dumps(head, indent=2).encode()
+
+
+def forward_migrations(root, frozen_count):
+    """Paths of migrations appended after the frozen chain (forward-only schema work).
+
+    Only journal entries after the frozen prefix qualify, numbered consecutively from it, each
+    naming exactly one top-level SQL file and its snapshot. Anything else stays unlisted.
+    """
+    entries = json.loads((root / JOURNAL).read_bytes())['entries']
+    paths = set()
+    for position, entry in enumerate(entries[frozen_count:], start=frozen_count):
+        assert isinstance(entry, dict) and entry.get('idx') == position, f'forward migration out of order: {position}'
+        tag = entry.get('tag')
+        assert isinstance(tag, str) and re.fullmatch(rf'{position:04d}_[a-z0-9_]+', tag), f'forward migration tag: {tag}'
+        paths |= {f'drizzle/{tag}.sql', f'drizzle/meta/{position:04d}_snapshot.json'}
+    return paths
+
+
 def validate_migrations(entries, root, tracked):
     listed = []
+    # One journal entry per pinned top-level SQL file; a missing pin shortens the prefix and fails.
+    frozen_count = len({e['path'] for e in entries if isinstance(e, dict) and isinstance(e.get('path'), str)
+                        and e['path'].count('/') == 1 and e['path'].endswith('.sql')})
     for entry in entries:
         exact_fields(entry, 'path sha256')
         path = entry['path']
@@ -75,9 +113,13 @@ def validate_migrations(entries, root, tracked):
         assert path not in listed, f'duplicate migration: {path}'
         listed.append(path)
         assert (root / path).is_file(), f'missing migration: {path}'
-        assert hashlib.sha256((root / path).read_bytes()).hexdigest() == entry['sha256'], f'changed migration: {path}'
+        # The journal is append-only: its frozen prefix must reproduce the pinned bytes.
+        content = frozen_journal_bytes(root, frozen_count) if path == JOURNAL else (root / path).read_bytes()
+        assert hashlib.sha256(content).hexdigest() == entry['sha256'], f'changed migration: {path}'
+    assert JOURNAL in listed, 'journal not pinned'
     expected = migration_paths(tracked)
-    assert set(listed) == expected, f'migration inventory mismatch: {sorted(set(listed) ^ expected)}'
+    admitted = set(listed) | forward_migrations(root, frozen_count)
+    assert admitted == expected, f'migration inventory mismatch: {sorted(admitted ^ expected)}'
 
 
 def validate_runtime(facts):
@@ -115,9 +157,11 @@ def validate_manifest(data):
     assert baseline['product_output_paths'] == len(tree.splitlines())
     assert baseline['product_output_git_tree_sha256'] == hashlib.sha256(tree.encode()).hexdigest()
     validate_owners(data['owners'], tracked)
-    # Source snapshot remains immutable; current tracked migrations may neither drift nor disappear.
+    # Source snapshot remains immutable; frozen migrations may neither drift nor disappear, and the
+    # only additions admitted are journaled forward migrations (see validate_migrations).
     current = git('ls-files').splitlines()
-    assert migration_paths(current) == migration_paths(tracked), 'migration chain changed since source_commit'
+    assert {e['path'] for e in data['migrations']} == migration_paths(tracked), 'manifest does not pin the frozen chain'
+    assert migration_paths(tracked) <= migration_paths(current), 'migration chain changed since source_commit'
     validate_migrations(data['migrations'], ROOT, current)
     for entry in data['migrations']:
         frozen = subprocess.check_output(['git', 'show', f"{data['source_commit']}:{entry['path']}"], cwd=ROOT)
@@ -244,13 +288,77 @@ def test_no_private_keys_or_values(manifest, key):
             no_private_data({'nested': [value]})
 
 
-def test_new_drizzle_file_not_in_manifest_is_reported(manifest, tmp_path):
-    tracked = [e['path'] for e in manifest['migrations']]
-    for entry in manifest['migrations']:
-        target = tmp_path / entry['path']
+def copy_migrations(tmp_path):
+    """Copy every currently tracked migration file (frozen and forward) into tmp_path."""
+    current = sorted(migration_paths(git('ls-files').splitlines()))
+    for path in current:
+        target = tmp_path / path
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((ROOT / entry['path']).read_bytes())
+        target.write_bytes((ROOT / path).read_bytes())
+    return current
+
+
+def append_journal_entry(root, tag, idx=None):
+    journal = root / JOURNAL
+    data = json.loads(journal.read_bytes())
+    data['entries'].append({'idx': len(data['entries']) if idx is None else idx, 'version': '6',
+                            'when': 1, 'tag': tag, 'breakpoints': True})
+    journal.write_text(json.dumps(data, indent=2))
+
+
+def test_new_drizzle_file_not_in_manifest_is_reported(manifest, tmp_path):
+    tracked = copy_migrations(tmp_path)
     for path in ['drizzle/9999_unlisted.sql', 'drizzle/meta/unlisted.json']:
         (tmp_path / path).write_text('synthetic')
         with pytest.raises(AssertionError, match=re.escape(path)):
             validate_migrations(manifest['migrations'], tmp_path, tracked + [path])
+
+
+def test_journaled_forward_migration_is_admitted(manifest, tmp_path):
+    tracked = copy_migrations(tmp_path)
+    validate_migrations(manifest['migrations'], tmp_path, tracked)
+    position = len(json.loads((tmp_path / JOURNAL).read_bytes())['entries'])
+    tag = f'{position:04d}_synthetic_forward'
+    append_journal_entry(tmp_path, tag)
+    added = [f'drizzle/{tag}.sql', f'drizzle/meta/{position:04d}_snapshot.json']
+    for path in added:
+        (tmp_path / path).write_text('synthetic')
+    validate_migrations(manifest['migrations'], tmp_path, tracked + added)
+    # Journaled but not tracked (SQL or snapshot missing) is still a mismatch.
+    for path in added:
+        with pytest.raises(AssertionError, match=re.escape(path)):
+            validate_migrations(manifest['migrations'], tmp_path, tracked + [p for p in added if p != path])
+
+
+@pytest.mark.parametrize('field, value', [('when', 0), ('tag', '0000_renamed'), ('breakpoints', False)])
+def test_edited_frozen_journal_entry_is_reported(manifest, tmp_path, field, value):
+    tracked = copy_migrations(tmp_path)
+    data = json.loads((tmp_path / JOURNAL).read_bytes())
+    data['entries'][0][field] = value
+    (tmp_path / JOURNAL).write_text(json.dumps(data, indent=2))
+    with pytest.raises(AssertionError, match=re.escape(f'changed migration: {JOURNAL}')):
+        validate_migrations(manifest['migrations'], tmp_path, tracked)
+
+
+def test_removed_or_reformatted_frozen_journal_is_reported(manifest, tmp_path):
+    tracked = copy_migrations(tmp_path)
+    data = json.loads((tmp_path / JOURNAL).read_bytes())
+    del data['entries'][3]
+    (tmp_path / JOURNAL).write_text(json.dumps(data, indent=2))
+    with pytest.raises(AssertionError):
+        validate_migrations(manifest['migrations'], tmp_path, tracked)
+    data = json.loads((ROOT / JOURNAL).read_bytes())
+    (tmp_path / JOURNAL).write_text(json.dumps(data, indent=4))
+    with pytest.raises(AssertionError, match=re.escape(f'changed migration: {JOURNAL}')):
+        validate_migrations(manifest['migrations'], tmp_path, tracked)
+
+
+@pytest.mark.parametrize('tag, idx, message', [('9999_skipped', None, 'forward migration tag'),
+                                               ('{position:04d}_x', 99, 'forward migration out of order'),
+                                               ('{position:04d}_Bad-Name', None, 'forward migration tag')])
+def test_misnumbered_forward_migration_is_reported(manifest, tmp_path, tag, idx, message):
+    tracked = copy_migrations(tmp_path)
+    position = len(json.loads((tmp_path / JOURNAL).read_bytes())['entries'])
+    append_journal_entry(tmp_path, tag.format(position=position), idx)
+    with pytest.raises(AssertionError, match=message):
+        validate_migrations(manifest['migrations'], tmp_path, tracked)

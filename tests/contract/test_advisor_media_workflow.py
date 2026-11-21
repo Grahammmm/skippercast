@@ -1,9 +1,8 @@
 """The advisor-media runner job's workflow keeps the shape 09 § Derived images requires (TA-M1).
 
-Dispatch only (no schedule that could fall back to GitHub-hosted minutes), dark
-until ENABLE_ADVISOR, only on our own runner, the OIDC identity the Worker pins
-(deployments/production.json scheduler.workflows), and only the R2 token scoped
-to the advisor bucket.
+Dispatch only, dark until ENABLE_ADVISOR, on GitHub-hosted Ubuntu with ffmpeg.
+The Worker pins its OIDC identity (deployments/production.json scheduler.workflows),
+and the job uses only the R2 token scoped to the advisor bucket.
 """
 import json
 import re
@@ -25,9 +24,9 @@ class AdvisorMediaWorkflowTests(unittest.TestCase):
         for trigger in ('schedule:', 'push:', 'pull_request'):
             self.assertNotIn(trigger, self.header)
 
-    def test_dark_until_enabled_and_never_on_a_hosted_runner(self):
-        self.assertIn("if: vars.ENABLE_ADVISOR == 'true' && vars.DATA_RUNNER != ''", self.text)
-        self.assertEqual(re.findall(r'^\s*runs-on:\s*(.+?)\s*$', self.text, re.M), ["${{ vars.DATA_RUNNER || 'ubuntu-latest' }}"])
+    def test_dark_until_enabled_on_hosted_ubuntu(self):
+        self.assertEqual(re.findall(r'^    if: (.+)$', self.text, re.M), ["vars.ENABLE_ADVISOR == 'true'"])
+        self.assertEqual(re.findall(r'^\s*runs-on:\s*(.+?)\s*$', self.text, re.M), ['ubuntu-latest'])
 
     def test_identity_and_least_privilege(self):
         self.assertIn('permissions: {}', self.header)
@@ -41,7 +40,12 @@ class AdvisorMediaWorkflowTests(unittest.TestCase):
 
     def test_runs_the_job_with_the_advisor_extra_and_its_scoped_token(self):
         self.assertIn('python -m pip install -e ".[advisor]"', self.text)
-        self.assertIn('run: python scripts/advisor/media_job.py', self.text)
+        commands = re.findall(r'^        run: (.+)$', self.text, re.M)
+        self.assertLess(
+            commands.index('sudo apt-get install -y --no-install-recommends ffmpeg'),
+            commands.index('python scripts/advisor/media_job.py'),
+            'install ffmpeg before deriving media',
+        )
         self.assertIn('R2_ADVISOR_TOKEN: ${{ secrets.R2_ADVISOR_TOKEN }}', self.text)
         self.assertNotIn('CLOUDFLARE_API_TOKEN', self.text, 'never the broad deploy token')
         self.assertNotIn('R2_PUBLISH_TOKEN', self.text, 'the feed bucket token is not reused')

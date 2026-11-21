@@ -27,6 +27,7 @@ import {readPalette, type Palette} from './palette.ts';
 import {shownPresentation} from './stage.ts';
 import {sp, type StatusCopy} from './status-copy.ts';
 import {SWELL_LAYER} from './swell.ts';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'sst-fronts' as const;
 /** SC1352-07: a catalogue id for this module's card and status words (mark.layer.fronts.<key>). */
@@ -105,11 +106,11 @@ export const ageLimit = (fileMs: number): number => Math.min(fileMs, MAX_AGE_MS)
 
 export function frontsBasis(d: DrawnFronts, now: Date): string {
   return `Offshore temperature fronts found in the ${d.product} daily analysis, observed ${ageWords(ageOf(d.observedAt, now))}, drawn as an edge with a band: the position is uncertain by the analysis's own stated error divided by the front's strength, either side of the line. `
-    + `Withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a front is an edge to search along, not a fish or catch location.${d.credit ? ` Credit: ${d.credit}.` : ''}`;
+    + `Withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a front is an edge to search along, not a fish or catch location.`;
 }
 /** The variables of the basis sentence, for the card and the legend's popover alike (a Spanish card or legend resolves them at render). */
 function basisVars(d: DrawnFronts, now: Date) {
-  return {product: d.product, age: ageVar(ageOf(d.observedAt, now)), hours: Math.round(d.limitMs / HOUR), credit: d.credit ? {id: fid('credit'), vars: {credit: d.credit}} : ''};
+  return {product: d.product, age: ageVar(ageOf(d.observedAt, now)), hours: Math.round(d.limitMs / HOUR)};
 }
 const none = (reason: string, note = NONE, copy?: StatusCopy): FrontsStatus => ({drawn: null, note, reason, basis: FRONTS_BASIS, ...(copy ? {copy} : {})});
 const OFF: FrontsStatus = {drawn: null, note: '', reason: '', basis: FRONTS_BASIS};
@@ -121,9 +122,9 @@ export function frontsStatus(on: boolean, feed: FrontsFeed | null, now: Date): F
   if (!feed) return none('Loading the region\'s offshore temperature fronts.', 'loading', {note: [sp(fid('status.loadingNote'))], reason: [sp(fid('status.loading'))]});
   if (feed.state === 'none') return say('No current front data: no offshore temperature fronts are published for this region yet.', 'status.none');
   if (feed.state === 'error') return say('No current front data: the region\'s fronts file could not be read or failed its checks.', 'status.error');
-  const {doc} = feed, limit = ageLimit(doc.maxAgeMs), current = doc.fronts.filter(f => fresh(f.observedAt, now, limit));
+  const {doc} = feed, limit = ageLimit(doc.maxAgeMs), current = doc.fronts;
   const limitText = `${Math.round(limit / HOUR)}-hour`;
-  if (doc.fronts.length > current.length || (!doc.fronts.length && (!doc.observedAt || !fresh(doc.observedAt, now, limit))))
+  if (current.some(f => !fresh(f.observedAt, now, limit)) || (!current.length && (!doc.observedAt || !fresh(doc.observedAt, now, limit))))
     return none(`No current front data: the latest fronts are past their ${limitText} age limit or carry no usable observation time.`, NONE,
       {note: [sp(fid('status.noneNote'))], reason: [sp(fid('status.stale'), {hours: Math.round(limit / HOUR)})]});
   if (!current.length) {
@@ -149,14 +150,20 @@ export function frontFeatures(d: Pick<DrawnFronts, 'fronts'>): {type: 'FeatureCo
   })};
 }
 /** The band under the line, both lines only: no fill, no point. */
-export function frontsOverlay(p: Palette): Overlay {
+function frontsLayers(p: Palette): Overlay['layers'] {
   const band: MapLibre.ExpressionSpecification = ['interpolate', ['exponential', 2], ['zoom'], 0, ['get', 'px0'], 24, ['*', ['get', 'px0'], 2 ** 24]];
+  return [
+    {id: FRONTS_BAND_LAYER, type: 'line', source: FRONTS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {'line-color': p.contrast1, 'line-opacity': 0.35, 'line-width': band}},
+    {id: FRONTS_LAYER, type: 'line', source: FRONTS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {'line-color': p.contrast2, 'line-opacity': 0.9, 'line-width': 1.5}},
+  ];
+}
+
+/** One shared function, so equal overlays stay equal. A live theme switch re-runs the same layer builder with the new palette; ids and sources stay. */
+const themePaint = (pal: Palette) => paintEdits(frontsLayers(pal));
+export function frontsOverlay(p: Palette): Overlay {
   return {
     sources: {[FRONTS_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}},
-    layers: [
-      {id: FRONTS_BAND_LAYER, type: 'line', source: FRONTS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {'line-color': p.contrast1, 'line-opacity': 0.35, 'line-width': band}},
-      {id: FRONTS_LAYER, type: 'line', source: FRONTS_SOURCE, layout: {'line-cap': 'round', 'line-join': 'round'}, paint: {'line-color': p.contrast2, 'line-opacity': 0.9, 'line-width': 1.5}},
-    ],
+    layers: frontsLayers(p), themePaint,
   };
 }
 
@@ -199,7 +206,8 @@ export function createFronts(o: FrontsOptions): {reading(at: {lon: number; lat: 
   const tick = signal(0), on = computed(() => layers.value.includes(REGISTRY_ID));
   const feed = signal<{region: string; result: FrontsFeed | null} | null>(null);
   const status = computed(() => { void tick.value; const p = place(), f = feed.value; return frontsStatus(on.value, p && f?.region === p.regionId ? f.result : null, now()); });
-  let feedRegion = '', feedAt = 0, feedAbort: AbortController | undefined, drawnKey = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  let feedRegion = '', feedAt = 0, feedAbort: AbortController | undefined, timer: ReturnType<typeof setTimeout> | undefined;
+  let painted: DrawnFronts['fronts'] | null = null, drawnOn: Engine | null = null;
   const withdraw = (): void => { if (chartMark.peek()?.id.startsWith('sst-fronts:')) chartMark.value = null; };
   const disposers = [
     // Read only while Temp fronts is on, again after an hour; a failed read keeps the map working and says so.
@@ -216,13 +224,16 @@ export function createFronts(o: FrontsOptions): {reading(at: {lon: number; lat: 
     effect(() => { const s = status.value; frontsState.value = s; setRailNote(REGISTRY_ID, on.value ? s.note : '', on.value ? s.copy?.note : undefined); }),
     // New fronts redraw; none (off, stale, nothing found) removes the lines at once.
     effect(() => {
-      const e = engine.value, d = status.value.drawn, k = d?.key ?? '';
-      if (!e || (k === drawnKey && e === drawnOn)) return;
-      if (k !== drawnKey) withdraw();
-      drawnKey = k; drawnOn = e;
+      // An accepted document keeps its array across clock ticks; a new read may correct geometry with the same IDs and times.
+      const e = engine.value, d = status.value.drawn, generation = e ? d?.fronts ?? null : null;
+      if (generation === painted && e === drawnOn) return;
+      if (generation !== painted) withdraw();
+      painted = null; drawnOn = e;
+      if (!e) return;
       if (!d) { e.setOverlay(REGISTRY_ID, null); return; }
       e.setOverlay(REGISTRY_ID, frontsOverlay(palette()), [SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
       e.setData(FRONTS_SOURCE, frontFeatures(d));
+      painted = d.fronts;
     }),
     // Re-judge at the age limit of the oldest drawn front and at the next hour.
     effect(() => {
@@ -234,7 +245,7 @@ export function createFronts(o: FrontsOptions): {reading(at: {lon: number; lat: 
     }),
   ];
   return {
-    reading(at) { const d = status.peek().drawn; return d && drawnKey === d.key && shownPresentation.peek() === 'chart' ? frontsMark(d, at, now()) : null; },
+    reading(at) { const d = status.peek().drawn; return d && painted === d.fronts && drawnOn === engine.peek() && shownPresentation.peek() === 'chart' ? frontsMark(d, at, now()) : null; },
     destroy() { for (const dispose of disposers) dispose(); clearTimeout(timer); feedAbort?.abort(); withdraw(); frontsState.value = OFF; setRailNote(REGISTRY_ID, ''); },
   };
 }

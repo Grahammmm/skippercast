@@ -16,11 +16,17 @@ _spec.loader.exec_module(status)
 EXPECTED = "\n".join([
     "# Committed seafloor status", "",
     "Ledger input hash: `hash-1`", "",
-    "| Region | Reaches | Valid survey reaches | Screen-ready with habitat | Other states | Tier 1 km² | Tier 2 km² | Live publication |",
-    "| --- | ---: | ---: | ---: | --- | ---: | ---: | --- |",
-    "| alpha | 2 | 1 | 1 | habitat-screened: 1, unknown: 1 | 2.500000 | 1.000000 | Not verified by this report |",
-    "| beta | 1 | 1 | 0 | surveyed: 1 | 1.250000 | 0.750000 | Not verified by this report |",
+    "| Region | Reaches | Valid survey reaches | Screen-ready with ranked habitat | Other states | "
+    "Screen-ready with unranked search areas | Screen-ready with unranked classified areas | "
+    "Tier 1 km² | Tier 2 km² | Live publication |",
+    "| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | --- |",
+    "| alpha | 2 | 1 | 1 | habitat-screened: 1, unknown: 1 | 0 (1 unknown) | 0 (1 unknown) | "
+    "2.500000 | 1.000000 | Not verified by this report |",
+    "| beta | 1 | 1 | 0 | surveyed: 1 | 0 | 0 | 1.250000 | 0.750000 | Not verified by this report |",
     "", "Total reaches: 3.", "",
+    "The ranked column requires positive Tier 2 area. Unranked columns count ready",
+    "reaches with recorded areas in each category, not the areas themselves. A reach",
+    "can count in multiple columns. Unknown means a usable count was not recorded.", "",
     "Tier areas are ledger measurements, not catch probability. A screened status",
     "with zero selected survey area is not useful measured coverage. Screen-ready",
     "counts describe saved screens, not current season/gear clearance. Publication",

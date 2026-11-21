@@ -8,6 +8,7 @@ independent patch observations, current fish presence, or fishing waypoints.
 import argparse
 from collections import Counter
 from datetime import date
+import hashlib
 import json
 from pathlib import Path
 
@@ -26,19 +27,57 @@ from research.scripts.audit_usgs_video_observations import load_archive, open_or
 OUTPUT = ROOT / "research/receipts/point-conception-original-4m-camera-gap.json"
 MANIFEST = ROOT / "research/catalog/usgs-video-cruises.json"
 PRIOR = ROOT / "dist/data/point-conception-original-4m-rugged-overlap.json"
+SCOPE = "point-conception-two-original-4m-components-usgs-video-proximity"
+# Reviewed DS 781 inventory (12 cruise IDs and archive digests, plus catalog and base URLs).
+REVIEWED_INVENTORY_SHA256 = "06d3a1b0a46c6da60f47125bdedaf4da3a594cfd44e4baae896f65bc655c20d8"
+EXPECTED_COMPONENTS = {"H11952": 4736, "H11953": 3616}  # survey ID -> area in m²
+
+
+def reviewed_sources(manifest):
+    canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    if hashlib.sha256(canonical).hexdigest() != REVIEWED_INVENTORY_SHA256 or not manifest["archives"]:
+        raise ValueError("Camera cruise inventory incomplete or changed; hold for review")
+    return [(cruise, sha, manifest["base_url"] + cruise + "_video_observations.zip")
+            for cruise, sha in sorted(manifest["archives"].items())]
+
+
+def require_components(identities):
+    if Counter(identities) != Counter(EXPECTED_COMPONENTS.items()):
+        raise ValueError("Camera components incomplete or changed; hold for review")
+
+
+def require_searched_zero(receipt, manifest):
+    """Use the source rows as the inventory binding without changing the receipt format."""
+    expected = reviewed_sources(manifest)
+    sources = receipt.get("sources", [])
+    identities = Counter((row.get("cruise"), row.get("sha256"), row.get("url")) for row in sources)
+    if (receipt.get("schema_version") != 1 or receipt.get("scope") != SCOPE
+            or receipt.get("catalog_url") != manifest["catalog_url"]
+            or identities != Counter(expected)
+            or any(type(row.get("records")) is not int or row["records"] <= 0 for row in sources)):
+        raise ValueError("Camera receipt does not cover the reviewed cruise inventory; hold for review")
+    components = receipt.get("components", [])
+    require_components((row.get("survey_id"), row.get("component_area_m2")) for row in components)
+    if any(type(row.get("bottom_observations_inside_component")) is not int
+           or row["bottom_observations_inside_component"] != 0 for row in components):
+        raise ValueError("Direct camera evidence changed or is unknown; review before asserting a gap")
 
 
 def audit(manifest, video_cache, candidates, *, download=False):
+    inventory = reviewed_sources(manifest)
+    require_components((survey, cells * 16) for survey, cells, _ in candidates)
     to_native = Transformer.from_crs(4326, 26910, always_xy=True).transform
     records = {survey: [] for survey, _, _ in candidates}
     sources = []
-    for cruise, sha in sorted(manifest["archives"].items()):
+    for cruise, sha, url in inventory:
         raw = load_archive(video_cache, cruise, sha, manifest["base_url"], download)
         accuracy = camera_accuracy(raw)
         reader = open_original_zip(raw)
-        sources.append({"cruise": cruise, "sha256": sha,
-                        "url": manifest["base_url"] + cruise + "_video_observations.zip",
-                        "records": len(reader), "position_accuracy_note": accuracy})
+        count = len(reader)
+        if count == 0:
+            raise ValueError(f"Reviewed camera archive has no records: {cruise}")
+        sources.append({"cruise": cruise, "sha256": sha, "url": url,
+                        "records": count, "position_accuracy_note": accuracy})
         for item in reader.iterShapeRecords():
             if not item.shape.points:
                 continue
@@ -79,7 +118,7 @@ def audit(manifest, video_cache, candidates, *, download=False):
         })
     return {
         "schema_version": 1,
-        "scope": "point-conception-two-original-4m-components-usgs-video-proximity",
+        "scope": SCOPE,
         "catalog_url": manifest["catalog_url"],
         "distance_crs": "EPSG:26910",
         "sources": sources,

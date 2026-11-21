@@ -2,7 +2,8 @@
 // § As built (TA-V1), Validation; TA-V2 moved it here from claude.ts so the
 // Hermes client validates exactly as the Claude provider does). Nothing a
 // provider returns reaches the advisor without passing through one of these:
-// confidences clamped to 0..1, booleans only when literally true, dates real
+// moderation fields required as-is; other confidences clamped to 0..1,
+// other booleans only when literally true, dates real
 // YYYY-MM-DD, counts non-negative integers, species keys limited to the set the
 // client offered (a key outside it becomes null with its label kept), at most
 // three fish candidates sorted by confidence.
@@ -33,11 +34,19 @@ function isoDate(v: unknown): string | null {
 const obj = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
 const list = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
 
+/** Only explicit, valid safety evidence can clear a moderation hold. */
+export function hasModerationEvidence(input: unknown): input is Record<string, unknown> & Pick<Classification, 'has_person' | 'person_confidence' | 'nsfw'> {
+  const {has_person, person_confidence, nsfw} = obj(input);
+  return typeof has_person === 'boolean' && typeof nsfw === 'boolean'
+    && typeof person_confidence === 'number' && person_confidence >= 0 && person_confidence <= 1;
+}
+
 export function parseClassification(input: unknown, meta: ResultMeta): Classification {
   const i = obj(input);
+  if (!hasModerationEvidence(i)) throw Error('vision classification has invalid moderation evidence');
   const kind = (IMAGE_KINDS as readonly unknown[]).includes(i.kind) ? i.kind as ImageKind : 'unknown';
-  return {kind, kind_confidence: clamp01(i.kind_confidence), has_person: bool(i.has_person), person_confidence: clamp01(i.person_confidence),
-    has_fish: bool(i.has_fish), text_present: bool(i.text_present), nsfw: bool(i.nsfw), ...meta};
+  return {kind, kind_confidence: clamp01(i.kind_confidence), has_person: i.has_person, person_confidence: i.person_confidence,
+    has_fish: bool(i.has_fish), text_present: bool(i.text_present), nsfw: i.nsfw, ...meta};
 }
 
 export const MAX_BOARD_LINES = 40;

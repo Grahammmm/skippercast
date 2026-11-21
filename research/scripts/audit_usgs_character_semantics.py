@@ -14,6 +14,15 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
+if __package__:
+    from .audit_usgs_ds781_metadata import (
+        EXPLICIT_REUSE, matches_redistribution_review, reviewed_redistribution_products,
+    )
+else:
+    from audit_usgs_ds781_metadata import (
+        EXPLICIT_REUSE, matches_redistribution_review, reviewed_redistribution_products,
+    )
+
 
 HOSTS = {"pubs.usgs.gov", "cmgds.marine.usgs.gov"}
 MAX_BYTES = 2_000_000
@@ -68,18 +77,21 @@ def audit(native, metadata, getter=fetch):
     if (native.get("scope") != "usgs-ds781-statewide-original-character-raster-audit"
             or metadata.get("scope") != "usgs-ds781-original-fgdc-metadata-triage"):
         raise ValueError("Wrong USGS original-source inventories")
-    by_url = {row.get("xml_url"): row for row in metadata["records"] if row.get("xml_url")}
+    by_archive = {row.get("archive_url"): row for row in metadata["records"]}
     rows = [row for row in native["products"] if row["status"] == "ok"]
-    if len(rows) != native["inspected_count"] or len(by_url) != len(set(by_url)):
+    if len(rows) != native["inspected_count"] or len(by_archive) != len(metadata["records"]):
         raise ValueError("USGS original-source inventory changed")
+    reviewed = reviewed_redistribution_products()
 
     def one(row):
-        url = row["metadata_url"]
-        source = by_url.get(url)
-        if (source is None or source["status"] != "reviewed"
-                or source.get("rights_evidence") != "explicit-public-domain-redistribution"
+        url = row.get("metadata_url")
+        source = by_archive.get(row["archive_url"])
+        if (source is None or source.get("rights_evidence") != EXPLICIT_REUSE
+                or source.get("kind") != "seafloor-character" or source.get("map_area") != row["map_area"]
+                or source.get("xml_url") != url
+                or not matches_redistribution_review(source, reviewed)
                 or source.get("metadata_sha256") != row["metadata_sha256"]):
-            raise ValueError("Character metadata or redistribution review is not pinned: " + url)
+            raise ValueError(f"Character metadata or redistribution review is not pinned: {url}")
         raw = getter(url)
         actual = hashlib.sha256(raw).hexdigest()
         if actual != row["metadata_sha256"]:

@@ -58,6 +58,6 @@ def test_complete_and_nonfailure_controls_are_unchanged(tmp_path):
     unlist(tmp_path, 'tides', 'wx')
     assert run(tmp_path)[0] == 0
     write(tmp_path / 'e', {})
-    assert run(tmp_path / 'e')[0] == 0
+    assert_named(tmp_path / 'e', 'latest.json: sources must not be empty')
     write(tmp_path / 'f', {'harbor': 'failed'})
     assert run(tmp_path / 'f')[0] == REVIEW

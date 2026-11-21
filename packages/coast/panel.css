@@ -2914,6 +2914,11 @@ body.app-body.map-focused #expand-map {
   outline: 2px solid var(--coast-mint);
   outline-offset: 2px;
 }
+
+/* Keep the native disclosure at least as large as the WCAG target floor. */
+.history-measurement-note > summary {
+  min-height: 24px;
+}
 .reef-gradient {
   background:
     linear-gradient(

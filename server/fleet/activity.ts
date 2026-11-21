@@ -30,7 +30,7 @@
 //   GET /api/fleet/jobs/health?region=<id>
 //     Staleness booleans and ages only: {region, checked_at, stale_after_s, stale,
 //     checks: {heartbeat, last_message, processed: {age_s, stale}}, cause}. A check is stale
-//     when its time is unknown or more than STALE_HOURS (3) old; cause is staleCause() below.
+//     when its time is unknown or more than STALE_HOURS (3) old; a future last_message is unknown.
 import {body} from '../http.ts';
 import {ClientError} from '../errors.ts';
 import {recordFleetAis} from '../analytics.ts';
@@ -43,20 +43,33 @@ import {advisorPairs, advisorPrune, landingPairs, landingPrune, landingRows, SWE
 export const MAX_ACTIVITY_BYTES = 1024 * 1024;
 export const LIMITS = {windows: 50, trips: 200, segments: 4000, events: 2000, cells: 1000, hours: 72} as const;
 export const STALE_HOURS = 3;
+export const STALE_S = STALE_HOURS * 3600;
 export const BASIS = 'inferred-from-movement';
 export const heartbeatKey = (region: string): string => `fleet.ais.${region}.heartbeat`;
 export const processedKey = (region: string): string => `fleet.ais.${region}.processed`;
 
-/** Evidence scoped to the displayed trip, not the vessel's unrelated history.
+/** Evidence scoped to the displayed trips (at most 20), not the vessel's unrelated history.
  * Fishing segments have already passed classify.py's regional sustained-run thresholds. */
-export async function tripActivityClaims(db: D1Database, tripId: string, identityConfirmed: boolean): Promise<Claim[]> {
-  const reports = (await db.prepare(`SELECT rp.report_kind kind, r.source FROM fleet_trip_reports rp
-    LEFT JOIN advisor_reports r ON rp.report_kind='advisor' AND r.id=rp.report_ref WHERE rp.trip_id=?`)
-    .bind(tripId).all<{kind: string; source: string | null}>()).results;
-  const segments = await db.prepare(`SELECT COUNT(*) AS n FROM fleet_segments WHERE trip_id=?
-    AND kind IN ('drift-anchor','troll-slow','troll-pelagic')`).bind(tripId).first<{n: number}>();
-  return [reportClaim(reports.map(r => ({source: r.kind === 'advisor' ? (r.source ? `advisor:${r.source}` : '') : r.kind}))),
-    classifiedAisClaim(segments?.n ?? 0, identityConfirmed)].filter((c): c is Claim => c !== null);
+export async function tripActivityClaims(db: D1Database, trips: readonly {id: string; identityConfirmed: boolean}[]): Promise<Map<string, Claim[]>> {
+  if (!trips.length) return new Map();
+  const ids = trips.map(trip => trip.id);
+  const [reports, segments] = await Promise.all([
+    db.prepare(`SELECT rp.trip_id, rp.report_kind kind, r.source FROM fleet_trip_reports rp
+      LEFT JOIN advisor_reports r ON rp.report_kind='advisor' AND r.id=rp.report_ref WHERE rp.trip_id IN (${marks(ids.length)})`)
+      .bind(...ids).all<{trip_id: string; kind: string; source: string | null}>(),
+    db.prepare(`SELECT trip_id, COUNT(*) AS n FROM fleet_segments WHERE trip_id IN (${marks(ids.length)})
+      AND kind IN ('drift-anchor','troll-slow','troll-pelagic') GROUP BY trip_id`)
+      .bind(...ids).all<{trip_id: string; n: number}>(),
+  ]);
+  const reportsByTrip = new Map<string, {source: string}[]>();
+  for (const r of reports.results) {
+    const sources = reportsByTrip.get(r.trip_id) ?? [];
+    sources.push({source: r.kind === 'advisor' ? (r.source ? `advisor:${r.source}` : '') : r.kind});
+    reportsByTrip.set(r.trip_id, sources);
+  }
+  const segmentsByTrip = new Map(segments.results.map(r => [r.trip_id, r.n]));
+  return new Map(trips.map(({id, identityConfirmed}) => [id, [reportClaim(reportsByTrip.get(id) ?? []),
+    classifiedAisClaim(segmentsByTrip.get(id) ?? 0, identityConfirmed)].filter((c): c is Claim => c !== null)]));
 }
 
 /** Test seam: the clock for received_at, processed.at and health ages. */
@@ -272,7 +285,7 @@ async function applyActivity(db: D1Database, raw: Record<string, unknown>): Prom
       UNION SELECT return_port_id FROM fleet_trips t WHERE ${recent.sql}) WHERE p IS NOT NULL`).bind(...recent.args, ...recent.args).all<{p: string}>()).results.map(r => r.p);
     const landing = await landingRows(ports, recent.args[1] as string);
     feeds = {read: landing.feeds - landing.unavailable, unavailable: landing.unavailable, reports: landing.rows.length};
-    add('unpaired', [advisorPrune(db, recent), ...landingPrune(db, region, recent, landing.rows)]);
+    add('unpaired', [advisorPrune(db, recent), ...landingPrune(db, region, recent, landing.rows, landing.conflictedIds)]);
     add('paired_advisor', [advisorPairs(db, recent, now)]);
     add('paired_landing', landingPairs(db, region, recent, landing.rows, now));
     add('processed', [db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
@@ -311,25 +324,33 @@ export async function heartbeat(db: D1Database, request: Request, env?: Pick<Env
   }
 }
 
+type Check = {age_s: number | null; stale: boolean};
+
+function checkAge(at: unknown, now: number, rejectFuture = false): Check {
+  const time = typeof at === 'string' ? Date.parse(at) : NaN;
+  const ageS = Number.isFinite(time) && !(rejectFuture && time > now)
+    ? Math.max(0, Math.floor((now - time) / 1000)) : null;
+  return {age_s: ageS, stale: ageS === null || ageS > STALE_S};
+}
+
+/** A future message timestamp is unknown, not evidence of recent AIS traffic. */
+export function aisLastMessageCheck(at: unknown, now: number): Check {
+  return checkAge(at, now, true);
+}
+
 /** GET /api/fleet/jobs/health: staleness booleans and ages, nothing else. */
 export async function health(db: D1Database, region: string | undefined): Promise<Result> {
   if (!region || !REGION.test(region)) return {status: 400, body: {error: 'invalid region'}};
   const rows = (await db.prepare('SELECT key,value FROM job_state WHERE key IN (?,?)').bind(heartbeatKey(region), processedKey(region))
     .all<{key: string; value: string}>()).results;
   const read = (key: string): Record<string, unknown> => { try { return JSON.parse(rows.find(r => r.key === key)?.value ?? '{}') ?? {}; } catch { return {}; } };
-  const beat = read(heartbeatKey(region)), done = read(processedKey(region)), now = activityDeps.now(), limit = STALE_HOURS * 3600;
-  const check = (at: unknown) => {
-    const time = typeof at === 'string' ? Date.parse(at) : NaN;
-    const ageS = Number.isFinite(time) ? Math.max(0, Math.floor((now.getTime() - time) / 1000)) : null;
-    return {age_s: ageS, stale: ageS === null || ageS > limit};
-  };
-  const checks = {heartbeat: check(beat.written_at), last_message: check(beat.last_message_at), processed: check(done.at)};
-  return {status: 200, body: {region, checked_at: now.toISOString(), stale_after_s: limit, stale: Object.values(checks).some(c => c.stale), checks, cause: staleCause(checks, beat)}};
+  const beat = read(heartbeatKey(region)), done = read(processedKey(region)), now = activityDeps.now(), time = now.getTime();
+  const checks = {heartbeat: checkAge(beat.written_at, time), last_message: aisLastMessageCheck(beat.last_message_at, time), processed: checkAge(done.at, time)};
+  return {status: 200, body: {region, checked_at: now.toISOString(), stale_after_s: STALE_S, stale: Object.values(checks).some(c => c.stale), checks, cause: staleCause(checks, beat)}};
 }
 
 /** How much older than the last processor push the heartbeat may be and still count as current at that push. */
 export const CAUSE_TOLERANCE_S = 600;
-type Check = {age_s: number | null; stale: boolean};
 export type StaleCause = 'none' | 'no-data' | 'processor-not-delivered' | 'listener-stale' | 'no-messages';
 
 /** The likely reason a health answer is stale (`beat`, the stored heartbeat, is read through `checks`). The heartbeat is stored only when the

@@ -83,16 +83,15 @@ test('explicit null clears launch and plan; null targets and status take their d
   const saved=row(id);assert.equal(saved.launch_point,null);assert.equal(saved.plan,null);assert.equal(saved.status,'planned');
 }));
 
-test('an id-only or ignored-field PATCH leaves every planner and alert column alone, even a concurrent change',()=>run(async({hooks,patch,save,row})=>{
+// SCA-215 (F04-14): an edit with no supported field used to answer 200 and bump updated_at; it is now a 400
+// (full negative/positive controls: tests/test_f04_14_audit.mjs). What stays here: a refused edit never
+// disturbs columns another request changed.
+test('an id-only or ignored-field PATCH is a 400 that leaves every planner and alert column alone, even after a concurrent change',()=>run(async({patch,save,row})=>{
   const id=await save('alice',{launch_point:'south',plan});
+  assert.equal((await patch('alice',{id,status:'done'})).status,200);
   const before=row(id);
-  hooks.push(async()=>assert.equal((await patch('alice',{id,status:'done'})).status,200));
-  const out=await (await patch('alice',{id,date:'2000-01-01',region:'x',owner:'bob',species:'lingcod',boat_name:'x',wind_limit:99})).json();
-  assert.equal(out.status,'done');assert.equal(out.launch_point,'south');assert.deepEqual(Object.keys(out).sort(),KEYS);
-  const after=row(id);
-  for(const k of ['owner','region','point','species','date','start_hour','end_hour','wind_limit','gust_limit','sea_limit','boat_name','plan','launch_point','targets'])assert.equal(after[k],before[k],k);
-  assert.equal(after.status,'done');
-  assert.equal((await patch('alice',{id})).status,200);assert.equal(row(id).status,'done');
+  for(const bad of [{date:'2000-01-01',region:'x',owner:'bob',species:'lingcod',boat_name:'x',wind_limit:99},{}])assert.equal((await patch('alice',{id,...bad})).status,400,JSON.stringify(bad));
+  assert.deepEqual(row(id),before);
 }));
 
 test('a malformed supplied field is a 400 before any trip UPDATE; bad ids, missing, foreign rows and anonymous callers are refused',()=>run(async({patch,save,writes,row,env})=>{

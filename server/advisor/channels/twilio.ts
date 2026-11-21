@@ -10,9 +10,9 @@
 // and the signature is checked with WebCrypto's HMAC verify (constant time).
 //
 // Outbound: POST /2010-04-01/Accounts/<sid>/Messages.json with Basic auth
-// (account sid : auth token), a 15 s timeout and one retry on a network error,
-// as BlueBubbles does; never on an HTTP status (a 4xx is final, and after a 5xx or a
-// timeout Twilio may already have accepted the message, so the row is 'unknown').
+// (account sid : auth token) with a 15 s timeout and no retry. A 4xx is final;
+// after a network error, timeout or 5xx, Twilio may already have accepted the
+// message, so the row is 'unknown'.
 // Error 21610 (the recipient texted STOP to Twilio) stops the contact.
 //
 // The number is decrypted from the contact's phone_enc blob inside send() only
@@ -172,13 +172,14 @@ const PUBLIC_STATES = new Set(['approved', 'posted']);
 export function createTwilio(options: TwilioOptions = {}): ChannelAdapter & {mediaUrls(env: Env, keys: string[]): Promise<string[] | string>} {
   const doFetch: Fetcher = (url, init) => (options.fetcher ?? fetch)(url, init);
 
-  /** One API call: Basic auth, timeout, one retry on a network error (never on a status or a timeout). Never throws. */
-  async function call(config: TwilioConfig, path: string, init: {method?: string; form?: URLSearchParams; timeoutMs?: number} = {}): Promise<{status: number; body: TwilioBody | null; error?: string}> {
+  /** Retry GET once on a network error, never after a timeout or an HTTP response. */
+  async function call(config: TwilioConfig, path: string, init: {method?: 'GET' | 'POST'; form?: URLSearchParams; timeoutMs?: number} = {}): Promise<{status: number; body: TwilioBody | null; error?: string}> {
     const headers: Record<string, string> = {Authorization: config.auth, Accept: 'application/json'};
     if (init.form) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    const method = init.method ?? 'GET', attempts = method === 'GET' ? 2 : 1;
     let response: Response | null = null, failure = '';
-    for (let attempt = 0; attempt < 2 && !response; attempt++) {
-      try { response = await doFetch(`${API_BASE}/2010-04-01/Accounts/${config.sid}${path}`, {method: init.method ?? 'GET', headers, body: init.form?.toString(), signal: AbortSignal.timeout(init.timeoutMs ?? TIMEOUT_MS)}); }
+    for (let attempt = 0; attempt < attempts && !response; attempt++) {
+      try { response = await doFetch(`${API_BASE}/2010-04-01/Accounts/${config.sid}${path}`, {method, headers, body: init.form?.toString(), signal: AbortSignal.timeout(init.timeoutMs ?? TIMEOUT_MS)}); }
       catch (error) { failure = errorCode(error); if (failure === 'timeout') break; }
     }
     if (!response) return {status: 0, body: null, error: failure};
@@ -240,7 +241,8 @@ export function createTwilio(options: TwilioOptions = {}): ChannelAdapter & {med
     for (const url of urls) form.append('MediaUrl', url);
     if (env.ADVISOR_WEBHOOK_TOKEN) form.set('StatusCallback', `${advisorSettings(env).publicBase}/api/advisor/inbound/twilio-status/${encodeURIComponent(env.ADVISOR_WEBHOOK_TOKEN)}`);
     const r = await call(config, '/Messages.json', {method: 'POST', form});
-    if (r.error) return {providerId: null, status: r.error === 'timeout' ? 'unknown' : 'failed', error: r.error};
+    // A rejected fetch does not tell us whether Twilio already created the message.
+    if (r.error) return {providerId: null, status: 'unknown', error: r.error};
     const code = typeof r.body?.code === 'number' ? r.body.code : typeof r.body?.error_code === 'number' ? r.body.error_code : null;
     if (code === OPTED_OUT) { await stopRecipient(env, phone); return {providerId: null, status: 'failed', error: 'opted-out'}; }
     // After a 5xx Twilio may still have queued it: 'unknown', never resent blindly.

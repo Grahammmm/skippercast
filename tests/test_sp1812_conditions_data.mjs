@@ -8,7 +8,7 @@ const c = await import('../server/advisor/answers/conditions.ts');
 const {COMFORT_WORD, verdictFor} = await import('../server/advisor/answers/comfort.ts');
 const {rateComfort} = await import('../web/score.ts');
 const healthy = () => JSON.parse(readFileSync(new URL('./fixtures/sp1812_conditions_data/healthy.json', import.meta.url)));
-const region = {id: 'synthetic-coast', timezone: 'America/Los_Angeles', forecast_points: [{id: 'central'}], marine_zones: {coastal: 'PZZ645'}};
+const region = {id: 'synthetic-coast', timezone: 'America/Los_Angeles', forecast_points: [{id: 'central', latitude: 35.37, longitude: -120.9}], marine_zones: {coastal: 'PZZ645'}};
 const DATE = '2026-09-28';
 const run = (feed, point = 'central', date = DATE, window) => c.windowConditions(feed, region, point, date, window);
 const failed = () => { const f = healthy(); for (const m of Object.values(f.forecast.models)) m.error = 'synthetic model failure'; return f; };

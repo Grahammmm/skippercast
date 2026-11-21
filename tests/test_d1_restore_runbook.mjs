@@ -89,7 +89,7 @@ test('runbook_covers_every_schema_table', () => {
   // Clear order: dependents before parents, d1_migrations last, families in the documented sequence.
   const drops = [...sqlOf(RUNBOOK, 'clear').matchAll(/EXISTS ([a-z_0-9]+);/g)].map(m => m[1]);
   const at = n => drops.indexOf(n);
-  const before = [['advisor_post_stats', 'advisor_posts'], ['advisor_report_edits', 'advisor_reports'], ['advisor_reviews', 'advisor_reports'], ['advisor_reports', 'advisor_boats'],
+  const before = [['advisor_post_stats', 'advisor_posts'], ['advisor_report_edits', 'advisor_reports'], ['advisor_review_events', 'advisor_reviews'], ['advisor_reviews', 'advisor_reports'], ['advisor_reports', 'advisor_boats'],
     ['advisor_crew', 'advisor_boats'], ['advisor_media', 'advisor_boats'], ['advisor_messages', 'advisor_contacts'], ['advisor_boats', 'advisor_contacts'],
     ['fleet_trip_reports', 'fleet_trips'], ['fleet_segment_labels', 'fleet_trips'], ['fleet_events', 'fleet_segments'], ['fleet_segments', 'fleet_trips'], ['fleet_departures', 'fleet_offerings'],
     ['fleet_offerings', 'fleet_vessels'], ['fleet_vessel_facts', 'fleet_vessels'], ['fleet_aliases', 'fleet_vessels'], ['fleet_ais_watch', 'fleet_vessels'], ['fleet_link_clicks', 'fleet_vessels'],
@@ -212,11 +212,14 @@ function rehearse(runbook) {
   const tables = () => sql.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(r => r.name);
   const names = tables();
   assert.ok(util_equal(names, [...schemaTables(), 'd1_migrations'].sort()), 'committed migrations create exactly the schema tables plus bookkeeping');
-  names.filter(n => n !== 'd1_migrations').forEach((table, i) => {
+  // Seed and import the child after the parent; leave FK enforcement on.
+  const seedOrder = names.filter(n => n !== 'advisor_review_events').concat('advisor_review_events');
+  seedOrder.filter(n => n !== 'd1_migrations').forEach((table, i) => {
     const columns = sql.prepare(`PRAGMA table_info(${table})`).all();
     const rows = ZERO.has(table) ? 0 : (i % 2) + 1;
     for (let n = 1; n <= rows; n++) {
       const values = columns.map(c => /int/i.test(c.type) ? n : /real/i.test(c.type) ? n + 0.5 : `${table}.${c.name}.${n}`);
+      if (table === 'advisor_review_events') values[columns.findIndex(c => c.name === 'review_id')] = sql.prepare('SELECT id FROM advisor_reviews ORDER BY id LIMIT 1').get().id;
       sql.prepare(`INSERT INTO ${table}(${columns.map(c => c.name).join(',')}) VALUES (${columns.map(() => '?').join(',')})`).run(...values);
     }
   });
@@ -229,7 +232,7 @@ function rehearse(runbook) {
 
   // The export: what is actually in the database, as create/index statements then inserts.
   const parts = sql.prepare("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type='table' DESC, rowid").all().map(r => `${r.sql};`);
-  for (const n of names) for (const r of sql.prepare(`SELECT * FROM ${n} ORDER BY rowid`).all()) parts.push(`INSERT INTO ${n}(${Object.keys(r).join(',')}) VALUES (${Object.values(r).map(quote).join(',')});`);
+  for (const n of seedOrder) for (const r of sql.prepare(`SELECT * FROM ${n} ORDER BY rowid`).all()) parts.push(`INSERT INTO ${n}(${Object.keys(r).join(',')}) VALUES (${Object.values(r).map(quote).join(',')});`);
   const exported = parts.join('\n');
 
   sql.exec(sqlOf(runbook, 'clear'));

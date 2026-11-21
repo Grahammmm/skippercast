@@ -21,7 +21,8 @@ everything else in a response only in memory, to pick the place:
   is matched to a vessel of that port when the vessel's normalised name occurs
   in the place's display name on word boundaries (``name_in_label``: "Sea Wolf"
   matches "SeaWolf Sportfishing", "Wolf" does not) and the match is one-to-one;
-  closed places and ambiguous matches are skipped and counted.
+  closed places and ambiguous matches are skipped and counted, including
+  conflicts with IDs already held in the region's resolved snapshot.
 - **Place Details** with field mask ``id`` (the IDs-only refresh Google
   recommends for stored place IDs) for a vessel that already has a
   ``place_id``: a moved ID is recorded as the new value; a ``NOT_FOUND`` is
@@ -178,15 +179,21 @@ class GooglePlaces:
         return True
 
     def prepare(self, vessels: Iterable[Mapping[str, Any]], binding, ctx: RunContext) -> None:
-        """Run one Text Search per port that has vessels without a place_id, and match places to them."""
+        """Reserve the region's stored IDs, then search ports with unmatched vessels."""
         if not self.available:
             return
         by_port: dict[str, list[Mapping[str, Any]]] = {}
+        reserved_ids: set[str] = set()
         for vessel in vessels:
-            if not vessel.get("place_id") and vessel.get("port_id") and len(norm(vessel.get("name", ""))) >= MIN_NAME:
+            stored = vessel.get("place_id")
+            if isinstance(stored, str) and stored:
+                reserved_ids.add(stored)
+            elif not stored and vessel.get("port_id") and len(norm(vessel.get("name", ""))) >= MIN_NAME:
                 by_port.setdefault(vessel["port_id"], []).append(vessel)
-        for port_id in sorted(by_port):
-            self._ports[port_id] = self._match(port_id, by_port[port_id], binding, ctx)
+        self._ports = {
+            port_id: self._match(port_id, by_port[port_id], binding, ctx, reserved_ids)
+            for port_id in sorted(by_port)
+        }
 
     def _search(self, port, binding, ctx: RunContext) -> list[dict]:
         place = port.name.split("·")[0].strip()   # "Port San Luis · Avila Beach" -> "Port San Luis"
@@ -215,7 +222,8 @@ class GooglePlaces:
             raise PlacesError("incomplete Places search")   # a prefix is no evidence of a unique match
         return places
 
-    def _match(self, port_id: str, vessels: list[Mapping[str, Any]], binding, ctx: RunContext) -> dict[str, str]:
+    def _match(self, port_id: str, vessels: list[Mapping[str, Any]], binding, ctx: RunContext,
+               reserved_ids: set[str]) -> dict[str, str]:
         try:
             port = ctx.region.port(port_id)
         except KeyError:
@@ -243,7 +251,8 @@ class GooglePlaces:
         matched = {}
         for vessel_id, pids in vessel_to.items():
             pid = next(iter(pids))
-            if len(pids) == 1 and place_to[pid] == {vessel_id}:
+            # A reserved result does not make another name match less ambiguous.
+            if len(pids) == 1 and place_to[pid] == {vessel_id} and pid not in reserved_ids:
                 matched[vessel_id] = pid
             else:
                 self.report["ambiguous"] += 1

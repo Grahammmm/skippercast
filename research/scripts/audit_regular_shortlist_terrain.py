@@ -8,13 +8,15 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+from math import ceil, floor
 from pathlib import Path
 
 import numpy as np
 from pyproj import CRS, Transformer
 import rasterio
 from rasterio.features import geometry_mask
-from rasterio.windows import from_bounds
+from rasterio.windows import Window
+from shapely.affinity import affine_transform
 from shapely.geometry import shape
 from shapely.ops import transform
 
@@ -84,22 +86,29 @@ def audit(queue, context, closures, bag_cache: Path, *, now=None):
                                 shape(features[item["context_id"]]["geometry"]))
             if polygon.is_empty or not polygon.is_valid:
                 raise ValueError("Invalid display outline")
-            window = from_bounds(*polygon.bounds, transform=ds.transform).round_offsets().round_lengths()
+            # Bound the complete outline in pixel space before clipping the read.
+            inverse = ~ds.transform
+            left, top, right, bottom = affine_transform(
+                polygon, (inverse.a, inverse.b, inverse.d, inverse.e, inverse.c, inverse.f)).bounds
+            footprint = Window.from_slices((floor(top), ceil(bottom)), (floor(left), ceil(right)),
+                                           boundless=True)
+            window = footprint.crop(ds.height, ds.width)
             depth = ds.read(1, window=window)
-            uncertainty = ds.read(2, window=window)
             affine = ds.window_transform(window)
-            inside = geometry_mask([polygon], out_shape=depth.shape,
-                                   transform=affine, invert=True)
-            qualified = cells_qualified(depth, uncertainty, resolution) & inside
-            if inside.sum() < 20 or not qualified.all(where=inside):
+            if depth.size:
+                inside = geometry_mask([polygon], out_shape=depth.shape,
+                                       transform=affine, invert=True)
+                qualified = cells_qualified(depth, ds.read(2, window=window), resolution) & inside
+            else:
+                inside = qualified = np.zeros(depth.shape, dtype=bool)
+            if window != footprint or inside.sum() < 20 or not qualified.all(where=inside):
                 metrics.append({"context_id": item["context_id"], "status": "held-native-cell-gap",
                                 "native_cells_inside": int(inside.sum()),
                                 "qualified_native_cells": int(qualified.sum()),
                                 "terrain": None, "fishing_target": False, "exportable": False})
                 continue
             yy, xx = np.where(qualified)
-            east = affine.c + (xx + .5) * affine.a
-            north = affine.f + (yy + .5) * affine.e
+            east, north = affine @ (xx + .5, yy + .5)
             local_hard_area = polygon.intersection(polygon.centroid.buffer(250)).area
             terrain = terrain_metrics(east, north, depth[qualified],
                                       np.full(len(east), resolution), hard_area_m2=local_hard_area)

@@ -394,7 +394,10 @@ def report(region, root: Path | None = None, *, thresholds: ActivityThresholds |
         if not positions:
             missing += 1
             continue
-        add(table, confusion(labels, predict(positions, region.ports, th)))
+        part = confusion(labels, predict(positions, region.ports, th))
+        add(table, part)  # Keep gap minutes in the report even for trips that don't count.
+        if not any(n for row in part.values() for kind, n in row.items() if kind not in UNSCORED):
+            continue
         scored += 1
         ports.add(trip.depart_port_id)
         coverage["modes"][dominant_mode(labels)] += 1

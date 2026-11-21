@@ -9,12 +9,14 @@ from pathlib import Path
 import re
 import signal
 import struct
+import subprocess
+import sys
 import time
 import zlib
 import zipfile
 
 from .. import vertical
-from ..handoff.common import digest, ref, epoch as _epoch
+from ..handoff.common import digest, ref
 from ..output_writer import ManagedOutputs, PRIVATE_RENDER_PROFILE, PRIVATE_RENDER_LIMITS
 from . import terrain_only as terrain
 from . import terrain_demo as demo
@@ -26,6 +28,14 @@ RECEIPT_LIMIT = 256 * 1024
 HTML_LIMIT = 6 * MIB
 FLAGS = dict(source_accessed=False, imagery_used=False, internal_diagnostic=True,
              publication_prohibited=True, website='held', habitat='unassessed')
+DEADLINE_EXHAUSTED = 'render_stage_deadline_exhausted'
+
+
+def _check_deadline(horizon):
+    remaining = horizon - time.time()
+    if remaining <= 0:
+        raise TimeoutError(DEADLINE_EXHAUSTED)
+    return remaining
 
 
 def _json_bytes(value):
@@ -73,6 +83,8 @@ def _payload(receipt,mesh):
         center=((vertices.min(axis=0)+vertices.max(axis=0))/2).tolist(),span=np.ptp(vertices,axis=0).tolist(),
         metadata=dict(crs=mesh['crs'],crs_wkt=mesh['crs_wkt'],affine=mesh['affine'],nodata=mesh['nodata'],
             vertical=mesh['vertical'],acceptance=receipt['acceptance'],render_binding=receipt['render_binding'],
+            # _prepare ran terrain.verify first: it raised unless an independent, bound, accepting review exists.
+            review_confirmed=True,
             limitations=receipt['limitations'],support_cells=receipt['support_cells'],
             uncertainty_kind=mesh['uncertainty_kind'],
             interpolation='planar_supported_triangle_interpolation_visualization_only',**FLAGS))
@@ -273,7 +285,7 @@ def _forecast_and_write(source_root,render_inputs,*,release,now,horizon,shared_r
         batch['batch_completion_bytes']=len(batch_data)
     else: raise ValueError('render_batch_forecast_unstable')
     if control_bytes+len(batch_data)>CONTROL_LIMIT: raise ValueError('render_batch_control_forecast_exceeded')
-    if time.time()>=_epoch(horizon): raise TimeoutError('render_stage_deadline_exhausted')
+    _check_deadline(horizon)
     if batch_bytes_conflict(release['output_root']): raise ValueError('managed_render_root_invalid')
     output_root=Path(release['output_root'])
     if not output_root.exists():
@@ -290,10 +302,12 @@ def _forecast_and_write(source_root,render_inputs,*,release,now,horizon,shared_r
     # Reserve every file before writing any mesh, PNG, HTML or receipt bytes.
     for path,data,role,contract in all_files:
         intent='governed-render:'+digest([path,hashlib.sha256(data).hexdigest()])
+        _check_deadline(horizon)
         manager.reserve_file(path,role=role,max_bytes=len(data),intent=intent)
     def write_one(entry):
         path,data,role,contract=entry
         intent='governed-render:'+digest([path,hashlib.sha256(data).hexdigest()])
+        _check_deadline(horizon)
         manager.write_bytes(path,data,role=role,max_bytes=len(data),intent=intent)
     for entry in all_files:
         if entry[0].endswith('/complete.json') or entry[0] in ('complete.json','render-batch-pointer.json','batch-complete.json'):
@@ -304,7 +318,10 @@ def _forecast_and_write(source_root,render_inputs,*,release,now,horizon,shared_r
             write_one(entry)
     write_one(next(entry for entry in all_files if entry[0]=='complete.json'))
     write_one(next(entry for entry in all_files if entry[0]=='render-batch-pointer.json'))
-    write_one(next(entry for entry in all_files if entry[0]=='batch-complete.json'))
+    # Read back the children before sealing the batch. An interrupted readback
+    # must not leave the terminal marker that admits the browser stage.
+    _verify_batch(output_root.resolve(strict=True), batch_data)
+    write_one(all_files[-1])
     return dict(batch=batch,previews=[dict(id=p['id'],render=p['receipt'],demo=p['demo']) for p in previews],
                 managed_output_audit=manager.audit())
 
@@ -545,7 +562,10 @@ def _bound_descriptor(root,descriptor,cap):
 def verify_completed_batch(output_root):
     """Read-only browser admission: terminal batch marker binds every child artifact."""
     root=Path(output_root).resolve(strict=True)
-    batch_data=_read_output(root,'batch-complete.json',RECEIPT_LIMIT)
+    return _verify_batch(root, _read_output(root,'batch-complete.json',RECEIPT_LIMIT))
+
+
+def _verify_batch(root, batch_data):
     batch=json.loads(batch_data)
     if (batch.get('schema')!='coastal-governed-render-batch-v1' or batch.get('state')!='done'
             or type(batch.get('preview_count')) is not int or not 1<=batch['preview_count']<=4
@@ -674,17 +694,65 @@ def _read_json(path,cap):
 
 
 def run_governed(context,source_root,inputs_path,*,now,horizon):
-    """Validated programmatic entry; all public execution flows through child release."""
+    """Run the released render under the same killable deadline as the CLI."""
+    from ..child_release import _number
+    now, horizon = _number(now), _number(horizon)
+    _check_deadline(horizon)
+    request = _json_bytes([context, os.fspath(source_root), os.fspath(inputs_path), now, horizon])
+    try:
+        worker = subprocess.run(
+            [sys.executable, '-m', 'skippercast.coastal.render.governed', '--_render-worker'],
+            input=request, stdout=subprocess.PIPE, check=True, timeout=_check_deadline(horizon),
+        )
+    except subprocess.TimeoutExpired as error:
+        # subprocess.run kills and reaps the worker. Leave partial evidence alone.
+        raise TimeoutError(DEADLINE_EXHAUSTED) from error
+    except subprocess.CalledProcessError as error:
+        if error.returncode == -signal.SIGALRM:
+            raise TimeoutError(DEADLINE_EXHAUSTED) from error
+        raise OSError('governed_render_worker_failed') from error
+    response = json.loads(worker.stdout)
+    if 'error' in response:
+        kind, message = response['error']
+        raise _WORKER_ERRORS[kind](message)
+    return response['result']
+
+
+def _run_released_render(context, source_root, inputs_path, now, horizon):
+    # Default SIGALRM terminates the disposable worker in the kernel, including
+    # while it is in native code. Never change timers in the caller's process.
+    signal.signal(signal.SIGALRM, signal.SIG_DFL)
+    signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGALRM})
+    started = time.monotonic()
+    remaining = _check_deadline(horizon)
+    signal.setitimer(signal.ITIMER_REAL, remaining)
     from ..child_release import validate_child_release
     release=validate_child_release(context,'render',now=now,horizon=horizon)
+    remaining = min(started + remaining, release['stage_clock']['deadline_monotonic'],
+                    release['global_clock']['deadline_monotonic']) - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError(DEADLINE_EXHAUSTED)
+    signal.setitimer(signal.ITIMER_REAL, remaining)
     plan,manifest=load_owner_render_plan(context,release,source_root,inputs_path)
     inputs,shared_range,source_batch_ref,input_binding=load_render_prerequisites(
         source_root,manifest,now=now,horizon=horizon,render_plan=plan)
-    if time.time()>=_epoch(horizon): raise TimeoutError('render_stage_deadline_exhausted')
-    result=_forecast_and_write(source_root,inputs,release=release,now=now,horizon=horizon,
+    _check_deadline(horizon)
+    return _forecast_and_write(source_root,inputs,release=release,now=now,horizon=horizon,
         shared_range_m=shared_range,source_batch_ref=source_batch_ref,input_binding=input_binding)
-    verify_completed_batch(release['output_root'])
-    return result
+
+
+_WORKER_ERRORS = {kind.__name__: kind for kind in (
+    TimeoutError, ValueError, KeyError, TypeError, OSError, zipfile.BadZipFile)}
+
+
+def _render_worker():
+    try:
+        response = dict(result=_run_released_render(*json.load(sys.stdin)))
+    except tuple(_WORKER_ERRORS.values()) as error:
+        kind = next(kind for kind in _WORKER_ERRORS.values() if isinstance(error, kind))
+        response = dict(error=[kind.__name__, error.args[0] if isinstance(error, KeyError) else str(error)])
+    sys.stdout.buffer.write(_json_bytes(response))
+    return 0
 
 
 def main(argv=None):
@@ -704,22 +772,13 @@ def main(argv=None):
         now=time.time()
         horizon=min(float(clock['deadline_epoch'])-0.25,now+3600)
         if horizon<=now:
-            raise ValueError('render_stage_deadline_exhausted')
-        def stop_deadline(_signum,_frame):
-            raise TimeoutError('render_stage_deadline_exhausted')
-        previous_handler=signal.getsignal(signal.SIGALRM)
-        signal.signal(signal.SIGALRM,stop_deadline)
-        signal.setitimer(signal.ITIMER_REAL,max(0.01,horizon-time.time()))
-        try:
-            result=run_governed(context,args.source_root,args.inputs,now=now,horizon=horizon)
-            print(json.dumps(result,sort_keys=True,allow_nan=False)); return 0
-        finally:
-            signal.setitimer(signal.ITIMER_REAL,0)
-            signal.signal(signal.SIGALRM,previous_handler)
+            raise ValueError(DEADLINE_EXHAUSTED)
+        result=run_governed(context,args.source_root,args.inputs,now=now,horizon=horizon)
+        print(json.dumps(result,sort_keys=True,allow_nan=False)); return 0
     except (ValueError,KeyError,TypeError,OSError,zipfile.BadZipFile,TimeoutError) as error:
         print(json.dumps(dict(schema='coastal-governed-render-batch-v1',state='held',holds=[str(error)],**FLAGS)))
         return 2
 
 
 if __name__=='__main__':
-    raise SystemExit(main())
+    raise SystemExit(_render_worker() if sys.argv[1:] == ['--_render-worker'] else main())

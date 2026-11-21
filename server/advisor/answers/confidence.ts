@@ -31,6 +31,13 @@ export function validFeed(data: DailyFeed | null | undefined): boolean {
 }
 
 const age = (s: string | undefined, now: number): number => Number.isFinite(Date.parse(s ?? '')) ? (now - Date.parse(s!)) / HOUR : Infinity;
+
+/** Whether the regional daily feed can support current landing activity. */
+export function isFreshDailyFeed(data: DailyFeed | null | undefined, now: number): boolean {
+  const hours = age(data?.generated_at, now);
+  return validFeed(data) && hours >= -1 && hours <= 36;
+}
+
 const dayFormats = new Map<string, Intl.DateTimeFormat>();
 function localDay(now: number, tz: string): string {
   let f = dayFormats.get(tz);
@@ -47,7 +54,7 @@ export interface Evidence {
 export function reportEvidence(data: DailyFeed | null | undefined, target: string, now = Date.now(), groundId: string | null = null, tz = PACIFIC): Evidence {
   const today = localDay(now, tz);
   const first = new Date(Date.parse(today + 'T12:00:00Z') - 7 * 24 * HOUR).toISOString().slice(0, 10);
-  const fresh = validFeed(data) && age(data!.generated_at, now) >= -1 && age(data!.generated_at, now) <= 36;
+  const fresh = isFreshDailyFeed(data, now);
   const species = targetSpecies(target);
   const reports = (data?.reports || []).filter(r => (r.date ?? '') >= first && (r.date ?? '') < today && (!groundId || r.ground_id === groundId) &&
     r.catches?.some(c => species.includes(c.species ?? '') && (c.count ?? 0) > 0));

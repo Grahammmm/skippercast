@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   valueAt,
   range,
@@ -12,21 +15,34 @@ import {
 } from "../dist/forecast.js";
 import { targetGPX } from "../dist/gpx.js";
 
-test("direct mobile downloads match every public target and its linked geometry", () => {
-  const atlas = JSON.parse(
-    readFileSync(new URL("../dist/data/atlas.json", import.meta.url)),
-  );
-  const directory = new URL("../dist/downloads/targets/", import.meta.url);
-  assert.deepEqual(
-    readdirSync(directory).sort(),
-    atlas.targets.map((t) => `${t.id}.gpx`).sort(),
-  );
-  for (const target of atlas.targets) {
-    assert.equal(
-      readFileSync(new URL(`${target.id}.gpx`, directory), "utf8"),
-      targetGPX(atlas, target.id),
-      target.id,
-    );
+// Prove the filter itself, not just that git deleted the old source files.
+test("the static copy omits stale GPX but preserves neighboring downloads", async (t) => {
+  const { copyStatic } = await import("../scripts/client-build.mjs");
+  const root = await mkdtemp(join(tmpdir(), "sc-downloads-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const src = join(root, "src"), out = join(root, "out");
+  await mkdir(join(src, "downloads", "targets"), { recursive: true });
+  for (const name of ["complete.gpx", "targets/SC26-001.gpx", "LICENSE.txt", "spot-notes.html"]) {
+    await writeFile(join(src, "downloads", name), name);
+  }
+  await copyStatic(src, out);
+  const download = join(out, "downloads");
+  assert.deepEqual(readdirSync(download, { recursive: true }).filter((name) => /\.gpx$/i.test(name)), []);
+  for (const name of ["LICENSE.txt", "spot-notes.html"]) {
+    assert.equal(readFileSync(join(download, name), "utf8"), name);
+  }
+});
+
+// Neither the shipping tree nor an install/offline pack list may restore the files.
+test("the client build and its precache and offline pack lists contain no GPX", () => {
+  const source = new URL("../dist/downloads/", import.meta.url);
+  assert.deepEqual(readdirSync(source, { recursive: true }).filter((name) => /\.gpx$/i.test(name)), []);
+  const client = new URL("../dist/client/", import.meta.url);
+  if (!existsSync(client)) return; // Some source-only CI steps run before pnpm build.
+  assert.deepEqual(readdirSync(client, { recursive: true }).filter((name) => /\.gpx$/i.test(name)), []);
+  const manifest = JSON.parse(readFileSync(new URL("precache.json", client)));
+  for (const paths of [manifest.shells, manifest.assets, manifest.static, manifest.warm, manifest.v2.assets, manifest.v2.static]) {
+    assert.ok(paths.every((path) => !/\.gpx(?:[?#]|$)/i.test(path)));
   }
 });
 

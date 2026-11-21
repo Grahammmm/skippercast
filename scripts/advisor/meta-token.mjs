@@ -5,25 +5,26 @@
 // (minted from a long-lived user token) does not expire and serves both the
 // Page and the Instagram account, so there is no refresh job.
 //
-//   META_APP_ID=... META_APP_SECRET=... node scripts/advisor/meta-token.mjs [--page <page-id>] [--redirect-uri <url>]
+//   node scripts/advisor/meta-token.mjs --token-file <new-private-file> [--page <page-id>] [--redirect-uri <url>]
 //
 // 1. Prints the Facebook Login dialog URL with the scopes below; open it signed
 //    in as the owner and approve.
 // 2. Paste the address the browser lands on (or just its `code`).
 // 3. The code becomes a short-lived user token, then a long-lived one
 //    (fb_exchange_token); GET /me/accounts lists the Pages with their tokens.
-// 4. Prints the Page id, the Page token and the linked Instagram user id, checks
+// 4. Prints the Page id and the linked Instagram user id, checks
 //    the account can publish (content_publishing_limit) and, when Meta exposes it,
 //    that its account_type is BUSINESS (Stories publishing needs Business,
 //    not Creator), and says whether the Page token expires (debug_token).
 //
-// Nothing is written to disk: the values are printed once for the owner to put
-// in GitHub secrets (META_PAGE_ID, META_PAGE_TOKEN, META_IG_USER_ID, plus
-// META_APP_ID, META_APP_SECRET and META_VERIFY_TOKEN). The app id and secret
+// The Page token goes only to the new owner-only file (0600). Choose a path
+// in private local storage outside the checkout. Import it into META_PAGE_TOKEN
+// without displaying it, then remove the temporary file. The app id and secret
 // are read from the environment, never from argv (shell history). Every Graph
 // call carries appsecret_proof (server/advisor/social/meta.ts graph()).
 import {createInterface} from 'node:readline/promises';
 import {randomBytes} from 'node:crypto';
+import {open} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 
 const root = new URL('../../', import.meta.url);
@@ -33,18 +34,20 @@ export const SCOPES = ['pages_show_list', 'pages_read_engagement', 'pages_manage
   'instagram_basic', 'instagram_content_publish', 'instagram_manage_comments', 'instagram_manage_messages', 'instagram_manage_insights', 'business_management'];
 /** Meta's own landing page for login flows without a web server ("Manually build a login flow"). Add it to the app's Valid OAuth Redirect URIs. */
 export const DEFAULT_REDIRECT = 'https://www.facebook.com/connect/login_success.html';
-const USAGE = 'usage: META_APP_ID=... META_APP_SECRET=... node scripts/advisor/meta-token.mjs [--page <page-id>] [--redirect-uri <https url>]';
+const USAGE = 'usage: node scripts/advisor/meta-token.mjs --token-file <new-file-in-private-local-storage> [--page <page-id>] [--redirect-uri <https url>]';
 const ID = /^\d{1,32}$/;
 
-/** argv -> {page, redirectUri}; throws with the usage line on anything unexpected. */
+/** argv -> {page, redirectUri, tokenFile}; requires an explicit file destination. */
 export function parseArgs(argv) {
-  const out = {page: null, redirectUri: DEFAULT_REDIRECT};
+  const out = {page: null, redirectUri: DEFAULT_REDIRECT, tokenFile: null};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], v = argv[i + 1];
     if (a === '--page' && v && ID.test(v)) { out.page = v; i++; }
     else if (a === '--redirect-uri' && v && /^https:\/\/[^\s]+$/.test(v)) { out.redirectUri = v; i++; }
-    else throw Error(`unexpected argument ${a}\n${USAGE}`);
+    else if (a === '--token-file' && !out.tokenFile && v && !v.startsWith('-')) { out.tokenFile = v; i++; }
+    else throw Error(`unexpected or invalid argument\n${USAGE}`);
   }
+  if (!out.tokenFile) throw Error(`--token-file is required\n${USAGE}`);
   return out;
 }
 
@@ -123,8 +126,36 @@ export async function tokenExpiry({appId, appSecret, token, fetcher = fetch}) {
   return typeof r?.data?.expires_at === 'number' ? r.data.expires_at : null;
 }
 
+/**
+ * Writes the Page token to a new owner-only file. Exclusive creation refuses existing files, devices, pipes and
+ * symlinks; a refusal means the file at `path` is not ours and it is never touched. After a failed write the
+ * script never deletes by name: a path can be swapped for another run's file between any check and the unlink,
+ * so ownership cannot be proven at deletion time. It empties the file through its own open descriptor instead
+ * (always the file this run created, wherever the name now points) and leaves removal to the owner.
+ */
+export async function savePageToken(path, token) {
+  let file;
+  try {
+    file = await open(path, 'wx', 0o600);
+  } catch {
+    throw Error('Could not save the Page token. --token-file must name a new owner-only file in private local storage. The file there, if any, was not created by this run and was left untouched.');
+  }
+  try {
+    const info = await file.stat();
+    if (!info.isFile() || (info.mode & 0o777) !== 0o600 || info.uid !== process.geteuid()) throw Error();
+    await file.writeFile(token);
+  } catch {
+    let emptied = true;
+    try { await file.truncate(0); } catch { emptied = false; }
+    throw Error(emptied
+      ? 'Could not save the Page token. This run created a file for it, emptied it, and did not delete anything by name. Leave the path untouched (it may now belong to another run) and start again with a new --token-file name.'
+      : 'Could not save the Page token, and the file this run created could not be emptied: it may hold part of the token. Leave the path untouched (it may now belong to another run), start again with a new --token-file name, and rotate the Page token (re-run this script for a fresh one and revoke the old) because part of it may be on disk.');
+  } finally { await file.close(); }
+}
+
 export async function main(argv, {env = process.env, fetcher = fetch, ask, log = console.log} = {}) {
   const args = parseArgs(argv);
+  if (typeof process.geteuid !== 'function') throw Error('A POSIX filesystem with owner-only file permissions is required.');
   const appId = String(env.META_APP_ID ?? '').trim(), appSecret = String(env.META_APP_SECRET ?? '').trim();
   if (!ID.test(appId) || !appSecret) throw Error(`set META_APP_ID and META_APP_SECRET in the environment\n${USAGE}`);
   const state = randomBytes(12).toString('hex');
@@ -147,21 +178,22 @@ export async function main(argv, {env = process.env, fetcher = fetch, ask, log =
   const ig = await checkInstagram(cfg, page.instagram.id);
   const expires = await tokenExpiry({appId, appSecret, token: page.token, fetcher}).catch(() => null);
   log('');
-  log('3. Put these in the repository secrets (Settings > Secrets and variables > Actions):');
-  log(`   META_PAGE_ID      ${page.id}   (${page.name})`);
-  log(`   META_PAGE_TOKEN   ${page.token}`);
-  log(`   META_IG_USER_ID   ${page.instagram.id}   (@${ig.username ?? page.instagram.username ?? '?'})`);
-  log('   META_APP_ID and META_APP_SECRET as used here, and META_VERIFY_TOKEN: any long random string (the webhook handshake, TA-S6).');
-  log('');
   log(`Page token: ${expires === 0 ? 'does not expire' : expires ? `expires ${new Date(expires * 1000).toISOString()} (expected never: was the user token long-lived?)` : 'expiry unknown'}`);
   log(`Publishing quota: ${ig.quota.quota_usage} of ${ig.quota.quota_total ?? '?'} posts used in the last 24 hours.`);
   if (ig.business === true) log('Instagram account type: BUSINESS.');
   else if (ig.business === false) { log(`Instagram account type is ${ig.account_type}, not BUSINESS: Stories publishing needs a Business account (Instagram app > Settings > Account type).`); return 1; }
   else log('Instagram account type: Meta did not return it on this route. Confirm in the Instagram app (Settings > Account type and tools) that it is Business, not Creator.');
+  await savePageToken(args.tokenFile, page.token);
+  log('');
+  log('3. Put these in the repository secrets (Settings > Secrets and variables > Actions):');
+  log(`   META_PAGE_ID      ${page.id}   (${page.name})`);
+  log('   META_PAGE_TOKEN   Import from the file given to --token-file without displaying it, then remove the file.');
+  log(`   META_IG_USER_ID   ${page.instagram.id}   (@${ig.username ?? page.instagram.username ?? '?'})`);
+  log('   META_APP_ID and META_APP_SECRET as used here, and META_VERIFY_TOKEN: any long random string (the webhook handshake, TA-S6).');
   return 0;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  try { process.exit(await main(process.argv.slice(2))); }
-  catch (e) { console.error(String(e?.message ?? e)); process.exit(1); }
+  try { process.exitCode = await main(process.argv.slice(2)); }
+  catch (e) { console.error(String(e?.message ?? e)); process.exitCode = 1; }
 }

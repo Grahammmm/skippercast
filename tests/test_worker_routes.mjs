@@ -10,7 +10,15 @@ import {stripJsonComments} from '../scripts/wrangler_config.mjs';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html', '/sources.html': '/sources.0123456789.html', '/skill.html': '/skill.0123456789.html'};
+globalThis.SHELLS = {
+  '/landing.html': '/landing.0123456789.html',
+  '/app.html': '/app.0123456789.html',
+  '/privacy.html': '/privacy.0123456789.html',
+  '/sources.html': '/sources.0123456789.html',
+  '/status.html': '/status.0123456789.html',
+  '/coverage.html': '/coverage.0123456789.html',
+  '/skill.html': '/skill.0123456789.html',
+};
 globalThis.BUILD_ID = 'build-test';
 import {withSessions} from './fixtures/test-sessions.mjs';
 const {default: deployed} = await import('../server/index.ts');
@@ -35,6 +43,21 @@ const call = (path, {method = 'GET', owner, origin, env = {}} = {}) => {
   const body = ['GET', 'HEAD'].includes(method) ? undefined : '{}';
   return worker.fetch(new Request(ORIGIN + path, {method, headers, body}), {ASSETS, ...env});
 };
+
+// These are the shell links whose asset existence is checked by check_web.py.
+for (const [path, shell] of [
+  ['/privacy', '/privacy.0123456789'],
+  ['/map', '/app.0123456789'],
+  ['/sources', '/sources.0123456789'],
+  ['/status', '/status.0123456789'],
+  ['/coverage', '/coverage.0123456789'],
+  ['/skill', '/skill.0123456789'],
+]) {
+  test(`public shell alias ${path}`, async () => {
+    const response = await call(path);
+    assert.deepEqual([response.status, await response.text(), response.headers.get('Cache-Control')], [299, shell, 'no-store']);
+  });
+}
 
 test('every method and path reaches the same handler as before the Hono router', async () => {
   const {sql, adapter} = database(), env = {DB: adapter};

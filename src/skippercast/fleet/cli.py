@@ -5,8 +5,10 @@ Each pipeline step (design sections 4 and 9) runs inside a run directory under
 counts in ``state.json``, writes one ``fleet_runs`` row through the sink
 (``run.record``, id ``<run_id>:<step>``) and updates ``report.json``. ``run``
 chains ``discover -> resolve -> enrich-code -> ingest -> refresh`` (``--steps``
-picks a subset, in that order) in one run and stops at the first failed step;
-a discovery binding that failed makes the run ``partial``, and with none failed
+picks a subset, in that order) in one run and stops on a step exception. A
+failed step keeps the run ``failed`` until that step completes without binding
+failures. Otherwise, a failed discovery or enrichment binding makes the run
+``partial``, and with none failed
 a known gap (an adapter not implemented yet, a source whose pages the adapter
 does not support, a source unavailable or empty; ``discover.json`` ``gaps``)
 makes it ``complete-with-known-gaps`` (``report.json`` ``known_gaps``; the
@@ -74,6 +76,8 @@ def execute(run: Run, ctx: RunContext, sink, steps, options: Mapping[str, Mappin
             raise
         counts = {**counts, "skips": len(getattr(ctx.net, "skips", ())) - skips}
         status = "partial" if counts.get("failed") else KNOWN_GAPS if counts.get("gaps") else "ok"
+        if status == "partial" and report["steps"].get(step, {}).get("status") == "failed":
+            status = "failed"  # An incomplete retry does not clear a failed step.
         run.step_finished(step, counts)
         # fleet_runs keeps its ok/partial/failed vocabulary; the gaps are in counts_json
         _record(sink, step, started, "ok" if status == KNOWN_GAPS else status, counts, None)
@@ -87,9 +91,10 @@ def execute(run: Run, ctx: RunContext, sink, steps, options: Mapping[str, Mappin
 
 
 def run_status(steps: Mapping[str, Mapping[str, Any]]) -> str:
-    """The run's status from its steps': ``partial`` when one is, else ``complete-with-known-gaps`` when a step
-    recorded a known gap (a binding not implemented, unsupported, unavailable or empty), else ``ok``."""
+    """Return the most severe recorded step status: failed, partial, known gaps, then ok."""
     statuses = {s.get("status") for s in steps.values()}
+    if "failed" in statuses:
+        return "failed"
     return "partial" if "partial" in statuses else KNOWN_GAPS if KNOWN_GAPS in statuses else "ok"
 
 

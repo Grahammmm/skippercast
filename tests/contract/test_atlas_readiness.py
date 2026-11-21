@@ -79,7 +79,7 @@ class AtlasReadinessTests(unittest.TestCase):
                              + row['substrate_screen_bbox_only_file_count'])
             self.assertEqual(row['substrate_screen_bbox_only_file_count'],
                              len(row['substrate_screen_bbox_only_bag_urls']))
-            self.assertEqual(bool(row['published_candidate_points_in_band']),
+            self.assertEqual(bool(row['qualified_fishing_targets_in_band']),
                              row['status'] == 'partial-local-targets')
             self.assertGreaterEqual(len(row['remaining_promotion_gates']), 6)
             self.assertTrue(row['nbs_original_hard_footprint_screen']['research_only'])

@@ -3,8 +3,9 @@
 A JSON spec (schema ``coastal-clean-rerun-spec-v1``) lists the steps. Each
 pass gets a brand-new, empty root under ``work_base`` (``pass-1``, ``pass-2``);
 ``work_base`` itself must not exist yet, so no earlier output can leak in.
-Declared inputs are copied into each pass root and hash-checked. Every step
-runs with ``HOME``, ``TMPDIR``/``TMP``/``TEMP`` and the ``XDG_*`` directories
+Declared inputs are copied into each pass root, hash-checked, and compared by
+target and digest across passes. Every step runs with ``HOME``,
+``TMPDIR``/``TMP``/``TEMP`` and the ``XDG_*`` directories
 inside its pass root and ``PYTHONDONTWRITEBYTECODE=1``. These isolation
 variables belong to the driver: a spec or step ``env`` that sets one is
 refused, and the driver applies its own values last. ``guard_paths`` (mission
@@ -22,12 +23,14 @@ the checks say.
 Each COAST-PROD id is PASS only when it maps to at least one step or cited
 receipt, every mapped step passed in every pass (expected exit code, receipt
 present, receipt checks hold), its deterministic outputs are identical across
-passes, every cited receipt exists, matches its pin and passes its checks, it
-has at least one receipt, and the guards are unchanged. An id with neither is
+passes, staged inputs match across passes for mapped steps, every cited
+receipt exists, matches its pin and passes its checks, the id has at least one
+receipt, and the guards are unchanged for mapped steps. An id with neither is
 NO_RECEIPT; a declared hold is HELD; neither is ever PASS. The overall verdict
-is PASS only when all six are PASS **and** every declared step passed in every
-pass **and** every step's deterministic outputs are identical across passes,
-mapped to an id or not: cited earlier evidence never stands in for a failed
+is PASS only when all six are PASS, all staged inputs match across passes,
+every declared step passed in every pass, and every step's deterministic
+outputs are identical across passes, mapped to an id or not: cited earlier
+evidence never stands in for a failed
 or nondeterministic clean rerun.
 
 Spec::
@@ -256,14 +259,17 @@ def stage(spec, root):
     for item in spec.get('stage_inputs', []):
         source = Path(item['from'])
         target = confined_relative(root, item['to'])
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if source.is_dir():
-            shutil.copytree(source, target, symlinks=True)
-        else:
-            shutil.copy2(source, target)
-        before, after = tree_manifest(source), tree_manifest(target)
-        if before != after:
-            raise ValueError(f'staged copy differs from source: {source}')
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_dir():
+                shutil.copytree(source, target, symlinks=True)
+            else:
+                shutil.copy2(source, target)
+            before, after = tree_manifest(source), tree_manifest(target)
+            if before != after:
+                raise ValueError(f'staged copy differs from source: {source}')
+        except (OSError, ValueError) as error:
+            raise ValueError(f'target {item["to"]!r}: {error}') from error
         staged.append(dict(source=str(source), target=item['to'], digest=manifest_digest(after), entries=len(after)))
     return staged
 
@@ -411,9 +417,31 @@ def compare_passes(passes, spec):
     return comparison
 
 
+def staged_input_problems(passes):
+    problems = []
+    baseline = None
+    for p in passes:
+        number = p['number']
+        if 'stage_error' in p:
+            problems.append(f'pass {number}: input staging failed: {p["stage_error"]}')
+            continue
+        by_target = {}
+        for item in p['staged']:
+            # Retain every digest even if the spec stages to the same target twice.
+            by_target.setdefault(item['target'], []).append(item['digest'])
+        if baseline is None:
+            baseline = (number, by_target)
+            continue
+        baseline_number, baseline_targets = baseline
+        for target in sorted(baseline_targets.keys() | by_target.keys()):
+            if baseline_targets.get(target) != by_target.get(target):
+                problems.append(f'pass {number}: staged input {target!r} differs from pass {baseline_number}')
+    return problems
+
+
 def evaluate(spec, passes, comparison):
     guards_ok = all(p.get('guards_unchanged', False) for p in passes)
-    staged_ok = all('stage_error' not in p for p in passes)
+    stage_problems = staged_input_problems(passes)
     prod = {}
     for pid in PROD_IDS:
         entry = spec.get('coast_prod', {}).get(pid)
@@ -435,8 +463,8 @@ def evaluate(spec, passes, comparison):
                 reasons.append(f'step {sid}: outputs differ across passes: {cmp["differing"]}')
         if entry.get('steps') and not guards_ok:
             reasons.append('guarded paths changed during a pass')
-        if entry.get('steps') and not staged_ok:
-            reasons.append('input staging failed')
+        if entry.get('steps'):
+            reasons.extend(stage_problems)
         receipts = [dict(p=p['number'], step=s['id'], **s['receipt']) for p in passes for s in p['steps']
                     if s['id'] in entry.get('steps', []) and s.get('receipt')]
         for item in entry.get('evidence', []):
@@ -461,8 +489,7 @@ def evaluate(spec, passes, comparison):
         if step.get('deterministic_outputs') and comparison.get(step['id'], {}).get('identical') is not True:
             rerun_problems.append(f'step {step["id"]}: deterministic outputs not identical across passes '
                                   f'(differing {comparison.get(step["id"], {}).get("differing")})')
-    if not staged_ok:
-        rerun_problems.append('input staging failed')
+    rerun_problems.extend(stage_problems)
     if not guards_ok:
         rerun_problems.append('guarded paths changed during a pass')
     not_pass = sorted(k for k, v in prod.items() if v['status'] != 'PASS')
@@ -475,7 +502,7 @@ def evaluate(spec, passes, comparison):
 def markdown(report):
     lines = [f'# Clean rerun x{len(report["passes"])}: {report["name"]}', '',
              f'Verdict: **{report["verdict"]}** (PASS needs all six COAST-PROD ids PASS, every step ok in every '
-             'pass and every deterministic output identical).', '',
+             'pass, and identical staged inputs and deterministic outputs).', '',
              *[f'- {reason}' for reason in report.get('verdict_reasons', [])],
              *([''] if report.get('verdict_reasons') else []),
              f'Spec sha256 `{report["spec_sha256"]}`; work base `{report["work_base"]}`.', '',

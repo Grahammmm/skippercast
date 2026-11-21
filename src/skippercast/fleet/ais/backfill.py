@@ -18,8 +18,8 @@ listener never heard. ``fleet-ais.yml`` runs it for one month on a dispatch with
    never the listener's. A day is written to a staging file and moved into place
    only when complete, replacing any earlier copy, so an interrupted or repeated
    run never leaves half a day or a day twice. ``backfill/days/YYYY-MM-DD.json``
-   records what a day holds (bbox, MMSIs, counts, ``ingested_at``); a day whose
-   record matches this run's bbox and MMSIs is not downloaded again unless
+   records what a day holds (bbox, MMSIs, counts, ``ingested_at``); a complete day
+   whose record matches this run's bbox and MMSIs is not downloaded again unless
    ``--force``. A day NOAA has not published yet is reported as missing, and a
    cut or corrupt download (``CorruptDay``) or an unreadable file as failed: in
    both cases nothing of that day is stored and the rest go on.
@@ -41,8 +41,9 @@ Re-running a day or a month gives the same store rows and the same pushed rows.
 ``thresholds.retention`` (design.md section 5), counted from when a day was
 ingested rather than from the day itself (NOAA's days are already months old):
 a day's positions go ``raw_days`` after its ingest and its statics
-``static_days`` after; the file and its record go once both have. Emptying a
-day's positions also drops its record, so a later backfill downloads it again.
+``static_days`` after; the file and its record go once both have. Expiring a
+day's positions keeps only the ingest clock and marks the day incomplete, so
+a later backfill downloads it again without maintenance extending static retention.
 The scheduled processor run applies it (``process.run``) and so does every
 backfill before it ingests. Derived trips, events and aggregates stay, as they
 do for the live source.
@@ -121,12 +122,19 @@ def _wanted(bbox: Bbox, mmsis: Iterable[int]) -> dict:
     return {"bbox": [list(corner) for corner in bbox], "mmsis": sorted(set(mmsis))}
 
 
-def _ingested(store: AisStore, day: date, wanted: Mapping) -> bool:
+def _read_manifest(path: Path) -> dict:
     try:
-        manifest = json.loads(_manifest_path(store, day).read_text(encoding="utf-8"))
+        manifest = json.loads(path.read_text(encoding="utf-8"))
     except (FileNotFoundError, ValueError):
-        return False
+        return {}
+    return manifest if isinstance(manifest, dict) else {}
+
+
+def _ingested(store: AisStore, day: date, wanted: Mapping) -> bool:
+    manifest = _read_manifest(_manifest_path(store, day))
+    # Version 1 manifests written before the flag only recorded complete days.
     return (manifest.get("schema_version") == MANIFEST_VERSION and store.day_path(day).is_file()
+            and manifest.get("positions_complete", True) is True
             and {k: manifest.get(k) for k in wanted} == dict(wanted))
 
 
@@ -166,23 +174,12 @@ def ingest_day(source, store: AisStore, day: date, bbox: Bbox, mmsis: Iterable[i
     ingested = _now_ms(now_ms)
     _write_json(_manifest_path(store, day), {"schema_version": MANIFEST_VERSION, "source": SOURCE_ID, "rights": RIGHTS,
                                              **wanted, "counts": result, "ingested_ms": ingested,
-                                             "ingested_at": iso_utc(ingested)})
+                                             "ingested_at": iso_utc(ingested), "positions_complete": True})
     return result
 
 
 def _now_ms(now_ms: int | None) -> int:
     return round(datetime.now(timezone.utc).timestamp() * 1000) if now_ms is None else now_ms
-
-
-def _ingested_ms(store: AisStore, day: date) -> int:
-    """When the day was ingested: its record's ``ingested_ms``, else the file's modification time."""
-    try:
-        value = json.loads(_manifest_path(store, day).read_text(encoding="utf-8")).get("ingested_ms")
-        if isinstance(value, int) and not isinstance(value, bool):
-            return value
-    except (FileNotFoundError, ValueError, AttributeError):
-        pass
-    return round(store.day_path(day).stat().st_mtime * 1000)
 
 
 def apply_retention(store: AisStore, limits: RetentionLimits, now_ms: int) -> dict:
@@ -193,17 +190,29 @@ def apply_retention(store: AisStore, limits: RetentionLimits, now_ms: int) -> di
         path = store.day_path(day)
         if path.is_symlink() or path.resolve().parent != store.raw_dir.resolve():
             continue
-        age = (today - datetime.fromtimestamp(_ingested_ms(store, day) / 1000, timezone.utc).date()).days
+        manifest_path = _manifest_path(store, day)
+        manifest = _read_manifest(manifest_path)
+        recorded_ms = manifest.get("ingested_ms")
+        ingested_ms = recorded_ms if type(recorded_ms) is int else round(path.stat().st_mtime * 1000)
+        age = (today - datetime.fromtimestamp(ingested_ms / 1000, timezone.utc).date()).days
         expired = [t for t, limit in (("positions", limits.raw_days), ("statics", limits.static_days)) if age > limit]
         if len(expired) == 2:
             for sidecar in ("-wal", "-shm", "-journal"):
                 path.with_name(path.name + sidecar).unlink(missing_ok=True)
             path.unlink()
-            _manifest_path(store, day).unlink(missing_ok=True)
+            manifest_path.unlink(missing_ok=True)
             result["deleted"].append(day.isoformat())
             continue
         if not expired or path.stat().st_nlink > 1:
             continue
+        # Anchor a missing clock before SQLite can change mtime, and invalidate the
+        # cache before deleting positions so an interrupted purge can't yield a hit.
+        if "positions" in expired:
+            retained = {"ingested_ms": ingested_ms, "positions_complete": False}
+        else:
+            retained = {**manifest, "ingested_ms": ingested_ms}
+        if retained != manifest:
+            _write_json(manifest_path, retained)
         emptied = []
         with closing(store.connect(day)) as conn:
             with conn:
@@ -214,8 +223,6 @@ def apply_retention(store: AisStore, limits: RetentionLimits, now_ms: int) -> di
             if emptied:
                 conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
                 conn.execute("VACUUM")
-        if "positions" in expired:
-            _manifest_path(store, day).unlink(missing_ok=True)   # positions gone: a later backfill downloads it again
         if emptied:
             result["emptied"][day.isoformat()] = emptied
     return result

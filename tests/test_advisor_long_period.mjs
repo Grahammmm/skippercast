@@ -40,7 +40,7 @@ function feed({over = {}, by = () => ({}), units = {}, ageH = 4, reverse = false
     hourly: {time: order, ...Object.fromEntries(keys.map(([k, src]) => [k, order.map(t => v(t)[src ?? k])]))}});
   const model = keys => ({meta: {last_run_initialisation_time: NOW / 1000 - ageH * 3600}, data: Array.from({length: POINT_INDEX + 1}, (_, i) => i === POINT_INDEX ? series(keys) : null)});
   const wave = ['wave_height', 'wave_period', 'wind_wave_height', 'wind_wave_period', 'swell_wave_height', 'swell_wave_period', 'swell_wave_direction', 'secondary_swell_wave_height', 'secondary_swell_wave_direction'].map(k => [k]);
-  return {region_id: 'morro-bay', completed_at: new Date(NOW - 3600000).toISOString(), forecast: {models: {
+  return {region_id: 'morro-bay', completed_at: new Date(NOW - 3600000).toISOString(), forecast: {requested_points: REGION.forecast_points.map(p => [p.id, p.latitude, p.longitude]), models: {
     gfs_global: model([['wind_speed_10m'], ['wind_gusts_10m'], ['wind_direction_10m']]),
     ncep_gfswave016: model(wave),
     ecmwf_ifs025: model([['wind_speed_10m', 'ecmwf_wind'], ['wind_gusts_10m', 'ecmwf_gust']]),
@@ -234,7 +234,7 @@ test('get_conditions without species exposes the Bumpy word and the hour; a two-
   const times = Array.from({length: 24 * 8}, (_, i) => Date.parse('2026-10-01T00:00:00Z') / 1000 + i * 3600);
   const intel = feed({times, by: only([9], LP, sun)});
   const when = Date.parse('2026-10-01T17:00:00Z');
-  const issued = {...intel, forecast: {models: Object.fromEntries(Object.entries(intel.forecast.models).map(([id, m]) => [id, {...m, meta: {last_run_initialisation_time: when / 1000 - 4 * 3600}}]))}};
+  const issued = {...intel, forecast: {...intel.forecast, models: Object.fromEntries(Object.entries(intel.forecast.models).map(([id, m]) => [id, {...m, meta: {last_run_initialisation_time: when / 1000 - 4 * 3600}}]))}};
   const out = (await TOOL_BY_NAME.get('get_conditions').run({port: 'morro-bay', date: 'this weekend'}, ctx(issued, {now: when}))).result;
   assert.deepEqual(out.dates, [sat, sun]);
   assert.deepEqual(out.days.map(d => [d.date, d.comfort, d.comfort_held]), [[sat, 'comfortable', undefined], [sun, 'bumpy', 'long-period swell (2.6 ft at 16 s) at 9 am']]);

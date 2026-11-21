@@ -16,9 +16,10 @@ import rasterio
 from rasterio.features import geometry_mask
 
 from research.scripts.audit_point_conception_4m_access import candidate_footprints
+from research.scripts.audit_point_conception_4m_camera_gap import require_searched_zero
 from research.scripts.audit_point_conception_4m_hard_overlap import USGS_CACHE, USGS_SOURCE
 from research.lib.paths import ROOT
-from research.scripts.audit_point_conception_original_300_gap import CACHE, file_sha256
+from research.scripts.audit_point_conception_original_300_gap import CACHE, file_sha256, install_original
 from research.scripts.audit_point_conception_original_300_ladder import SOURCE_HASHES
 
 
@@ -31,22 +32,26 @@ REPORT_HASHES = {
 }
 
 
+NOAA_REPORT_MAX_BYTES = 10_000_000
+USGS_REPORT_MAX_BYTES = 20_000_000
+
+
+def cache_report(path, url, expected, *, fetch, max_bytes):
+    if path.exists():
+        if file_sha256(path) != expected:
+            raise ValueError(f"Original cached report changed: {path.name}")
+        return
+    if not fetch:
+        raise FileNotFoundError(path)
+    request = Request(url, headers={"User-Agent": "SkipperCast source review/1.0"})
+    install_original(path, expected, lambda: urlopen(request, timeout=30),
+                     max_bytes=max_bytes, required_url=url)
+
+
 def report_path(cache, survey, *, fetch):
     path = cache / f"{survey}-DR.pdf"
     url = f"https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/{survey}/DR/{survey}.pdf"
-    if not path.exists():
-        if not fetch:
-            raise FileNotFoundError(path)
-        with urlopen(Request(url, headers={"User-Agent": "SkipperCast source review/1.0"}), timeout=30) as response:
-            if response.url != url:
-                raise ValueError("Unexpected NOAA report redirect")
-            raw = response.read(10_000_001)
-        if len(raw) > 10_000_000:
-            raise ValueError("NOAA report exceeds review size limit")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-    if file_sha256(path) != REPORT_HASHES[survey]:
-        raise ValueError(f"NOAA original report changed: {survey}")
+    cache_report(path, url, REPORT_HASHES[survey], fetch=fetch, max_bytes=NOAA_REPORT_MAX_BYTES)
     return path, url
 
 
@@ -123,19 +128,7 @@ def usgs_class_lineage(archive):
 
 
 def usgs_acoustic_source(path, *, fetch):
-    if not path.exists():
-        if not fetch:
-            raise FileNotFoundError(path)
-        with urlopen(Request(USGS_PAMPHLET_URL, headers={"User-Agent": "SkipperCast source review/1.0"}), timeout=30) as response:
-            if response.url != USGS_PAMPHLET_URL:
-                raise ValueError("Unexpected USGS report redirect")
-            raw = response.read(20_000_001)
-        if len(raw) > 20_000_000:
-            raise ValueError("USGS report exceeds review size limit")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(raw)
-    if file_sha256(path) != USGS_PAMPHLET_SHA:
-        raise ValueError("USGS source report changed")
+    cache_report(path, USGS_PAMPHLET_URL, USGS_PAMPHLET_SHA, fetch=fetch, max_bytes=USGS_REPORT_MAX_BYTES)
     text = " ".join(" ".join((page.extract_text() or "").split()) for page in PdfReader(path).pages).lower()
     if "bathymetry and backscatter data collected by fugro pelagos" not in text or "in 2008" not in text:
         raise ValueError("USGS original acoustic-source statement changed")
@@ -150,8 +143,8 @@ def usgs_acoustic_source(path, *, fetch):
 def audit(bag_cache, usgs_cache, report_cache, *, fetch=False):
     prior = json.loads((ROOT / "dist/data/point-conception-original-4m-rugged-overlap.json").read_text())
     camera = json.loads((ROOT / "research/receipts/point-conception-original-4m-camera-gap.json").read_text())
-    if any(row["bottom_observations_inside_component"] for row in camera["components"]):
-        raise ValueError("Direct camera evidence changed; review before asserting a gap")
+    manifest = json.loads((ROOT / "research/catalog/usgs-video-cruises.json").read_text())
+    require_searched_zero(camera, manifest)
     candidates = candidate_footprints(bag_cache, usgs_cache, prior)
     rows = []
     for survey, cells, footprint in candidates:

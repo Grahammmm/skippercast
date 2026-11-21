@@ -44,7 +44,7 @@ function feed({over = {}, by = () => ({}), ageH = 4, reverse = false, times = HO
   const model = keys => ({meta: {last_run_initialisation_time: NOW / 1000 - ageH * 3600, ...(end === null ? {} : {data_end_time: end})},
     data: Array.from({length: INDEX + 1}, (_, i) => i === INDEX ? series(keys) : null)});
   const wave = ['wave_height', 'wave_period', 'wind_wave_height', 'wind_wave_period', 'swell_wave_height', 'swell_wave_period', 'swell_wave_direction', 'secondary_swell_wave_height', 'secondary_swell_wave_direction'].map(k => [k]);
-  return {region_id: 'morro-bay', completed_at: new Date(NOW - 3600000).toISOString(), forecast: {models: {
+  return {region_id: 'morro-bay', completed_at: new Date(NOW - 3600000).toISOString(), forecast: {requested_points: REGION.forecast_points.map(p => [p.id, p.latitude, p.longitude]), models: {
     gfs_global: model([['wind_speed_10m'], ['wind_gusts_10m'], ['wind_direction_10m']]),
     ncep_gfswave016: model(wave),
     ecmwf_ifs025: model([['wind_speed_10m', 'ecmwf_wind'], ['wind_gusts_10m', 'ecmwf_gust']]),
@@ -214,7 +214,7 @@ test('thin_all_advisor_paths: get_conditions with and without a species, custom 
   // Two dates: only the date with the gap is held, and the daily feed is read once.
   const times = Array.from({length: 24 * 8}, (_, i) => Date.parse('2026-10-01T00:00:00Z') / 1000 + i * 3600);
   const weekend = feed({times, by: only([9], NO_WIND, '2026-10-04')}), when = Date.parse('2026-10-01T17:00:00Z'), reads = {};
-  const intel = {...weekend, forecast: {models: Object.fromEntries(Object.entries(weekend.forecast.models).map(([id, m]) => [id, {...m, meta: {last_run_initialisation_time: when / 1000 - 4 * 3600}}]))}};
+  const intel = {...weekend, forecast: {...weekend.forecast, models: Object.fromEntries(Object.entries(weekend.forecast.models).map(([id, m]) => [id, {...m, meta: {last_run_initialisation_time: when / 1000 - 4 * 3600}}]))}};
   const two = (await get.run({port: 'morro-bay', date: 'this weekend'}, {...ctx(intel, daily(), {reads}), now: when})).result;
   assert.deepEqual(two.days.map(d => [d.date, d.comfort, d[HELD]]), [['2026-10-03', 'comfortable', undefined], ['2026-10-04', 'bumpy', '1 of 9 hours have no forecast']]);
   assert.equal(Object.entries(reads).filter(([u]) => /latest\.json$/.test(u)).reduce((n, [, c]) => n + c, 0), 1, 'no extra daily feed read');

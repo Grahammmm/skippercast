@@ -6,6 +6,7 @@ import sys
 import pytest
 
 from skippercast.platform import depth_contours as dc
+from skippercast.platform.contracts import OWNER_DISPLAY_BASIS
 from tests._support import ROOT
 
 REGION = {'id': 'test-bay', 'bounds': [-121.2, 35.0, -120.7, 35.6],
@@ -105,6 +106,78 @@ def test_check_rejects_a_source_that_is_not_an_approved_binding():
         dc.check_contours(collection(), unbound, SOURCES)
 
 
+@pytest.fixture
+def owner_selected_contours():
+    ident = 'survey-c'  # Candidate and deliberately absent from the static binding.
+    doc = collection(sources=(ident,))
+    for feature in doc['features']:
+        feature['properties']['source_id'] = ident
+    sources = {**SOURCES, ident: {**SOURCES[ident], 'publication_allowed': False,
+                                'rights': {'public_display': 'allowed', 'owner_public_display': {
+                                    'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}}}}
+    return doc, sources, ident
+
+
+def test_owner_cleared_selection_does_not_change_repo_channel(owner_selected_contours):
+    # R5b can use attested selection in place of static binding; R10 must not follow it.
+    doc, sources, ident = owner_selected_contours
+    dc.check_selected_contours(doc, REGION, sources, {ident})
+    with pytest.raises(ValueError, match='approved bathymetry binding'):
+        dc.check_contours(doc, REGION, sources)
+
+
+@pytest.mark.parametrize('case, reason', [
+    ('missing-marker', 'approved bathymetry binding'),
+    ('wrong-basis', 'approved bathymetry binding'),
+    ('approved-but-denied', 'not cleared for public display'),
+    ('private', 'not cleared for public display'),
+    ('excluded', 'not cleared for public display'),
+    ('no-display', 'not cleared for public display'),
+    ('not-selected', 'approved bathymetry binding'),
+    ('not-bathymetry', 'approved bathymetry binding'),
+])
+def test_selected_contour_validator_refuses_ineligible_provenance(owner_selected_contours, case, reason):
+    # A selection ID or a lookalike owner marker cannot override any other gate.
+    doc, sources, ident = owner_selected_contours
+    selected = {ident}
+    source, rights = sources[ident], sources[ident]['rights']
+    if case in ('missing-marker', 'approved-but-denied'):
+        del rights['owner_public_display']
+        if case == 'approved-but-denied':
+            source['review_status'] = 'approved'
+    elif case == 'wrong-basis':
+        rights['owner_public_display']['basis'] = 'unrelated decision'
+    elif case in ('private', 'excluded'):
+        rights['public_display'] = case
+    elif case == 'no-display':
+        del rights['public_display']
+    elif case == 'not-selected':
+        selected.clear()
+    elif case == 'not-bathymetry':
+        source['needs'] = ['imagery']
+    with pytest.raises(ValueError, match=reason):
+        dc.check_selected_contours(doc, REGION, sources, selected)
+
+
+def test_selected_contours_keep_publication_hold(owner_selected_contours):
+    # Even a false-valued nested hold marker prevents export, as for R10.
+    doc, sources, ident = owner_selected_contours
+    doc['features'][0]['properties']['publication_held'] = False
+    with pytest.raises(dc._ContoursHeld):
+        dc.check_selected_contours(doc, REGION, sources, {ident})
+
+
+def test_selected_contour_omissions_follow_selection_not_static_bindings(owner_selected_contours):
+    # Reusing the repo-channel omission list would include an unrelated static survey.
+    doc, sources, ident = owner_selected_contours
+    provenance = doc['provenance']
+    provenance['sources_omitted'] = [{'source_id': 'survey-a', 'review_status': 'approved'}]
+    dc.check_selected_contours(doc, REGION, sources, {ident, 'survey-a'})
+    provenance['sources_omitted'].append({'source_id': 'survey-b', 'review_status': 'approved'})
+    with pytest.raises(ValueError, match='omitted bound surveys'):
+        dc.check_selected_contours(doc, REGION, sources, {ident, 'survey-a'})
+
+
 def test_review_expires_is_a_year_after_the_oldest_review():
     c = collection(sources=('survey-a', 'survey-b'))
     assert dc.review_expires(c, SOURCES) == '2027-09-26'
@@ -137,11 +210,11 @@ def test_publish_writes_both_forms_with_the_age_limit_and_enforces_the_budget(tm
     assert full['provenance']['review_expires'] == '2027-09-26' and full['provenance']['review_days'] == 365
     assert json.loads((out / 'depth-contours-overview.geojson').read_text())['provenance']['review_expires'] == '2027-09-26'
     monkeypatch.setattr(dc, 'MAX_BYTES', 100)
+    fresh = tmp_path / 'fresh'
     with pytest.raises(ValueError, match='over its 100-byte budget'):
-        dc.publish_depth_contours(root, REGION, out, SOURCES)
-    assert not (out / 'depth-contours.geojson').exists(), 'an over-budget form is not left behind'
+        dc.publish_depth_contours(root, REGION, fresh, SOURCES)
+    assert not (fresh / 'depth-contours.geojson').exists(), 'an over-budget form is not left behind'
     (root / 'catalog/depth-contours/test-bay.geojson').unlink()
-    (out / 'depth-contours.geojson').write_text('{}')
     assert dc.publish_depth_contours(root, REGION, out, SOURCES) is None
     assert not (out / 'depth-contours.geojson').exists() and not (out / 'depth-contours-overview.geojson').exists(), 'stale copies removed'
 
@@ -323,7 +396,7 @@ def _dated(value, **kw):
 
 BAD_DATES = ['2026-02-29', '1900-02-29', '2026-04-31', '2026-01-00', '2026-01-32', '0000', '0000-01', '0000-01-01',
              '2026-00', '2026-13', 2008, True, None, '\u0662\u0660\u0660\u0668', '2026-1', '2026-01-1', '2026-W05-3',
-             ' 2008', '2008 ', '2008\n', '2008-01-01\r\n', '2008-01-01T00:00:00Z', '200', '20080']
+             ' 2008', '2008 ', '2008\n', '2008-01-01\r\n', '2008-01-01T00:00:00Z', '200', '20080', 'unstated']
 GOOD_DATES = ['0001', '9999', '2008', '2026-02', '2000-02-29', '2024-02-29']
 
 
@@ -333,7 +406,7 @@ def test_check_refuses_an_impossible_or_non_canonical_survey_date(value):
         dc.check_contours(_dated(value), REGION, SOURCES)
 
 
-@pytest.mark.parametrize('value', BAD_DATES[:3] + ['0000-01-01'])
+@pytest.mark.parametrize('value', BAD_DATES[:3] + ['0000-01-01', 'unstated'])
 def test_held_check_has_the_same_calendar_gate(value):
     region = {**REGION, 'source_bindings': {'bathymetry': ['survey-a', 'survey-c']}}
     c = _dated(value, sources=('survey-a', 'survey-c'))
@@ -353,6 +426,14 @@ def test_check_keeps_valid_partial_survey_dates_verbatim(value):
     dc.check_contours(c, REGION, SOURCES)
     assert c['provenance']['sources'][0]['survey_date'] == value
     assert {f['properties']['survey_date'] for f in c['features']} == {value}
+
+
+@pytest.mark.parametrize('value', [None, 'Unstated', 'unstated ', '2023-02-29'])
+def test_selected_contours_refuse_missing_or_invalid_survey_dates(value):
+    # R5b allows only the exact token, not arbitrary placeholders or malformed dates.
+    sources = {**SOURCES, 'survey-a': {**SOURCES['survey-a'], 'rights': {'public_display': 'allowed'}}}
+    with pytest.raises(ValueError, match='survey date or datum'):
+        dc.check_selected_contours(_dated(value), REGION, sources, {'survey-a'})
 
 
 def test_valid_but_unequal_feature_and_source_dates_still_hit_the_feature_error():

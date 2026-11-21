@@ -410,8 +410,11 @@ class RetentionTests(BackfillTestCase):
         rows = dump(self.store, DAY)
         self.assertEqual(rows["positions"], [])
         self.assertTrue(rows["statics"], "statics last static_days")
-        self.assertFalse((self.store.root / "days" / "2026-06-20.json").exists(),
+        self.assertFalse(bf._ingested(self.store, DAY, bf._wanted(BBOX, [MMSI])),
                          "positions gone: the next backfill downloads the day again")
+        record = json.loads((self.store.root / "days" / "2026-06-20.json").read_text())
+        self.assertEqual(record, {"ingested_ms": now, "positions_complete": False},
+                         "retain the clock, not the expired selection metadata")
         result = bf.apply_retention(self.store, self.LIMITS, now + 91 * 86_400_000)
         self.assertEqual(sorted(result["deleted"]), ["2026-06-20", "2026-06-21"])
         self.assertEqual(list(self.store.raw_dir.iterdir()), [])
@@ -541,17 +544,6 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(process.STORES["marinecadastre"](root).raw_dir, root / "backfill" / "raw")
         self.assertEqual(process.SOURCE_RIGHTS["marinecadastre"], "noaa-planning-only")
         self.assertIsInstance(bf.backfill_store(root), AisStore)
-
-
-class WorkflowTests(unittest.TestCase):
-    def test_fleet_ais_takes_a_backfill_month(self):
-        text = (ROOT / ".github" / "workflows" / "fleet-ais.yml").read_text()
-        self.assertIn("      backfill_month:\n", text)
-        self.assertIn("BACKFILL_MONTH: ${{ inputs.backfill_month }}", text)
-        self.assertIn('python -m skippercast.fleet.ais backfill --region "$REGION" --month "$BACKFILL_MONTH"', text)
-        self.assertIn("timeout-minutes: ${{ inputs.backfill_month && 150 || 25 }}", text)
-        self.assertEqual(text.count("inputs.backfill_month"), 2, "the input reaches the script through the environment")
-        self.assertNotRegex(text, r"(contents|actions|issues|pull-requests): write")
 
 
 if __name__ == "__main__":

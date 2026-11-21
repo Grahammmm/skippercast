@@ -30,8 +30,9 @@ state's window, or the licensee's ZIP code lies in the port's region (``GROUP_ZI
 Contradictions: an AIS call sign absent from the licence, an MMSI licensed to another name, a call sign
 licensed to another MMSI or to no one, a non-US MMSI or call sign, an AIS ship type that is neither fishing,
 pleasure nor passenger, a length more than 20% off the licence's, or an MMSI seen only in other ports while
-its licensee lives elsewhere. A vessel with one resolving MMSI is ``resolved``; two resolving MMSIs, or one
-MMSI resolving for two registry vessels, leave it ``unresolved``.
+its licensee lives elsewhere. A length discrepancy stays a note only when both an AIS/licence match and a
+qualifying PSIX/licence match support the candidate. A vessel with one resolving MMSI is ``resolved``;
+two resolving MMSIs, or one MMSI resolving for two registry vessels, leave it ``unresolved``.
 
 Run (from the repository root, with ``src`` and the root on ``sys.path``)::
 
@@ -437,12 +438,16 @@ def _candidate(v: dict, mmsi: str, via: set, ix: _Index, presence: Mapping[str, 
     if length.startswith("agrees"):
         keys.append(f"length(ais vs licence {length[8:-1]})")
 
+    evidence_sets = set()
     if static_named and call_ok and port_ok:
         methods.append("licence-call-sign")
     if static_named and active and (not ais_call or call_ok) and port_ok:
         methods.append("licence-mmsi")
+        # The call-sign method is a stronger check on the same AIS/licence evidence.
+        evidence_sets.add("ais-licence")
     if active and psix and port_ok and not other_mmsi:
         methods.append("official-number")
+        evidence_sets.add("psix-licence")
     elif active and psix and other_mmsi:
         notes.append("official-number-also-points-at(" + ",".join(other_mmsi) + ")")
     elif active and psix:
@@ -465,7 +470,7 @@ def _candidate(v: dict, mmsi: str, via: set, ix: _Index, presence: Mapping[str, 
     if static and static.ship_type not in (None, *CHARTER_TYPES, *UNSPECIFIC_TYPES):
         conflicts.append(f"ais-ship-type-{static.ship_type}")
     if length == "contradicts":
-        if len(methods) >= 2:   # AIS dimensions are self-entered; two registry agreements outweigh them
+        if len(evidence_sets) >= 2:   # AIS dimensions are self-entered; require independent corroboration
             notes.append("ais-length-differs-from-licence")
         else:
             conflicts.append("length-contradicts-licence")

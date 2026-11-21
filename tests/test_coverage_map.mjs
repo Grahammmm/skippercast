@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {coverageModel, renderMap, renderList} from '../dist/coverage-map.js';
@@ -95,7 +96,7 @@ test('page uses the public index and handles network and HTTP failures in the co
   try {
     for (const [n, fetcher] of [async () => { throw Error('offline'); }, async () => ({ok: false})].entries()) {
       const nodes = {'coverage-map': {innerHTML: 'old'}, 'coverage-list': {innerHTML: 'old'}};
-      globalThis.document = {getElementById: id => nodes[id]};
+      globalThis.document = {documentElement: {lang: 'en'}, getElementById: id => nodes[id]};
       globalThis.fetch = async (url, options) => { assert.equal(url, '/regions/index.json'); assert.equal(options.cache, 'no-store'); return fetcher(); };
       await import(`../dist/coverage-map.js?failure=${n}`);
       await new Promise(resolve => setImmediate(resolve));
@@ -106,4 +107,34 @@ test('page uses the public index and handles network and HTTP failures in the co
     globalThis.document = originalDocument;
     globalThis.fetch = originalFetch;
   }
+});
+
+test('coverage_page_spanish: localizes the page and map without renaming regions', {timeout: 2000}, async ({mock}) => {
+  const page = readFileSync(new URL('../dist/coverage.html', import.meta.url), 'utf8');
+  const heading = {textContent: 'Coverage', getAttribute: () => page.match(/<h1 data-i18n="([^"]+)"/)?.[1]};
+  const rendered = Promise.withResolvers(), nodes = {'coverage-map': {}, 'coverage-list': {set innerHTML(value) { rendered.resolve(value); }}};
+  const doc = {documentElement: {lang: 'en'}, getElementById: id => nodes[id],
+    querySelectorAll: selector => selector === '[data-i18n]' && heading.getAttribute() ? [heading] : []};
+  mock.method(globalThis, 'fetch', async () => ({ok: true, json: async () => ({regions: [
+    region('point-reyes', [-123, 37, -122, 38], {name: 'Point Reyes'}), null]})}));
+  const location = globalThis.location;
+  try {
+    globalThis.location = {search: '?lang=es'};
+    globalThis.document = doc;
+    await import('../dist/coverage-map.js?spanish');
+    const list = await rendered.promise;
+    assert.equal(doc.documentElement.lang, 'es');
+    assert.equal(heading.textContent, 'Cobertura');
+    assert.match(page, /<noscript>.*lang="es"/);
+    assert.match(nodes['coverage-map'].innerHTML, /<title>Point Reyes — Vista previa<\/title>/);
+    assert.match(list, /Point Reyes — Vista previa \(revisión incompleta; consulta el aviso\)/);
+    assert.match(list, /Regiones que no se pudieron dibujar: 1/);
+    assert.match(renderList(coverageModel(null), 'es'), /No se pudo leer la lista de regiones/);
+  } finally { globalThis.location = location; delete globalThis.document; }
+});
+
+test('coverage_english_identical', () => {
+  const models = [coverageModel({regions: [region('port', [-123, 35, -122, 36], {name: 'Port & Bay', status: 'active'}), region('preview', [-123, 36, -122, 37]), null]}), coverageModel(null), coverageModel({regions: []})];
+  const html = models.map(m => renderMap(m, {lang: 'en'}) + renderList(m, 'en')).join('\n');
+  assert.equal(createHash('sha256').update(html).digest('hex'), 'e12561220690ddb4f77f49598ce2a3a56fddfec2cfac4c83c261e51aad6716c0');
 });

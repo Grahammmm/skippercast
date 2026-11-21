@@ -3,8 +3,7 @@
 //
 //   graph(cfg, method, path, params)   one call: the versioned base, the token and
 //                                      appsecret_proof on every call, a 20 s timeout,
-//                                      a small retry with backoff on HTTP 5xx and on
-//                                      Meta's rate-limit codes 4, 17, 32 and 613
+//                                      bounded backoff, except on ambiguous Page creates
 //   ig* / fb* / pageInfo               the calls TA-S2 publishes with, each one request
 //                                      shape (tests/test_advisor_meta.mjs pins them)
 //
@@ -54,6 +53,11 @@ export class MetaError extends Error {
   }
   /** Worth a retry: a server error or one of the rate-limit codes. */
   get retryable(): boolean { return this.status >= 500 || (this.code !== null && RETRY_CODES.has(this.code)); }
+}
+
+/** A Page create may have committed; a missing acknowledgement is not a rejection. */
+export class MetaCreateUncertain extends MetaError {
+  override get retryable(): boolean { return false; }
 }
 
 /** The Meta secrets this deploy has: {configured} only when the publishing ones are all set (09 § Setup step 4). */
@@ -110,11 +114,14 @@ function logFailure(error: MetaError, attempt: number, retrying: boolean): void 
  * The token and appsecret_proof are added to the query (GET) or the form body
  * (POST). Retries a 5xx or a rate-limit code at most MAX_ATTEMPTS times in all,
  * waiting BACKOFF_MS between; a network failure is retried only for a GET (a
- * POST that timed out may have been applied). Throws MetaError.
+ * POST that timed out may have been applied). Page creates do not retry
+ * ambiguous responses, even a 5xx that carries a rate-limit code.
  */
-export async function graph<T = Record<string, unknown>>(cfg: MetaConfig, method: 'GET' | 'POST', path: string, params: Params = {}): Promise<T> {
+export async function graph<T = Record<string, unknown>>(cfg: MetaConfig, method: 'GET' | 'POST', path: string, params: Params = {}, operation?: 'page-create'): Promise<T> {
   if (!path.startsWith('/') || path.includes('?') || path.includes('#') || path.includes('..')) throw new TypeError('graph path must be an absolute path without a query');
   const edge = edgeOf(path), fetcher = cfg.fetcher ?? ((url: string, init: RequestInit) => fetch(url, init)), sleep = cfg.sleep ?? defaultSleep;
+  const create = operation === 'page-create';
+  const ErrorType = create ? MetaCreateUncertain : MetaError;
   const all = form({...params, access_token: cfg.token, appsecret_proof: await appsecretProof(cfg.token, cfg.appSecret)});
   const url = `${cfg.base ?? GRAPH_BASE}${path}`, attempts = Math.max(1, Math.min(cfg.attempts ?? MAX_ATTEMPTS, MAX_ATTEMPTS));
   for (let attempt = 1; ; attempt++) {
@@ -127,14 +134,16 @@ export async function graph<T = Record<string, unknown>>(cfg: MetaConfig, method
       const retrying = method === 'GET' && attempt < attempts;
       advisorLog(retrying ? 'warn' : 'error', 'advisor_meta_error', {edge, status: 0, code: null, subcode: null, fbtrace_id: null, attempt, retrying,
         reason: (cause as Error)?.name === 'TimeoutError' ? 'timeout' : 'network'});
-      if (!retrying) throw new MetaError(edge, 0, null, null, null);
+      if (!retrying) throw new ErrorType(edge, 0, null, null, null);
       await sleep(BACKOFF_MS[attempt - 1] ?? BACKOFF_MS.at(-1)!);
       continue;
     }
     if (response.ok) {
-      try { return await response.json() as T; } catch { throw new MetaError(edge, response.status, null, null, null); }
+      try { return await response.json() as T; } catch { throw new ErrorType(edge, response.status, null, null, null); }
     }
-    const error = await failure(edge, response);
+    const rejected = await failure(edge, response);
+    const error = create && (response.status >= 500 || response.status === 408)
+      ? new MetaCreateUncertain(edge, rejected.status, rejected.code, rejected.subcode, rejected.fbtraceId) : rejected;
     const retrying = error.retryable && attempt < attempts;
     logFailure(error, attempt, retrying);
     if (!retrying) throw error;
@@ -252,6 +261,11 @@ export async function igCollaborators(cfg: MetaConfig, mediaId: string): Promise
 
 // ---- Facebook Page ------------------------------------------------------------------------------
 
+function pageCreateId(edge: string, id: unknown): string {
+  if (typeof id === 'string' && ID.test(id)) return id;
+  throw new MetaCreateUncertain(edge, 200, null, null, null);
+}
+
 /**
  * POST /<page-id>/photos: a photo post with its message, published now or
  * scheduled by Meta (`scheduled_publish_time`, epoch seconds, 10 min to 30 days
@@ -261,8 +275,8 @@ export async function fbPhoto(cfg: MetaConfig, pageId: string, input: {url: stri
   if (!/^https:\/\/\S+$/.test(input.url)) throw new TypeError('the photo URL must be https');
   const scheduled = input.scheduled_publish_time !== undefined;
   const r = await graph<{id?: string; post_id?: string}>(cfg, 'POST', `/${requireId(pageId, 'page')}/photos`, {url: input.url, message: input.message,
-    published: scheduled ? false : (input.published ?? true), scheduled_publish_time: input.scheduled_publish_time});
-  return {id: requireId(String(r.id ?? ''), 'photo'), post_id: typeof r.post_id === 'string' && ID.test(r.post_id) ? r.post_id : null};
+    published: scheduled ? false : (input.published ?? true), scheduled_publish_time: input.scheduled_publish_time}, 'page-create');
+  return {id: pageCreateId('photos', r?.id), post_id: typeof r.post_id === 'string' && ID.test(r.post_id) ? r.post_id : null};
 }
 
 /**
@@ -302,8 +316,8 @@ export async function fbFeed(cfg: MetaConfig, pageId: string, input: {message?: 
   if (!input.photo_ids.length || input.photo_ids.length > 10) throw new TypeError('a multi-photo post takes 1 to 10 photos');
   const params: Params = {message: input.message};
   input.photo_ids.forEach((id, i) => { params[`attached_media[${i}]`] = JSON.stringify({media_fbid: requireId(id, 'photo')}); });
-  const r = await graph<{id?: string}>(cfg, 'POST', `/${requireId(pageId, 'page')}/feed`, params);
-  return requireId(String(r.id ?? ''), 'post');
+  const r = await graph<{id?: string}>(cfg, 'POST', `/${requireId(pageId, 'page')}/feed`, params, 'page-create');
+  return pageCreateId('feed', r?.id);
 }
 
 /** A Page photo Story: an unpublished photo (POST /<page-id>/photos published=false), then POST /<page-id>/photo_stories photo_id. Returns the story's post id. */

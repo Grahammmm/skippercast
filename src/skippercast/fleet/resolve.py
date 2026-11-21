@@ -71,10 +71,11 @@ a vessel this run's candidates were assigned to.
 
 Only an admin fact may be null; a null from any other source is ignored.
 
-Vessel ids are ``sha256(region:creation_key)[:32]`` with the strongest key at
-creation (``uscg:``, ``reg:``, ``hin:``, ``mmsi:``, ``cs:``, else
-``name-port:<slug>|<port>``). Slugs are unique against every snapshot vessel
-slug, every advisor boat slug and the slugs created in this run.
+Vessel ids are ``sha256(region:creation_key)[:32]``. Decided new-vessel
+reviews use ``review:<id>``; unreviewed creations use the strongest key
+(``uscg:``, ``reg:``, ``hin:``, ``mmsi:``, ``cs:``, else ``name-port:<slug>|<port>``).
+Slugs are unique against every snapshot vessel slug, every advisor boat slug
+and the slugs created in this run.
 
 ``fact.upsert`` operations carry no ``supersedes``; superseding is ingest's
 (design section 9). Offerings, departures and the change kinds other than
@@ -503,7 +504,12 @@ class _Resolver:
         if review.get("status") == "decided" and action == "same-vessel" and decision.get("vessel_id") in self.vessels:
             return self.assign(cand, self.vessels[decision["vessel_id"]], 1.0)
         if review.get("status") == "decided" and action == "new-vessel":
-            return self.create(cand)
+            # The review survives changes to the candidate's name, port and matching keys.
+            key = f"review:{review['id']}"
+            vessel = self.vessels.get(ops.vessel_id(self.config.region, key))
+            if vessel is not None:
+                return self.assign(cand, vessel, 1.0)
+            return self.create(cand, key=key)
         self.assignments[cand.fp] = None
         self.skipped.append({"fingerprint": cand.fp, "reason": f"merge review {review['id']} {review.get('status')}"
                              + (f" ({action})" if action else "")})
@@ -556,12 +562,13 @@ class _Resolver:
         self.review_ids.append(ops.review_id("merge", cand.fp))
         self.assignments[cand.fp] = None
 
-    def create(self, cand: _Cand) -> None:
-        kind = next((k for k in KEY_ORDER if k in cand.keys), None)
-        key = (f"{KEY_PREFIX[kind]}:{cand.keys[kind]}" if kind
-               else f"name-port:{slugify(cand.name)}|{cand.port or '-'}")
-        if ops.vessel_id(self.config.region, key) in self.vessels:
-            key += "~" + ops.sha256(cand.fp)[:8]
+    def create(self, cand: _Cand, *, key: str | None = None) -> None:
+        if key is None:
+            kind = next((k for k in KEY_ORDER if k in cand.keys), None)
+            key = (f"{KEY_PREFIX[kind]}:{cand.keys[kind]}" if kind
+                   else f"name-port:{slugify(cand.name)}|{cand.port or '-'}")
+            if ops.vessel_id(self.config.region, key) in self.vessels:
+                key += "~" + ops.sha256(cand.fp)[:8]
         vid = ops.vessel_id(self.config.region, key)
         vessel = _Vessel(vid, self.new_slug(cand), cand.name, cand.norm, {}, None, None, None, {}, frozenset(), None, key)
         self._add(vessel)
@@ -587,25 +594,29 @@ class _Resolver:
 
     # -- columns and operations
 
-    def facts_for(self, vessel: _Vessel) -> tuple[list[_Fact], list[_Fact]]:
-        """(every current fact, this run's facts) for a vessel; this run's replace a source's stored ones per field."""
-        fresh: dict[str, _Fact] = {}
+    def facts_for(self, vessel: _Vessel) -> tuple[list[_Fact], list[dict]]:
+        """Return current facts and validated fresh operations; only admissible facts replace stored ones."""
+        fresh: dict[str, tuple[_Fact, dict]] = {}
         for facts, fp in [(c.facts, c.fp) for c, _score in vessel.cands] + [(vessel.extra, vessel.id)]:
             for fact in facts:
-                key = ops.value_key(fact.value) if _json_ok(fact.value) else None
-                if key is None:
-                    self.skipped.append({"fingerprint": fp, "reason": f"fact {fact.field}: not JSON"})
+                op = {"op": "fact.upsert", "vessel_id": vessel.id, "field": fact.field, "value_json": fact.value,
+                      "source_id": fact.source_id, "source_url": fact.source_url, "method": fact.method,
+                      "confidence": fact.confidence, "rights": fact.rights, "retrieved_at": fact.retrieved_at}
+                try:
+                    row = ops.validate_op(op, 0, self.config.region)
+                except ops.OpError as error:
+                    self.skipped.append({"fingerprint": fp, "reason": f"fact {fact.field}: {error}"})
                     continue
-                ident = ops.fact_id(vessel.id, fact.field, fact.source_id, fact.source_url, key)
-                fresh[ident] = _Fact(ident, fact.field, fact.value, fact.source_id, fact.source_url, fact.method,
-                                     float(fact.confidence), fact.rights, fact.retrieved_at, key)
-        reported = {(f.field, f.source_id) for f in fresh.values()}
+                fresh[row.id] = (_Fact(row.id, fact.field, fact.value, fact.source_id, fact.source_url, fact.method,
+                                       float(fact.confidence), fact.rights, fact.retrieved_at, row.cols["value_key"]), op)
+        ordered = [fresh[ident] for ident in sorted(fresh)]
+        reported = {(f.field, f.source_id) for f, _op in ordered}
         stored = [f for f in self.stored_facts.get(vessel.id, ()) if (f.field, f.source_id) not in reported
                   and f.id not in fresh]
-        return stored + sorted(fresh.values(), key=lambda f: f.id), sorted(fresh.values(), key=lambda f: f.id)
+        return stored + [f for f, _op in ordered], [op for _fact, op in ordered]
 
     def emit(self, vessel: _Vessel) -> None:
-        facts, fresh = self.facts_for(vessel)
+        facts, fresh_ops = self.facts_for(vessel)
         by_field: dict[str, list[_Fact]] = {}
         for fact in facts:
             if fact.value is None and fact.source_id != "admin":
@@ -677,8 +688,7 @@ class _Resolver:
             if cand.norm != norm and cand.url:
                 self.alias(vessel, cand.name, cand.norm, ALIAS_KIND.get(self.config.kind(cand.raw.source_id), "spelling"), cand.url)
         self.class_review(vessel, by_field.get("vessel_class", ()), winners.get("vessel_class"))
-        for fact in fresh:
-            self.fact(vessel, fact)
+        self.ops.extend(fresh_ops)
 
     def operator(self, name: str) -> str:
         """The operator id for an entity name: the stored one of that normalised name, else a new one (sent)."""
@@ -729,26 +739,6 @@ class _Resolver:
                          "proposal_json": {"vessel_id": vessel.id, "vessel_class": best.value if best else None},
                          "score": None, "opened_at": self.now})
         self.review_ids.append(ops.review_id("class", print_))
-
-    def fact(self, vessel: _Vessel, fact: _Fact) -> None:
-        op = {"op": "fact.upsert", "vessel_id": vessel.id, "field": fact.field, "value_json": fact.value,
-              "source_id": fact.source_id, "source_url": fact.source_url, "method": fact.method,
-              "confidence": fact.confidence, "rights": fact.rights, "retrieved_at": fact.retrieved_at}
-        try:
-            ops.validate_op(op, 0, self.config.region)
-        except ops.OpError as error:
-            self.skipped.append({"fingerprint": f"{vessel.id}|{fact.field}|{fact.source_id}",
-                                 "reason": f"fact: {error}"})
-            return
-        self.ops.append(op)
-
-
-def _json_ok(value: Any) -> bool:
-    try:
-        ops.canonical_json(value)
-    except (TypeError, ValueError):
-        return False
-    return True
 
 
 ORDER = {kind: i for i, kind in enumerate(ops.OP_KINDS)}

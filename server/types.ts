@@ -13,10 +13,12 @@ export interface Region {
   jurisdiction_id?: string; landing_names?: string[];
   harbor: {information_url: string};
 }
+export interface SchedulerIdentity {repository: string; repository_id: string; owner_id: string; ref: string; workflow?: string; workflows?: string[]}
 export interface Deployment {
   public_origin: string; allowed_origins: string[]; forecast_feed: string;
   // workflow: the trip check's (live-conditions.yml); workflows: every workflow allowed a job identity (TA-M1).
-  scheduler: {repository: string; repository_id: string; owner_id: string; ref: string; workflow: string; workflows?: string[]};
+  scheduler: SchedulerIdentity & {workflow: string};
+  fleet_scheduler?: SchedulerIdentity & {workflows: string[]};
 }
 
 /** Published feeds and upstream APIs are external JSON, not yet schema-validated (P2-02). */
@@ -31,4 +33,3 @@ export interface TripRow {
 }
 export interface AlertEventRow {id: string; trip_id: string; owner: string; kind: string; message: string; status: string; created_at: string; delivered_at: string | null}
 export interface SubscriptionRow {id: string; owner: string; endpoint: string; p256dh: string; auth: string; created_at: string}
-export interface CountRow {n: number}

@@ -392,7 +392,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pages", required=True, type=Path, help="pages file (JSON, see the module docstring)")
     parser.add_argument("--out", type=Path, default=ROOT / "docs/showcase", help="output directory (default docs/showcase)")
     parser.add_argument("--date", help="date in the file names (default: the after commit's date in the pages file's time zone)")
-    parser.add_argument("--work", type=Path, help="scratch directory for worktrees and raw captures (default: a new temporary directory)")
+    parser.add_argument("--work", type=Path, help="scratch directory for worktrees and raw captures (existing directories are kept; default: a new temporary directory)")
     parser.add_argument("--keep", action="store_true", help="keep the scratch worktrees and raw captures")
     parser.add_argument("--reuse", action="store_true", help="with --work: reuse captures already in it (re-render the page only)")
     args = parser.parse_args(argv)
@@ -420,8 +420,17 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     prs = merged_prs(before, after)
 
-    work = (args.work or Path(tempfile.mkdtemp(prefix="showcase-"))).resolve()
-    work.mkdir(parents=True, exist_ok=True)
+    owns_work = True
+    if args.work is None:
+        work = Path(tempfile.mkdtemp(prefix="showcase-")).resolve()
+    else:
+        work = args.work.resolve()
+        try:
+            work.mkdir(parents=True)
+        except FileExistsError:
+            if not work.is_dir():
+                raise
+            owns_work = False
     log_path = work / "showcase.log"
     print(f"before {short(before)}  after {short(after)}  {len(prs)} merged PRs  scratch {work}  log {log_path}")
     captured: dict[str, dict] = {}
@@ -511,7 +520,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"wrote {page_path.relative_to(ROOT) if page_path.is_relative_to(ROOT) else page_path}: "
           f"{tally['changed']} visible change, {tally['new']} new, {tally['same']} no visible change, "
           f"{tally['failed'] + tally['failed-before'] + tally['unstable']} not comparable")
-    if not args.keep:
+    if owns_work and not args.keep:
         for label in ("before", "after"):
             sha = before if label == "before" else after
             tree = work / f"tree-{sha[:12]}"

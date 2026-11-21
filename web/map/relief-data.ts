@@ -19,15 +19,38 @@ type ReliefArchive = ReliefIdentity & Readonly<{
   sources: readonly ReliefSource[]; mask: 'transparent-nodata'; depth_bands: readonly DepthBand[];
   // Availability summary, not a map of pixels. Use surveyed footprints for spatial claims.
   native_support_by_zoom: Readonly<Partial<Record<number, readonly ReliefTier[]>>>;
+  /** The look the tiles were baked with (reliefLook); null when the pointer's `style` member is invalid. */
+  look: string | null;
 }>;
+
+/** The look of a pointer without a `style` member: today's ramp-B tiles (style/index.json `deep-fixed-v1`). */
+export const LEGACY_LOOK = 'deep-fixed-v1';
+const VERSION = /^[a-z0-9.-]{1,64}$/;
+/**
+ * MSK-2 (STYLE-PIPELINE-DESIGN rev 2 § 6): the look key a pointer's tiles were baked with, which the legend's depth chips
+ * follow. The optional member is `style: {baked, contours|null, habitat|null, built_with}`; the key is its baked digest. Absent:
+ * LEGACY_LOOK. Present but malformed: null (an unknown look, never the default), so the legend shows no chips rather than
+ * another version's. It does not refuse the relief: the tiles are still the reviewed tiles.
+ */
+export function reliefLook(pointer: Record<string, unknown>): string | null {
+  const style = pointer.style;
+  if (style === undefined) return LEGACY_LOOK;
+  if (!record(style) || Object.keys(style).sort().join() !== 'baked,built_with,contours,habitat') return null;
+  const {baked, contours, habitat, built_with} = style;
+  return hash(baked) && (contours === null || hash(contours)) && (habitat === null || hash(habitat)) && typeof built_with === 'string' && VERSION.test(built_with)
+    ? baked : null;
+}
 
 type Refusal = 'missing' | 'wrong-region' | 'unreviewed' | 'private' | 'identity' | 'metadata' | 'unknown-resolution';
 type Resolution = {status: 'ready'; archive: ReliefArchive} | {status: 'unavailable'; reason: Refusal};
 
 const SHA256 = /^[a-f0-9]{64}$/;
 const ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const RESTRICTED_LINEAGE = /\b(?:csumb|sfml|mbari)\b|california state university,? monterey bay|monterey bay aquarium research institute/i;
-const UNKNOWN_LICENCE = /^(?:unresolved|unknown|unlicensed|metadata-review-needed)$/i;
+// Rights basis (DATA-LIVE-9): G decision 2026-11-18 put all map data live, including CSUMB/SFML lineage
+// and sources with unconfirmed terms (owner-accepted risk; revisit when paid). Lineage names and an
+// unresolved licence are therefore not refusals. MBARI stays excluded until G answers DATA-LIVE-PLAN
+// §5 #2. Integrity checks below are unchanged.
+const EXCLUDED_MBARI = /\bmbari\b|monterey bay aquarium research institute/i;
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const text = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;
 const hash = (v: unknown): v is string => typeof v === 'string' && SHA256.test(v);
@@ -37,12 +60,12 @@ const count = (v: unknown): v is number => finite(v) && Number.isSafeInteger(v) 
 const refused = (reason: Refusal): Resolution => ({status: 'unavailable', reason});
 
 function publicSource(row: unknown): row is Record<string, unknown> & {rights: Record<string, unknown>} {
+  // Raw-file redistribution (publication_allowed, redistribution_reviewed, review_status) is a separate
+  // decision that stays off; it does not govern showing derived depth shading.
   return record(row) && row.rights_class === 'public' && record(row.rights) && row.rights.public_display === 'allowed' &&
-    row.private !== true && row.publication_allowed !== false && row.rights.redistribution_reviewed !== false &&
-    !(text(row.rights.license) && UNKNOWN_LICENCE.test(row.rights.license.trim())) &&
-    (row.review_status === undefined || row.review_status === 'approved') &&
+    row.private !== true &&
     ![row.id, row.provider, row.attribution, row.source_url, row.rights.attribution, row.rights.terms_url]
-      .some(v => text(v) && RESTRICTED_LINEAGE.test(v));
+      .some(v => text(v) && EXCLUDED_MBARI.test(v));
 }
 
 function publicSources(pointer: Record<string, unknown>) {
@@ -155,7 +178,7 @@ export function resolveRelief(region: string, pointer: unknown, observed?: Relie
   const object_key = `tiles/relief/${region}/${sha256}.pmtiles`;
   return {status: 'ready', archive: {region, object_key, sha256, bytes, digest_root_sha256, release_sha256, envelope_sha256,
     minzoom, maxzoom, bounds, private: false, sources: [...sources.values()], mask: detail_summary.mask,
-    depth_bands, native_support_by_zoom}};
+    depth_bands, native_support_by_zoom, look: reliefLook(pointer)}};
 }
 
 /** One object per distinct hash, with each reviewed region's clipped bounds retained.

@@ -42,8 +42,9 @@ const READY = screenAt(SNAPSHOT.features, NOW);
 /** Every clock current for 30 days from `now`. */
 const clocks = now => ({reviewExpiresAt: iso(now + 30 * 24 * HOUR), accessReviewedAt: iso(now - 24 * HOUR), accessReviewExpiresAt: iso(now + 30 * 24 * HOUR),
   legalReviewedAt: iso(now - 24 * HOUR), legalReviewExpiresAt: iso(now + 30 * 24 * HOUR), checkedAt: iso(now - 24 * HOUR)});
-/** A coast report whose marine alert check is current at `now`, with no alerts, notices or model samples. */
-const checked = now => ({alerts: [], sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(now - HOUR)}], waterQuality: [], nearshore: []});
+const cleanCounty = now => ({id: BEACH_HEALTH_SOURCE, outcome: 'ok', fetchedAt: iso(now - HOUR)});
+/** A coast report whose marine and county checks are current at `now`, with no alerts, notices or model samples. */
+const checked = now => ({alerts: [], sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(now - HOUR)}, cleanCounty(now)], waterQuality: [], nearshore: []});
 
 test('priority: Current, No surf model, Hold and Blocked from protected areas and model coverage', () => {
   const run = clocks(NOW);
@@ -92,7 +93,7 @@ test('the Chart holds the runs of an area under a marine alert or beach notice',
   const plain = shownRuns(PACKAGE, READY, checked(NOW), NOW).find(r => r.status.label !== 'Blocked');
   assert.ok(plain, 'an unblocked run');
   const area = plain.run.properties.areaId;
-  const base = {alerts: [], sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(NOW - HOUR)}, {id: BEACH_HEALTH_SOURCE, outcome: 'ok', fetchedAt: iso(NOW - HOUR)}], waterQuality: [], nearshore: []};
+  const base = checked(NOW);
   const held = (report) => shownRuns(PACKAGE, READY, report, NOW).find(r => r.run.id === plain.run.id).status;
   assert.equal(held(base).label, 'No surf model');
   assert.deepEqual(held({...base, alerts: [{event: 'Gale Warning', effective: null, expires: iso(NOW + HOUR), areaIds: [area]}]}),
@@ -105,10 +106,10 @@ test('the Chart holds the runs of an area under a marine alert or beach notice',
   // An alert list is only as current as its check (packages/coast daily.ts): a stale, failed or missing check, or no report, holds.
   const unchecked = ['Marine alert check not current'];
   for (const sources of [[{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(NOW - 3 * HOUR)}], [{id: 'nws-alerts', outcome: 'error', fetchedAt: iso(NOW - HOUR)}], []]) {
-    assert.deepEqual(held({...base, sources}), {priority: 0, label: 'Hold', reasons: unchecked}, JSON.stringify(sources));
+    assert.deepEqual(held({...base, sources: [...sources, cleanCounty(NOW)]}), {priority: 0, label: 'Hold', reasons: unchecked}, JSON.stringify(sources));
   }
-  assert.deepEqual(held(null), {priority: 0, label: 'Hold', reasons: unchecked}, 'no coast report, no alert check');
-  assert.equal(held({...base, sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(NOW - 2 * HOUR)}]}).label, 'No surf model', 'two hours old is still current');
+  assert.deepEqual(held(null), {priority: 0, label: 'Hold', reasons: [...unchecked, 'County beach water-quality check unavailable']}, 'no coast report, neither check is available');
+  assert.equal(held({...base, sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(NOW - 2 * HOUR)}, cleanCounty(NOW)]}).label, 'No surf model', 'two hours old is still current');
 });
 
 test('review dates never set guidance priority or imply current reviews', () => {
@@ -321,7 +322,7 @@ test('a threshold exactly one routine interval ahead, or at a report\'s arrival,
 
   // A report arriving exactly as its alert check turns 2 h old.
   clock = NOW + RECHECK_MS + 5000;
-  report.value = {...checked(NOW), alerts: [], sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(clock - 2 * HOUR)}]};
+  report.value = {...checked(NOW), alerts: [], sources: [{id: 'nws-alerts', outcome: 'ok', fetchedAt: iso(clock - 2 * HOUR)}, cleanCounty(clock)]};
   assert.equal(shoreState.value.held, 0, 'still current at exactly 2 h');
   clock += 1000;
   t.mock.timers.tick(1000);

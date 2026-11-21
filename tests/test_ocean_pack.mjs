@@ -368,7 +368,7 @@ test('only the pack\'s ocean phase (web/trip-runtime.ts) imports ocean-pack, and
     if (e.isDirectory()) { if (!['node_modules', '.git', 'dist', '.worktrees'].includes(e.name)) walk(path); } else if (/\.(ts|tsx|js|mjs)$/.test(e.name) && /ocean-pack/.test(readFileSync(path, 'utf8'))) importers.push(path);
   } };
   for (const dir of ['web', 'server', 'packages', 'tests', 'scripts']) walk(new URL(`../${dir}`, import.meta.url).pathname);
-  assert.deepEqual(importers.map(p => p.split('/').slice(-2).join('/')).sort(), ['tests/test_ocean_pack.mjs', 'web/trip-runtime.ts']);
+  assert.deepEqual(importers.map(p => p.split('/').slice(-2).join('/')).sort(), ['tests/test_f15_04_audit.mjs', 'tests/test_ocean_pack.mjs', 'web/trip-runtime.ts']);
   const feedSource = readFileSync(new URL('../web/map/habitat-feed.ts', import.meta.url), 'utf8');
   assert.equal((feedSource.match(/function layerOf\(/g) ?? []).length, 1);
   assert.match(feedSource, /export function layerOf\(/);

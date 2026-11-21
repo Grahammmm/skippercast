@@ -108,10 +108,10 @@ test('a saved boat keeps its other fields; only an auto-named boat is renamed', 
   saved = JSON.parse(storage.getItem(m.BOAT_KEY));
   assert.equal(saved.boat.name, 'Ruby'); assert.equal(saved.boat.loa_ft, 25); assert.equal(saved.boat.hull, 'modified-v');
   assert.equal(saved.query, 'Parker 2320'); assert.equal(saved.saved_at, full.saved_at);
-  // An unreadable or other-schema record is replaced by a fresh one, never merged.
+  // An unreadable or other-schema record is neither merged nor replaced (F13-07: tests/test_f13_07_audit.mjs).
   ({m, storage} = await fresh({'skippercast-boat-v1': '{not json'}));
   m.saveFirstUse({lengthFt: '20', profile: 'boat'}, storage);
-  assert.equal(JSON.parse(storage.getItem(m.BOAT_KEY)).boat.name, '20 ft boat');
+  assert.equal(storage.getItem(m.BOAT_KEY), '{not json');
 });
 
 test('limits clamp through clampLimits, the clamped value is said back, and defaults store no entry', async () => {
@@ -446,17 +446,27 @@ test('boat_invalid_or_blank_length_never_reads_storage', async () => {
   }
 });
 
-test('boat_unreadable_json_is_not_a_read_failure', async () => {
+// SCA-291 / F13-07: only an empty key gets defaults; an unreadable or other-schema record is kept (tests/test_f13_07_audit.mjs).
+test('boat_unreadable_json_is_kept_and_only_an_empty_key_gets_defaults', async () => {
   const {m} = await fresh();
-  for (const stored of ['{not json', '', 'null', JSON.stringify({schema_version: 2, boat: {name: 'Old', loa_ft: 30}})]) {
-    const boatStore = flaky(stored === '' ? {} : {'skippercast-boat-v1': stored}, 'never');
+  for (const stored of ['{not json', 'null', JSON.stringify({schema_version: 2, boat: {name: 'Old', loa_ft: 30}})]) {
+    const boatStore = flaky({'skippercast-boat-v1': stored}, 'never');
     const before = m.boatSaved.value;
     const result = m.saveFirstUse({lengthFt: '20', profile: 'boat'}, boatStore);
-    assert.ok(util.isDeepStrictEqual(result, {boat: true, notices: []}), `${stored}: ${JSON.stringify(result)}`);
+    assert.ok(util.isDeepStrictEqual(result, {boat: false, notices: [m.ENTRY_COPY.unreadable]}), `${stored}: ${JSON.stringify(result)}`);
+    assert.equal(boatStore.map.get('skippercast-boat-v1'), stored);
+    assert.equal(boatStore.writes.length, 0);
+    assert.equal(m.boatSaved.value, before, `${stored}: no signal`);
+  }
+  {
+    const boatStore = flaky({}, 'never');
+    const before = m.boatSaved.value;
+    const result = m.saveFirstUse({lengthFt: '20', profile: 'boat'}, boatStore);
+    assert.ok(util.isDeepStrictEqual(result, {boat: true, notices: []}), JSON.stringify(result));
     const saved = JSON.parse(boatStore.map.get('skippercast-boat-v1'));
     assert.equal(saved.schema_version, 1); assert.equal(saved.boat.name, '20 ft boat'); assert.equal(saved.boat.loa_ft, 20);
     assert.equal(saved.query, ''); assert.equal(saved.preset, null); assert.equal(saved.lookup, null);
-    assert.equal(m.boatSaved.value, before + 1, `${stored}: one signal`);
+    assert.equal(m.boatSaved.value, before + 1, 'one signal');
   }
   // A valid envelope still changes only length and an auto name.
   const boatStore = flaky({'skippercast-boat-v1': JSON.stringify({...FULL, boat: {...FULL.boat, name: '23 ft boat'}})}, 'never');

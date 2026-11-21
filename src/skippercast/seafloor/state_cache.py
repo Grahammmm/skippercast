@@ -116,7 +116,7 @@ def restore(s3, bucket, root, name, *, include_cache=True):
         if not path.resolve().is_relative_to(base.resolve()) or path.is_symlink():
             raise ValueError('Private restore escapes its root')
         if not path.exists() or sha256(path) != entry['sha256']:
-            restore_private(s3, bucket, path, entry['sha256'])
+            restore_private(s3, bucket, path, entry['sha256'], size=entry['bytes'])
         if path.stat().st_size != entry['bytes']:
             raise ValueError('Private restore size mismatch')
     if name == 'shared' and not any(entry['path'] == marker for entry in entries):

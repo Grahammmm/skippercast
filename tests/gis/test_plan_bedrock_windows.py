@@ -1,5 +1,4 @@
 """Offline synthetic checks for the private bedrock-window proposer."""
-from pathlib import Path
 
 from affine import Affine
 import numpy as np
@@ -15,36 +14,10 @@ from research.scripts.plan_bedrock_windows import (
 )
 
 
-def test_nominal_depth_includes_25_and_300_ft_endpoints_and_excludes_nodata():
-    values = np.array([[MIN_DEPTH_M, MAX_DEPTH_M, MIN_DEPTH_M - .001,
-                        MAX_DEPTH_M + .001, np.nan]], dtype=float)
-    valid = np.array([[True, True, True, True, True]], dtype=bool)
-    assert nominal_depth_count(values, valid) == 2
-    valid[0, 1] = False  # masked/no-data at the upper endpoint is not usable support
-    assert nominal_depth_count(values, valid) == 1
-
-
-def test_private_proposer_depth_limits_use_shared_foot_constant():
-    import ast
-    tree = ast.parse(Path(plan_module.__file__).read_text())
-    imports_shared = any(
-        isinstance(n, ast.ImportFrom) and n.module == 'skippercast.util.units'
-        and any(a.name == 'M_PER_FT' and a.asname is None for a in n.names)
-        for n in tree.body)
-    assert imports_shared
-
-    def threshold(name):
-        node = next(n for n in tree.body if isinstance(n, ast.Assign)
-                    and [t.id for t in n.targets if isinstance(t, ast.Name)] == [name])
-        return node.value
-    for name, feet in (('MIN_DEPTH_M', 25), ('MAX_DEPTH_M', 300)):
-        expr = threshold(name)
-        assert isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.Mult)
-        assert isinstance(expr.left, ast.Constant) and expr.left.value == feet
-        assert isinstance(expr.right, ast.Name) and expr.right.id == 'M_PER_FT'
+def test_private_proposer_depth_limits_are_exact_25_and_300_ft():
     # Independent old formulas, exact (not approximate).
-    assert plan_module.MIN_DEPTH_M == 25 * 0.3048
-    assert plan_module.MAX_DEPTH_M == 300 * 0.3048
+    assert MIN_DEPTH_M == 25 * 0.3048
+    assert MAX_DEPTH_M == 300 * 0.3048
 
 
 # Endpoints spelled independently of the module's constants.

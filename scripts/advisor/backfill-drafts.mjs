@@ -69,10 +69,12 @@ export function wranglerD1({local = false, run = spawnSync} = {}) {
   };
 }
 
-export const CANDIDATES_SQL = `SELECT m.id,m.boat_id,m.kind,m.publish_state,b.status AS boat_status,b.consent_photos_at,b.consent_revoked_at,
+export const CANDIDATES_SQL = `SELECT m.id,m.created_at,m.boat_id,m.kind,m.publish_state,b.status AS boat_status,b.consent_photos_at,b.consent_revoked_at,
     EXISTS (SELECT 1 FROM advisor_posts p WHERE EXISTS (SELECT 1 FROM json_each(p.media_json) j WHERE j.value=m.id)) AS has_post
   FROM advisor_media m LEFT JOIN advisor_boats b ON b.id=m.boat_id
-  WHERE m.publish_state IN ('queued','approved') AND m.kind IN ('image','video') ORDER BY m.created_at,m.id LIMIT ${LIMIT}`;
+  WHERE m.publish_state IN ('queued','approved') AND m.kind IN ('image','video')
+    AND (? IS NULL OR (m.created_at,m.id) > (?,?))
+  ORDER BY m.created_at,m.id LIMIT ${LIMIT}`;
 
 const consentActive = b => Boolean(b.consent_photos_at) && (!b.consent_revoked_at || b.consent_revoked_at < b.consent_photos_at);
 /** Why a candidate row gets no draft, or null when it gets one (ensureMediaDraft's checks, read-only). */
@@ -92,16 +94,28 @@ export function skipReason(row) {
  */
 export async function backfill(env, {apply = false, now = Date.now(), log = () => {}, fetcher} = {}) {
   const {ensureMediaDraft} = await import(new URL('server/advisor/social/drafts.ts', root).href);
-  const rows = (await env.DB.prepare(CANDIDATES_SQL).all()).results;
-  const out = {candidates: rows.length, eligible: 0, created: 0, exists: 0, skipped: {}};
-  for (const row of rows) {
-    const reason = skipReason(row);
-    if (reason) { out.skipped[reason] = (out.skipped[reason] ?? 0) + 1; continue; }
-    out.eligible++;
-    if (!apply) { log(`would draft ${row.kind === 'video' ? 'a reel' : 'a post'} for media ${row.id}${row.boat_id ? ` (boat ${row.boat_id})` : ' (angler)'}`); continue; }
-    const result = await ensureMediaDraft(env, row.id, {now, createdBy: 'engine', ...(fetcher ? {fetcher} : {})});
-    if (result.status === 'skipped') out.skipped[result.reason] = (out.skipped[result.reason] ?? 0) + 1;
-    else { out[result.status]++; log(`${result.status === 'created' ? 'drafted' : 'already had'} post ${result.postId} for media ${row.id}`); }
+  const out = {candidates: 0, eligible: 0, created: 0, exists: 0, skipped: {}};
+  let after = null;
+  // Keep both page size and per-run draft attempts bounded. Resume after the
+  // last scanned key, even when none of the rows on that page were eligible.
+  while (out.eligible < LIMIT) {
+    const at = after?.created_at ?? null;
+    const {results: rows} = await env.DB.prepare(CANDIDATES_SQL).bind(at, at, after?.id ?? null).all();
+    for (const row of rows) {
+      out.candidates++;
+      const reason = skipReason(row);
+      if (reason) { out.skipped[reason] = (out.skipped[reason] ?? 0) + 1; continue; }
+      out.eligible++;
+      if (!apply) log(`would draft ${row.kind === 'video' ? 'a reel' : 'a post'} for media ${row.id}${row.boat_id ? ` (boat ${row.boat_id})` : ' (angler)'}`);
+      else {
+        const result = await ensureMediaDraft(env, row.id, {now, createdBy: 'engine', ...(fetcher ? {fetcher} : {})});
+        if (result.status === 'skipped') out.skipped[result.reason] = (out.skipped[result.reason] ?? 0) + 1;
+        else { out[result.status]++; log(`${result.status === 'created' ? 'drafted' : 'already had'} post ${result.postId} for media ${row.id}`); }
+      }
+      if (out.eligible === LIMIT) break;
+    }
+    if (rows.length < LIMIT) break;
+    after = rows.at(-1);
   }
   return out;
 }

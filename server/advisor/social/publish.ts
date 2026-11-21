@@ -25,9 +25,11 @@
 //   5. Facebook (when targeted and its id is not stored): a photo (/photos with the caption), a
 //      multi-photo post (unpublished /photos then /feed attached_media), a Reel (/video_reels 3-phase
 //      upload) or a photo Story (/photo_stories); fb_post_id or fb_story_id stored.
-//   6. Every surface done -> `posted`, posted_at, its media `posted`; a surface failed and another
+//   6. Every surface done -> `posted`, its media `posted`; a surface failed and another
 //      done -> `partial` with the error; none done -> `failed`. A failed surface is not tried again
 //      until the admin retries (opts.retry), and a retry runs only the surfaces without an id.
+//      An ambiguous Page photo/feed create is held for reconciliation, even on an admin retry.
+//      posted_at is recorded with the first successful surface id, not at finalization.
 //
 // TA-S3 (SP-7, SO-5): the post's collaborators (at most 3 usernames; feed images, carousels and
 // Reels, never Stories) and user tags (`{username, x, y}`; images only: a photo's container, or a
@@ -59,7 +61,7 @@ import {approvalHold, mediaIdsOf} from '../admin/posts.ts';
 import type {PostRow} from '../admin/posts.ts';
 import {COLLABORATORS_MAX, HANDLE, TARGETS_FOR, USER_TAGS_MAX, captionStats} from './drafts.ts';
 import type {Target} from './drafts.ts';
-import {MetaError, fbFeed, fbPhoto, fbPhotoStory, fbVideoReel, igCollaborators, igContainer, igContainerStatus, igPermalink, igPublish, igPublishingLimit, metaConfig, metaConfigured} from './meta.ts';
+import {MetaCreateUncertain, MetaError, fbFeed, fbPhoto, fbPhotoStory, fbVideoReel, igCollaborators, igContainer, igContainerStatus, igPermalink, igPublish, igPublishingLimit, metaConfig, metaConfigured} from './meta.ts';
 import type {Fetcher, IgContainerInput, MetaConfig, UserTag} from './meta.ts';
 import type {ConsumerDeps, AdvisorContactRow} from '../types.ts';
 import type {Env} from '../../env.ts';
@@ -91,7 +93,7 @@ export interface PublishDeps {
   dispatch?: (env: Env, file: string) => Promise<number>;   // the media job dispatch (tests)
 }
 
-interface PublishState {ig_children?: string[]; ig_started_at?: string; ig_error?: string; fb_photos?: string[]; fb_error?: string}
+interface PublishState {ig_children?: string[]; ig_started_at?: string; ig_error?: string; fb_photos?: string[]; fb_error?: string; fb_uncertain?: boolean}
 interface MediaRow {id: string; kind: string; mime: string; r2_key: string; derived_at: string | null; derived_error: string | null; publish_state: string}
 
 const IG_TARGETS: readonly Target[] = ['instagram', 'instagram_story'];
@@ -99,6 +101,8 @@ const FB_TARGETS: readonly Target[] = ['facebook', 'facebook_story'];
 const parse = <T>(json: string | null, fallback: T): T => { try { return (JSON.parse(json ?? 'null') as T) ?? fallback; } catch { return fallback; } };
 const short = (error: unknown): string => error instanceof MetaError || error instanceof TypeError ? error.message.slice(0, 200) : 'unexpected error';
 const defaultSleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+// Keep the time on retries/resumes. A legacy row with a published id but no time stays unknown.
+const FIRST_SURFACE_TIME = 'COALESCE(posted_at, CASE WHEN ig_media_id IS NULL AND fb_post_id IS NULL AND fb_story_id IS NULL THEN ? END)';
 
 /** The public URLs Meta fetches (09 § Media that Meta fetches; routes/advisor.ts /media). */
 export const mediaUrls = (base: string, id: string): {feed: string; story: string; video: string} =>
@@ -256,7 +260,8 @@ async function publishInstagram(run: Run): Promise<Step> {
     const mediaId = await igPublish(cfg, ig, container);
     // TA-S3: collaborators were invited with the container; the cron reads their answers.
     const invited = post.kind !== 'story' && tagsOf(post).collaborators.length > 0;
-    await db.prepare('UPDATE advisor_posts SET ig_media_id=?,collab_status=?,updated_at=? WHERE id=?').bind(mediaId, invited ? 'invited' : null, run.at(), post.id).run();
+    const at = run.at();
+    await db.prepare(`UPDATE advisor_posts SET ig_media_id=?,collab_status=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(mediaId, invited ? 'invited' : null, at, at, post.id).run();
     post.ig_media_id = mediaId; post.collab_status = invited ? 'invited' : null;
     advisorLog('info', 'advisor_post_published', {surface: 'instagram', kind: post.kind});
     const permalink = await igPermalink(cfg, mediaId).catch(() => null);
@@ -277,7 +282,8 @@ async function publishFacebook(run: Run): Promise<Step> {
     if (post.kind === 'story') {
       if (first.kind === 'video') return {status: 'error', error: 'a video Story to the Page is not supported yet'};
       const story = await fbPhotoStory(cfg, page, {url: first.story});
-      await db.prepare('UPDATE advisor_posts SET fb_story_id=?,updated_at=? WHERE id=?').bind(story.post_id, run.at(), post.id).run();
+      const at = run.at();
+      await db.prepare(`UPDATE advisor_posts SET fb_story_id=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(story.post_id, at, at, post.id).run();
       post.fb_story_id = story.post_id;
     } else {
       let id: string;
@@ -297,12 +303,21 @@ async function publishFacebook(run: Run): Promise<Step> {
         }
         id = await fbFeed(cfg, page, {...(message ? {message} : {}), photo_ids: photos});
       }
-      await db.prepare('UPDATE advisor_posts SET fb_post_id=?,updated_at=? WHERE id=?').bind(id, run.at(), post.id).run();
+      const at = run.at();
+      await db.prepare(`UPDATE advisor_posts SET fb_post_id=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(id, at, at, post.id).run();
       post.fb_post_id = id;
     }
     advisorLog('info', 'advisor_post_published', {surface: 'facebook', kind: post.kind});
     return {status: 'done'};
   } catch (error) {
+    if (error instanceof MetaCreateUncertain) {
+      state.fb_uncertain = true;
+      state.fb_error = `Page create outcome uncertain; reconcile before retrying (${short(error)})`;
+      // Write the hold before finalizing the post, so a resumed `publishing` row
+      // also skips Facebook if the status update is interrupted.
+      await writeState(db, post.id, state, run.at());
+      return {status: 'error', error: state.fb_error};
+    }
     return {status: 'error', error: short(error)};
   }
 }
@@ -366,7 +381,10 @@ export async function publish(env: Env, postId: string, deps: PublishDeps = {}, 
     const {ig, fb} = surfacesOf(post);
     if (!ig && !fb) { error = 'the post has no surface to go to'; await fail(db, post.id, error, at(), startable); outcome = 'failed'; return {outcome, error}; }
     const state = await readState(db, post.id);
-    if (opts.retry) { delete state.ig_error; delete state.fb_error; }
+    if (opts.retry) {
+      delete state.ig_error;
+      if (!state.fb_uncertain) delete state.fb_error;
+    }
     const claimed = await db.prepare(`UPDATE advisor_posts SET status='publishing',error=NULL,updated_at=? WHERE id=? AND status=?`).bind(at(), post.id, post.status).run();
     if (!claimed.meta.changes) return {outcome: 'skipped', error: 'the post changed'};
     const run: Run = {env, db, cfg, post, media, items, state, base, clock, at, tries: Math.max(1, deps.pollTries ?? POLL_TRIES),
@@ -397,7 +415,7 @@ export async function publish(env: Env, postId: string, deps: PublishDeps = {}, 
     const errors = [state.ig_error && !igDone ? `instagram: ${state.ig_error}` : null, state.fb_error && !fbDone ? `facebook: ${state.fb_error}` : null].filter(Boolean).join('; ');
     if (igDone && fbDone) {
       await db.batch([
-        db.prepare("UPDATE advisor_posts SET status='posted',posted_at=?,error=NULL,updated_at=? WHERE id=? AND status='publishing'").bind(at(), at(), post.id),
+        db.prepare("UPDATE advisor_posts SET status='posted',error=NULL,updated_at=? WHERE id=? AND status='publishing'").bind(at(), post.id),
         ...(ids.length ? [db.prepare(`UPDATE advisor_media SET publish_state='posted' WHERE publish_state='approved' AND id IN (${ids.map(() => '?').join(',')})`).bind(...ids)] : []),
         db.prepare('DELETE FROM job_state WHERE key=?').bind(STATE_PREFIX + post.id),
       ]);

@@ -66,7 +66,7 @@ def ensure_archive(path, url, expected, limit, fetch):
         raise ValueError("USGS original source bytes changed")
 
 
-def join_outline(lon, lat, source_depth, polygon, bathy, character):
+def join_outline(lon, lat, source_depth, polygon, bathy, character, *, reviewed_counts=None):
     if not (len(lon) == len(lat) == len(source_depth)) or not len(lon):
         raise ValueError("Original beam arrays missing")
     x, y = Transformer.from_crs("EPSG:4326", bathy.crs, always_xy=True).transform(lon, lat)
@@ -98,10 +98,18 @@ def join_outline(lon, lat, source_depth, polygon, bathy, character):
     band = valid_depth & (-np.ma.getdata(elevations) >= LOWER) & (-np.ma.getdata(elevations) <= UPPER)
     hard = valid_class & (np.ma.getdata(classes).astype("i4") % 10 == 3)
     center_inside = centers_inside_outline[local_row, local_col]
-    both = band & hard & center_inside
-    unique_all = np.unique(row.astype("i8") * bathy.width + col.astype("i8"))
-    unique_center_inside = np.unique(row[center_inside].astype("i8") * bathy.width + col[center_inside].astype("i8"))
-    unique_paired = np.unique((row[both].astype("i8") * bathy.width + col[both].astype("i8")))
+    band_inside = band & center_inside
+    both = band_inside & hard
+    cell_ids = row.astype("i8") * bathy.width + col.astype("i8")
+    unique_all = np.unique(cell_ids)
+    unique_center_inside = np.unique(cell_ids[center_inside])
+    unique_paired = np.unique(cell_ids[both])
+    # The reviewed matrix counts only in-band cells. All centers remain a
+    # diagnostic; the matrix has no corresponding all-center reference.
+    if reviewed_counts is not None and (
+            len(np.unique(cell_ids[band_inside])) > reviewed_counts["native_navd88_band_cells"]
+            or len(unique_paired) > reviewed_counts["paired_original_class3_hard_band_cells"]):
+        raise ValueError("Beam-to-cell join exceeds original measured outline cells")
     differences = source_depth[both] - (-np.ma.getdata(elevations)[both])
     # Cell-neighborhood robustness is a sensitivity check, not a registration
     # bound: an unknown real offset may exceed one 2 m cell.
@@ -121,7 +129,7 @@ def join_outline(lon, lat, source_depth, polygon, bathy, character):
                        & ~np.ma.getmaskarray(classes_n)
                        & (np.ma.getdata(classes_n).astype("i4") % 10 == 3)
                        & centers_inside_outline[rr, cc])
-    unique_robust = np.unique(row[robust].astype("i8") * bathy.width + col[robust].astype("i8"))
+    unique_robust = np.unique(cell_ids[robust])
     return {
         "source_valid_beams_inside_outline": int(len(lon)),
         "source_valid_beams_nearest_usgs_cell_center_inside_outline": int(center_inside.sum()),
@@ -147,6 +155,7 @@ def build(root, fetch=False):
     original = json.loads((root / "research/receipts/monterey-2009-centralmontereybay-valid-beam-review.json").read_text())
     matrix_path = root / "research/receipts/monterey-300-source-evidence-matrix.json"
     matrix = json.loads(matrix_path.read_text())
+    reviewed = {row["context_id"]: row for row in matrix["review_order"]}
     if original.get("scope") != "monterey-2009-centralmontereybay-original-valid-beam-research" or original.get("fishing_target") is not False:
         raise ValueError("Original beam audit changed")
     features = {f["properties"]["id"]: f for f in json.loads((root / "research/receipts/usgs-offshore-monterey-hard-context.geojson").read_text())["features"]}
@@ -185,14 +194,10 @@ def build(root, fetch=False):
                 points = {key: np.concatenate(collected[ident][key]) for key in ("lon", "lat", "depth")}
                 if len(points["lon"]) != original["outlines"][ident]["valid_beams_inside_outline"]:
                     raise ValueError("Original source outline tally changed")
-                summaries[ident] = {"context_id": original["outlines"][ident]["context_id"],
-                                    **join_outline(points["lon"], points["lat"], points["depth"], outlines[ident], bathy, character)}
-    reviewed = {row["context_id"]: row for row in matrix["review_order"]}
-    for row in summaries.values():
-        prior = reviewed[row["context_id"]]
-        if (row["unique_usgs_2m_cell_centers_inside_outline_under_source_beams"] > prior["native_navd88_band_cells"]
-                or row["unique_paired_class3_band_cells_under_source_beams"] > prior["paired_original_class3_hard_band_cells"]):
-            raise ValueError("Beam-to-cell join exceeds original measured outline cells")
+                context_id = original["outlines"][ident]["context_id"]
+                summaries[ident] = {"context_id": context_id, **join_outline(
+                    points["lon"], points["lat"], points["depth"], outlines[ident], bathy, character,
+                    reviewed_counts=reviewed[context_id])}
     return {
         "schema_version": 1, "scope": "monterey-2009-original-beams-to-usgs-native-cell-screen",
         "original_beam_receipt_sha256": hashlib.sha256((root / "research/receipts/monterey-2009-centralmontereybay-valid-beam-review.json").read_bytes()).hexdigest(),

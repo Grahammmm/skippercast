@@ -494,6 +494,14 @@
       "en": "Nice shot. Want me to ID a fish, or can we share this with credit?",
       "es": "Buena foto. ¿Quieres que identifique un pez, o la compartimos con crédito?"
     },
+    "fishid_choose_action": {
+      "en": "Which would you like? Reply ID to identify a fish or SHARE to let us share the photo with credit.",
+      "es": "¿Qué prefieres? Responde ID para identificar un pez o COMPARTIR para que compartamos la foto con crédito."
+    },
+    "angler_video_offer": {
+      "en": "Nice video. Can we share this video on SkipperCast with credit? Reply YES if so.",
+      "es": "Buen video. ¿Podemos compartir este video en SkipperCast con crédito? Responde SÍ si quieres."
+    },
     "share_credit_ask": {
       "en": "Thanks! How should we credit you? A first name is fine, or 'anonymous'.",
       "es": "¡Gracias! ¿Cómo te damos crédito? Basta con tu nombre, o 'anónimo'."

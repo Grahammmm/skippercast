@@ -1,7 +1,15 @@
 """The survey-science roll-up gate: diagnostic CLI output versus the evidence() oracle."""
 import io
 import itertools
+import os
+from pathlib import Path
+import re
+import subprocess
+import tempfile
+from textwrap import dedent
 import unittest
+
+import yaml
 
 from scripts import ci_select
 from tests._support import ROOT
@@ -78,8 +86,6 @@ class GateDiagnosticTest(unittest.TestCase):
         self.assertIn('DCO is checked independently', out)
 
     def test_summary_is_appended_and_sanitised(self):
-        import tempfile
-        from pathlib import Path
         with tempfile.TemporaryDirectory() as tmp:
             summary = Path(tmp) / 'summary.md'
             summary.write_text('earlier\n')
@@ -99,13 +105,65 @@ class GateDiagnosticTest(unittest.TestCase):
 
 
 class WorkflowWiringTest(unittest.TestCase):
-    def test_required_job_keeps_its_contract_and_truthful_step_name(self):
+    def setUp(self):
         text = (ROOT / '.github/workflows/ci.yml').read_text()
-        job = text[text.index('\n  survey-science:'):text.index('\n  survey-tests:')]
-        self.assertIn('needs: [changes, survey-tests, check]', job)
-        self.assertIn('if: ${{ !cancelled() }}', job)
-        self.assertIn('run: python3 scripts/ci_select.py --gate', job)
-        self.assertNotIn('Core suite and GIS layer passed', job)
+        self.workflow = yaml.safe_load(text)
+        self.job = text.split('\n  survey-science:', 1)[1].split('\n  survey-tests:', 1)[0]
+        run = self.job.split('        run: ', 1)[1]
+        self.command = dedent(run[2:]) if run.startswith('|\n') else run.splitlines()[0] + '\n'
+
+    def test_required_job_keeps_its_contract_and_truthful_step_name(self):
+        self.assertIn('needs: [changes, survey-tests, check]', self.job)
+        self.assertTrue(self.workflow['jobs']['survey-science']['if'].startswith('${{ !cancelled() && '))
+        self.assertIn('TESTS: ${{ needs.survey-tests.result }}', self.job)
+        self.assertRegex(self.command, re.compile(r'^python3 scripts/ci_select\.py --gate$', re.M))
+        self.assertNotIn('Core suite and GIS layer passed', self.job)
+
+    def test_draft_events_skip_all_ci_jobs_without_renaming_required_checks(self):
+        # PyYAML's YAML 1.1 loader reads an unquoted `on` as True.
+        events = self.workflow.get('on', self.workflow.get(True))
+        self.assertEqual(events['pull_request']['types'], [
+            'opened', 'synchronize', 'reopened', 'ready_for_review', 'converted_to_draft',
+        ])
+        jobs = self.workflow['jobs']
+        guard = "github.event_name != 'pull_request' || github.event.pull_request.draft == false"
+        # A new job without the guard can run on drafts; the roll-up in
+        # particular would fail closed on its skipped prerequisites.
+        for job_id, job in jobs.items():
+            with self.subTest(job=job_id):
+                condition = job.get('if', '').removeprefix('${{').removesuffix('}}').strip()
+                self.assertTrue(condition == guard or condition.endswith(f' && ({guard})'), condition)
+
+        # Compare the names emitted by the required jobs to the protected list,
+        # including the separate DCO workflow and the two default matrix names.
+        dco_jobs = yaml.safe_load((ROOT / '.github/workflows/dco.yml').read_text())['jobs']
+        contexts = [jobs[key].get('name', key) for key in (
+            'survey-science', 'changes', 'e2e', 'e2e-2', 'e2e-3', 'e2e-4',
+        )]
+        matrix = jobs['check']['strategy']['matrix']
+        self.assertEqual(set(matrix), {'python'})
+        contexts.extend(jobs['check'].get('name', f'check ({version})') for version in matrix['python'])
+        contexts.append(dco_jobs['sign-off'].get('name', 'sign-off'))
+        self.assertCountEqual(contexts, [
+            'survey-science', 'check (3.11)', 'check (3.13)', 'changes',
+            'e2e (1)', 'e2e (2)', 'e2e (3)', 'e2e (4)', 'sign-off',
+        ])
+
+    def test_workflow_requires_a_successful_full_result_even_on_no_survey_prs(self):
+        # Replay the real roll-up step: the legacy CLI alone accepts an intentional
+        # skip on a no-survey PR and rejects actual success for that selection.
+        cases = [(env_of(core='false', survey='false', tests=result), int(result != 'success'))
+                 for result in RESULTS]
+        cases += [(env_of(survey=''), 1), (env_of(core='false', survey='false', web='false'), 1)]
+        with tempfile.TemporaryDirectory() as tmp:
+            step = Path(tmp) / 'gate.sh'
+            step.write_text(self.command)
+            for case, expected in cases:
+                env = dict(os.environ, EVENT='pull_request', **case)
+                env.pop('GITHUB_STEP_SUMMARY', None)
+                result = subprocess.run(['bash', '-e', str(step)], cwd=ROOT, env=env,
+                                        capture_output=True, text=True, check=False)
+                self.assertEqual(result.returncode, expected, (case, result.stdout, result.stderr))
 
 
 if __name__ == '__main__':
