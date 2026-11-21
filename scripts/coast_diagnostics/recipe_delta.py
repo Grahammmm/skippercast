@@ -315,7 +315,12 @@ def _escape(token):
 
 def _same_leaf(a, b):
     # Type-exact: true != 1, 1 != 1.0, so a JSON type change is a reported change.
-    return type(a) is type(b) and a == b
+    if type(a) is not type(b) or a != b:
+        return False
+    if type(a) is float and a == 0.0:
+        # Python equality merges signed zeros, but JSON preserves their signs.
+        return math.copysign(1.0, a) == math.copysign(1.0, b)
+    return True
 
 
 def _changes(before, after):

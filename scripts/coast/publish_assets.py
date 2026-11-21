@@ -60,7 +60,7 @@ def group_of(path):
 def get(path, origin=ORIGIN, headers=None):
     request = Request(origin + path, headers={'Accept-Encoding': 'identity', 'User-Agent': 'SkipperCast-coast-assets/1', **(headers or {})})
     with urlopen(request, timeout=60) as response:
-        return response.status, dict(response.headers), response.read()
+        return response.status, response.headers, response.read()
 
 
 def _doi(value):
@@ -208,12 +208,17 @@ def fetch(path, entry, origin=ORIGIN):
     release = entry.get('habitatRelease')
     if path.startswith('/api/habitat/tiles'):
         # The proxy refuses a single range covering the whole archive, so a small one takes two.
-        url, parts, step = f'{path}&release={release}', [], max(1, min(RANGE, entry['bytes'] - 1))
-        for start in range(0, entry['bytes'], step):
-            end = min(start + step, entry['bytes']) - 1
-            status, _, body = get(url, origin, {'Range': f'bytes={start}-{end}'})
+        total = entry['bytes']
+        url, parts, step = f'{path}&release={release}', [], max(1, min(RANGE, total - 1))
+        for start in range(0, total, step):
+            end = min(start + step, total) - 1
+            status, headers, body = get(url, origin, {'Range': f'bytes={start}-{end}'})
             if status != 206 or len(body) != end - start + 1:
                 raise ValueError(f'{path}: range {start}-{end} not returned exactly')
+            ranges = [value for name, value in headers.items() if name.lower() == 'content-range']
+            if len(ranges) != 1 or not re.fullmatch(
+                    rf'bytes 0*{start}-0*{end}/0*{total}', ranges[0].strip(' \t'), re.IGNORECASE):
+                raise ValueError(f'{path}: range {start}-{end} requires Content-Range: bytes {start}-{end}/{total}')
             parts.append(body)
         data = b''.join(parts)
     else:
