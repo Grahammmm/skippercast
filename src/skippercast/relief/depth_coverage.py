@@ -24,6 +24,10 @@ def _depth_bands(elevation):
     )
 
 
+def _valid_elevation(elevation):
+    return np.isfinite(elevation) & (elevation != _SURVEY_NODATA)
+
+
 def depth_coverage(elevation, support, water, *, cell_area_m2, coarse=None) -> dict:
     """Summarize survey coverage in m² from same-shape arrays and one cell area.
 
@@ -39,7 +43,7 @@ def depth_coverage(elevation, support, water, *, cell_area_m2, coarse=None) -> d
             or (coarse is not None and coarse.shape != elevation.shape)):
         raise ValueError('elevation, support, water and coarse must share one lattice')
 
-    valid = np.isfinite(elevation) & (elevation != _SURVEY_NODATA)
+    valid = _valid_elevation(elevation)
     surveyed = water & valid & (elevation <= 0)
     measured = surveyed & (support == 3)
     estimated = surveyed & (support != 3)
@@ -71,6 +75,34 @@ def depth_coverage(elevation, support, water, *, cell_area_m2, coarse=None) -> d
         'deepest_m': -float(elevation[surveyed].min()) if surveyed.any() else None,
         'reaches_300ft': bool(np.any(surveyed & (elevation <= _ELEVATION_300FT))),
     }
+
+
+def _depth_shortfall(elevation, water, coarse, area, result):
+    """Use coarse depths to locate the gap, not as evidence of surveyed depth."""
+    if result['reaches_300ft'] or coarse is None:
+        return None
+
+    start = result['deepest_m'] or 0.0
+    mosaic_valid = _valid_elevation(elevation)
+    coarse_water = _valid_elevation(coarse) & (coarse <= 0)
+    if np.any(water & ~mosaic_valid & ~coarse_water):
+        return None
+
+    assessed = water & coarse_water & (coarse < -start)
+    if np.any(assessed & mosaic_valid):
+        return None
+
+    # Compare in raster precision, as for the bands. The cell at the target
+    # counts in both subsets, but only once in the assessed area.
+    in_interval = np.count_nonzero(assessed & (coarse >= _ELEVATION_300FT)) * area
+    at_or_beyond = np.count_nonzero(assessed & (coarse <= _ELEVATION_300FT)) * area
+    if in_interval <= 0 or at_or_beyond <= 0:
+        return None
+
+    assessed_area = np.count_nonzero(assessed) * area
+    return dict(status='unsurveyed', from_depth_m=start, to_depth_m=-_ELEVATION_300FT,
+                assessed_m2=assessed_area, unsurveyed_m2=assessed_area,
+                in_interval_m2=in_interval, at_or_beyond_target_m2=at_or_beyond)
 
 
 def _water_geometries(region):
@@ -135,7 +167,9 @@ def _read_report(region, mosaic, coarse_path):
                 with WarpedVRT(grid, **lattice, dtype='float32', nodata=np.nan) as aligned:
                     coarse = aligned.read(1, masked=True).filled(np.nan)
     t = lattice['transform']
-    result = depth_coverage(elevation, support, water, cell_area_m2=abs(t.a * t.e - t.b * t.d), coarse=coarse)
+    area = abs(t.a * t.e - t.b * t.d)
+    result = depth_coverage(elevation, support, water, cell_area_m2=area, coarse=coarse)
+    result['depth_shortfall'] = _depth_shortfall(elevation, water, coarse, area, result)
     return dict(result, region=region.id, mosaic_generation=mosaic['generation'], coarse_sha256=coarse_sha256)
 
 

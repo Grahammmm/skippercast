@@ -77,7 +77,13 @@ async function main() {
   for (const label of list.querySelectorAll('[data-depth-region]')) {
     const region = label.dataset.depthRegion;
     if (!checks.has(region)) checks.set(region, depthState(region));
-    checks.get(region).then(state => { label.textContent = t(state, lang); });
+    checks.get(region).then(state => {
+      if (state === 'depthLive') {
+        label.innerHTML = `${text(t(state, lang))} — <a href="/sources#region-${text(region)}">${text(publicPageText('status.nav.sources', lang))}</a>`;
+      } else {
+        label.textContent = t(state, lang);
+      }
+    });
   }
 }
 if (typeof document !== 'undefined' && document.getElementById('coverage-map') && document.getElementById('coverage-list')) main();
