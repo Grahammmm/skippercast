@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "santa-cruz-monterey-bay",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "santa-cruz-harbor-z13", "center": [-122.002, 36.959], "size_m": 4000, "zoom": 13},
+    {"id": "pigeon-point-outer-z15", "center": [-122.43, 37.14], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}

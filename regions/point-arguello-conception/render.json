@@ -1,0 +1,10 @@
+{
+  "schema": "sc-render/1",
+  "region": "point-arguello-conception",
+  "style": "nearshore-v1.0.0",
+  "previews": [
+    {"id": "port-san-luis-distant-departure-reference-z13", "center": [-120.76, 35.1767], "size_m": 4000, "zoom": 13},
+    {"id": "point-sal-z15", "center": [-120.82, 34.9], "size_m": 1200, "zoom": 15}
+  ],
+  "piers": []
+}
