@@ -1203,7 +1203,7 @@ test('a link\'s ?base=chart shows Chart detail in the base select, which can be 
 });
 
 // FE-16: a synthetic coast report whose surface-temperature analysis covers the water off Morro Bay on
-// a 0.02° grid (57.3 to 64.1 °F, so the legend reads 57–65 °F), analysed 30 hours ago and named by its
+// a 0.02° grid (57.3 to 64.1 °F), analysed 30 hours ago and named by its
 // own source status, as the bridge serves it; the rest of the bridge is held.
 async function serveReport(page: Page, sst: Record<string, unknown> = {}) {
   const now = Date.now(), iso = (ms: number) => new Date(ms).toISOString(), points = [];
@@ -1239,9 +1239,10 @@ test('Water temp draws the bound analysis as a field with contours, names it, re
   await entry.getByRole('button', {name: /Water temp/}).click();
   await expect.poll(() => params(page).layers).toBe('water-temp');
   const row = page.locator('.app-legend-water-temp');
-  await expect(row.locator('[data-range="water-temp"]')).toHaveText('57–65 °F');
+  // SST-B stretches the visible water, not the entire analysis; the two viewport widths see different samples.
+  await expect(row.locator('[data-range="water-temp"]')).toHaveText(narrow(page) ? '60–64 °F' : '58–64 °F');
   await expect(row.locator('[data-stamp="water-temp"]')).toHaveText(/^NASA JPL MUR · analysis \w{3} \d{1,2} · 30 h old$/);
-  await expect(row.locator('.ui-popover-body')).toHaveText(/^NASA JPL MUR daily analysis on a 0\.01° grid sampled every 0\.02°, for \w{3} \d{1,2} \(30 h old\), with an analysis error of 0\.6 °F\. Surface water only, neither bottom temperature nor a forecast; masked land and missing cells stay blank\.How it’s built$/);
+  await expect(row.locator('.ui-popover-body')).toHaveText(/^SST °F, 1° bands, auto-stretched\. NASA JPL MUR daily analysis on a 0\.01° grid sampled every 0\.02°, for \w{3} \d{1,2} \(30 h old\), with an analysis error of 0\.6 °F\. Surface water only, neither bottom temperature nor a forecast; masked land and missing cells stay blank\.How it’s built$/);
   await expect(entry.locator('.ui-rail-note')).toHaveText(/^analysis \w{3} \d{1,2} · 30 h old$/);
   await expect(page.locator('[data-unavailable="water-temp"]')).toHaveCount(0);
   await v2.a11y('v2-map-water-temp');

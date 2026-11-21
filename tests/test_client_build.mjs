@@ -10,7 +10,7 @@ import {mkdtemp, mkdir, readdir, readFile, rm, symlink, writeFile} from 'node:fs
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {promisify} from 'node:util';
-import {buildClient, copyStatic, glyphVersion, hashName, IMMUTABLE_ASSETS, IMMUTABLE_GLYPHS, versionGlyphs} from '../scripts/client-build.mjs';
+import {buildClient, copyStatic, glyphVersion, hashName, IMMUTABLE_ASSETS, IMMUTABLE_GLYPHS, REVALIDATE, SAFETY_FILES, STATIC_DATA, STATIC_MAX_AGE_S, STATIC_SWR_S, versionGlyphs} from '../scripts/client-build.mjs';
 import {BUILD_PLACEHOLDER} from '../scripts/precache.mjs';
 import {GLYPH_VERSION} from '../web/map/style.ts';
 import {dropMaplibreLogo, MAPLIBRE_CSS, STATIC_REF} from '../vite.config.mjs';
@@ -141,7 +141,7 @@ test('copyStatic refuses raw shore snapshots and linked assets (F20-04)', async 
   }
 });
 
-test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor files and data stable', async t => {
+test('C3: the build preserves stable files, hashes scripts and pages, and writes headers in order', async t => {
   const {out, buildId, shells} = await built(t);
   const top = (await readdir(out)).sort();
   assert.ok(top.includes(`landing.${buildId}.html`) && top.includes(`about.${buildId}.html`));
@@ -153,7 +153,7 @@ test('the build hashes scripts and styles, renames pages and keeps sw.js, vendor
   assert.ok((await readFile(join(out, 'sw.js'), 'utf8')).startsWith(`const BUILD = '${buildId}';`));
   assert.equal(await readFile(join(out, '.assetsignore'), 'utf8'), '.vite\n');
   assert.equal(await readFile(join(out, '_headers'), 'utf8'), '/*\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n'
-    + '/basemap/glyphs/v/*\n  Cache-Control: public, max-age=31536000, immutable\n');
+    + '/basemap/glyphs/v/*\n  Cache-Control: public, max-age=31536000, immutable\n' + EXPECTED_STATIC + EXPECTED_SAFETY);
   const html = await readFile(join(out, `landing.${buildId}.html`), 'utf8');
   // Vendored files keep their stable path and SRI; the manifest and icons are not hashed.
   assert.match(html, new RegExp(`<script\\s+src="vendor/lib\\.js" integrity="${SRI.replace(/[+/]/g, '\\$&')}" defer>`));
@@ -179,15 +179,71 @@ test('the build id changes when any module changes', async t => {
   assert.notEqual(a.buildId, b.buildId);
 });
 
-/** The Cache-Control a Cloudflare `_headers` file gives `path` (its rules' `*` matches any run of characters), or null. */
+/** The joined _headers Cache-Control value, or null if no custom value remains. */
 function headerCacheControl(text, path) {
-  let rule = null, found = null;
+  let rule = null;
+  const values = [];
   for (const line of text.split('\n')) {
     if (line.startsWith('/')) rule = new RegExp(`^${line.trim().split('*').map(p => p.replace(/[.?+^$()[\]{}|\\]/g, '\\$&')).join('.*')}$`);
-    else if (/^\s+Cache-Control:/.test(line) && rule?.test(path)) found = line.split(':').slice(1).join(':').trim();
+    else if (rule?.test(path)) {
+      if (line.trim() === '! Cache-Control') values.length = 0;
+      else if (/^\s+Cache-Control:/.test(line)) values.push(line.slice(line.indexOf(':') + 1).trim());
+    }
   }
-  return found;
+  return values.length ? values.join(', ') : null;
 }
+
+const SHORT_CACHE = 'public, max-age=120, stale-while-revalidate=300';
+const DEFAULT_CACHE = 'public, max-age=0, must-revalidate';
+const EXPECTED_STATIC = `/regions/*\n  Cache-Control: ${SHORT_CACHE}\n/data/*\n  Cache-Control: ${SHORT_CACHE}\n`;
+const EXPECTED_SAFETY = [
+  '/data/regulations*.json', '/regions/*/regulations.json', '/regions/*/regulations-startup.json',
+  '/data/protected-areas.geojson', '/regions/*/protected-areas.geojson', '/data/noaa-federal-areas.json',
+  '/data/*-closure-review.json', '/regions/*/groundfish-exclusions.geojson', '/regions/*/coverage.json',
+].map(path => `${path}\n  ! Cache-Control\n  Cache-Control: ${DEFAULT_CACHE}\n`).join('');
+
+test('C1: exactly two short-cache rules with bounded lifetimes', () =>
+  assert.deepEqual([STATIC_MAX_AGE_S, STATIC_SWR_S, STATIC_DATA], [120, 300, EXPECTED_STATIC]));
+
+test('C2: safety rules detach before restoring the revalidation directive', () =>
+  assert.deepEqual([REVALIDATE, SAFETY_FILES], [DEFAULT_CACHE, EXPECTED_SAFETY]));
+
+test('C4: ordinary region and data files use the short cache', async t => {
+  const headers = await readFile(join((await built(t)).out, '_headers'), 'utf8');
+  const paths = ['/regions/morro-bay/region.json', '/data/atlas.json'];
+  assert.deepEqual(paths.map(path => headerCacheControl(headers, path)), [SHORT_CACHE, SHORT_CACHE]);
+});
+
+test('C4: safety and unchanged paths retain their previous cache policies', async t => {
+  const {out} = await built(t);
+  const headers = await readFile(join(out, '_headers'), 'utf8');
+  const safety = [
+    '/data/regulations.json', '/data/regulations-northern.json', '/regions/morro-bay/regulations.json',
+    '/regions/morro-bay/regulations-startup.json', '/data/protected-areas.geojson', '/regions/big-sur-coast/protected-areas.geojson',
+    '/data/noaa-federal-areas.json', '/data/cape-mendocino-shortlist-closure-review.json',
+    '/regions/southern-california/groundfish-exclusions.geojson', '/regions/morro-bay/coverage.json',
+  ];
+  for (const path of safety) assert.equal(headerCacheControl(headers, path), DEFAULT_CACHE, path);
+  for (const path of ['/assets/x.0123456789.js', `/basemap/glyphs/v/${GLYPH_VERSION}/dm-sans-medium/0-255.pbf`])
+    assert.equal(headerCacheControl(headers, path), 'public, max-age=31536000, immutable', path);
+  for (const path of ['/basemap/glyphs/dm-sans-medium/0-255.pbf', '/sw.js', '/feeds/conditions/latest.json'])
+    assert.equal(headerCacheControl(headers, path), null, path);
+  await t.test('C4: no generated rule uses more than one splat', () => {
+    assert.deepEqual(headers.split('\n').filter(line => line.startsWith('/') && /\*.*\*/.test(line)), []);
+  });
+  await t.test('C4: no committed region points at a cacheable safety asset', async () => {
+    const repo = join(DIST, '..');
+    const {stdout} = await run('git', ['ls-files', '-z', '--', ':(glob)dist/regions/*/region.json'], {cwd: repo});
+    const drift = [];
+    for (const file of stdout.split('\0').filter(Boolean)) {
+      const {assets} = JSON.parse(await readFile(join(repo, file), 'utf8'));
+      const region = file.split('/')[2];
+      const paths = [assets.regulations, assets.protected_areas, assets.closures, `regions/${region}/regulations-startup.json`, `regions/${region}/coverage.json`];
+      drift.push(...paths.filter(p => p != null).map(p => `/${p}`).filter(p => headerCacheControl(headers, p) !== DEFAULT_CACHE));
+    }
+    assert.deepEqual(drift, []);
+  });
+});
 
 test('R4-SC-08: the glyphs are copied under their content version, kept a year; a stale version fails the build', async () => {
   const out = await mkdtemp(join(tmpdir(), 'sc-glyphs-'));

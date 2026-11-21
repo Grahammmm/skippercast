@@ -30,6 +30,7 @@ import {MPA_FILL} from '../web/map/mpa.ts';
 import {PLACE_LABELS} from '../web/map/style.ts';
 import {ramps, readPalette} from '../web/map/palette.ts';
 import {CONTOUR_LABELS, CONTOUR_LAYER, SST_LAYER, waterTempOverlay} from '../web/map/sst.ts';
+import {SST_BAND_EDGE} from '../web/map/sst-bands.ts';
 import {
   HEIGHT_SCALE, ISOLINE_LABELS, ISOLINE_LAYER, ISOLINE_SOURCE, STROKE_CASING, STROKE_LAYER, STROKE_SOURCE, SWELL_BASIS, SWELL_LAYER, SWELL_SOURCE,
   createSwell, directionStrokes, frameSummary, periodLines, swellFrame, swellMark, swellOverlay, swellPartition, swellState, swellStatus,
@@ -487,7 +488,7 @@ test('in the stack the water temperature sits under the swell field, and both un
   }
   const control = class {}, module = {lib: {Map: FakeMap, NavigationControl: control, ScaleControl: control, AttributionControl: control, setWorkerUrl() {}, addProtocol() {}},
     workerUrl: '/w.js', Protocol: class { constructor() { this.tile = () => {}; } }};
-  const swellIds = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER], sstIds = [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS];
+  const swellIds = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER], sstIds = [SST_LAYER, SST_BAND_EDGE, CONTOUR_LAYER, CONTOUR_LABELS];
   // The `before` lists the layers pass (sst.ts, swell.ts, depth-contours.ts), in every order they can arrive.
   const contours = contoursOverlay(sentinel, {type: 'FeatureCollection', features: []}), contourIds = contours.layers.map(l => l.id);
   const draw = {sst: e => e.setOverlay('water-temp', waterTempOverlay(sentinel), [CONTRAST_LAYER, 'chlorophyll', SWELL_LAYER, DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]),

@@ -13,3 +13,4 @@ See [0001](0001-record-architecture-decisions.md) for the format and rules.
 | [0007](0007-text-advisor-channels-and-vision.md) | Text Advisor: an owned number with a self-hosted iMessage relay, Twilio as the fallback, and a two-provider vision chain | Accepted |
 | [0008](0008-charter-fleet-registry-and-ais.md) | Charter fleet: state-level region config, a headless OSINT step, raw AIS kept off D1, and aisstream behind a source adapter | Accepted |
 | [0009](0009-front-end-rebuild-and-fish-merge.md) | Front end: rebuild the shell on ADR 0005's stack behind a flag, self-host the basemap, and merge `fish` | Accepted (2026-10-05) |
+| [0010](0010-spot-alert-events.md) | Store spot-watch alert events separately | Accepted |

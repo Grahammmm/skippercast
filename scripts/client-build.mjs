@@ -12,7 +12,8 @@
 //    cached page can never pin an old set of assets.
 // 4. precache.json and the build id in sw.js (scripts/precache.mjs), _headers
 //    (server/security-headers.ts, plus a year's immutable caching for
-//    /assets/* and the content-versioned glyphs /basemap/glyphs/v/*) and
+//    /assets/* and /basemap/glyphs/v/*, and a short cache for region and data
+//    files except safety inputs, which still revalidate) and
 //    .assetsignore (keeps .vite/ off the CDN).
 //
 // The build id hashes every page and every hashed asset name, so any change
@@ -36,6 +37,26 @@ export const IMMUTABLE_ASSETS = '/assets/*\n  Cache-Control: public, max-age=315
 // stay, with the assets' default revalidation, for pages and packs that name them.
 export const GLYPHS = 'basemap/glyphs';
 export const IMMUTABLE_GLYPHS = `/${GLYPHS}/v/*\n  Cache-Control: public, max-age=31536000, immutable\n`;
+
+export const STATIC_MAX_AGE_S = 120;
+export const STATIC_SWR_S = 300;
+export const STATIC_DATA = ['/regions/*', '/data/*'].map(path =>
+  `${path}\n  Cache-Control: public, max-age=${STATIC_MAX_AGE_S}, stale-while-revalidate=${STATIC_SWR_S}\n`).join('');
+export const REVALIDATE = 'public, max-age=0, must-revalidate';
+// Cloudflare joins matching values. Clear the short cache rule before restoring
+// the default for each safety path; Cloudflare permits only one splat per rule.
+export const SAFETY_FILES = [
+  '/data/regulations*.json',
+  '/regions/*/regulations.json',
+  '/regions/*/regulations-startup.json',
+  '/data/protected-areas.geojson',
+  '/regions/*/protected-areas.geojson',
+  '/data/noaa-federal-areas.json',
+  '/data/*-closure-review.json',
+  '/regions/*/groundfish-exclusions.geojson',
+  '/regions/*/coverage.json',
+].map(path => `${path}\n  ! Cache-Control\n  Cache-Control: ${REVALIDATE}\n`).join('');
+
 // Top-level authored module sources: Vite builds these instead of copying them.
 const SOURCE = /\.(?:js|css|html)$/;
 // These nested inputs are bundled by admin.html, chat.html, my-data.html and
@@ -180,7 +201,7 @@ export async function buildClient({root = 'dist', out = join(root, 'client'), co
   await copyStatic(root, out, {only: copy});
   await versionGlyphs(out);
   const {buildId, shells} = await hashPages(out, pages(root));
-  await writeFile(join(out, '_headers'), headers + IMMUTABLE_ASSETS + IMMUTABLE_GLYPHS);
+  await writeFile(join(out, '_headers'), headers + IMMUTABLE_ASSETS + IMMUTABLE_GLYPHS + STATIC_DATA + SAFETY_FILES);
   await writeFile(join(out, '.assetsignore'), '.vite\n');
   await writePrecache(out, buildId);
   return {buildId, shells, manifest};

@@ -11,6 +11,7 @@ import {chartMark} from '../web/map/chart.ts';
 import {createFronts} from '../web/map/fronts.ts';
 import {FRONTS_SOURCE} from '../web/map/layers.ts';
 import {readPalette} from '../web/map/palette.ts';
+import {SST_BAND_SOURCE} from '../web/map/sst-bands.ts';
 import {createWaterTemp, CONTOUR_SOURCE, SST_SOURCE} from '../web/map/sst.ts';
 
 const HOUR = 3_600_000, NOW = Date.parse('2026-11-01T19:00:00Z');
@@ -18,7 +19,7 @@ const STAMP = '2026-11-01T17:00:00Z', NEW_STAMP = '2026-11-01T18:00:00Z';
 const PAGE = 'https://example.test/map', REGION = 'fixture';
 const title = 'Synthetic analysis';
 const shades = ['#112233', '#225566', '#447788', '#668899', '#88aacc', '#bbeeef'];
-const palette = readPalette(name => name.startsWith('sst-') ? shades[Number(name.at(-1))] : '1');
+const palette = readPalette(name => name.startsWith('skl-sst-fill-ramp-stops-') ? shades[Number(name.split('-').at(-1)) % shades.length] : '#112233');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 function setup(t, layer) {
@@ -29,7 +30,7 @@ function setup(t, layer) {
   syncFromURL(href);
   camera.value = null;
   let time = NOW;
-  const e = {images: [], contours: [], lines: [], setOverlay() {},
+  const e = {images: [], contours: [], bands: [], lines: [], setOverlay() {},
     setImage(id, texture) {
       assert.equal(id, SST_SOURCE);
       assert.ok(texture.data.some((v, i) => i % 4 === 3 && v > 0), 'texture has visible pixels');
@@ -37,6 +38,7 @@ function setup(t, layer) {
     },
     setData(id, data) {
       if (id === FRONTS_SOURCE) this.lines.push(data.features.map(f => f.geometry.coordinates));
+      else if (id === SST_BAND_SOURCE) this.bands.push(data.features.length);
       else {
         assert.equal(id, CONTOUR_SOURCE);
         this.contours.push(data.features.length);
@@ -103,6 +105,7 @@ async function sst(t, stamp) {
     const at = point(0.05, 0.05);
     assert.equal(e.images.length, 1);
     assert.ok(e.contours[0] > 0, 'the fixture has real contours');
+    assert.ok(e.bands[0] > 0, 'SST-B draws edges separately from the original contours');
     chartMark.value = layer.reading(at);
     assert.match(chartMark.value?.reading ?? '', /^57\.0 °F/);
     data.coastReport.value = report(63, stamp);
@@ -113,6 +116,7 @@ async function sst(t, stamp) {
     await tick();
     assert.equal(e.images.length, observed.repaints + 1, 'a clock tick does not rebuild the texture');
     assert.equal(e.contours.length, observed.contourUpdates + 1);
+    assert.equal(e.bands.length, 2, 'band edges are replaced once with the new analysis');
     return {observed, wanted: {repaints: 1, contourUpdates: 1, changedPixels: true, cleared: true, pick: '59.0 °F · analysis error 1.0 °F'}};
   } finally { layer.destroy(); }
 }

@@ -26,9 +26,11 @@ import {MPA_FILL} from '../web/map/mpa.ts';
 import {PLACE_LABELS} from '../web/map/style.ts';
 import {ramps, readPalette} from '../web/map/palette.ts';
 import {
-  CONTOUR_LABELS, CONTOUR_LAYER, CONTOUR_SOURCE, MAX_AGE_MS, SST_LAYER, SST_SOURCE, WATER_TEMP_BASIS,
-  analysisStatus, contourLines, createWaterTemp, sstMark, waterTempOverlay, waterTempState,
+  CONTOUR_LABELS, CONTOUR_LAYER, CONTOUR_SOURCE, SST_LAYER, SST_SOURCE, WATER_TEMP_BASIS,
+  analysisStatus, contourLines, createWaterTemp, sstDataIsFresh, sstMark, waterTempOverlay, waterTempState,
 } from '../web/map/sst.ts';
+import {SST_BAND_EDGE, SST_BAND_SOURCE, sstBandLayers, sstBandModel, sstBandPixels} from '../web/map/sst-bands.ts';
+import {sampleDisplay, scalarGrid} from '../web/map/field.ts';
 import {surfaceField} from '../web/map/surface-field.js';
 import {SWELL_LAYER} from '../web/map/swell.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
@@ -59,6 +61,39 @@ function report({sst = {}, source = MUR, generatedAt = '2026-10-09T02:20:00.000Z
 }
 const status = (r = report(), at = AT, now = NOW) => analysisStatus(true, 'ready', r, at, now, TZ);
 const fieldOf = (pts = points()) => surfaceField(pts.map(p => ({lon: p.lon, lat: p.lat, values: [p.tempF, p.errorF]})), {step: [STEP, STEP]});
+
+test('SST-B raster and band-edge paint match the independently generated fragment', async () => {
+  const css = await readFile(new URL('../web/tokens.css', import.meta.url), 'utf8');
+  const tokens = new Map([...css.matchAll(/^\s*--([\w-]+):\s*([^;]+);/gm)].map(([, k, v]) => [k, v.trim()]));
+  const palette = readPalette(name => tokens.get(name) ?? '');
+  const {layers} = JSON.parse(await readFile(new URL('../style/generated/maplibre-layers-v1.0.0.json', import.meta.url)));
+  const actual = sstBandLayers(palette, true);
+  assert.deepEqual(actual, layers.filter(l => actual.some(a => a.id === l.id)));
+  const [operators, stops] = [actual[0].paint['raster-opacity'].slice(0, 3), actual[0].paint['raster-opacity'].slice(3)];
+  const mapLibreCurve = [...operators, ...stops.map((value, i) => i % 2 ? value : value - 1)];
+  assert.deepEqual(waterTempOverlay(palette).layers[0].paint['raster-opacity'], mapLibreCurve);
+});
+
+test('SST-B stretches the finite display samples and changes bands at z13 without bridging gaps', () => {
+  const sample = scalarGrid([0, 1, 2, 3], [0, 1], [50, 54, NaN, 100, 50, 54, NaN, 100]);
+  const temps = sampleDisplay({lon: [0.125, 0.25, 0.5, 0.875, 1.5, 2.5], lat: [0.5]}, sample);
+  assert.deepEqual([...temps], [50.5, 51, 52, 53.5, NaN, NaN]);
+  const low = sstBandModel(temps, 12.99), high = sstBandModel(temps, 13);
+  assert.deepEqual([low.low, low.high, low.step, low.count], [50, 54, 1, 4]);
+  assert.deepEqual([high.low, high.high, high.step, high.count], [50.5, 53.5, 0.5, 6]);
+  const pixels = sstBandPixels(temps, high, temperatureColors);
+  assert.deepEqual([...pixels.slice(0, 4)], [...fieldColor(0, 0, 1, temperatureColors), 255]);
+  assert.deepEqual([...pixels.slice(-8)], new Array(8).fill(0));
+});
+
+test('SST analysis and retrieval each enforce the exclusive age limit and inclusive skew limit', () => {
+  for (const key of ['analysedAt', 'fetchedAt']) {
+    for (const [delta, expected] of [[-72 * HOUR, false], [-72 * HOUR + 1, true], [300_000, true], [300_001, false]]) {
+      const timing = {analysedAt: NOW.toISOString(), fetchedAt: NOW.toISOString(), [key]: new Date(+NOW + delta).toISOString()};
+      assert.equal(sstDataIsFresh(timing, NOW), expected, `${key} at ${delta} ms`);
+    }
+  }
+});
 
 test('the token ramp equals packages/coast temperatureColors, in every theme', async () => {
   const css = await readFile(new URL('../web/tokens.css', import.meta.url), 'utf8');
@@ -133,9 +168,26 @@ test('nothing draws without a fresh, loaded, drawable analysis, and the reason i
   assert.equal(status(report({source: {...MUR, outcome: 'error'}})).note, 'no analysis in the report', 'a failed source');
   assert.equal(status(report({source: null})).note, 'no analysis in the report', 'an unnamed source');
   assert.equal(status({...report(), spatial: {}}).note, 'no analysis in the report');
-  const late = new Date(Date.parse('2026-10-07T09:00:00Z') + MAX_AGE_MS);
-  assert.deepEqual(reason(status(report(), late, late)), ['no fresh analysis · last Oct 7', 'Water temp unavailable: the latest NASA JPL MUR analysis, for Oct 7, is past its 72-hour age limit.', null]);
-  assert.equal(status(report({sst: {fetchedAt: '2026-10-06T02:00:00.000Z'}})).note, 'no fresh analysis · last Oct 7', 'retrieved over 72 h ago');
+  // Each timestamp independently expires at the limit; clock skew is inclusive.
+  // Keep the dock later than the skew cases so its separate rule cannot hide an age-gate regression.
+  const selectedHour = new Date(NOW.getTime() + HOUR);
+  for (const key of ['analysedAt', 'fetchedAt']) {
+    for (const [offset, draws, label] of [
+      [-72 * HOUR + 1, true, '1 ms inside the age limit'],
+      [-72 * HOUR, false, 'at the age limit'],
+      [5 * 60_000, true, 'at the clock skew limit'],
+      [5 * 60_000 + 1, false, '1 ms beyond the clock skew limit'],
+    ]) {
+      const when = new Date(NOW.getTime() + offset).toISOString();
+      const result = status(report({sst: {[key]: when}}), selectedHour, NOW);
+      assert.equal(Boolean(result.drawn), draws, `${key}: ${label}`);
+      if (!draws) {
+        const date = key === 'fetchedAt' ? 'Oct 7' : offset < 0 ? 'Oct 5' : 'Oct 8';
+        assert.equal(result.note, `no fresh analysis · last ${date}`, 'withhold copy names the analysis date');
+        assert.equal(result.reason, `Water temp unavailable: the latest NASA JPL MUR analysis, for ${date}, is past its 72-hour age limit.`);
+      }
+    }
+  }
   assert.equal(status(report(), new Date('2026-10-07T08:00:00Z')).note, 'analysis after this hour · Oct 7');
   const irregular = points().map((p, k) => (k === 7 ? {...p, lon: p.lon + 0.007} : p));
   assert.deepEqual(reason(status(report({sst: {points: irregular}}))), ['grid cannot be drawn · Oct 7',
@@ -162,13 +214,13 @@ test('contours run every 0.5 °F, join into lines, label whole degrees with the 
 
 test('the overlay sits under the protected areas, coloured from the palette; a click reads the analysis with its error', () => {
   const o = waterTempOverlay(sentinel);
-  assert.deepEqual(o.layers.map(l => l.id), [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS]);
-  assert.deepEqual(Object.keys(o.sources), [SST_SOURCE, CONTOUR_SOURCE]);
+  assert.deepEqual(o.layers.map(l => l.id), [SST_LAYER, SST_BAND_EDGE, CONTOUR_LAYER, CONTOUR_LABELS]);
+  assert.deepEqual(Object.keys(o.sources), [SST_SOURCE, SST_BAND_SOURCE, CONTOUR_SOURCE]);
   assert.equal(o.sources[SST_SOURCE].type, 'image');
   assert.equal(o.sources[SST_SOURCE].url, undefined, 'no request: the pixels come from setImage');
-  assert.equal(o.layers[1].paint['line-color'], sentinel.text);
-  assert.equal(o.layers[2].paint['text-color'], sentinel.text);
-  assert.deepEqual(o.layers[2].filter, ['get', 'major'], 'labels on whole degrees only');
+  assert.equal(o.layers[2].paint['line-color'], sentinel.text);
+  assert.equal(o.layers[3].paint['text-color'], sentinel.text);
+  assert.deepEqual(o.layers[3].filter, ['get', 'major'], 'labels on whole degrees only');
   const a = status().drawn;
   const mark = sstMark(a, {lon: WEST + 0.01, lat: SOUTH + 0.01}, NOW, TZ);
   assert.equal(mark.name, 'Surface temperature');
@@ -212,12 +264,13 @@ function layer(t, {href = `${PAGE}?region=morro-bay&layers=water-temp`, first = 
 test('a rejected replacement grid hides the previous texture and contours', t => {
   const {w, e, data, asked} = layer(t);
   assert.deepEqual(asked, [['place', 'morro-bay'], ['load', 'report']], 'the report is asked for while Water temp is on');
-  assert.deepEqual(e.overlay.layers.map(l => l.id), [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS]);
+  assert.deepEqual(e.overlay.layers.map(l => l.id), [SST_LAYER, SST_BAND_EDGE, CONTOUR_LAYER, CONTOUR_LABELS]);
   assert.deepEqual(e.before, [CONTRAST_LAYER, 'chlorophyll', SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL], 'under Temp contrast, else chlorophyll, swell, wind, depth contours, place labels, or protected areas (§ 9 order)');
   assert.equal(e.images.length, 1);
   assert.equal(e.images[0][0], SST_SOURCE);
   assert.ok(e.data.some(([id, d]) => id === CONTOUR_SOURCE && d.features.length > 0));
-  assert.deepEqual(waterTempState.value.drawn.range, [57, 65]);
+  assert.deepEqual(waterTempState.value.drawn.range, [57, 63]);
+  assert.match(waterTempState.value.basis, /^SST °F, 1° bands, auto-stretched\./);
   assert.equal(railNotes.value['water-temp'], 'analysis Oct 7 · 42 h old');
   chartMark.value = w.reading({lon: WEST + 0.01, lat: SOUTH + 0.01});
   assert.equal(chartMark.value.name, 'Surface temperature');
@@ -263,7 +316,7 @@ test('the engine adds the image source without a request and replaces its pixels
   eng.setImage(SST_SOURCE, tex);
   assert.deepEqual(map.images, [], 'nothing before the style has loaded');
   map.fire('style.load');
-  assert.deepEqual(map.layers, ['water', SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS, MPA_FILL, 'coastline']);
+  assert.deepEqual(map.layers, ['water', SST_LAYER, SST_BAND_EDGE, CONTOUR_LAYER, CONTOUR_LABELS, MPA_FILL, 'coastline']);
   assert.equal(map.images.length, 1);
   assert.equal(map.images[0][1].image.data, tex.data, 'the pixels, not a URL');
   assert.deepEqual(map.images[0][1].coordinates, tex.coordinates);

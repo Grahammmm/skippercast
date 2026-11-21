@@ -200,6 +200,7 @@ def test_guarded_tiny_release_through_envelope(tmp_path, monkeypatch, blank_char
                             basemap_roots=(FIXTURES, root))
     real_run = subprocess.run
     qa_command = []
+    baseline_release = []
 
     def dispatch(command, *, capture_output=False, **kwargs):
         if command[:len(cfg.prefix) + 2] != [*cfg.prefix, cfg.python, str(cfg.region_py)]:
@@ -218,6 +219,20 @@ def test_guarded_tiny_release_through_envelope(tmp_path, monkeypatch, blank_char
             argv[at] = str(mosaic_config)
         if argv[0] == 'qa':
             qa_command[:] = argv
+        if argv[0] == 'nearshore_vectors' and not blank_chart:
+            # Build package both before and after vectors, evicting the receipt
+            # so a cache hit cannot mask accidental release dependence.
+            package_argv = ['package', *argv[1:5], '--manifest', str(region.dir / 'inventory/manifest.json')]
+            for producer in ('tiles:public', 'digests', 'zone:public', 'inventory', 'contours'):
+                package_argv.extend(('--upstream', producer))
+            assert cli.main(package_argv) == 0
+            prior = receipts.check(region, 'package').receipt
+            assert prior is not None
+            baseline_release.append((region.dir / f'release/{prior["generation"]}/release.json').read_bytes())
+            region.receipt_path('package').unlink()
+        if argv[0] == 'package' and baseline_release:
+            region.receipt_path('inventory').unlink()
+            assert cli.main(['inventory', *argv[1:5]]) == 0
         if capture_output:
             out = StringIO()
             with redirect_stdout(out):
@@ -246,7 +261,17 @@ def test_guarded_tiny_release_through_envelope(tmp_path, monkeypatch, blank_char
         print(f'tiny 24x24 control: QA exit 1, rendered-content refusal; {len(shot_doc["shots"])} shots')
         return
     assert code == 0
-    assert package.decode_document(release.read_bytes())['bounds'] == bounds
+    assert [release.read_bytes()] == baseline_release
+    release_doc = package.decode_document(release.read_bytes())
+    assert release_doc['bounds'] == bounds
+    manifest = package.decode_document((region.dir / 'inventory/manifest.json').read_bytes())
+    assert all(not p.startswith('layers/public/nearshore/') for p in manifest['layer_paths'])
+    assert all(not row['path'].startswith('layers/public/nearshore/') for row in release_doc['layers'])
+    vectors = receipts.check(region, 'nearshore_vectors', 'public')
+    assert vectors.done and vectors.receipt is not None and len(vectors.receipt['outputs']) == 4
+    qa_receipt = receipts.check(region, 'qa').receipt
+    assert qa_receipt is not None
+    assert {'stage': 'nearshore_vectors', 'scope': 'public', 'generation': vectors.receipt['generation']} in qa_receipt['upstream']
     assert shot_doc['cameras'] == [12, 13]
     # Chart zoom and the 512 px base tile yield this Mercator scale. Prove the
     # union of both devices' widest frames fits inside continuous evidence.
