@@ -113,11 +113,22 @@ export const serveAsset: Handler<AppEnv> = async c => {
   const fresh = new Response(response.body, response);
   fresh.headers.set('Cache-Control', 'no-store');
   if (page === V2_SHELLS.app && typeof HTMLRewriter !== 'undefined') {
+    const isMap = url.pathname === '/map';
+    // An ambiguous /map link keeps the default shell, including its preview.
+    if (isMap && search.getAll('region').length > 1) return fresh;
+    const regionId = isMap ? (await import('../config.ts')).regionById(search.get('region'))?.id : undefined;
     const {ogFor} = await import('../og.ts'), og = ogFor(search);
-    if (og) return new HTMLRewriter()
-      .on('meta[property="og:title"]', {element: el => { el.setAttribute('content', og.title); }})
-      .on('meta[property="og:description"]', {element: el => { el.setAttribute('content', og.description); }})
-      .transform(fresh);
+    if (og || regionId) {
+      const rewriter = new HTMLRewriter();
+      if (og) rewriter
+        .on('meta[property="og:title"]', {element: el => { el.setAttribute('content', og.title); }})
+        .on('meta[property="og:description"]', {element: el => { el.setAttribute('content', og.description); }});
+      // Anonymous CORS uses same-origin credentials, matching earlyReads' plain fetch.
+      if (regionId) rewriter.on('head', {element: el => {
+        el.append(`<link rel="preload" as="fetch" crossorigin="anonymous" href="/regions/${encodeURIComponent(regionId)}/region.json">`, {html: true});
+      }});
+      return rewriter.transform(fresh);
+    }
   }
   return fresh;
 };
