@@ -22,7 +22,8 @@ async function load() {
     export {ViewNav} from './web/app/Masthead.tsx';
     export {ReportsLink, viewDetent} from './web/app/Mobile.tsx';
     export {PlanLink} from './web/app/PlanView.tsx';
-    export {appView, setParams, startURLSync, syncFromURL} from './web/state.ts';`},
+    export {appView, navigate, setParams, startURLSync, syncFromURL} from './web/state.ts';
+    export {camera, choosePresentation, createStage, spanForZoom} from './web/map/stage.ts';`},
   outfile, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins, logLevel: 'silent'});
   mod = await import(pathToFileURL(outfile).href);
   return mod;
@@ -182,6 +183,52 @@ test('hour, area, layer, profile and target changes replace; Back restores the e
     assert.equal(m.appView.value, 'coast'); assert.equal(url().searchParams.get('hour'), null);
     assert.equal(url().hash, '#spot');
   } finally { restore(); }
+});
+
+const ORBIT = '35.41,-120.95,13,-35.12,49.88';
+const orbitLink = mode => `${MAP}&presentation=${mode}&view=${ORBIT}`;
+
+async function mountStage(m, t) {
+  const locations = [];
+  const stage = m.createStage({host: {dataset: {}}, doc: {hidden: false, addEventListener() {}, removeEventListener() {}},
+    reliefFetch: null, load: async () => ({styles: [], mountCoast: () => ({
+      load: async () => true, destroy() {}, setLocation: location => locations.push(location),
+      setPerspective() {}, setVisible() {}, setRelief() {}, setWaterVisible() {}, setWaterOpacity() {},
+      setContours() {}, setSunAzimuth() {}, setPhotoMix() {}, setFixedRamp() {}, setSourceCoverage() {}, setHabitatVisible() {},
+    })})});
+  t.after(() => { stage.destroy(); restore(); });
+  await new Promise(resolve => setImmediate(resolve));
+  return locations;
+}
+
+// Back/Forward must keep the URL orbit on re-entry instead of replacing it with the automatic 3D entry pose.
+test('Back and Forward restore the full 3D orbit on re-entry', async t => {
+  const m = await install();
+  reset(orbitLink('2d')); m.syncFromURL();
+  const locations = await mountStage(m, t);
+  const shared = orbitLink('3d');
+  m.navigate(shared);
+  m.navigate(`${MAP}&presentation=2d&view=35.37,-120.86,12`);
+  m.navigate(shared);
+  go(-1); go(-1); // Back to 3D from a different camera.
+  const expected = {latitude: 35.41, longitude: -120.95, zoom: 13, bearing: -35.12, pitch: 49.88};
+  const {zoom, ...pose} = expected;
+  assert.deepEqual(m.camera.value, expected, 'Back preserves the five saved fields');
+  assert.deepEqual(locations.at(-1), {...pose, span: m.spanForZoom(zoom)});
+  go(-1); go(1);
+  assert.deepEqual(m.camera.value, expected, 'Forward preserves the five saved fields');
+  assert.deepEqual(locations.at(-1), {...pose, span: m.spanForZoom(zoom)});
+  assert.deepEqual(counts(), [3, 0, 5], 'restoring the camera writes no history');
+});
+
+// An ordinary 3D choice still applies the entry pose, even when the current 2D URL carries an old orbit.
+test('a 3D presentation choice still applies the one-time entry pose', async t => {
+  const m = await install();
+  reset(orbitLink('2d')); m.syncFromURL();
+  const locations = await mountStage(m, t);
+  m.choosePresentation('3d');
+  assert.deepEqual(m.camera.value, {latitude: 35.41, longitude: -120.95, zoom: 12.5, bearing: -35.12, pitch: 60});
+  assert.deepEqual(locations.at(-1), {latitude: 35.41, longitude: -120.95, span: m.spanForZoom(12.5), bearing: -35.12, pitch: 60});
 });
 
 test('Back to History from a peeked sheet opens it full through viewDetent; Back to other views leaves the detent', async () => {

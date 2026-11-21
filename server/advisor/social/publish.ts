@@ -93,7 +93,8 @@ export interface PublishDeps {
   dispatch?: (env: Env, file: string) => Promise<number>;   // the media job dispatch (tests)
 }
 
-interface PublishState {ig_children?: string[]; ig_started_at?: string; ig_error?: string; fb_photos?: string[]; fb_error?: string; fb_uncertain?: boolean}
+interface PublishState {ig_children?: string[]; ig_started_at?: string; ig_error?: string; fb_photos?: string[]; fb_error?: string; fb_uncertain?: boolean;
+  fb_pending?: {op: string; at: string}}   // H8 #1: a Page create was issued and its outcome is not yet recorded
 interface MediaRow {id: string; kind: string; mime: string; r2_key: string; derived_at: string | null; derived_error: string | null; publish_state: string}
 
 const IG_TARGETS: readonly Target[] = ['instagram', 'instagram_story'];
@@ -113,9 +114,11 @@ async function readState(db: D1Database, id: string): Promise<PublishState> {
   return parse<PublishState>(row?.value ?? null, {});
 }
 async function writeState(db: D1Database, id: string, state: PublishState, at: string): Promise<void> {
-  await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
-    .bind(STATE_PREFIX + id, JSON.stringify(state), at).run();
+  await stateStatement(db, id, state, at).run();
 }
+const stateStatement = (db: D1Database, id: string, state: PublishState, at: string): D1PreparedStatement =>
+  db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
+    .bind(STATE_PREFIX + id, JSON.stringify(state), at);
 
 /** The lease: an UPSERT that only takes an expired (or missing) lock. Returns the value to release with, or null. */
 async function claim(db: D1Database, id: string, now: number): Promise<string | null> {
@@ -261,7 +264,8 @@ async function publishInstagram(run: Run): Promise<Step> {
     // TA-S3: collaborators were invited with the container; the cron reads their answers.
     const invited = post.kind !== 'story' && tagsOf(post).collaborators.length > 0;
     const at = run.at();
-    await db.prepare(`UPDATE advisor_posts SET ig_media_id=?,collab_status=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(mediaId, invited ? 'invited' : null, at, at, post.id).run();
+    // H8 #13: ig_posted_at is Instagram's own time (its Story's 24 h starts here); posted_at stays the first surface's.
+    await db.prepare(`UPDATE advisor_posts SET ig_media_id=?,ig_posted_at=?,collab_status=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(mediaId, at, invited ? 'invited' : null, at, at, post.id).run();
     post.ig_media_id = mediaId; post.collab_status = invited ? 'invited' : null;
     advisorLog('info', 'advisor_post_published', {surface: 'instagram', kind: post.kind});
     const permalink = await igPermalink(cfg, mediaId).catch(() => null);
@@ -274,23 +278,57 @@ async function publishInstagram(run: Run): Promise<Step> {
   }
 }
 
-/** Facebook Page: one photo, a multi-photo post, a Reel or a photo Story. */
+/**
+ * Facebook Page: one photo, a multi-photo post, a Reel or a photo Story.
+ *
+ * H8 #1: the public create is bracketed by a durable per-operation marker
+ * (state.fb_pending), written before the request and cleared in the same batch
+ * that stores the returned id. A marker found on entry means an earlier run may
+ * have had its create accepted and lost the acknowledgement (a crash or a failed
+ * write after Meta answered): the surface is held for reconciliation, like an
+ * ambiguous create, and never created again. Only a definite rejection of the
+ * create clears the marker, so an admin retry can run it again.
+ */
 async function publishFacebook(run: Run): Promise<Step> {
   const {post, items, cfg, db, state} = run, page = run.env.META_PAGE_ID!;
   const message = post.caption || undefined, first = items[0]!;
+  if (state.fb_pending) {
+    state.fb_uncertain = true;
+    state.fb_error = `Page create outcome unknown after an interrupted ${state.fb_pending.op} create; reconcile before retrying`;
+    await writeState(db, post.id, state, run.at());
+    return {status: 'error', error: state.fb_error};
+  }
+  const begin = async (op: string): Promise<void> => {
+    state.fb_pending = {op, at: run.at()};
+    await writeState(db, post.id, state, run.at());
+  };
+  let created = false;
+  /** Store the created id and clear the marker together: either both land or the marker stays. */
+  const record = async (column: 'fb_post_id' | 'fb_story_id', id: string): Promise<void> => {
+    created = true;
+    const at = run.at(), settled: PublishState = {...state};
+    delete settled.fb_pending;
+    await db.batch([
+      db.prepare(`UPDATE advisor_posts SET ${column}=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(id, at, at, post.id),
+      stateStatement(db, post.id, settled, at),
+    ]);
+    delete state.fb_pending;
+    post[column] = id;
+  };
   try {
     if (post.kind === 'story') {
       if (first.kind === 'video') return {status: 'error', error: 'a video Story to the Page is not supported yet'};
+      await begin('story');
       const story = await fbPhotoStory(cfg, page, {url: first.story});
-      const at = run.at();
-      await db.prepare(`UPDATE advisor_posts SET fb_story_id=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(story.post_id, at, at, post.id).run();
-      post.fb_story_id = story.post_id;
+      await record('fb_story_id', story.post_id);
     } else {
       let id: string;
       if (post.kind === 'reel') {
+        await begin('reel');
         const reel = await fbVideoReel(cfg, page, {video_url: first.video, ...(message ? {description: message} : {})});
         id = reel.post_id ?? reel.video_id;
       } else if (items.length === 1) {
+        await begin('photo');
         const photo = await fbPhoto(cfg, page, {url: first.feed, ...(message ? {message} : {})});
         id = photo.post_id ?? photo.id;
       } else {
@@ -301,22 +339,29 @@ async function publishFacebook(run: Run): Promise<Step> {
           state.fb_photos = [...photos];
           await writeState(db, post.id, state, run.at());
         }
+        await begin('feed');
         id = await fbFeed(cfg, page, {...(message ? {message} : {}), photo_ids: photos});
       }
-      const at = run.at();
-      await db.prepare(`UPDATE advisor_posts SET fb_post_id=?,posted_at=${FIRST_SURFACE_TIME},updated_at=? WHERE id=?`).bind(id, at, at, post.id).run();
-      post.fb_post_id = id;
+      await record('fb_post_id', id);
     }
     advisorLog('info', 'advisor_post_published', {surface: 'facebook', kind: post.kind});
     return {status: 'done'};
   } catch (error) {
-    if (error instanceof MetaCreateUncertain) {
+    if (error instanceof MetaCreateUncertain || (state.fb_pending && (created || !(error instanceof MetaError || error instanceof TypeError)))) {
+      // An ambiguous create, or a create whose outcome could not be recorded: Meta may have the post.
       state.fb_uncertain = true;
-      state.fb_error = `Page create outcome uncertain; reconcile before retrying (${short(error)})`;
+      state.fb_error = error instanceof MetaCreateUncertain
+        ? `Page create outcome uncertain; reconcile before retrying (${short(error)})`
+        : 'Page create outcome not recorded; reconcile before retrying';
       // Write the hold before finalizing the post, so a resumed `publishing` row
       // also skips Facebook if the status update is interrupted.
       await writeState(db, post.id, state, run.at());
       return {status: 'error', error: state.fb_error};
+    }
+    if (state.fb_pending) {
+      // A definite rejection of the create: nothing was made, so a retry may create it.
+      delete state.fb_pending;
+      await writeState(db, post.id, state, run.at());
     }
     return {status: 'error', error: short(error)};
   }

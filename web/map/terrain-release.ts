@@ -16,10 +16,23 @@ function boundedSize(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 && value <= MAX_ASSET_BYTES;
 }
 
+const ASSET_BASE = 'https://terrain.invalid'; // Parse without depending on the browser or issuing a request.
+function isAssetURL(raw: string): boolean {
+  if (/[?#\\\s\u0000-\u001f\u007f]|%25|%2f|%5c/i.test(raw)) return false;
+  try {
+    const {origin, pathname} = new URL(raw, ASSET_BASE);
+    // Refuse normalization rather than validating one spelling and returning another.
+    return origin === ASSET_BASE && pathname === raw && pathname.startsWith('/data/') &&
+      !pathname.endsWith('/') && !pathname.includes('//') &&
+      !/[\u0000-\u001f\u007f]/.test(decodeURIComponent(pathname));
+  } catch {
+    return false;
+  }
+}
+
 function isAsset(value: unknown): value is Asset {
-  // Mirror regional.ts's verifiedAsset metadata checks at its default budget.
-  // The loader still verifies the length and digest of the actual response.
-  return isRecord(value) && typeof value.url === 'string' && value.url.startsWith('/data/') &&
+  // Preflight the path and metadata. The loader still verifies the actual response's length and digest.
+  return isRecord(value) && typeof value.url === 'string' && isAssetURL(value.url) &&
     typeof value.sha256 === 'string' && value.sha256.length === 64 && /^[a-f0-9]{64}$/.test(value.sha256) &&
     boundedSize(value.bytes) && (value.encoding === undefined ||
       (value.encoding === 'gzip' && boundedSize(value.decodedBytes)));

@@ -45,6 +45,9 @@ import type {Env} from '../../env.ts';
 export const AUTO_NOTE = 'auto: story';
 export type StoryOutcome = {region: string; kind: 'count_board' | 'conditions'; status: 'approved' | 'exists' | 'held' | 'skipped'; postId?: string; reason?: string};
 
+/** D1/SQLite's message for a second INSERT of the same advisor_posts id (the deterministic card id). */
+const DUPLICATE_POST = /UNIQUE constraint failed: advisor_posts\.id\b/;
+
 /** The id of a region's conditions card for a local date. */
 export const conditionsStoryId = async (region: string, date: string): Promise<string> => (await sha256(`story:conditions:${region}:${date}`)).slice(0, 32);
 
@@ -136,12 +139,20 @@ async function conditionsStory(env: Env, region: string, now: number, deps: Soci
     lines: [conditionsText(inputs.conditions, FEED_LANGUAGE), ...(word ? [t(FEED_LANGUAGE, 'daily_post_confidence_short', {label: word})] : [])]};
   // Both writes succeed or neither does. If another tick inserted this id
   // after our read, the duplicate insert aborts before touching its graphic.
-  await db.batch([
-    db.prepare(`INSERT INTO advisor_posts(id,kind,region,boat_id,media_json,caption,targets_json,status,scheduled_for,created_by,approved_at,created_at,updated_at)
-      VALUES(?,'story',?,NULL,'[]','',?,'approved',?,'engine',?,?,?)`)
-      .bind(id, region, JSON.stringify(TARGETS_FOR.story), storySlotAt(region, now), at, at, at),
-    prepareGraphicRequest(db, id, {kind: 'story', data, out_key: graphicKey(id, GRAPHIC_FILE.story)}, now),
-  ]);
+  try {
+    await db.batch([
+      db.prepare(`INSERT INTO advisor_posts(id,kind,region,boat_id,media_json,caption,targets_json,status,scheduled_for,created_by,approved_at,created_at,updated_at)
+        VALUES(?,'story',?,NULL,'[]','',?,'approved',?,'engine',?,?,?)`)
+        .bind(id, region, JSON.stringify(TARGETS_FOR.story), storySlotAt(region, now), at, at, at),
+      prepareGraphicRequest(db, id, {kind: 'story', data, out_key: graphicKey(id, GRAPHIC_FILE.story)}, now),
+    ]);
+  } catch (error) {
+    // The loser of that race: the winner already has the post and its graphic, so this is `exists`.
+    // Any other failure (or a duplicate whose winner row cannot be read back) still propagates.
+    if (!DUPLICATE_POST.test(String((error as Error)?.message))
+      || !await db.prepare('SELECT 1 AS x FROM advisor_posts WHERE id=?').bind(id).first()) throw error;
+    return {region, kind: 'conditions', status: 'exists', postId: id};
+  }
   await requestMediaJob(env, now, deps.dispatch ? {dispatch: deps.dispatch} : {});
   return {region, kind: 'conditions', status: 'approved', postId: id};
 }
