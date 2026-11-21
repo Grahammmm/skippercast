@@ -71,7 +71,7 @@ def _tile_reason(target: Path, region_id: str, layer: dict, ref: dict, epoch: fl
     except OSError:
         return "missing"
     size = ref.get("bytes")
-    if not _number(size) or len(data) != size:
+    if not _number(size) or not 1 <= size <= 5_000_000 or len(data) != size:
         return "bytes"
     if hashlib.sha256(data).hexdigest() != ref.get("sha256"):
         return "sha256"

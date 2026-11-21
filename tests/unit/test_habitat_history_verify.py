@@ -91,6 +91,15 @@ def test_c2_checks_length_then_hash_before_decoding(tmp_path, change, reason):
     assert _check(tmp_path, ref | change) == [(SAMPLE, reason)]
 
 
+@pytest.mark.parametrize("size,expected", [(5_000_000, []), (5_000_001, [(SAMPLE, "bytes")]),
+                                            (5_000_223, [(SAMPLE, "bytes")])])
+def test_c2_enforces_browser_tile_size_limit(tmp_path, size, expected):
+    # Whitespace pads an otherwise valid authenticated tile to the exact boundary.
+    data = json.dumps(_tile()).encode()
+    ref = _write(tmp_path, data + b" " * (size - len(data)))
+    assert _check(tmp_path, ref) == expected
+
+
 def test_c2_stops_at_first_bad_ref_not_first_or_last_ref(tmp_path):
     valid = _write(tmp_path, json.dumps(_tile()).encode())
     missing = {"path": "habitat-history/missing-0123456789abcdef.json"}
