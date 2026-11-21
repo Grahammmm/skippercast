@@ -20,6 +20,7 @@ export type ControlMode = 'bottom' | 'water-column' | 'boat-comfort';
 // Existing model-gap tolerances, in kn and ft; independent of the comfort score.
 export const MODEL_GAP = Object.freeze({wind: 4, sea: 1});
 export type Verdict = 'go' | 'marginal' | 'no-go' | 'unknown';
+export type HeadingSector = 'head' | 'bow' | 'beam' | 'stern' | 'following';
 
 /** Multipliers on the tuned thresholds for a boat (boat-handling.js boatFactors). */
 export interface BoatFactors {
@@ -86,6 +87,20 @@ export const THRESHOLDS = Object.freeze({
   shortChopPenalty: 0.8,
   /** Wind and wave burdens overlap: the larger in full, this share of the smaller. */
   overlap: 0.45,
+  /** Ride-by-heading heuristics. Lower edges are inclusive; following includes 180°.
+   * The beam roll charge can make beam comfort lower than head comfort. */
+  heading: Object.freeze({
+    sectors: [
+      {from: 0, sector: 'head', factor: 1.25},
+      {from: 45, sector: 'bow', factor: 1.1},
+      {from: 80, sector: 'beam', factor: 1.1},
+      {from: 110, sector: 'stern', factor: 0.9},
+      {from: 150, sector: 'following', factor: 0.85},
+    ] as const,
+    rollPenalty: 0.5,
+    rollPeriodFactor: 1.5, // times the boat's chop period
+    rollSeaStart: 2, // feet, times the boat's sea factor
+  }),
 });
 
 export const clamp = (n: number): number => Math.round(Math.max(0, Math.min(10, n)) * 10) / 10;
@@ -329,4 +344,44 @@ export function rateComfort(h: FeedHour, boat: BoatFactors = REFERENCE_BOAT): Co
   };
   const uncapped = clamp(10 - combinedBurden(costs.wind, Math.max(costs.seas, costs.chop)) - costs.crossing - costs.short);
   return {score: Math.min(T.capLimited, uncapped), uncapped, limited: true, wind, gust, sea, chop: isNum(h.chop) ? h.chop : null, costs};
+}
+
+export interface HeadingRating {
+  course: number;
+  relative: number | null;
+  sector: HeadingSector | null;
+  score: number | null;
+  factor: number;
+  limited: boolean;
+}
+
+type HeadingOffsets = Partial<Record<'head' | 'beam' | 'following', number>>;
+
+/** Extra ride estimate for a true course in degrees; does not change the day verdict. */
+export function headingRating(
+  h: FeedHour, course: number, boat: BoatFactors = REFERENCE_BOAT, offset?: HeadingOffsets,
+): HeadingRating {
+  const rating = rateComfort(h, boat);
+  const relative = angleBetween(course, h.swell_from);
+  if (relative === null) {
+    return {course, relative, sector: null, score: rating?.score ?? null, factor: 1, limited: true};
+  }
+  const T = THRESHOLDS.heading;
+  const {sector, factor} = T.sectors.findLast(({from}) => relative >= from) ?? T.sectors[0];
+  if (!rating) return {course, relative, sector, score: null, factor, limited: true};
+
+  const {costs, limited} = rating;
+  const roll = isNum(h.swell_period) && h.swell_period <= T.rollPeriodFactor * boat.chopPeriod
+    && rating.sea >= T.rollSeaStart * boat.sea ? T.rollPenalty : 0;
+  // Calibration groups the bow and stern quarters with head and following seas, respectively.
+  const group = sector === 'bow' ? 'head' : sector === 'stern' ? 'following' : sector;
+  const wave = Math.max(costs.seas, costs.chop);
+  const burden = combinedBurden(costs.wind, wave * factor) + (sector === 'beam' ? roll : 0);
+  const score = clamp(10 - burden - costs.crossing - costs.short + (offset?.[group] ?? 0));
+  return {course, relative, sector, score: limited ? Math.min(THRESHOLDS.capLimited, score) : score, factor, limited};
+}
+
+/** Eight ratings clockwise from true north, at 45° intervals. */
+export function headingRose(h: FeedHour, boat?: BoatFactors, offset?: HeadingOffsets): HeadingRating[] {
+  return Array.from({length: 8}, (_, i) => headingRating(h, i * 45, boat, offset));
 }

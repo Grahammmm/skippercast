@@ -224,6 +224,19 @@ def _tile(ds, z, x, y, builder):
     return out
 
 
+def _mosaic_evidence(bg, background, z, x, y, builder):
+    """Sample the masked mosaic at exact tile pixel centers, without blending."""
+    import numpy as np
+    from rasterio.warp import Resampling, reproject
+
+    transform, _ = builder.tile_grid(z, x, y, pad=0)
+    evidence = np.full((builder.TILE, builder.TILE), builder.NODATA, dtype=bg.dtype)
+    reproject(bg, evidence, src_transform=background.transform, src_crs=background.crs,
+              src_nodata=builder.NODATA, dst_transform=transform, dst_crs='EPSG:3857',
+              dst_nodata=builder.NODATA, resampling=Resampling.nearest, tolerance=0)
+    return evidence != builder.NODATA
+
+
 def _render(source, manifest, rows, bounds, out, label, baked):
     import numpy as np
     import rasterio
@@ -303,6 +316,7 @@ def _render(source, manifest, rows, bounds, out, label, baked):
                 measured = np.zeros(rgba.shape[:2], dtype=bool)
                 native_core = np.zeros_like(measured)
                 used = []
+                has_evidence = _mosaic_evidence(bg, background, z, x, y, builder) if z > 13 else None
                 if z > 15:
                     background_core, _ = builder.warp_window(bg, background.transform, background.crs, z, x, y, pad=0)
                 for row, image in eligible:
@@ -315,6 +329,9 @@ def _render(source, manifest, rows, bounds, out, label, baked):
                         native_core |= valid
                         measured[valid] = (cert[valid] == 1) & pixels[valid]
                         pixels &= valid
+                    if has_evidence is not None:
+                        # Clip paint without changing the certification test above.
+                        pixels &= has_evidence
                     if tile is not None and pixels.any():
                         rgba[pixels] = tile[pixels]
                         if row is not None:
