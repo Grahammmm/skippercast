@@ -226,6 +226,77 @@ test('status_page_names_as_published: Spanish wrappers never translate source va
   assert.doesNotMatch(renderCoverage(undefined, 'es'), /Fetched by your browser|Fixed release|freshness check/);
 });
 
+test('C1: status tables retain the narrow CSS hook and all four scoped column headings', () => {
+  // Without the hook, the phone-specific Status placement cannot reach the table.
+  const html = renderRows(statusRows(fresh(), NOW));
+  const opening = '<table class="evidence-table status-table"><thead><tr><th scope="col">Data</th><th scope="col">Last successful publish (UTC)</th><th scope="col">Expected within</th><th scope="col">Status</th></tr></thead><tbody>';
+  assert.deepEqual(html.match(/<table[^]*?<tbody>/g), [opening, opening]);
+  const css = readFileSync(new URL('../dist/coast-readable.css', import.meta.url), 'utf8');
+  const narrow = css.split('@media (max-width: 599px) {')[1]?.split('@media')[0];
+  assert.equal(narrow?.match(/\.coast-readable \.status-table tr > :last-child \{[^}]+\}/)?.[0],
+    '.coast-readable .status-table tr > :last-child { grid-area: 1 / 2; }');
+});
+
+test('C2: Spanish row headers mark published names, not localized feed or rollup labels', () => {
+  // An escaped provider name must stay literal, even inside a language span.
+  const feeds = fresh();
+  feeds.data.sources.sst.name = 'NOAA SST <grid> & {n}';
+  const html = renderRows(statusRows(feeds, NOW, 'es'), 'es');
+  assert.deepEqual(html.match(/<th scope="row">.*?<\/th>/g), [
+    '<th scope="row">Fuente de condiciones en vivo</th>',
+    '<th scope="row">Boyas: Morro Bay</th>',
+    '<th scope="row">Fuente de datos diarios</th>',
+    '<th scope="row"><span lang="en">NOAA SST &lt;grid&gt; &amp; {n}</span></th>',
+    '<th scope="row"><span lang="en">NOAA tide predictions</span></th>',
+    '<th scope="row">Páginas de normas de pesca y áreas protegidas</th>',
+    '<th scope="row">Informes de desembarques</th>',
+  ]);
+  const coast = renderRows(statusRows({coast: {}}, NOW, 'es'), 'es');
+  assert.deepEqual(coast.match(/<th scope="row"><span lang="en">.*?<\/span><\/th>/g), [
+    'NOAA West Coast Operational Forecast System',
+    'GOES East and West longwave infrared imagery (nowCOAST WMS time index)',
+    'CDIP MOP alongshore nearshore wave model (SLO sites)',
+    'SLO County beach water-contact status (SurfSafeSLO public view)',
+    'NDBC standard-met annual archives and 45-day realtime files (recorded history)',
+  ].map(name => `<th scope="row"><span lang="en">${name}</span></th>`));
+});
+
+test('C2: Spanish coverage renders complete groups with English names and Spanish reasons', () => {
+  // Coverage is rendered separately; marking only table headers misses these names.
+  const names = {'noaa-gefs-members': 'NOAA GEFS 0.25° wind ensemble members', 'usgs-naip': 'NAIP natural-colour aerial mosaic', 'noaa-bag': 'NOAA surveys & uncertainty grids'};
+  assert.equal(renderCoverage(names, 'es'), `<h3>Publicados con un horario, pero aún sin comprobación de antigüedad</h3>
+<ul><li><span lang="en">NOAA GEFS 0.25° wind ensemble members</span></li></ul>
+<h3>Tu navegador consulta al proveedor; SkipperCast no publica estos datos</h3>
+<ul><li><span lang="en">NAIP natural-colour aerial mosaic</span></li><li><span lang="en">NOAA ENC display service (chart images on the map)</span></li></ul>
+<h3>Publicación fija o datos de investigación; sin publicación programada</h3>
+<ul><li><span lang="en">NOAA surveys &amp; uncertainty grids</span></li></ul>`);
+});
+
+test('C3: status rows keep their complete values and order before rendering', () => {
+  // Mixing a late source and a two-page rollup catches changed verdicts, counts or order.
+  const feeds = fresh();
+  feeds.data.sources.tides.last_success_at = hoursAgo(50);
+  const recent = '2026-11-01T18:30:00.000Z';
+  assert.deepEqual(statusRows(feeds, NOW), [
+    {group: 'Live conditions', name: 'Live conditions feed', lastSuccess: '2026-11-01T20:12:00.000Z', expectedHours: 3, ageHours: 0.3, state: 'ok', note: ''},
+    {group: 'Live conditions', name: 'Buoys: Morro Bay', lastSuccess: '2026-11-01T20:12:00.000Z', expectedHours: 3, ageHours: 0.3, state: 'ok', note: ''},
+    {group: 'Daily evidence', name: 'Daily evidence feed', lastSuccess: recent, expectedHours: 36, ageHours: 2, state: 'ok', note: ''},
+    {group: 'Daily evidence', name: 'NOAA SST', lastSuccess: recent, expectedHours: 36, ageHours: 2, state: 'ok', note: ''},
+    {group: 'Daily evidence', name: 'NOAA tide predictions', lastSuccess: '2026-10-30T18:30:00.000Z', expectedHours: 36, ageHours: 50, state: 'late', note: ''},
+    {group: 'Daily evidence', name: 'Fishing-rule and protected-area pages', lastSuccess: recent, expectedHours: 36, ageHours: 2, state: 'ok', note: '2 sources'},
+    {group: 'Daily evidence', name: 'Landing reports', lastSuccess: recent, expectedHours: 36, ageHours: 2, state: 'ok', note: '2 sources'},
+  ]);
+});
+
+test('C4: English source rendering stays byte-for-byte unchanged', () => {
+  // Mobile CSS must not require an English markup change or emit a language span here.
+  const row = {group: 'Daily evidence', name: 'NOAA SST', state: 'late', lastSuccess: null, ageHours: null, expectedHours: 36, note: 'example'};
+  assert.equal(renderRows([row], 'en'), `<h2>Daily evidence</h2>
+<div class="forecast-table-wrap" role="region" tabindex="0" aria-label="Daily evidence data table"><table class="evidence-table status-table"><thead><tr><th scope="col">Data</th><th scope="col">Last successful publish (UTC)</th><th scope="col">Expected within</th><th scope="col">Status</th></tr></thead><tbody>
+<tr class="status-late"><th scope="row">NOAA SST</th><td>none</td><td>36 h</td><td>Overdue · example</td></tr>
+</tbody></table></div>`);
+});
+
 test('status_page_spanish_failure_paths: expired, missing, future, backup and duplicate rollups keep their verdicts', async () => {
   await statusPage.initStatusPage({querySelectorAll: () => []}, {search: '?lang=es', storage: null});
   const feeds = fresh();

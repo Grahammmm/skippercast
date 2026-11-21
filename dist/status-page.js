@@ -205,13 +205,19 @@ export function coverageGroups(names = SOURCE_NAMES, extra = DOCUMENTED_EXTRA) {
 
 const text = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const hours = value => (value < 1 ? `${Math.round(value * 60)} min` : `${value < 10 ? value.toFixed(1) : Math.round(value)} h`);
+const publishedName = (name, lang) => lang === 'es' ? `<span lang="en">${text(name)}</span>` : text(name);
 
 /** The HTML of the table rows, one <section> per group. */
 export function renderRows(rows, lang = 'en') {
   const groups = [...new Set(rows.map(r => r.group))];
+  // Coast names and individual daily source names are published in English.
+  // Daily feed headings and the two rollups are localized catalogue copy.
+  const dailyLabels = new Set(['names.daily', 'names.empty', 'kind.page-watch', 'kind.charter-reports'].map(id => t(id, lang)));
+  const renderName = ({group, name}) => group === t('group.coast', lang) || (group === t('group.daily', lang) && !dailyLabels.has(name))
+    ? publishedName(name, lang) : text(name);
   return groups.map(group => `<h2>${text(group)}</h2>
 <div class="forecast-table-wrap" role="region" tabindex="0" aria-label="${text(t('table', lang, {group}))}"><table class="evidence-table status-table"><thead><tr><th scope="col">${text(t('data', lang))}</th><th scope="col">${text(t('last', lang))}</th><th scope="col">${text(t('expected', lang))}</th><th scope="col">${text(t('status', lang))}</th></tr></thead><tbody>
-${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><th scope="row">${text(r.name)}</th><td>${r.lastSuccess ? `<time datetime="${text(r.lastSuccess)}">${text(r.lastSuccess.slice(0, 16).replace('T', ' '))}</time>${r.ageHours === null ? '' : ` (${text(t('ago', lang, {hours: hours(r.ageHours)}))})`}` : t('none', lang)}</td><td>${hours(r.expectedHours)}</td><td>${text(t('state.' + r.state, lang))}${r.note ? ` · ${text(r.note)}` : ''}</td></tr>`).join('\n')}
+${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><th scope="row">${renderName(r)}</th><td>${r.lastSuccess ? `<time datetime="${text(r.lastSuccess)}">${text(r.lastSuccess.slice(0, 16).replace('T', ' '))}</time>${r.ageHours === null ? '' : ` (${text(t('ago', lang, {hours: hours(r.ageHours)}))})`}` : t('none', lang)}</td><td>${hours(r.expectedHours)}</td><td>${text(t('state.' + r.state, lang))}${r.note ? ` · ${text(r.note)}` : ''}</td></tr>`).join('\n')}
 </tbody></table></div>`).join('\n');
 }
 
@@ -219,7 +225,7 @@ ${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><t
 export function renderCoverage(names = SOURCE_NAMES, lang = 'en') {
   const groups = coverageGroups(names);
   return ['scheduled-unwatched', 'browser-direct', 'fixed'].filter(k => groups[k]?.length).map(k =>
-    `<h3>${text(t('coverage.' + k, lang))}</h3>\n<ul>${groups[k].map(n => `<li>${text(n)}</li>`).join('')}</ul>`).join('\n');
+    `<h3>${text(t('coverage.' + k, lang))}</h3>\n<ul>${groups[k].map(n => `<li>${publishedName(n, lang)}</li>`).join('')}</ul>`).join('\n');
 }
 
 async function load(url) {

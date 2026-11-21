@@ -103,6 +103,13 @@ body.coast-readable {
 @media (max-width: 599px) {
   .coast-readable header, .coast-readable main, .coast-readable footer { padding: var(--space-4); }
   .coast-readable th, .coast-readable td { padding: var(--space-2); }
+  /* Keep Status next to Data on phones, without changing the table's reading order. */
+  .coast-readable .status-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr);
+  }
+  .coast-readable .status-table :is(th, td) { overflow-wrap: anywhere; }
+  .coast-readable .status-table tr > :last-child { grid-area: 1 / 2; }
 }
 @media print {
   /* Outranks web/tokens.css's :root wherever the built page orders the two sheets. */
