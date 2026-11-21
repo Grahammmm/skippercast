@@ -18,7 +18,7 @@ import {sharedFetch} from '../shared-fetch.ts';
 import {mapMayLoad} from '../map-ready.ts';
 import {hasCoastTerrain} from '../coast-context.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt} from '../profile.ts';
-import {grade, habitat, navigate, profile, region, selection, species, withParams} from '../state.ts';
+import {grade, habitat, layers, navigate, profile, region, selection, species, withParams} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
 import {ZOOM_OFFSET} from './engine.ts';
 import {
@@ -26,7 +26,7 @@ import {
   markAreas, surveyFeatures, terrainCard, terrainDetailCard, validDailyPart, withheld, withheldCard,
   type Atlas, type Collection, type DailyRecord, type Geology, type HabitatReceipt, type MarkData, type MarkScreen, type RegionData, type ScreenInputs, type Survey,
 } from './habitat.ts';
-import {DENSITY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE, overlayFeatures, setTerrainLayer} from './layers.ts';
+import {DENSITY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE, overlayFeatures, setTerrainLayer, spotsOn} from './layers.ts';
 import {loadMpas, mpaQuery, validMpas} from './mpa.ts';
 import type {Palette} from './palette.ts';
 import {LABEL_FONT, mapControl} from './style.ts';
@@ -93,14 +93,16 @@ export const marksAvailability = computed<OverlayAvailability | null>(() => {
  * The wide view's density (#620): the same screened, graded marks, weighted by grade and fit. Shore draws none:
  * its places are runs along the beach, not reefs.
  */
-const densityMarks = computed(() => profile.value === 'shore' ? EMPTY : shownMarks.value);
+// MB-13: the menu's Spots row hides the marks and their density together (the `spots-off` marker in the rail list).
+const spotMarks = computed(() => spotsOn(layers.value) ? shownMarks.value : EMPTY);
+const densityMarks = computed(() => profile.value === 'shore' ? EMPTY : spotMarks.value);
 
 /** Each FE-18 source's GeoJSON for the Chart. */
 export const markSources: Readonly<Record<string, {readonly value: Collection}>> = {
   [SURVEY_SOURCE]: computed(() => surveyFeatures(markData.value, target.value, markScreen.value)),
   [GEOLOGY_SOURCE]: computed(() => geologyFeatures(markData.value, target.value)),
   [DENSITY_SOURCE]: densityMarks,
-  [MARKS_SOURCE]: shownMarks,
+  [MARKS_SOURCE]: spotMarks,
   [SELECTION_SOURCE]: computed(() => points([shownSpot(selection.value), linked.value ?? habitatReceipt.value])),
 };
 

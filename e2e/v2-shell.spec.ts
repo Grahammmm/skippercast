@@ -219,7 +219,8 @@ test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) 
       '.ui-rail-item:last-child .ui-rail-toggle', 'input[aria-label="Hour"]', 'button[aria-label="Play"]'];
   const reached = new Set<string>();
   // #616 added the verdict basis and the Details summary to the brief column, before the rail in tab order.
-  for (let i = 0; i < 96 && reached.size < wanted.length; i++) {
+  // MB-13: the layer menu lists 13 rows (each with a basis button) and the Map theme row, so the walk allows 128 Tabs; it still must reach every wanted control.
+  for (let i = 0; i < 128 && reached.size < wanted.length; i++) {
     await page.keyboard.press('Tab');
     for (const selector of wanted) if (!reached.has(selector) && await page.locator(selector).evaluate(el => el === document.activeElement)) reached.add(selector);
   }

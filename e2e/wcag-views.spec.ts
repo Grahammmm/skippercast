@@ -15,7 +15,7 @@ type Kind = 'axe' | 'focus' | 'target';
 interface Finding {kind: Kind; rule: string; selector: string}
 interface Known extends Finding {view: string; project: string; reason: string; ref: string}
 const KINDS: readonly string[] = ['axe', 'focus', 'target'];
-const MIN = 24, MAX_STOPS = 512;  // Populated Reports views can exceed 128 stops; still require an actual exit.
+const MIN = 24, MAX_STOPS = 512;  // Populated Reports and the layer menu can exceed 128 stops; still require an actual exit.
 /** A heading each view shows once rendered (also in its 503 forecast state); a view not listed waits for any h1/h2. */
 const HEADINGS: Record<string, string> = {coast: 'Where to look', conditions: 'Conditions', history: 'Recorded history', fleet: 'Fleet', reports: 'Reports'};
 /** Views whose heading text is the selected target (PlanView.tsx), so they wait for the heading's id instead. */
