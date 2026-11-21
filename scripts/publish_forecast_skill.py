@@ -79,19 +79,36 @@ def port_scores(port, region, archive, now):
     return rows
 
 
-def build(index, regions_dir, now, statuses=('active',)):
+def build(index, regions_dir, now, statuses=('active',), *, archive_counts=None):
     ports, scores = [], []
     for entry in index['regions']:
         if entry.get('status') not in statuses:
             continue
-        region = json.loads((ROOT / 'regions' / entry['id'] / 'region.json').read_text())
-        archive = load_archive(Path(regions_dir) / entry['id'], entry['id'])
+        port = entry['id']
+        region = json.loads((ROOT / 'regions' / port / 'region.json').read_text())
+        try:
+            archive = load_archive(Path(regions_dir) / port, port, required=True)
+        except (OSError, ValueError, AttributeError, KeyError, TypeError) as error:
+            reason = ' '.join(str(error).splitlines())
+            raise ValueError(f'{port}: {reason}') from error
+        if archive_counts is not None:
+            archive_counts[port] = (len(archive['forecasts']), len(archive['observations']))
         stations = region['intelligence']['verification_stations']
         ports.append({'id': entry['id'], 'name': entry['name'], 'stations': [{'id': s['id'], 'name': s.get('name', s['id'])} for s in stations]})
         scores += port_scores(entry['id'], region, archive, now)
     return {'schema_version': 1, 'generated_at': datetime.fromtimestamp(now, timezone.utc).isoformat().replace('+00:00', 'Z'),
             'minimum': {'valid_times': V.MIN_VALID_TIMES, 'days': V.MIN_DAYS, 'runs': V.MIN_RUNS},
             'windows_days': list(WINDOW_DAYS), 'ports': ports, 'scores': scores}
+
+
+def print_check(archive_counts, scores):
+    for port, (forecasts, observations) in archive_counts.items():
+        print(f'{port}: {forecasts} forecasts, {observations} observations')
+    for row in scores:
+        status = 'enough' if row['enough'] else 'below minimum'
+        print(f"{row['port']} {row['station']} {row['variable']} {row['lead_hours']}h {row['window_days']}d: "
+              f"n={row['n']} valid_times={row['valid_times']} days={row['days']} runs={row['runs']} {status}")
+    print(f"check: {sum(row['enough'] for row in scores)} of {len(scores)} rows clear the minimum")
 
 
 def main(argv=None):
@@ -102,9 +119,18 @@ def main(argv=None):
     parser.add_argument('--out', default=str(ROOT / 'dist' / 'data' / 'forecast-skill.json'))
     parser.add_argument('--now', type=float, help='epoch seconds; default the current time')
     parser.add_argument('--statuses', default='active', help='comma-separated region statuses counted as ports')
+    parser.add_argument('--check', action='store_true', help='print archive and score counts without writing the output')
     args = parser.parse_args(argv)
     now = args.now if args.now is not None else datetime.now(timezone.utc).timestamp()
-    result = build(json.loads(Path(args.index).read_text()), args.regions_dir, now, tuple(args.statuses.split(',')))
+    index = json.loads(Path(args.index).read_text())
+    archive_counts = {} if args.check else None
+    try:
+        result = build(index, args.regions_dir, now, tuple(args.statuses.split(',')), archive_counts=archive_counts)
+    except ValueError as error:
+        parser.exit(1, f'forecast skill: {error}\n')
+    if args.check:
+        print_check(archive_counts, result['scores'])
+        return
     Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
     print(f"{args.out}: {len(result['ports'])} port(s), {len(result['scores'])} score row(s), "
           f"{sum(r['enough'] for r in result['scores'])} with enough data")

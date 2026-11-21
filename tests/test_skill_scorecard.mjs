@@ -1,8 +1,8 @@
 // BF-skill-scorecard: the public forecast skill page (dist/skill.html) and its publisher (scripts/publish_forecast_skill.py).
 import assert from 'node:assert/strict';
-import {execFileSync} from 'node:child_process';
+import {execFileSync, spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {mkdirSync, mkdtempSync, readFileSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
@@ -190,4 +190,91 @@ test('publisher: lead times are 24, 48 and 72 hours apart, and a longer lead is 
     assert.equal(at(lead === 24 ? 48 : 24, 30).n, 0);
   }
   assert.deepEqual([24, 48, 72].map(l => publish({count: 31, leadH: 100, pairs: () => [2, 2]})(l, 30).n), [0, 0, 0]);
+});
+
+function publisherFixture() {
+  // Same 80 wave pairs as the existing publish() rolling-window case.
+  const dir = mkdtempSync(join(tmpdir(), 'skill-cli-'));
+  const manifest = join(dir, 'morro-bay', 'verification-state.json');
+  mkdirSync(join(dir, 'morro-bay'));
+  const forecasts = [], observations = [];
+  for (let i = 0; i < 80; i++) {
+    const time = nowS - 3600 - i * 4 * 3600, cycle = time - 18 * 3600;
+    forecasts.push({id: `f${i}`, model: 'gfs_global', cycle, acquired_at: cycle + 3600, station: '46028', time,
+      variable: 'wave_height', value: i < 42 ? 2 : 6, unit: 'ft', grid: COORDS, station_coordinates: COORDS});
+    observations.push({id: `o${i}`, station: '46028', time, variable: 'wave_height', value: 2, unit: 'ft',
+      received_at: time + 600, qa: 'provisional_automated', station_coordinates: COORDS, measurement_height_m: 10});
+  }
+  writeFileSync(manifest, JSON.stringify({schema_version: 1, region_id: 'morro-bay', forecasts, observations}));
+  const out = join(dir, 'skill.json');
+  const run = (...flags) => {
+    const result = spawnSync('python3', [SCRIPT, '--regions-dir', dir, '--out', out, '--now', String(nowS), ...flags], {encoding: 'utf8'});
+    assert.equal(result.error, undefined);
+    return {status: result.status, stdout: result.stdout, stderr: result.stderr};
+  };
+  return {manifest, out, run};
+}
+
+const sentinel = Buffer.from([0x00, 0x61, 0xff, 0x0a]);
+const missingArchive = {status: 1, stdout: '',
+  stderr: 'forecast skill: morro-bay: Prior regional feed exists but its verification archive is missing\n'};
+
+test('C1: publish refuses a missing or unreadable Morro Bay archive without replacing the output', () => {
+  // A silent empty-archive fallback or unhandled traceback is not an acceptable failure.
+  const {manifest, out, run} = publisherFixture();
+  writeFileSync(out, sentinel);
+  renameSync(manifest, `${manifest}.saved`);
+  assert.deepEqual(run(), missingArchive);
+  assert.deepEqual(readFileSync(out), sentinel);
+
+  writeFileSync(manifest, '{');
+  assert.deepEqual(run(), {status: 1, stdout: '',
+    stderr: 'forecast skill: morro-bay: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\n'});
+  assert.deepEqual(readFileSync(out), sentinel);
+});
+
+const zeroRows = (station, variable, leads) => leads.flatMap(lead => [7, 30].map(window =>
+  `morro-bay ${station} ${variable} ${lead}h ${window}d: n=0 valid_times=0 days=0 runs=0 below minimum`));
+const checkResult = {status: 0, stderr: '', stdout: [
+  'morro-bay: 80 forecasts, 80 observations',
+  ...zeroRows('46215', 'wave_height', [24, 48, 72]),
+  ...zeroRows('46028', 'wind_speed_10m', [24, 48, 72]),
+  'morro-bay 46028 wave_height 24h 7d: n=42 valid_times=42 days=8 runs=42 enough',
+  'morro-bay 46028 wave_height 24h 30d: n=80 valid_times=80 days=14 runs=80 enough',
+  ...zeroRows('46028', 'wave_height', [48, 72]),
+  'check: 2 of 18 rows clear the minimum',
+  '',
+].join('\n')};
+
+test('C2: check prints every matched score line and preserves the existing output bytes', () => {
+  // Catch a preview that counts all 80 pairs in both windows or falls through to the write.
+  const {out, run} = publisherFixture();
+  writeFileSync(out, sentinel);
+  assert.deepEqual(run('--check'), checkResult);
+  assert.deepEqual(readFileSync(out), sentinel);
+});
+
+test('C3: default publish preserves the pre-change JSON bytes and summary', () => {
+  const {out, run} = publisherFixture();
+  assert.deepEqual(run(), {status: 0, stderr: '', stdout: `${out}: 1 port(s), 18 score row(s), 2 with enough data\n`});
+  // SHA-256 of the full output from the unchanged publisher on the existing fixture;
+  // JSON parsing alone would miss key order, indentation, or a changed final newline.
+  assert.equal(createHash('sha256').update(readFileSync(out)).digest('hex'),
+    '13d48083894855ac9e7a219ad01412157587bff616bfa359e1b4cabf76d2df34');
+});
+
+test('C4: check refuses a missing Morro Bay archive without replacing the output', () => {
+  // Check mode must not turn a missing manifest into a successful zero-count report.
+  const {manifest, out, run} = publisherFixture();
+  writeFileSync(out, sentinel);
+  renameSync(manifest, `${manifest}.saved`);
+  assert.deepEqual(run('--check'), missingArchive);
+  assert.deepEqual(readFileSync(out), sentinel);
+});
+
+test('C5: check leaves an absent output path absent', () => {
+  // Catch a check that creates a new output even though it preserves existing files.
+  const {out, run} = publisherFixture();
+  assert.deepEqual(run('--check'), checkResult);
+  assert.equal(existsSync(out), false);
 });
