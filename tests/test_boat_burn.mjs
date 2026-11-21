@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {boatFactors, normalizeBoat} from '../dist/boat-handling.js';
+import {parseResponse} from '../server/boat-lookup.ts';
 
 // Strict bounds or lost string coercion would drop valid manual entries.
 test('normalization keeps finite burn rates at and between both limits', () => {
@@ -29,4 +30,13 @@ test('a legacy profile without a burn rate normalizes to the same JSON bytes', (
 test('burn rate is not a boat handling factor', () => {
   const boat = {loa_ft: 19, displacement_lb: 2400, hull: 'modified-v', layout: 'center-console'};
   assert.deepEqual(boatFactors({...boat, burn_gph: 200}), boatFactors(boat));
+});
+
+// Passing the model's raw object to the shared normalizer would accept a manual-only value.
+test('boat lookup ignores a model-supplied burn rate and its estimated flag', () => {
+  const raw = {name: 'Synthetic boat', loa_ft: 23, fuel_gal: 70, burn_gph: 9, estimated: ['burn_gph', 'fuel_gal']};
+  const {boat, estimated} = parseResponse({content: [{type: 'text', text: JSON.stringify(raw)}]});
+  assert.equal(boat.fuel_gal, 70);
+  assert.equal(Object.hasOwn(boat, 'burn_gph'), false);
+  assert.deepEqual(estimated, ['fuel_gal']);
 });
