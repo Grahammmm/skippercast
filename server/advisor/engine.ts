@@ -39,11 +39,13 @@ import type {Command} from './intents.ts';
 import {t, both} from './strings.ts';
 import type {StringKey} from './strings.ts';
 import {resolveLinks, portRegion, portName} from './links.ts';
-import {resolvePort} from './answers/resolve.ts';
+import {contactRegion, fold, namedPorts, namedSpecies, resolvePort, resolveSpecies} from './answers/resolve.ts';
+import {ruleKeys} from './answers/rules.ts';
 import {systemPrompt, REFUSAL_EN, ABUSE_EN} from './prompts/system.ts';
 import {toolsForRole, claudeTools, dispatchTool, isWebOnly} from './tools/index.ts';
 import {TOOL_RESULT_MAX} from './tools/tool.ts';
 import type {AdvisorTool, ToolContext} from './tools/index.ts';
+import type {RulesResult} from './tools/get_rules.ts';
 import {uploadLinkText} from './tools/send_upload_link.ts';
 import {contactCardAction} from './tools/send_contact_card.ts';
 import {linkKey, takeDaily, LINK_GUESSES_PER_DAY} from './tools/offer_text_link.ts';
@@ -58,7 +60,7 @@ import {REPORT_FLOWS, reportBrief} from './intake/reports.ts';
 import {ANGLER_FLOWS} from './intake/anglers.ts';
 // TA-A1: the plain "what's biting" pre-router and the day's answer in the situation brief.
 import {DAILY_FLOWS, storedDaily} from './answers/reports.ts';
-import {capReply, rulesGuard, stripMarkdown} from './reply.ts';
+import {capReply, rulesGuard, statesRuleNumber, stripMarkdown} from './reply.ts';
 // TA-A2: the advisory backstop on planning turns.
 import {leadsWithAdvisory} from './answers/planning.ts';
 // TA-S6: Instagram comments (a keyword's private reply, a question's public reply) and the DM "continue by text" line.
@@ -252,10 +254,12 @@ const count = (v: unknown): number => typeof v === 'number' && Number.isFinite(v
 class BudgetSpent extends Error { constructor() { super('advisor turn budget spent'); this.name = 'BudgetSpent'; } }
 
 export interface ModelTurn {
-  text: string; toolsCalled: string[]; usableRules: boolean; actions: Action[]; outcome: 'ok' | 'tool_loop' | 'budget';
+  text: string; toolsCalled: string[]; rules: RuleEvidence[]; identifiedFish: string | null; actions: Action[]; outcome: 'ok' | 'tool_loop' | 'budget';
   /** TA-A2: the first get_conditions result with an advisory: its line (reply language) and events, for the advisory backstop. */
   advisory?: {line: string; events: string[]} | null;
 }
+
+interface RuleEvidence {region: string; rules: {species_key: string}[]}
 
 /**
  * Claude with tools: at most MAX_TOOL_ROUNDS executed tool rounds; a fifth
@@ -275,7 +279,8 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
   const messages = [...args.messages];
   const request = {model: settings.model, max_tokens: MAX_TOKENS, temperature: TEMPERATURE, system: args.system, tools: claudeTools(tools), messages};
   const toolsCalled: string[] = [], actions: Action[] = [];
-  let usableRules = false, rounds = 0, pauses = 0, lastText = '', carry = '';
+  const rules: RuleEvidence[] = [];
+  let identifiedFish: string | null = null, rounds = 0, pauses = 0, lastText = '', carry = '';
   let advisory: ModelTurn['advisory'] = null;
 
   async function call(): Promise<ApiResponse> {
@@ -317,16 +322,24 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
         continue;
       }
       const uses = content.filter(b => b.type === 'tool_use' && typeof b.id === 'string' && typeof b.name === 'string');
-      if (data.stop_reason !== 'tool_use' || !uses.length) return {text: lastText, toolsCalled, usableRules, actions, outcome: 'ok', advisory};
-      if (rounds >= MAX_TOOL_ROUNDS) return {text: lastText, toolsCalled, usableRules, actions, outcome: 'tool_loop', advisory};
+      if (data.stop_reason !== 'tool_use' || !uses.length) return {text: lastText, toolsCalled, rules, identifiedFish, actions, outcome: 'ok', advisory};
+      if (rounds >= MAX_TOOL_ROUNDS) return {text: lastText, toolsCalled, rules, identifiedFish, actions, outcome: 'tool_loop', advisory};
       rounds++;
       const results: unknown[] = [];
       for (const use of uses) {
         const out = await dispatchTool(use.name!, use.input, ctx, tools);
         toolsCalled.push(use.name!);
-        if (use.name === 'get_rules' && !out.isError && !(out.result as {unavailable?: unknown})?.unavailable) usableRules = true;
-        // TA-I3: identify_fish quotes the rules table too (06 § fish ID step 3); a current row counts, a stale one does not.
-        if (use.name === 'identify_fish' && !out.isError && (out.result as {rules?: {stale?: boolean} | null})?.rules?.stale === false) usableRules = true;
+        const ruleResult = use.name === 'get_rules' && !out.isError ? out.result as RulesResult | null : null;
+        if (Array.isArray(ruleResult?.rules) && ruleResult.rules.length) rules.push(ruleResult);
+        // Fish ID reads rules in the contact region; only its current returned rows support claims.
+        if (use.name === 'identify_fish' && !out.isError) {
+          const fish = out.result as {candidates?: {species_key: string | null}[]; rules?: {species_key: string; stale: boolean} | null; second_rules?: {species_key: string; stale: boolean} | null};
+          const current = [fish.rules, fish.second_rules].filter((row): row is {species_key: string; stale: boolean} => !!row && row.stale === false);
+          if (current.length) {
+            rules.push({region: contactRegion(ctx.contact, ctx.settings), rules: current});
+            identifiedFish ??= fish.candidates?.[0]?.species_key ?? null;
+          }
+        }
         // TA-A2: a planning turn whose conditions carry an advisory must lead with it (AD-4); runTurn checks the reply.
         if (use.name === 'get_conditions' && !out.isError && !advisory) advisory = advisoryOf(out.result);
         if (out.actions) actions.push(...out.actions);
@@ -335,9 +348,58 @@ export async function modelTurn(args: {env: Env; settings: AdvisorSettings; syst
       messages.push({role: 'assistant', content}, {role: 'user', content: results});
     }
   } catch (error) {
-    if (error instanceof BudgetSpent) return {text: lastText, toolsCalled, usableRules, actions, outcome: 'budget', advisory};
+    if (error instanceof BudgetSpent) return {text: lastText, toolsCalled, rules, identifiedFish, actions, outcome: 'budget', advisory};
     throw error;
   }
+}
+
+/** Every recognized region name/id or port region in the text, never the model's choice of tool arguments. */
+function namedRuleRegions(text: string): string[] {
+  const words = ` ${fold(text)} `;
+  const regions = typeof REGIONS === 'undefined' ? {} : REGIONS;
+  const found = new Set(Object.entries(regions)
+    .filter(([id, region]) => [id, region.name].some(name => name && words.includes(` ${fold(name)} `)))
+    .map(([id]) => id));
+  // Every named port, not only the longest match: one unsupported port must not hide behind another.
+  for (const port of namedPorts(text)) found.add(portRegion(port) ?? `port:${port}`);
+  return [...found];
+}
+
+/**
+ * Fail closed (rule-29 checkpoint shape): a numeric rule sentence passes only
+ * when every fish and every region it relies on, named in that sentence or
+ * carried from any earlier sentence of the reply, matches a returned row for
+ * that same fish in that same region. Anything not positively resolved keeps
+ * the backstop: a region other than the checked one anywhere up to the
+ * sentence, more than one fish before a sentence, a fish with no row. Only a
+ * reply that names no fish at all falls back to the question's own fish.
+ */
+function hasRelatedRules(results: readonly RuleEvidence[], question: string, reply: string, ctx: ToolContext, identifiedFish: string | null): boolean {
+  if (!results.length) return false;
+  const asked = resolveSpecies(question)?.key ?? identifiedFish;
+  if (!asked) return false;
+  const asking = namedRuleRegions(question);
+  if (asking.length > 1) return false;
+  const region = asking[0] ?? contactRegion(ctx.contact, ctx.settings);
+  const rows = results.filter(result => result.region === region).flatMap(result => result.rules);
+  const supports = (subject: string): boolean => {
+    const keys = ruleKeys(subject);
+    return rows.some(row => keys.species.includes(row.species_key) || keys.group.includes(row.species_key));
+  };
+  if (!supports(asked)) return false;
+  const fishBefore = new Set<string>(), places = new Set<string>();
+  for (const sentence of reply.split(/(?<=[.!?])\s+|\n+/)) {
+    const named = namedSpecies(sentence);
+    for (const place of namedRuleRegions(sentence)) places.add(place);
+    if (statesRuleNumber(sentence)) {
+      if ([...places].some(place => place !== region)) return false;
+      if (fishBefore.size > 1) return false;
+      const relied = new Set([...fishBefore, ...named]);
+      if (![...(relied.size ? relied : [asked])].every(supports)) return false;
+    }
+    for (const fish of named) fishBefore.add(fish);
+  }
+  return true;
 }
 
 /** A get_conditions result's advisory line and events, when it says to lead with one. */
@@ -559,7 +621,7 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
   }
   if (!reply && comment) return done(actions.filter(a => a.type === 'review_open' || a.type === 'contact_update'), 'comment.unanswered', {usage, model: settings.model});
   if (!reply) reply = t(language, 'not_understood');
-  if (!turn.usableRules) {
+  if (!hasRelatedRules(turn.rules, text, reply, ctx, turn.identifiedFish)) {
     const guarded = rulesGuard(reply, language);
     if (guarded.fired) {
       reply = guarded.text;

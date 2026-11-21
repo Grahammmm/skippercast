@@ -2,8 +2,8 @@
 // step 3, ID-2, OP-6): the reviewed rules table for a species in a region. Each
 // rule carries its source, the date a person last checked it and `stale`; the
 // model must say "double-check" for a stale rule and give the rules link. An
-// empty list is still a real answer (the engine's rules guard counts any call
-// that is not an error or `unavailable`): the model then says to check CDFW.
+// empty list is still a real answer, but it cannot support a regulation quote:
+// the model then says to check CDFW.
 import type {AdvisorTool} from './tool.ts';
 import {lookupRules} from '../answers/rules.ts';
 import {contactRegion, resolveSpecies} from '../answers/resolve.ts';
@@ -13,9 +13,9 @@ import {ALL_SPECIES_KEYS, canonicalSpecies} from '../vision/species.ts';
 const MAX_RULES = 6, NOTE = 280;
 const clip = (s: string | null): string | null => s && s.length > NOTE ? `${s.slice(0, NOTE - 1).replace(/\s+\S*$/, '')}…` : s;
 
-export const getRules: AdvisorTool = {
+export const getRules = {
   name: 'get_rules',
-  description: "The current fishing rules for a species in a region from SkipperCast's reviewed rules table, with the source and the date a person last checked it. The only source of size limits, bag limits, seasons, closures and depth limits: never state one without calling this. A row with stale: true must be quoted with \"double-check\".",
+  description: "Fishing rules for a species in a region from SkipperCast's reviewed rules table, with the source and the date a person last checked it. Quote size limits, bag limits, seasons, closures and depth limits only from returned rows that apply to the fish and area in the question. A row with stale: true must be quoted with \"double-check\" and the rules link.",
   input_schema: {type: 'object', additionalProperties: false, required: ['species_key'], properties: {species_key: {type: 'string'}, region: {type: 'string', description: 'Region id; default: the contact region'}}},
   roles: ['angler', 'skipper', 'crew'],
   intent: 'rules',
@@ -39,4 +39,6 @@ export const getRules: AdvisorTool = {
       note: rules.length ? 'Quote only these rows, with the source and checked date. A stale row: say "double-check" and give the link.' : 'No reviewed rule for this species here: say to check the current CDFW rules and give the link. Do not state a number.',
     }};
   },
-};
+} satisfies AdvisorTool;
+
+export type RulesResult = Awaited<ReturnType<typeof getRules.run>>['result'];

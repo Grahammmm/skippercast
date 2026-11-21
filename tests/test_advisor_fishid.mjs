@@ -307,6 +307,49 @@ dbTest('identify_fish: the 06 reply, candidates and rules for the model; only th
   assert.deepEqual((await TOOL_BY_NAME.get('identify_fish').run({media_id: 'someone-else'}, ctx)).result, {error: 'no such photo from this person'});
 });
 
+dbTest('identify_fish current rules do not support another named fish', async () => {
+  const {sql, env, bucket} = setup({rules: ['lingcod']});
+  addMedia(sql, bucket, 'm1');
+  const chat = [
+    {stop_reason: 'tool_use', content: [{type: 'tool_use', name: 'identify_fish', id: 'id1', input: {media_id: 'm1'}}]},
+    {stop_reason: 'end_turn', content: [{type: 'text', text: 'Lingcod and cowcod must be at least 17 inches. Ask before you go.'}]},
+  ];
+  const r = await say(env, sql, 'What fish is this?', {media: ['m1'], vision: FISH('fish-id-lingcod-high.json'), chat});
+  assert.deepEqual(r.calls, ['chat', 'record_fish_id', 'chat']);
+  assert.match(r.texts.join(' '), /Check the current CDFW rules/);
+  assert.doesNotMatch(r.texts.join(' '), /17 inches/);
+});
+
+dbTest('identify_fish rules cannot support a numeric claim in another region', async t => {
+  const {sql, env, bucket} = setup({rules: ['lingcod']});
+  addMedia(sql, bucket, 'm1');
+  REGIONS['southern-california'] = {name: 'Southern California'};
+  t.after(() => { delete REGIONS['southern-california']; });
+  const chat = [
+    {stop_reason: 'tool_use', content: [{type: 'tool_use', name: 'identify_fish', id: 'id1', input: {media_id: 'm1'}}]},
+    {stop_reason: 'end_turn', content: [{type: 'text', text: 'In Southern California lingcod must be at least 22 inches.'}]},
+  ];
+  const r = await say(env, sql, 'What fish is this?', {media: ['m1'], vision: FISH('fish-id-lingcod-high.json'), chat});
+  assert.deepEqual(r.calls, ['chat', 'record_fish_id', 'chat']);
+  assert.match(r.texts.join(' '), /Check the current CDFW rules/);
+  assert.doesNotMatch(r.texts.join(' '), /22 inches/);
+});
+
+dbTest('identify_fish supports the identified fish numeric rule', async () => {
+  const {sql, db, env, bucket} = setup({rules: ['lingcod']});
+  addMedia(sql, bucket, 'm1');
+  const answer = await F.answerFor(fishId(input('fish-id-lingcod-high.json').candidates), {db, region: 'morro-bay', now: T0, language: 'en'});
+  assert.match(answer.text, /22 in\. minimum/);
+  const chat = [
+    {stop_reason: 'tool_use', content: [{type: 'tool_use', name: 'identify_fish', id: 'id1', input: {media_id: 'm1'}}]},
+    {stop_reason: 'end_turn', content: [{type: 'text', text: answer.text}]},
+  ];
+  const r = await say(env, sql, 'What fish is this?', {media: ['m1'], vision: FISH('fish-id-lingcod-high.json'), chat});
+  assert.deepEqual(r.calls, ['chat', 'record_fish_id', 'chat']);
+  assert.match(r.texts.join(' '), /22 in\. minimum/);
+  assert.doesNotMatch(r.texts.join(' '), /Check the current CDFW rules/);
+});
+
 dbTest('share_angler_photo: consent true queues and asks the credit; false shares nothing; another contact\'s photo is refused', async () => {
   const {sql, env, bucket, db} = setup();
   addMedia(sql, bucket, 'm1');
