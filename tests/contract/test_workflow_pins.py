@@ -41,6 +41,30 @@ class WorkflowPinTests(unittest.TestCase):
         self.assertIn('group: seafloor-publication', publication)
         self.assertIn('cancel-in-progress: false', publication)
 
+    def test_draft_skip_cannot_satisfy_required_survey_context(self):
+        # A skipped job under the bare required name counts as passing without running the gate.
+        ci = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+        gate = ci['jobs']['survey-science']
+        name = ' '.join(gate.get('name', 'survey-science').split())
+        self.assertNotEqual(name, 'survey-science', 'a draft skip must not report the required name')
+        branches = re.fullmatch(
+            r"\$\{\{ github.event_name == 'pull_request' && github.event.pull_request.draft == true"
+            r" && '([^']+)' \|\| '([^']+)' \}\}", name,
+        )
+        assert branches is not None, name
+        draft_name, active_name = branches.groups()
+        for event, draft in [('pull_request', True), ('pull_request', False),
+                             ('push', None), ('merge_group', None), ('schedule', None),
+                             ('workflow_dispatch', None)]:
+            with self.subTest(event=event, draft=draft):
+                if event == 'pull_request' and draft:
+                    self.assertNotEqual(draft_name, 'survey-science')
+                else:
+                    self.assertEqual(active_name, 'survey-science')
+        self.assertEqual(gate['needs'], ['changes', 'survey-tests', 'check'])
+        self.assertEqual(gate['if'], "${{ !cancelled() && (github.event_name != 'pull_request' "
+                         "|| github.event.pull_request.draft == false) }}")
+
     def test_actions_are_pinned_to_commit_shas(self):
         unpinned = []
         for path in sorted((ROOT / '.github/workflows').glob('*.y*ml')):

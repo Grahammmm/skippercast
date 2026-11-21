@@ -63,6 +63,11 @@ jobs:
   # `check` legs and every part of `survey-tests` to pass.
   # Missing/failed/cancelled prerequisites remain non-success in an active run.
   survey-science:
+    # A skipped draft must not publish the required context. GitHub may leave a
+    # skipped job's name expression unevaluated; neither form is the bare name.
+    name: >-
+      ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == true
+          && 'survey-science (draft: not run)' || 'survey-science' }}
     needs: [changes, survey-tests, check]
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
