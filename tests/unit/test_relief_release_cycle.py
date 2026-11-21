@@ -96,10 +96,13 @@ def check_live(repo, out, base, commit, release, *, tampered=False):
             ('archive', release.archive), ('root', release.root), ('chunk', release.chunk),
             ('tile', f'{release.archive}#8/5/0'),
         ))
+        # Neither fixture release includes a contours file; verify it is also absent on the site.
+        checks.append(dict(check='contours', key=f'regions/{REGION}/depth-contours.geojson',
+                           status='PASS', reason='none-merged'))
     report = out / REGION / 'live' / release.generation / 'live.json'
     assert json.loads(report.read_bytes()) == dict(
         region=REGION, base=base, merge=commit, deployed=commit, checks=checks,
-        verdict='FAIL' if tampered else 'PASS', requests=4 if tampered else 6,
+        verdict='FAIL' if tampered else 'PASS', requests=4 if tampered else 7,
     )
 
 
