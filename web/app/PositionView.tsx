@@ -3,6 +3,7 @@
 import {Button} from '../ui/Button.tsx';
 import {localeOf, t, type Language} from '../i18n.ts';
 import {FT_PER_M, M_PER_NMI} from '../units.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 import {PLANNING_MARGIN_M} from '../../dist/geo-screen.js';
 import type {Clock, PackState, PositionResult} from '../position-check.ts';
 
@@ -24,7 +25,7 @@ function day(iso: string | null, lang: Language): string {
   if (!Number.isFinite(date.getTime()) || (dateOnly && date.toISOString().slice(0, 10) !== iso)) return t('trip.pos.unknownDate', lang);
   // A date-only value has no instant to convert; format its UTC day as written.
   return new Intl.DateTimeFormat(localeOf(lang), {
-    timeZone: dateOnly ? 'UTC' : 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric',
+    timeZone: dateOnly ? 'UTC' : DEFAULT_ZONE, year: 'numeric', month: 'short', day: 'numeric',
   }).format(date);
 }
 
