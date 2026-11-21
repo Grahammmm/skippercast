@@ -56,17 +56,30 @@ def write_grid(path, values, crs, transform):
     return path
 
 
-@pytest.mark.parametrize('admission', ['allowed', 'cell-cap', 'memory-low', 'memory-unknown'])
-def test_region_trace_admission(tmp_path, monkeypatch, builder, admission):
+@pytest.mark.parametrize('admission, dates, expected', [
+    pytest.param('allowed', {}, 'unstated', id='missing-date'),
+    pytest.param('allowed', {'survey_year': 2008}, '2008', id='reviewed-year'),
+    pytest.param('allowed', {'survey_date': '2024-02-29', 'survey_year': 2008}, '2024-02-29', id='reviewed-date'),
+    pytest.param('allowed', {'survey_date': '2023-02-29', 'survey_year': 2008}, None, id='invalid-date'),
+    pytest.param('allowed', {'survey_year': 'unstated'}, None, id='invalid-year'),
+    pytest.param('cell-cap', {}, None, id='cell-cap'),
+    pytest.param('memory-low', {}, None, id='memory-low'),
+    pytest.param('memory-unknown', {}, None, id='memory-unknown'),
+])
+def test_region_trace_admission(tmp_path, monkeypatch, builder, admission, dates, expected):
     # The native guard must not stop a region trace, and refusals must precede mosaic reads.
+    # A missing catalog date must not crash the trace; a malformed preferred date must not fall back.
     import numpy as np
     import rasterio
     from rasterio.transform import from_origin
 
+    from skippercast.platform import depth_contours as dc
     from skippercast.relief import contours, receipts
 
     tool = contours.producer()
     _, source = builder
+    source.pop('survey_year')
+    source.update(dates)
     values = np.tile(np.linspace(-1, -100, 20, dtype='float32'), (20, 1))
     crs, transform = 'EPSG:32610', from_origin(690000, 3915000, 10, 10)
     elevation = write_grid(tmp_path / 'elevation.tif', values, crs, transform)
@@ -85,8 +98,15 @@ def test_region_trace_admission(tmp_path, monkeypatch, builder, admission):
     available = None if admission == 'memory-unknown' else 2 * values.size * 10 - (admission == 'memory-low')
     monkeypatch.setattr(contours, '_mem_available', lambda: available)
     if admission == 'allowed':
+        if expected is None:
+            with pytest.raises(ValueError, match='Invalid reviewed survey date or year'):
+                contours.trace(job)
+            return
         collection, _ = contours.trace(job)
         assert {f['properties']['source_id'] for f in collection['features']} == {SOURCE}
+        assert collection['provenance']['sources'][0]['survey_date'] == expected
+        assert {f['properties']['survey_date'] for f in collection['features']} == {expected}
+        dc.check_selected_contours(collection, region, {SOURCE: source}, {SOURCE})
         return
     monkeypatch.setattr(contours, 'mosaic_samples', lambda *_: pytest.fail('read mosaic before admission'))
     error, reason = {
