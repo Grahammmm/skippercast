@@ -44,18 +44,13 @@ class SchemaFiles(unittest.TestCase):
         from jsonschema import Draft202012Validator
         files = sorted((ROOT / 'schemas').glob('*.schema.json'))
         self.assertGreaterEqual(len(files), 15)
-        # The only schema without an $id is the byte-pinned standalone render recipe, loaded by path.
-        standalone = {'sc-render-v1.schema.json'}
         for path in files:
             schema = load(path)
             Draft202012Validator.check_schema(schema)
             self.assertEqual(schema['$schema'], 'https://json-schema.org/draft/2020-12/schema', path.name)
-            if path.name in standalone:
-                self.assertNotIn('$id', schema)
-                continue
             self.assertEqual(schema['$id'], 'https://skippercast.com/schemas/' + path.name)
         kinds = {name for name in validate.KINDS.values()}
-        self.assertEqual(kinds | {'common.schema.json'} | standalone, {p.name for p in files})
+        self.assertEqual(kinds | {'common.schema.json'}, {p.name for p in files})
 
     def test_every_reference_resolves_locally(self):
         def refs(node):
