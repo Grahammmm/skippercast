@@ -55,7 +55,7 @@ def test_health_valid_prefix_with_trailing_garbage_is_down():
 
 def test_manifest_valid_prefix_over_cap_is_unavailable():
     result, _ = probe(MANIFEST, padded(MANIFEST_OK) + b"x")
-    assert result == {"path": MANIFEST, "status": 200, "error": "habitat unavailable"}
+    assert result == {"path": MANIFEST, "status": 200, "error": "habitat manifest unreadable"}
 
 
 def test_exact_cap_at_eof_is_accepted():

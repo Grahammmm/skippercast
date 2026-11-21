@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SCB-06: the coastal report and nearshore swell tile name Scripps/CDIP. After the operator switches the three report feeds on, the report uses SkipperCast's own fresh data and keeps Fish as the fallback for missing or stale feeds.
 - The 3D seabed defaults to the same fixed depth colours as the region’s 2D relief when the region publishes a recognised look. The view-adaptive option is still available, and the default height stays at 2×.
 
 - SC2252-11: open an editable trip alert from the brief's lower-exposure window. Nothing is saved until you press Save.

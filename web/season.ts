@@ -44,7 +44,7 @@ export function seasonYear(data: any, species: string, region: RulesRegion, year
     return {month: m + 1, state, label};
   });
   const primary = profiles[0].primary_source_id || profiles[0].source_ids[0];
-  const page = speciesPage(data, species, region);
+  const page = speciesPage(data, species, region, lang);
   let link = page ?? {href: officialURL(data.sources[primary]?.url ?? CDFW_OCEAN, region), label: t('season.official', lang)};
   // Same rule as the rules card (regs.ts ruleSummary): with no species page, a non-reef target links the first cited,
   // sanitized fishing-map area page rather than another category's page (halibut's first source is groundfish).

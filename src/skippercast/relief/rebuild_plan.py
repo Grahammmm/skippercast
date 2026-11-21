@@ -2,7 +2,9 @@
 from collections.abc import Mapping
 from pathlib import Path
 
-from skippercast.relief import receipts as receipt_io
+from skippercast import style
+from skippercast.paths import repo_root
+from skippercast.relief import receipts as receipt_io, render_config
 
 # scripts/relief/run_region.py STAGES, for ordering independent stages only.
 _ORDER = {stage: index for index, stage in enumerate((
@@ -64,6 +66,30 @@ def plan(receipts: Mapping[str, Mapping | None], current: Mapping) -> list[dict]
                      'reasons': sorted(reasons)})
         decided.add(key)
     return rows
+
+
+def style_digests(region, *, default=None, pin=None, root=None):
+    """Resolve build digests with a proposed pin > saved pin > proposed default."""
+    directory = repo_root() / 'style' if root is None else Path(root)
+    config = render_config._config(region) or {}
+    selected_pin = config.get('style') if pin is None else pin
+    if default is not None and selected_pin is not None:
+        # A bad proposal is still an error if a pin hides it in this region.
+        render_config._select({'style': default}, directory)
+    selection = selected_pin if selected_pin is not None else default
+    version, _ = render_config._select({} if selection is None else {'style': selection}, directory)
+    selected = None if version == render_config.LEGACY else style.load(version, root=directory)
+    return {group: selected.digest(group) if selected is not None else None for group in _STYLE_GROUPS}
+
+
+def simulate_style(region, receipts, *, default=None, pin=None, root=None):
+    """Preview a style-only change for one region, leaving code digests unexamined.
+
+    ``pin`` overrides the saved pin for this region only. Like the render
+    resolver, ``root`` overrides the style directory, not the region tree.
+    """
+    styles = style_digests(region, default=default, pin=pin, root=root)
+    return plan(receipts, {'stage_digest': {}, 'style': styles})
 
 
 def load_receipts(out: str | Path, region: str) -> dict[str, dict]:

@@ -41,6 +41,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
+import re
 from urllib.request import Request, urlopen
 
 # The workers.dev host always serves the Worker (and R2). Set FEEDS_PUBLIC_BASE to
@@ -216,6 +217,7 @@ def source_verdict(feed, limit_hours, label, critical_kinds=None, required_kinds
         return 0, []
     failing = set(failing_kinds(feed, limit_hours, critical_kinds, required_kinds))
     lines, partial = [], 0
+    dated = {}
     for row in rows:
         over = past_limit(row, limit_hours)
         partial += over and row["kind"] not in failing
@@ -224,7 +226,24 @@ def source_verdict(feed, limit_hours, label, critical_kinds=None, required_kinds
         role = f"critical, limit {limit_hours:g} h" if row["critical"] else "advisory"
         mark = "FAIL" if row["kind"] in failing else "over" if over else "warn"
         backup = f", backup {row['station']} for {row['fallback_for']} (degraded service)" if row.get("fallback_for") else ""
-        lines.append(f"- {mark} {row['id']} ({row['kind']}): {row['status']}{backup}, {age_text} ({role})")
+        source_id, kind, status = row["id"], row["kind"], row["status"]
+        if (mark == "warn" and not row["critical"] and age is None and not row.get("fallback_for")
+                and isinstance(source_id, str) and isinstance(status, str)):
+            match = re.fullmatch(r"(.+)-([0-9]{4}-[0-9]{2}-[0-9]{2})", source_id)
+            if match:
+                prefix, date = match.groups()
+                dated.setdefault((prefix, kind, status), []).append((len(lines), date))
+        lines.append(f"- {mark} {source_id} ({kind}): {status}{backup}, {age_text} ({role})")
+    # Use the original line positions so interleaved warnings and backups stay in order.
+    for (prefix, kind, status), members in dated.items():
+        if len(members) < 3:
+            continue
+        dates = sorted(date for _, date in members)
+        lines[members[0][0]] = (f"- warn {prefix}-* ({kind}): {status}, no data time (advisory): "
+                                f"{len(dates)} dated files, {dates[0]} to {dates[-1]}: {', '.join(dates)}")
+        for index, _ in members[1:]:
+            lines[index] = ""
+    lines = [line for line in lines if line]
     if failing:
         out = sorted(failing - set(missing))
         parts = []
