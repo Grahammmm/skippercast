@@ -74,7 +74,8 @@ export function habitatManifestURL(regionId: string, page: string): string {
 
 const tileReference = (record: unknown, pattern: RegExp): record is Record<string, unknown> & {path: string} =>
   object(record) && typeof record.path === 'string' && pattern.test(record.path) && typeof record.sha256 === 'string' && SHA256.test(record.sha256)
-    && numeric(record.bytes) && Number.isInteger(record.bytes) && record.bytes >= 1 && record.bytes <= MAX_TILE_BYTES && box(record.bounds);
+    && numeric(record.bytes) && Number.isInteger(record.bytes) && record.bytes >= 1 && record.bytes <= MAX_TILE_BYTES
+    && (pattern === HISTORY_TILE_PATH && !Object.hasOwn(record, 'bounds') || box(record.bounds));
 
 function tileURL(manifestURL: string, record: unknown, regionId: string, pattern: RegExp): string {
   if (!tileReference(record, pattern)) throw new Error('Invalid ocean tile reference');
@@ -150,7 +151,7 @@ function historyEntries(layer: Layer) {
   for (const day of layer.raw.history) {
     if (!object(day) || typeof day.sample_at !== 'string') continue;
     const time = historyTime(day.sample_at), tiles: unknown = day.tiles;
-    // Bounds are part of the existing tile descriptor, including for archived tiles.
+    // R2 history references may omit bounds; verify the authenticated tile's bounds on read.
     if (!(time < current) || days.has(time) || !Array.isArray(tiles) || !tiles.length || tiles.length > MAX_TILES
       || !tiles.every(t => tileReference(t, HISTORY_TILE_PATH)) || new Set(tiles.map(t => t.path)).size !== tiles.length) continue;
     days.set(time, {sampleAt: day.sample_at, tiles});
@@ -168,12 +169,13 @@ async function sha256(bytes: ArrayBuffer): Promise<string> {
 }
 
 /** One tile's rows by frame time (epoch seconds), after its length, hash and identity checks. */
-export async function tileRows(bytes: ArrayBuffer, record: Record<string, unknown>, regionId: string, layer: Pick<Layer, 'id' | 'fields' | 'resolution' | 'frames'>): Promise<Map<number, unknown[][]>> {
+export async function tileRows(bytes: ArrayBuffer, record: Record<string, unknown>, regionId: string, layer: Pick<Layer, 'id' | 'fields' | 'resolution' | 'frames'>, history = false): Promise<Map<number, unknown[][]>> {
   if (bytes.byteLength !== record.bytes) throw new Error('Ocean tile length mismatch');
   if (await sha256(bytes) !== record.sha256) throw new Error('Ocean tile integrity check failed');
   const tile: unknown = JSON.parse(new TextDecoder().decode(bytes));
   if (!object(tile) || tile.schema_version !== 1 || tile.region_id !== regionId || tile.layer_id !== layer.id || !same(tile.fields, layer.fields)
-    || !same(tile.resolution_degrees, layer.resolution) || !same(tile.bounds, record.bounds) || !Array.isArray(tile.frames)) throw new Error('Ocean tile identity or grid mismatch');
+    || !same(tile.resolution_degrees, layer.resolution) || !box(tile.bounds)
+    || (!(history && !Object.hasOwn(record, 'bounds')) && !same(tile.bounds, record.bounds)) || !Array.isArray(tile.frames)) throw new Error('Ocean tile identity or grid mismatch');
   const width = layer.fields.length, out = new Map<number, unknown[][]>();
   for (const f of tile.frames) {
     if (!object(f) || !numeric(f.time) || !Array.isArray(f.cells) || !layer.frames.some(p => p.time === f.time) || out.has(f.time)) throw new Error('Ocean tile frames differ from the layer');
@@ -242,7 +244,7 @@ async function allRows(get: Get, manifestURL: string, regionId: string, layer: P
         signal.throwIfAborted();
         const i = next++, {record, url} = records[i]!;
         const response = await get(url, signal);
-        const rows = await tileRows(await readTile(response, record.bytes as number, signal), record, regionId, layer);
+        const rows = await tileRows(await readTile(response, record.bytes as number, signal), record, regionId, layer, historyFrame !== undefined);
         if (historyFrame !== undefined && !rows.has(historyFrame)) throw new Error('Ocean tile missing the history frame');
         parts[i] = rows;
       }

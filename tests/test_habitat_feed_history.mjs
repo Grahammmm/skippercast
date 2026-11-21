@@ -90,6 +90,20 @@ test('loads just the selected day, merging both tiles in manifest order even aft
   assert.deepEqual(f.asked, []);
 });
 
+test('R2 descriptors without bounds load only valid bounded history tiles', async () => {
+  for (const id of [SST_LAYER_ID, CHLOROPHYLL_LAYER_ID]) {
+    const f = feed(id), good = f.tile(PAST), invalid = f.tile(OLDER, 0, {bounds: [0, 0, 0, 1]});
+    const descriptor = ({path, sha256, bytes}) => ({path, sha256, bytes});
+    f.layer.history = [{sample_at: PAST, tiles: [descriptor(good.record)]},
+      {sample_at: OLDER, tiles: [descriptor(invalid.record)]}];
+    assert.deepEqual(historyDays(f.read()), [PAST, OLDER]);
+    assert.deepEqual(await f.load(PAST), {state: 'ready', sampleAt: PAST,
+      fields: f.layer.fields, resolution: f.layer.resolution_degrees, rows: [good.row]});
+    assert.deepEqual(await f.load(OLDER), {state: 'error'});
+    assert.deepEqual(f.asked, [MANIFEST, f.url(good.record.path), MANIFEST, f.url(invalid.record.path)]);
+  }
+});
+
 // Bad descriptor shapes must be filtered before any tile fetch, not just fail later as a 404.
 test('a malformed descriptor hides only its day without fetching any part of it', async () => {
   const f = feed(), d = f.day(PAST), [r] = d.tiles, good = f.day(OLDER);
@@ -99,7 +113,7 @@ test('a malformed descriptor hides only its day without fetching any part of it'
     `https://elsewhere.test/${r.path}`, `${r.path}?v=1`, `${r.path}#x`, `${r.path}\n`, 'habitat-history/SST-123.json',
     `habitat-history/${'a'.repeat(16)}.json`, `habitat-history/sst-${'A'.repeat(16)}.json`];
   const badTiles = [null, {}, [], [r, r], Array.from({length: 65}, (_, i) => ({...r, path: `habitat-history/sst-${i}-${'a'.repeat(16)}.json`})),
-    ...[null, [], {}, {...r, bounds: undefined}, {...r, bounds: [0, 0, 0, 1]}, {...r, bounds: [-181, 0, 0, 1]},
+    ...[null, [], {}, {...r, bounds: null}, {...r, bounds: [0, 0, 0, 1]}, {...r, bounds: [-181, 0, 0, 1]},
       ...[null, 'abc', 'A'.repeat(64)].map(sha256 => ({...r, sha256})),
       ...[undefined, '42', 0, -1, 1.5, 5_000_001].map(bytes => ({...r, bytes})),
       ...badPaths.map(path => ({...r, path}))].map(record => [f.tile(PAST, 1).record, record])];
