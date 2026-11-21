@@ -22,7 +22,9 @@ export function distanceText(metres: number, lang: Language = 'en'): string {
 function day(iso: string | null, lang: Language): string {
   const date = new Date(iso ?? '');
   const dateOnly = iso !== null && /^\d{4}-\d{2}-\d{2}$/.test(iso);
-  if (!Number.isFinite(date.getTime()) || (dateOnly && date.toISOString().slice(0, 10) !== iso)) return t('trip.pos.unknownDate', lang);
+  const calendarPart = iso?.match(/^\d{4}-\d{2}-\d{2}(?=T|$)/)?.[0];
+  const calendarDate = new Date(calendarPart ?? '');
+  if (!Number.isFinite(date.getTime()) || (calendarPart && (!Number.isFinite(calendarDate.getTime()) || calendarDate.toISOString().slice(0, 10) !== calendarPart))) return t('trip.pos.unknownDate', lang);
   // A date-only value has no instant to convert; format its UTC day as written.
   return new Intl.DateTimeFormat(localeOf(lang), {
     timeZone: dateOnly ? 'UTC' : DEFAULT_ZONE, year: 'numeric', month: 'short', day: 'numeric',

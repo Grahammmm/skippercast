@@ -48,6 +48,9 @@ test('C2: report the Pacific day of a timestamp but preserve a date-only calenda
 test('C2: localize the unknown-date fallback for invalid or missing values', () => {
   assert.equal(renderedCheck('en', 'not a date').at(-1), 'Boundaries last checked unknown date');
   assert.equal(renderedCheck('es', '2026-02-30').at(-1), 'Límites revisados por última vez el fecha desconocida');
+  assert.equal(renderedCheck('en', '2026-02-30T12:00:00Z').at(-1), 'Boundaries last checked unknown date');
+  assert.equal(renderedCheck('es', '2025-02-29T12:00:00-08:00').at(-1), 'Límites revisados por última vez el fecha desconocida');
+  assert.equal(renderedCheck('en', '2024-02-29T12:00:00Z').at(-1), 'Boundaries last checked Feb 29, 2024');
   assert.equal(renderedCheck('es', null).at(-1), 'Límites revisados por última vez el fecha desconocida');
 });
 
