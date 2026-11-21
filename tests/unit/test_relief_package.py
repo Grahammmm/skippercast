@@ -337,6 +337,25 @@ def test_package_refuses_ineligible_inputs(tmp_path, assembly, change, capsys):
     assert not list(region.dir.glob('release/*/release.json'))
 
 
+@pytest.mark.parametrize('private_ref', [True, False], ids=['private-upstream', 'private-layer-path'])
+def test_package_rejects_private_vector_input(tmp_path, assembly, capsys, private_ref):
+    # A private ref is refused before receipt lookup; a private path before layer binding.
+    region, manifest = inputs(tmp_path / 'out')
+    args = []
+    if private_ref:
+        args = ['--upstream', 'nearshore_vectors:private']
+        reason = 'package needs unique upstream refs from public layer stages'
+    else:
+        doc = json.loads(manifest.read_bytes())
+        doc['layer_paths'].append('layers/private/nearshore/piles.geojson')
+        write_json(manifest, doc)
+        reason = 'not a public layer path'
+    with pytest.raises(SystemExit) as exc:
+        run(region, 'package', '--manifest', manifest, '--upstream', 'tiles:public', *args)
+    assert exc.value.code == 2 and reason in capsys.readouterr().err
+    assert not list(region.dir.glob('release/*/release.json'))
+
+
 def test_package_refuses_qa_as_a_layer(tmp_path, assembly, capsys):
     region, manifest = inputs(tmp_path / 'out')
     doc = json.loads(manifest.read_bytes())
