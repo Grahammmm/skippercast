@@ -38,6 +38,10 @@ test('C1: exports and stores the fixed layer order', () => {
 // Applying coverage or region checks first can mask a more specific time failure.
 for (const [label, startedAt, region, coverage, missing] of [
   ['invalid time alone', 'not a time', 'fixture', 'inside', 'invalid time'],
+  ['impossible February date', '2024-02-30T12:00:00Z', 'fixture', 'inside', 'invalid time'],
+  ['impossible non-leap date with offset', '2023-02-29T12:00:00-08:00', 'fixture', 'inside', 'invalid time'],
+  ['zone-less time', '2024-02-29T12:00:00', 'fixture', 'inside', 'invalid time'],
+  ['date without time or zone', '2024-02-29', 'fixture', 'inside', 'invalid time'],
   ['invalid time before no region', 'not a time', null, 'inside', 'invalid time'],
   ['invalid time before outside coverage', 'not a time', 'fixture', 'outside', 'invalid time'],
   ['future time alone', '2024-02-29T01:02:03.001Z', 'fixture', 'inside', 'future time'],
@@ -53,6 +57,14 @@ for (const [label, startedAt, region, coverage, missing] of [
     expectSnapshot({ ...input, startedAt, region, coverage }, { v: 1, missing });
   });
 }
+
+// Valid leap days and offsets that cross a UTC day must remain usable.
+test('C2: accepts valid zoned leap-day timestamps', () => {
+  expectSnapshot({ ...input, startedAt: '2024-02-29T02:02:03+01:00' },
+    { v: 1, at, layers: missingLayers('not computed') });
+  expectSnapshot({ ...input, startedAt: '2024-02-28T20:02:03-05:00' },
+    { v: 1, at, layers: missingLayers('not computed') });
+});
 
 // A string comparison or >= would reject the catch at the exact supplied instant.
 test('C3: normalizes a non-UTC spelling at the clock boundary and copies all eight layers', () => {

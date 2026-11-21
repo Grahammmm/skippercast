@@ -17,6 +17,16 @@ function snapshotLayer(key: Layer, results: LayerResults, at: string): unknown {
   return { missing: 'invalid value' };
 }
 
+function snapshotTime(value: string): number {
+  // Require an explicit zone and check the original calendar day before applying it:
+  // Date.parse otherwise normalizes impossible dates such as February 30.
+  const day = /^((?:\d{4}|[+-]\d{6})-\d{2}-\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.exec(value)?.[1];
+  if (!day) return NaN;
+  const midnight = Date.parse(`${day}T00:00:00Z`);
+  if (!Number.isFinite(midnight) || !new Date(midnight).toISOString().startsWith(`${day}T`)) return NaN;
+  return Date.parse(value);
+}
+
 export function composeSnapshot(input: {
   startedAt: string;
   now: Date;
@@ -25,7 +35,7 @@ export function composeSnapshot(input: {
   layers: LayerResults;
 }): ConditionsV1 {
   try {
-    const time = Date.parse(input.startedAt);
+    const time = snapshotTime(input.startedAt);
     if (Number.isNaN(time)) return { v: 1, missing: 'invalid time' };
     if (time > Date.prototype.getTime.call(input.now)) return { v: 1, missing: 'future time' };
     const region = input.region;
