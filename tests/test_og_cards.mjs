@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const read = p => readFileSync(new URL(p, import.meta.url), 'utf8');
 const region = JSON.parse(read('../regions/morro-bay/region.json'));
 const ports = JSON.parse(read('../catalog/home-ports.json')).ports;
-globalThis.REGIONS = {[region.id]: region};
+globalThis.REGIONS = {[region.id]: region, 'fixture-alias': region};
 globalThis.DEPLOYMENT = {allowed_origins: []};
 globalThis.SHELLS = {'/app.html': '/app.hash.html', '/landing.html': '/landing.hash.html'};
 const {ogFor} = await import('../server/og.ts');
@@ -26,8 +26,9 @@ test('known region uses config names, first region wins, transient keys never en
   }
 });
 
+const rejectedIds = ['', 'unknown', '__proto__', 'constructor', '<script>', 'morro-bay">', '../../secret', '..', 'morro-bay/..'];
 test('unknown, hostile, empty and prototype region ids never become metadata', () => {
-  for (const id of ['', 'unknown', '__proto__', 'constructor', '<script>', 'morro-bay">']) {
+  for (const id of rejectedIds) {
     assert.equal(ogFor(query(`region=${encodeURIComponent(id)}`)), null, id);
   }
   assert.equal(ogFor(query('')), null);
@@ -71,6 +72,17 @@ class Rewriter {
     let html = await response.text();
     for (const [selector, handler] of this.handlers) {
       calls.push(selector);
+      if (selector === 'head') {
+        html = html.replace('</head>', end => {
+          let insert = '';
+          handler.element({append(value, options) {
+            assert.equal(options?.html, true);
+            insert += value;
+          }});
+          return insert + end;
+        });
+        continue;
+      }
       const property = selector.match(/^meta\[property="([^"]+)"\]$/)[1];
       html = html.replace(new RegExp(`<meta property="${property}" content="[^"]*" \\/>`), tag => {
         let result = tag;
@@ -89,27 +101,38 @@ const fetchShell = async path => {
   return serveAsset({req: {raw}, var: {path: new URL(raw.url).pathname}, env: {ASSETS: {fetch: async () =>
     new Response(app, {status: 200, headers: {'Content-Type': 'text/html', 'X-Fixture': 'kept', 'Cache-Control': 'public'}})}}});
 };
-test('rewriter changes only the two OG contents, retaining status, headers and the rest of the shell', async () => {
+test('rewriter changes only the OG contents and adds one /map preload, retaining status, headers and other bytes', async () => {
   globalThis.HTMLRewriter = Rewriter;
   try {
-    for (const path of ['/map?region=morro-bay', '/?region=morro-bay', '/app.html?region=morro-bay']) {
+    // The alias fixture catches hrefs built from the query key instead of the config id.
+    for (const path of ['/map?region=morro-bay', '/map?region=fixture-alias', '/?region=morro-bay', '/app.html?region=morro-bay']) {
       calls.length = 0;
       const response = await fetchShell(path), html = await response.text();
-      assert.deepEqual(calls, ['meta[property="og:title"]', 'meta[property="og:description"]']);
       const escaped = value => value.replaceAll('&', '&amp;');
-      const wanted = app.replace(`property="og:title" content="${meta(app, 'og:title')}"`, `property="og:title" content="${escaped(expected.title)}"`)
+      let wanted = app.replace(`property="og:title" content="${meta(app, 'og:title')}"`, `property="og:title" content="${escaped(expected.title)}"`)
         .replace(`property="og:description" content="${meta(app, 'og:description')}"`, `property="og:description" content="${escaped(expected.description)}"`);
-      assert.equal(html, wanted);
+      const selectors = ['meta[property="og:title"]', 'meta[property="og:description"]'];
+      if (path.startsWith('/map?')) {
+        wanted = wanted.replace('</head>', '<link rel="preload" as="fetch" crossorigin="anonymous" href="/regions/morro-bay/region.json"></head>');
+        selectors.push('head');
+      }
+      assert.equal(html, wanted, path);
+      assert.deepEqual(calls, selectors, path);
       assert.equal(response.status, 200);
       assert.equal(response.headers.get('Cache-Control'), 'no-store');
       assert.equal(response.headers.get('Content-Type'), 'text/html');
       assert.equal(response.headers.get('X-Fixture'), 'kept');
     }
-    for (const path of ['/map', '/map?region=unknown', '/map?region=%3Cscript%3E', '/?region=unknown&region=morro-bay', '/landing.html?region=morro-bay', '/sources?region=morro-bay', '/status?region=morro-bay', '/']) {
+    // A first-value-only check could rewrite the shell for an ambiguous shared link.
+    const untouched = ['/map', '/map?view=coast', ...rejectedIds.map(id => `/map?region=${encodeURIComponent(id)}`),
+      '/map?region=unknown&region=morro-bay', '/map?region=morro-bay&region=unknown', '/map?region=morro-bay&region=morro-bay',
+      '/?region=unknown&region=morro-bay', '/landing.html?region=morro-bay', '/sources?region=morro-bay',
+      '/status?region=morro-bay', '/about.html?region=morro-bay', '/'];
+    for (const path of untouched) {
       calls.length = 0;
       const response = await fetchShell(path);
       assert.equal(await response.text(), app, path);
-      assert.equal(response.headers.get('Cache-Control'), 'no-store');
+      assert.equal(response.headers.get('Cache-Control'), path.startsWith('/about.html') ? 'public' : 'no-store');
       assert.equal(calls.length, 0, path);
     }
   } finally { delete globalThis.HTMLRewriter; }
