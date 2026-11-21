@@ -2,15 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {build} from 'esbuild';
 
-// Mount the real Queue and its API client. Only the DOM and transport are fakes.
+// Mount the real admin views and their API client. Only the DOM and transport are fakes.
 const {outputFiles: [bundle]} = await build({stdin: {resolveDir: process.cwd(), contents: `
   export {Queue, focusReview} from './web/admin/queue.tsx';
+  export {Skippers} from './web/admin/skippers.tsx';
   export {ApiError, getQueue, getFleetEnabled} from './web/admin/api.ts';
   export {ADMIN_COPY as COPY} from './web/advisor/copy.ts';
   export {h, render} from 'preact';
   export {act} from 'preact/test-utils';
 `}, bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact'});
-const {Queue, focusReview, ApiError, getQueue, getFleetEnabled, COPY, h, render, act} =
+const {Queue, Skippers, focusReview, ApiError, getQueue, getFleetEnabled, COPY, h, render, act} =
   await import(`data:text/javascript;base64,${Buffer.from(bundle.contents).toString('base64')}`);
 
 class Element {
@@ -122,6 +123,50 @@ test('Queue renders empty only for a valid empty page', async t => {
     assert.equal(await getFleetEnabled(), false);
   });
 });
+
+for (const consent of ['revoked', 'given']) {
+  // Contract: fresh consent wins over the list snapshot, but private detail is discarded on collapse.
+  test(`Skippers uses detail consent (${consent}) without retaining the detail`, async t => {
+    const id = 'example-boat';
+    const path = `/api/admin/boats/${id}`;
+    const at = '2026-01-01T00:00:00Z';
+    const summary = {id, slug: id, name: 'Example Boat', port: 'Example Port', status: 'verified', created_at: at,
+      consent: 'given', consent_photos_at: at, consent_revoked_at: null, crew_count: 0};
+    const note = 'Synthetic detail-only note';
+    const fetch = t.mock.method(globalThis, 'fetch', async url => {
+      if (url === '/api/admin/boats') return Response.json({boats: [summary], next: null});
+      assert.equal(url, path);
+      return Response.json({boat: {...summary, consent, consent_revoked_at: consent === 'revoked' ? at : null,
+        owner: null, crew: [], consent_note: {note, at}}});
+    });
+    globalThis.document = {
+      createElement: name => new Element(name), createElementNS: (_, name) => new Element(name),
+      createTextNode: data => new Element('#text', String(data)),
+    };
+    const root = new Element('div');
+    const shownConsent = () => find(root, node => node.localName === 'dt' && node.textContent === COPY.consent)?.nextSibling?.textContent;
+    const toggle = () => act(() => {
+      const button = find(root, node => node.localName === 'button' && node.textContent === 'Details');
+      button.handlers.click.call(button, {type: 'click'});
+    });
+    try {
+      await act(() => render(h(Skippers), root));
+      await flush();
+      assert.equal(shownConsent(), COPY.consentState.given);
+      assert.equal(fetch.mock.callCount(), 1);
+      await toggle();
+      await flush();
+      assert.ok(root.textContent.includes(note));
+      assert.equal(shownConsent(), COPY.consentState[consent]);
+      await toggle();
+      assert.ok(!root.textContent.includes(note));
+      await toggle();
+      await flush();
+      assert.deepEqual(fetch.mock.calls.map(call => call.arguments[0]), ['/api/admin/boats', path, path]);
+      assert.ok(root.textContent.includes(note));
+    } finally { render(null, root); delete globalThis.document; }
+  });
+}
 
 // Contract: after a decision, focus lands where the A/E/R handler lives. Bug caught: focusing only the outer
 // list item leaves an already-expanded next review without keyboard shortcuts (they are on the nested card).

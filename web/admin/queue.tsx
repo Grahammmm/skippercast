@@ -23,21 +23,27 @@ export function focusReview(doc: Pick<Document, 'getElementById'>, id: string | 
   target?.focus();
 }
 
+type DetailProps<T> = {load: () => Promise<T>; onLoaded?: (value: T) => void; children: (value: T) => ComponentChildren};
+
 /** Detail lives only inside the open card, not in page state or a shared cache. */
-export function AdminDisclosure<T>({load, children}: {load: () => Promise<T>; children: (value: T) => ComponentChildren}) {
+export function AdminDisclosure<T>({load, onLoaded, children}: DetailProps<T>) {
   const [open, setOpen] = useState(false);
   return <>
     <button type="button" class="admin-button" aria-expanded={open} onClick={() => setOpen(v => !v)}>Details</button>
-    {open ? <LoadedDetail load={load}>{children}</LoadedDetail> : null}
+    {open ? <LoadedDetail load={load} onLoaded={onLoaded}>{children}</LoadedDetail> : null}
   </>;
 }
 
-function LoadedDetail<T>({load, children}: {load: () => Promise<T>; children: (value: T) => ComponentChildren}) {
+function LoadedDetail<T>({load, onLoaded, children}: DetailProps<T>) {
   const [value, setValue] = useState<T | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let live = true;
-    load().then(detail => { if (live) setValue(detail); }).catch(() => { if (live) setFailed(true); });
+    load().then(detail => {
+      if (!live) return;
+      onLoaded?.(detail);
+      setValue(detail);
+    }).catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
   }, []);
   return failed ? <p class="admin-error" role="alert">{COPY.loadFailed}</p> : value ? <>{children(value)}</> : <p role="status">{COPY.loading}</p>;
