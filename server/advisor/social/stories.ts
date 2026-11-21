@@ -14,7 +14,7 @@
 //                  fetch of its story.jpg, which carries the "Text SkipperCast" footer) and the post's
 //                  open review is closed as approved with the note 'auto: story'.
 //   the card       the day's conditions card: a Story with no photo (`media_json` []), its graphic
-//                  requestGraphic(kind 'story') with the title and today's conditions line and the
+//                  request (kind 'story') with the title and today's conditions line and the
 //                  landing reports' word, id sha256('story:conditions:<region>:<date>')[:32], approved
 //                  at once (generated from public data, nothing to review). No forecast: no card.
 //
@@ -30,7 +30,7 @@ import {addDays, localDate, PACIFIC} from '../answers/time.ts';
 import {activePorts, conditionsText, dailyInputs} from '../answers/reports.ts';
 import {sha256} from '../ids.ts';
 import {consentActive} from '../intake/skippers.ts';
-import {requestGraphic, requestMediaJob} from '../media.ts';
+import {prepareGraphicRequest, requestMediaJob} from '../media.ts';
 import {approvalHold, mediaIdsOf} from '../admin/posts.ts';
 import type {PostRow} from '../admin/posts.ts';
 import {FEED_LANGUAGE, TARGETS_FOR, ensureMediaDraft, postIdForMedia} from './drafts.ts';
@@ -134,10 +134,15 @@ async function conditionsStory(env: Env, region: string, now: number, deps: Soci
   const place = config?.name ?? portName(port) ?? region;
   const data = {title: t(FEED_LANGUAGE, 'story_conditions_title', {place}),
     lines: [conditionsText(inputs.conditions, FEED_LANGUAGE), ...(word ? [t(FEED_LANGUAGE, 'daily_post_confidence_short', {label: word})] : [])]};
-  await db.prepare(`INSERT INTO advisor_posts(id,kind,region,boat_id,media_json,caption,targets_json,status,scheduled_for,created_by,approved_at,created_at,updated_at)
-    VALUES(?,'story',?,NULL,'[]','',?,'approved',?,'engine',?,?,?) ON CONFLICT(id) DO NOTHING`)
-    .bind(id, region, JSON.stringify(TARGETS_FOR.story), storySlotAt(region, now), at, at, at).run();
-  await requestGraphic(env, id, {kind: 'story', data, out_key: graphicKey(id, GRAPHIC_FILE.story)}, now, deps.dispatch ? {dispatch: deps.dispatch} : {});
+  // Both writes succeed or neither does. If another tick inserted this id
+  // after our read, the duplicate insert aborts before touching its graphic.
+  await db.batch([
+    db.prepare(`INSERT INTO advisor_posts(id,kind,region,boat_id,media_json,caption,targets_json,status,scheduled_for,created_by,approved_at,created_at,updated_at)
+      VALUES(?,'story',?,NULL,'[]','',?,'approved',?,'engine',?,?,?)`)
+      .bind(id, region, JSON.stringify(TARGETS_FOR.story), storySlotAt(region, now), at, at, at),
+    prepareGraphicRequest(db, id, {kind: 'story', data, out_key: graphicKey(id, GRAPHIC_FILE.story)}, now),
+  ]);
+  await requestMediaJob(env, now, deps.dispatch ? {dispatch: deps.dispatch} : {});
   return {region, kind: 'conditions', status: 'approved', postId: id};
 }
 

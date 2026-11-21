@@ -12,10 +12,11 @@ BAD = ['../evil', 'a\nb', '.hidden', 'Monterey', 'a b', '', 'a' * 65, 'a/b', 'ce
 
 def plant(folder):
     folder.mkdir(parents=True)
-    evidence = {'health': {'sources_ok': 1, 'sources_total': 1, 'issues': [], 'critical_available': True},
+    evidence = {'region_id': folder.name,
+                'health': {'sources_ok': 1, 'sources_total': 1, 'issues': [], 'critical_available': True},
                 'sources': {'harbor': {'status': 'ok'}}}
     (folder / 'latest.json').write_text(json.dumps(evidence))
-    (folder / 'regulations-health.json').write_text(json.dumps({'review_required': []}))
+    (folder / 'regulations-health.json').write_text(json.dumps({'region_id': folder.name, 'review_required': []}))
 
 
 def run(tmp_path, region, summary=True):

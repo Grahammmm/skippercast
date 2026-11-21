@@ -11,6 +11,22 @@ from .parsers import ndbc
 from .settings import settings, previous_for_region
 from .failover import station_chain, ordered_source
 
+
+def _same_buoy_product(old, station, url, spectral):
+    data = (old or {}).get("data")
+    if not isinstance(data, dict) or data.get("station") != station:
+        return False
+    if "url" in old:
+        return old["url"] == url
+    # Legacy data-only rows have no request URL. The parsed NDBC header
+    # distinguishes the products even when individual observations are null.
+    units = data.get("units", {})
+    standard = {"DPD", "WTMP", "WSPD"}
+    spectrum = {"SwH", "SwP", "WWH", "WWP"}
+    required, other = (spectrum, standard) if spectral else (standard, spectrum)
+    return isinstance(units, dict) and required <= units.keys() and not other <= units.keys()
+
+
 def collect(now=None, previous=None, region_id="morro-bay"):
     now = now or datetime.now(timezone.utc)
     previous = previous_for_region(previous, region_id)
@@ -61,8 +77,9 @@ def collect(now=None, previous=None, region_id="morro-bay"):
             data["observations"] = sorted(data["observations"], key=lambda r: r["time"], reverse=True)[:24]
             return data
 
+        old = previous.get("sources", {}).get(ident)
         row = source(ident, name, "observation", url, 2, read, now,
-                     previous.get("sources", {}).get(ident))
+                     old if _same_buoy_product(old, station, url, spectral) else None)
         row["station_url"] = f"https://www.ndbc.noaa.gov/station_page.php?station={station}"
         return ident, row
 

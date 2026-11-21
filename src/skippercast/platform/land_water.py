@@ -45,6 +45,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import re
 
 from .contracts import read_json
 
@@ -56,6 +57,8 @@ MARGIN_M = 1
 UNIT = 10 ** 5  # published coordinates have 5 decimals
 CELL = 200  # grid units (0.002 degrees) per segment-index cell
 Z = 12
+# Match bounded ASCII decimal coordinates before converting them to integers.
+_TILE_ID = re.compile(rf'{Z}/(0|[1-9][0-9]{{0,3}})/(0|[1-9][0-9]{{0,3}})')
 GRID = 32  # cells per tile side in the index
 ROUNDING_M = 0.55  # half a 5-decimal unit of latitude, rounded up
 CORNERS = ('NE', 'SE', 'SW', 'NW')
@@ -291,6 +294,20 @@ def _acc(value):
 
 # ---- the build ----
 
+def _served_tiles(receipts):
+    cause = f'invalid served tile receipt (expected zoom-{Z} z/x/y)'
+    if not isinstance(receipts, list):
+        raise Unavailable(cause)
+    served = set()
+    for receipt in receipts:
+        tile = receipt.get('tile') if isinstance(receipt, dict) else None
+        match = _TILE_ID.fullmatch(tile) if isinstance(tile, str) else None
+        if match is None or any(int(axis) >= 2 ** Z for axis in match.groups()):
+            raise Unavailable(cause)
+        served.add(tile)
+    return served
+
+
 def assemble(shore, region):
     """Steps 1-7 on a published shoreline: a dict with the edge lines, joins, parity curves and counts.
 
@@ -308,7 +325,7 @@ def assemble(shore, region):
         raise Unavailable('shoreline bounds differ from the region bounds')
     k = metres_per_unit((S + N) / 2 / UNIT)
     on_bounds = lambda p: p[0] in (W, E) or p[1] in (S, N)
-    served = {r.get('tile') for r in prov.get('tile_receipts') or [] if isinstance(r, dict)} - {None}
+    served = _served_tiles(prov.get('tile_receipts', []))
     if not served:
         causes.append('no served tiles recorded')
     quantum = prov.get('display_quantisation_m')

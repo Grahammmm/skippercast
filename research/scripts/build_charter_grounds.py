@@ -52,12 +52,25 @@ def compact_geometry(poly, geo):
                       parse_float=lambda x: round(float(x), 6))
 
 
+def unique_trip_facts(records):
+    """Deduplicate collector-normalized facts, not inferred trip identities."""
+    by_fact = {}
+    for record in records:
+        fact = {**record, "species": sorted(record["species"])}
+        # Include trip description, reported catch and provenance before projection.
+        key = json.dumps(fact, sort_keys=True)
+        by_fact.setdefault(key, fact)
+    ordered = sorted(by_fact, key=lambda k: (by_fact[k]["date"], by_fact[k]["boat"], k), reverse=True)
+    return [by_fact[k] for k in ordered]
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("reports", type=Path)
     p.add_argument("research", type=Path)
     args = p.parse_args()
     facts = json.loads((args.reports / "trip-facts.json").read_text())
+    trip_facts = unique_trip_facts(facts["records"])
     sources = json.loads((args.research / "data/candidate-pool.json").read_text())["sources"]
     closed_path = args.research / "data/closed-area-screen.geojson"
     closed = json.loads(closed_path.read_text())
@@ -68,7 +81,7 @@ def main():
     output = []
     for definition in DEFINITIONS:
         name = definition.get("reported_ground", definition["label"])
-        records = [r for r in facts["records"] if r["ground"] == name]
+        records = [r for r in trip_facts if r["ground"] == name]
         assert records, name
         src = next(s for s in sources if s["key"] == definition["source_id"])
         window = (Point(utm(*definition["anchor"])).buffer(definition["radius_nm"] * 1852)
@@ -102,13 +115,12 @@ def main():
         reports = [{"date": r["date"], "boat": r["boat"], "species": r["species"],
                     "source_url": r["source_url"], "boat_source_url": r["vessel_source_url"]}
                    for r in records]
-        # Dedupe only exact records. Separate boats on one date remain separate trips.
-        reports = list({(r["date"], r["boat"], r["source_url"]): r for r in reports}.values())
-        reports.sort(key=lambda r: (r["date"], r["boat"]), reverse=True)
+        source_groups = Counter((r["date"], r["boat"], r["source_url"]) for r in reports)
         nearby = [t for t in atlas["targets"] if published.covers(Point(utm(t["longitude"], t["latitude"])))]
         nearby.sort(key=lambda t: (-t["habitat_score"], t["id"]))
         output.append({**definition, "reported_ground": name, "evidence_type": "published_named_ground",
                        "map_species": ["lingcod", "rockfish"], "report_count": len(reports),
+                       "shared_source_groups": sum(n > 1 for n in source_groups.values()),
                        "report_dates": sorted(set(r["date"] for r in reports)),
                        "boats": sorted(set(r["boat"] for r in reports)),
                        "latest_report": max(r["date"] for r in reports), "reports": reports,
@@ -122,18 +134,19 @@ def main():
               round(published.area / 1e6, 2), "km²", len(nearby), "survey candidates", flush=True)
     coverage = [{"date": c["date"], "status": c["status"],
                  "source_url": "https://www.socalfishreports.com/dock_totals/boats.php?date=" + c["date"],
-                 **({"local_trip_count": len(c["records"])} if c["status"] == "ok" else {"error": c["error"]})}
+                 **({"local_trip_count": len(unique_trip_facts(c["records"]))}
+                    if c["status"] == "ok" else {"error": c["error"]})}
                 for c in facts["coverage"]]
     for item in coverage:
         meta = args.reports / "raw" / ("counts-" + item["date"] + ".meta.json")
         if meta.exists():
             m = json.loads(meta.read_text())
             item.update({k: m[k] for k in ["retrieved_at", "sha256"]})
-    counts = Counter(r["ground"] or "Not reported" for r in facts["records"])
+    counts = Counter(r["ground"] or "Not reported" for r in trip_facts)
     dataset = {"schema_version": 1, "audit_date": "2026-09-21", "grounds": output,
                "coverage": {"from": min(c["date"] for c in coverage), "through": max(c["date"] for c in coverage),
                             "dates_checked": len(coverage), "dates_available": sum(c["status"] == "ok" for c in coverage),
-                            "local_trips": len(facts["records"]), "ground_counts": dict(counts),
+                            "local_trips": len(trip_facts), "ground_counts": dict(counts),
                             "mapped_single_ground_trips": sum(a["report_count"] for a in output), "pages": coverage},
                "method": "Landing-reported daily trip facts. Only single named-ground records are linked to an area; multi-ground trips are not allocated. Names are geographic evidence, not GPS fixes. Constructed search outlines use reviewed USGS 2008 bathymetry, fully covered native cells aggregated to a 10 m grid, 25–195 ft MLLW, buffered closure exclusions (505 m), 20 m erosion, 12 m inward buffer then 8 m simplification, and connected parts >=0.1 km². Actual published outline rechecked with all-touched cells. No gaps are bridged. Sounder depths change with tide. No catch ranking, track reconstruction or precise charter-to-reef attribution.",
                "source_links": [{"title": "Patriot Sportfishing · operator", "url": "https://www.patriotsportfishing.com/"},
@@ -146,6 +159,7 @@ def main():
                                   "buffer_m": 505},
                "limitations": ["Reported catches and places are supplied to the report publisher; not independently observed.",
                                "Report counts measure this sample, not popularity, fishing effort, catch rate or today's bite.",
+                               "Totals measure unique reported facts, not verified trips. Identical facts count once. Within each ground, different facts for the same boat, date and page are kept and flagged as shared source groups; the page cannot establish whether those rows describe separate trips.",
                                "Out Front is ambiguous. Point Sal, Purisima Point and Shell Beach are outside the requested Avila–Cambria area.",
                                "No complete-season or complete-fleet coverage is claimed. The mapped layer currently supports lingcod and rockfish only.",
                                "The existing AIS sample still contains zero independently verified local charter identities."]}

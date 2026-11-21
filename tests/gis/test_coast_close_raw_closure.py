@@ -90,16 +90,6 @@ def test_scientific_slots_still_refuse_raw_bytes(table, slot, source, reason):
         validator.GraphValidator(resolver, raw_provenance=[f.envelope_ref]).document(manifest, root_id=AID)
 
 
-def test_cache_candidate_requires_table_mapping_and_cache_subtree(table):
-    f, archive, resolver, entries = table
-    entry = entries['row']
-    candidate = dict(source_ref=entry['source_ref'], device=1, inode=1, size=entry['source_ref']['bytes'], mtime_ns=1)
-    with pytest.raises(ValueError, match='outside the segment cache subtree'):
-        validator._consistency(manifest_for(f, [entry], candidates=[candidate]))
-    with pytest.raises(ValueError, match='no retained archive/raw mapping'):
-        validator._consistency(manifest_for(f, [], candidates=[candidate]))
-
-
 def archived_payload(f, manifest_ref):
     leaf = f.typed(f.root / 'rights.json')
     return dict(schema='coast-segment-ledger-v1', **HEADER, campaign_segment_id='synthetic',

@@ -16,7 +16,7 @@ import {LayerDots} from './LayerDots.tsx';
 import {DEFAULT_REGION} from './place.ts';
 import {saveData} from './save-data.ts';
 import {warmApp} from './warm.ts';
-import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
+import {Shoreline} from './Shoreline.tsx';
 import {initTelemetry} from '../telemetry.ts';
 import {installDegradedWatch} from '../degraded.ts';
 import {initReadyLanguage, language, t} from './i18n.ts';
@@ -61,9 +61,9 @@ const landing = document.querySelector<HTMLElement>('.landing');
 const mark = (key: 'night' | 'preview', value: string | null) => { if (landing) { if (value) landing.dataset[key] = value; else delete landing.dataset[key]; } };
 function nightMap(): void {
   if (saveData(navigator) || !webgl2()) return;
-  import('./NightMap.tsx').then(({NightMap, NightCredit}) => {
+  import('./NightMap.tsx').then(({NightMap, NightNote}) => {
     mount('landing-night', <NightMap page={location.href} region={DEFAULT_REGION} onState={state => mark('night', state)} />);
-    mount('landing-credit', <><ShorelineCredit /><NightCredit /></>);
+    mount('landing-credit', <NightNote />);
   }, error => console.warn(t('landing.night.unavailable', language.value), error));
 }
 
@@ -85,7 +85,6 @@ async function start(): Promise<void> {
   // #617: after first paint the app's own first-paint files are fetched at low priority (warm.ts), so a chosen port opens faster.
   void savedPortTarget(location.href, savedPortId(), profile).then(next => { if (next) location.replace(next); else { afterFirstPaint(nightMap); afterFirstPaint(() => void warmApp()); } });
   mount('landing-shore', <Shoreline />);
-  mount('landing-credit', <ShorelineCredit />);
   mount('landing-head', <LandingHead href={location.href} />);
   // BF-landing-live: tomorrow's verdict loads by dynamic import once the readout is in; nothing more under Save-Data.
   mount('landing-app', <LandingApp href={location.href} initialProfile={profile} verdict={() => saveData(navigator) ? Promise.resolve(null) : import('./live-verdict.ts').then(m => m.loadLandingVerdict(undefined, undefined, undefined, lang))} />);

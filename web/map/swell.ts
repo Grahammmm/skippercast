@@ -46,11 +46,13 @@ import {layerEntry, setRailNote} from './layers.ts';
 import {pair, sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {MPA_FILL} from './mpa.ts';
-import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
+import {fieldOpacity} from './nearshore-paint.ts';
+import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, nearshoreThemePaint, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
-import {LABEL_FONT} from './style.ts';
+import {LABEL_FONT, PLACE_LABELS} from './style.ts';
 import {surfaceField, type SurfaceField} from './surface-field.js';
+import {paintEdits} from './theme-restyle.ts';
 
 const REGISTRY_ID = 'swell' as const;
 export const SWELL_SOURCE = 'swell';
@@ -61,7 +63,6 @@ export const ISOLINE_LAYER = 'swell-period';
 export const ISOLINE_LABELS = 'swell-period-labels';
 export const STROKE_CASING = 'swell-direction-casing';
 export const STROKE_LAYER = 'swell-direction';
-export const SWELL_OPACITY = 0.75;
 /** The texture's scale in feet: fixed, so the same colour is the same height at every hour. */
 export const HEIGHT_SCALE: readonly [number, number] = [0, 15];
 /** Blended from-direction vectors shorter than this mean the corners disagree: no stroke, "mixed" in a reading. */
@@ -229,15 +230,26 @@ export function directionStrokes(f: SwellFrame): {type: 'FeatureCollection'; fea
 /**
  * The texture, period isolines with their labels and the direction strokes, under the protected areas (§ 9);
  * with `rings`, the nearshore rings above them (FE-27), and without `field`, the rings alone.
+ * A live theme switch re-runs the same builder with the new palette and the same options (`themePaint`); ids and sources stay.
  */
-export function swellOverlay(p: Palette, {field = true, rings = false}: {field?: boolean; rings?: boolean} = {}): Overlay {
+export function swellOverlay(p: Palette, options: {field?: boolean; rings?: boolean} = {}): Overlay {
+  const {field = true, rings = false} = options, key = `${field}|${rings}`;
+  // One function per option set, so equal overlays stay equal.
+  let themePaint = themePaints.get(key);
+  if (!themePaint) themePaints.set(key, themePaint = (pal: Palette) => paintEdits(swellParts(pal, {field, rings}).layers));
+  return {...swellParts(p, {field, rings}), themePaint};
+}
+const themePaints = new Map<string, (pal: Palette) => ReturnType<typeof paintEdits>>();
+
+function swellParts(p: Palette, {field = true, rings = false}: {field?: boolean; rings?: boolean}): Overlay {
   const empty = {type: 'geojson' as const, data: {type: 'FeatureCollection' as const, features: []}};
   const width = (low: number, high: number): MapLibre.ExpressionSpecification => ['interpolate', ['linear'], ['zoom'], 7, low, 12, high];
   const head = (a: number, b: number): MapLibre.ExpressionSpecification => ['case', ['==', ['get', 'part'], 'head'], a, b];
   const drawn: Overlay = {
     sources: {[SWELL_SOURCE]: {type: 'image', coordinates: [[0, 1], [1, 1], [1, 0], [0, 0]]}, [ISOLINE_SOURCE]: empty, [STROKE_SOURCE]: empty},
     layers: [
-      {id: SWELL_LAYER, type: 'raster', source: SWELL_SOURCE, paint: {'raster-opacity': SWELL_OPACITY, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
+      // MSK-2: a coarse colour field, so its opacity follows the kit's field opacity by zoom (strong offshore, faint close in).
+      {id: SWELL_LAYER, type: 'raster', source: SWELL_SOURCE, paint: {'raster-opacity': fieldOpacity() as MapLibre.ExpressionSpecification, 'raster-resampling': 'linear', 'raster-fade-duration': 0}},
       {id: ISOLINE_LAYER, type: 'line', source: ISOLINE_SOURCE, layout: {'line-join': 'round'},
         paint: {'line-color': p.text, 'line-width': width(0.6, 1.2), 'line-opacity': 0.45, 'line-dasharray': [3, 2]}},
       {id: ISOLINE_LABELS, type: 'symbol', source: ISOLINE_SOURCE,
@@ -250,7 +262,8 @@ export function swellOverlay(p: Palette, {field = true, rings = false}: {field?:
     ],
   };
   if (!rings) return drawn;
-  return {sources: {...field ? drawn.sources : {}, [NEARSHORE_SOURCE]: empty}, layers: [...field ? drawn.layers : [], ringHitLayer(p), ringLayer(p)]};
+  // The rings restyle in place on a theme switch (THEME-ROUTE): the engine runs the installed overlay's themePaint.
+  return {sources: {...field ? drawn.sources : {}, [NEARSHORE_SOURCE]: empty}, layers: [...field ? drawn.layers : [], ringHitLayer(p), ringLayer(p)], themePaint: nearshoreThemePaint};
 }
 
 /** The mark card's reading at a clicked point inside the drawn field, or null outside it. */
@@ -307,16 +320,19 @@ export function createSwell(o: SwellOptions): {
     return nearshoreRings(report, report ? data.coastBinding.value?.areaId ?? null : null, terrainHour(hour.value, t, day.value, zone()), t);
   });
   let alive = true, drawnKey = '', drawnFieldKey = '', drawnRingKey = '', drawnShape = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  let requestGeneration = 0;
   const withdraw = (owner?: 'swell' | 'nearshore'): void => {
     const id = chartMark.peek()?.id ?? '';
     if (owner ? id.startsWith(`${owner}:`) : /^(?:swell|nearshore):/.test(id)) chartMark.value = null;
   };
 
   async function read(id: string): Promise<void> {
+    const generation = ++requestGeneration;
     const kept = load.peek().region === id ? load.peek().forecast : null, at = now().getTime();
     load.value = {state: 'loading', region: id, forecast: kept, at};
     const next = await loadForecast(id, fetchFn, page());
-    if (!alive || region.peek() !== id) return;
+    // The region can match again after A → B → A, but the request cannot.
+    if (!alive || generation !== requestGeneration || region.peek() !== id) return;
     // A failed refresh keeps the last good feed, whose run leaves through the gate.
     load.value = {state: next || kept ? 'ready' : 'error', region: id, forecast: next ?? kept, at};
   }
@@ -358,9 +374,15 @@ export function createSwell(o: SwellOptions): {
       if (!f && !r) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
       // § 9 order: under wind, else depth contours, else protected areas.
-      e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), ['wind-casing', DEPTH_BOTTOM, MPA_FILL]);
+      const overlay = swellOverlay(p, {field: !!f, rings: !!r});
+      // The texture is pixels in an image source, not a paint: a live theme switch repaints it from the same field with the new ramp
+      // (setImage sends no request and setData is not used); layer paints follow through the overlay's `themePaint`.
+      let painted = ramps(p).swell.join();
+      const texture = (ramp: string[]): void => { painted = ramp.join(); e.setImage(SWELL_SOURCE, fieldTexture(f!.field, HEIGHT_SCALE, ramp, v => v[0]!)); };
+      e.setOverlay(REGISTRY_ID, f ? {...overlay, themePaint: (pal: Palette) => { const ramp = ramps(pal).swell; if (ramp.join() !== painted) texture(ramp); return overlay.themePaint!(pal); }} : overlay,
+        ['wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
       if (f) {
-        e.setImage(SWELL_SOURCE, fieldTexture(f.field, HEIGHT_SCALE, ramps(p).swell, v => v[0]!));
+        texture(ramps(p).swell);
         e.setData(ISOLINE_SOURCE, periodLines(f));
         e.setData(STROKE_SOURCE, directionStrokes(f));
       }

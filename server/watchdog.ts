@@ -4,7 +4,8 @@
 // It also logs critical sources (buoys, alerts, tides, models) that have served
 // degraded data past the limit scripts/check_feed_freshness.py uses
 // (catalog/feed-health.json), naming any kind whose every source is out (the
-// check's failure condition); a new run would not fix those, so it only warns.
+// check's failure condition) or whose required group is missing from the feed entirely
+// (required_kinds in the same file); a new run would not fix those, so it only warns.
 // Needs GITHUB_TOKEN (fine-grained, Actions: read and write on this repo).
 import health from '../catalog/feed-health.json' with {type: 'json'};
 import {readBucketJSON, RAW} from './feeds.ts';
@@ -23,6 +24,9 @@ export function feedAgeMinutes(feed: ExternalJSON, now = Date.now()): number {
 
 const CRITICAL_KINDS = new Set<string>(health.critical_kinds);
 export const CRITICAL_DEGRADED_HOURS = health.feeds.conditions.critical_degraded_hours;
+/** Per-feed critical kinds the feed must carry (catalog/feed-health.json required_kinds): the live feed this Worker reads, and the daily feed. */
+export const LIVE_REQUIRED_KINDS: readonly string[] = health.feeds.conditions.required_kinds;
+export const DAILY_REQUIRED_KINDS: readonly string[] = health.feeds.data.required_kinds;
 
 export interface DegradedSource {id: string; kind: string; status: string; critical: boolean; age_hours: number | null}
 
@@ -56,17 +60,31 @@ export function criticalDegraded(feed: ExternalJSON, limitHours = CRITICAL_DEGRA
 }
 
 /**
- * Critical kinds whose every source in the feed is degraded past the limit: the ones that fail
- * the freshness check (failing_kinds in check_feed_freshness.py). One buoy out while another
- * (or its spectrum, also kind observation) reports is a partial outage, not a failing kind.
+ * Required kinds with no source at all in the feed: the group was never assembled, which the
+ * denominator below cannot see. A kind the feed does not require is not applicable and stays
+ * quiet when absent. An unreadable feed (not an object) reports nothing; its age check handles it.
  */
-export function failingKinds(feed: ExternalJSON, limitHours = CRITICAL_DEGRADED_HOURS): string[] {
+export function missingKinds(feed: ExternalJSON, required: readonly string[] = LIVE_REQUIRED_KINDS): string[] {
+  if (!feed || typeof feed !== 'object') return [];
+  const sources = feed.sources && typeof feed.sources === 'object' ? Object.values<ExternalJSON>(feed.sources) : [];
+  const present = new Set(sources.filter(source => source && typeof source === 'object').map(source => source.kind));
+  return [...required].filter(kind => !present.has(kind)).sort();
+}
+
+/**
+ * Critical kinds that fail the freshness check (failing_kinds in check_feed_freshness.py): every
+ * source in the feed degraded past the limit, or a required kind with no source in the feed.
+ * One buoy out while another (or its spectrum, also kind observation) reports is a partial
+ * outage, not a failing kind.
+ */
+export function failingKinds(feed: ExternalJSON, limitHours = CRITICAL_DEGRADED_HOURS, required: readonly string[] = LIVE_REQUIRED_KINDS): string[] {
   const over = new Map<string, number>();
   for (const row of criticalDegraded(feed, limitHours)) over.set(row.kind, (over.get(row.kind) || 0) + 1);
   const totals = new Map<string, number>();
   const sources = feed?.sources && typeof feed.sources === 'object' ? Object.values<ExternalJSON>(feed.sources) : [];
   for (const source of sources) if (source && typeof source === 'object') totals.set(source.kind, (totals.get(source.kind) || 0) + 1);
-  return [...over].filter(([kind, count]) => totals.get(kind) === count).map(([kind]) => kind).sort();
+  const degraded = [...over].filter(([kind, count]) => totals.get(kind) === count).map(([kind]) => kind);
+  return [...new Set([...degraded, ...missingKinds(feed, required)])].sort();
 }
 
 async function github(env: WatchdogEnv, path: string, init: RequestInit & {headers?: Record<string, string>} = {}): Promise<Response> {
@@ -117,15 +135,16 @@ async function activeRuns(env: WatchdogEnv, status: string): Promise<number> {
   return count;
 }
 
-export async function watchdog(env: WatchdogEnv, now = Date.now(), feedRead: Promise<ExternalJSON> = liveFeed()): Promise<{age_minutes: number | null; action: string; degraded: string[]; failing_kinds: string[]}> {
+export async function watchdog(env: WatchdogEnv, now = Date.now(), feedRead: Promise<ExternalJSON> = liveFeed()): Promise<{age_minutes: number | null; action: string; degraded: string[]; failing_kinds: string[]; missing_kinds: string[]}> {
   const feed = await feedRead;
   const age = feedAgeMinutes(feed, now);
   const degraded = criticalDegraded(feed);
   const failing = failingKinds(feed);
-  if (degraded.length) console.warn(failing.length ? 'Live feed critical kind out' : 'Live feed critical sources degraded (partial)',
-    {limit_hours: CRITICAL_DEGRADED_HOURS, failing_kinds: failing,
+  const missing = missingKinds(feed);
+  if (degraded.length || missing.length) console.warn(missing.length ? 'Live feed required source group missing' : failing.length ? 'Live feed critical kind out' : 'Live feed critical sources degraded (partial)',
+    {limit_hours: CRITICAL_DEGRADED_HOURS, failing_kinds: failing, missing_kinds: missing,
       sources: degraded.map(row => `${row.id} ${row.status} ${row.age_hours === null ? 'no data time' : `${row.age_hours.toFixed(1)} h`}`)});
-  const result = {age_minutes: Number.isFinite(age) ? Math.round(age) : null, action: 'none', degraded: degraded.map(row => row.id), failing_kinds: failing};
+  const result = {age_minutes: Number.isFinite(age) ? Math.round(age) : null, action: 'none', degraded: degraded.map(row => row.id), failing_kinds: failing, missing_kinds: missing};
   if (age <= STALE_MINUTES) return result;
   if (!env.GITHUB_TOKEN) { console.warn('Live feed stale; GITHUB_TOKEN not set, cannot restart', result); return {...result, action: 'no-token'}; }
   for (const status of ['in_progress', 'queued']) {

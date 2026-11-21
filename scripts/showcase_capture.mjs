@@ -15,9 +15,9 @@
 //
 // Frozen for every page: Date (page.clock.setFixedTime; timers keep running), Math.random (seeded), CSS
 // animations and transitions, scrollbars, the text caret, reduced motion on, and every origin other than
-// base_url (aborted, so no live service, tile or image decides a pixel). A load is kept once two frames in a
-// row are identical, and each page is loaded fresh until two loads in a row give the same picture (within
-// `tolerance`); a page that never repeats is reported as unsteady rather than silently kept.
+// base_url (aborted, so no live service, tile or image decides a pixel). A load settles once two frames in a
+// row are identical. A page is steady only when two consecutive fresh loads both settle and give the same
+// picture (within `tolerance`); otherwise it is reported as unsteady.
 import {mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -220,10 +220,11 @@ const results = [];
 for (const spec of job.pages) {
   let last = await load(spec), row = last.row;
   row.loads = 1;
-  // Load again until two fresh loads in a row agree: a picture that changes from load to load is not evidence.
+  // Matching final frames are not enough if either load timed out while settling.
   while (row.status === 'ok' && row.loads < LOADS) {
     const next = await load(spec);
-    const agree = next.row.status === 'ok' && (await diff(last.png, next.png)).changed === 0;
+    const agree = row.settled && next.row.status === 'ok' && next.row.settled
+      && (await diff(last.png, next.png)).changed === 0;
     next.row.loads = row.loads + 1;
     last = next; row = next.row;
     if (agree) { row.steady = true; break; }
@@ -233,7 +234,7 @@ for (const spec of job.pages) {
     writeFileSync(join(job.out_dir, `${spec.id}.png`), last.png);
   }
   results.push(row);
-  console.log(`${spec.id}: ${row.status}${row.status === 'ok' ? ` after ${row.loads} loads${row.steady ? '' : ', never the same twice'}` : ''}${row.error ? ` ${row.error}` : ''}`);
+  console.log(`${spec.id}: ${row.status}${row.status === 'ok' ? ` after ${row.loads} loads${row.steady ? '' : ', unsteady capture'}` : ''}${row.error ? ` ${row.error}` : ''}`);
 }
 writeFileSync(join(job.out_dir, 'results.json'), JSON.stringify(results, null, 1));
 await browser.close();

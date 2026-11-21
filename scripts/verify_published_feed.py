@@ -3,10 +3,12 @@
 
     python scripts/verify_published_feed.py <public-feed-url> <run_id> [--published-at <iso>]
 
-The Worker serves /feeds/* from R2 first, so a publish is only done when the
-public copy carries this run's `run_id` (and, for the live job, which runs many
-cycles inside one GitHub run, this cycle's `published_at`). Retries cover edge
-caches and brief propagation; any other outcome exits non-zero.
+This checks the generation served to the public, not whether the Worker read
+R2. For cacheable feeds the Worker keys its edge cache by logical path, so
+neither a different `verify` query nor `Cache-Control: no-cache` forces an R2
+read. Retries may see the same cached `latest.json` until its 60-second TTL
+expires. The response must match this run's `run_id` (and, when supplied, this
+cycle's `published_at`); otherwise the check exits non-zero after retries.
 """
 import argparse
 import json
@@ -24,7 +26,7 @@ def fetch_json(url, timeout=30):
 
 
 def bust(url, token):
-    """The same URL with a cache-busting query, so no cache answers for the origin."""
+    """Append a per-attempt token; the Worker's edge cache ignores it."""
     parts = urlsplit(url)
     query = (parts.query + '&' if parts.query else '') + urlencode({'verify': token})
     return urlunsplit(parts._replace(query=query))

@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   packet:
-    runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -45,6 +45,7 @@ jobs:
           python -m skippercast.pipeline.regulation_review collect \
             --jurisdiction "$JURISDICTION" --output "var/rules/$JURISDICTION"
       - name: Verify archived source identity and bytes
+        id: verify
         env:
           JURISDICTION: ${{ matrix.jurisdiction }}
         run: |
@@ -62,11 +63,12 @@ jobs:
           PY
           python scripts/verify_legal_review_artifact.py \
             "var/rules/$JURISDICTION.zip" --jurisdiction "$JURISDICTION" \
-            --output "var/rules/$JURISDICTION/verification.json"
+            --output "var/rules/verification.json"
       - name: Report coverage and unresolved sources
         if: always()
         env:
           JURISDICTION: ${{ matrix.jurisdiction }}
+          VERIFICATION_OUTCOME: ${{ steps.verify.outcome }}
         run: |
           python - <<'PY'
           import json, os
@@ -75,6 +77,11 @@ jobs:
           path = Path('var/rules') / jurisdiction / 'coverage.json'
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
               output.write(f'## {jurisdiction}\n')
+              if os.environ['VERIFICATION_OUTCOME'] == 'success':
+                  output.write(f'Unpack the downloaded artifact, then run `sha256sum {jurisdiction}.zip` '
+                               'and compare it to `archive_sha256` in `verification.json`.\n')
+              else:
+                  output.write('Unverified collection: no verification receipt or legal approval.\n')
               if not path.exists():
                   output.write('Collection failed before a coverage receipt was saved. No legal approval was made.\n')
               else:
@@ -85,13 +92,23 @@ jobs:
                   for source_id, check in checks.items():
                       if check['status'] != 'unchanged':
                           output.write(f'- {source_id}: {check["status"]}\n')
-                  output.write('This packet is evidence for human legal review, not season or access clearance.\n')
+              output.write('This packet is evidence for human legal review, not season or access clearance.\n')
           PY
-      - name: Retain immutable packet for legal review
-        if: always()
+      - name: Retain verified ZIP and detached receipt for legal review
+        if: always() && steps.verify.outcome == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: legal-review-${{ matrix.jurisdiction }}-${{ github.sha }}
+          path: |
+            var/rules/${{ matrix.jurisdiction }}.zip
+            var/rules/verification.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Retain unverified collection for diagnosis
+        if: always() && steps.verify.outcome != 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: legal-review-unverified-${{ matrix.jurisdiction }}-${{ github.sha }}
           path: var/rules/${{ matrix.jurisdiction }}/
           if-no-files-found: warn
           retention-days: 14

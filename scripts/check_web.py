@@ -5,6 +5,7 @@ checked by the claims pin test_receipt_claims.py under the research tests.
 """
 from pathlib import Path
 from html.parser import HTMLParser
+from collections import Counter
 import base64
 import hashlib
 import json
@@ -35,6 +36,15 @@ def check_page_references(path):
     parser = AssetParser()
     parser.feed(path.read_text())
     public_pages = {"/report", "/feed.xml", "/methodology", "/about"}
+    # tests/test_worker_routes.mjs checks dispatch; here only the linked files must exist.
+    linked_shells = {
+        "/privacy": "privacy.html",
+        "/map": "app.html",
+        "/sources": "sources.html",
+        "/status": "status.html",
+        "/coverage": "coverage.html",
+        "/skill": "skill.html",
+    }
     for tag, attrs in parser.tags:
         for attribute in ("src", "href"):
             ref = attrs.get(attribute)
@@ -52,35 +62,8 @@ def check_page_references(path):
                 app = (ROOT / "server/app.ts").read_text()
                 assert f"'{url.path}'" in router and "app.route('/', coastPages);" in app, (path, ref)
                 continue
-            if navigation and url.path == "/privacy":
-                assets = (ROOT / "server/routes/assets.ts").read_text()
-                assert "if(path === '/privacy') return '/privacy.html';" in assets, (path, ref)
-                assert (WEB / "privacy.html").exists(), (path, ref)
-                continue
-            if navigation and url.path == "/map":
-                assets = (ROOT / "server/routes/assets.ts").read_text()
-                assert "if (path === '/map') return V2_SHELLS.app;" in assets, (path, ref)
-                assert (WEB / "app.html").exists(), (path, ref)
-                continue
-            if navigation and url.path == "/sources":
-                assets = (ROOT / "server/routes/assets.ts").read_text()
-                assert "if(path === '/sources') return '/sources.html';" in assets, (path, ref)
-                assert (WEB / "sources.html").exists(), (path, ref)
-                continue
-            if navigation and url.path == "/status":
-                assets = (ROOT / "server/routes/assets.ts").read_text()
-                assert "if(path === '/status') return '/status.html';" in assets, (path, ref)
-                assert (WEB / "status.html").exists(), (path, ref)
-                continue
-            if navigation and url.path == "/coverage":
-                assets = (ROOT / "server/routes/assets.ts").read_text()
-                assert "if(path === '/coverage') return '/coverage.html';" in assets, (path, ref)
-                assert (WEB / "coverage.html").exists(), (path, ref)
-                continue
-            if navigation and url.path == "/skill":
-                assets = (ROOT / "server/routes/assets.ts").read_text()
-                assert "if(path === '/skill') return '/skill.html';" in assets, (path, ref)
-                assert (WEB / "skill.html").exists(), (path, ref)
+            if navigation and url.path in linked_shells:
+                assert (WEB / linked_shells[url.path]).exists(), (path, ref)
                 continue
             target = ((WEB / unquote(url.path).lstrip("/")) if url.path.startswith("/")
                       else (path.parent / unquote(url.path))).resolve()
@@ -194,8 +177,35 @@ def check_no_versioned_client_names():
 
 
 MARKUP_HOST = "web/app/CoastMarkup.tsx"
+MARKUP_ROOTS = ("web", "packages/coast/src")
+# Grandfather only existing Coast occurrences, not the containing files. Each
+# SHA-256 covers the stripped, comment-free source line containing the match;
+# repeated digests allow exactly that many matches. Line numbers may move.
+# These entries record legacy behavior, not a claim that templates are safe.
+COAST_MARKUP_ALLOWLIST = {
+    "packages/coast/src/coast3d/report.ts": (
+        "8a4f7f01e236440a815536ca5e7cafa9eaac5e79fe8d9c03e887476ccb6adcab",  # root capability check
+        "1fd0b699569d742878dc4cc193d34368ed876fa91f5b6b4ea11af7375ac154bc",  # refresh failure
+        "a787267ae194c31a5d8607aa32a8715ce47075ed1ce2ec802e0a7a5289c4a004",  # no-area bar
+        "13d9af5c2cde5124d56650e948d4161552fb527ad1639f4cd83bfbede4e2f28b",  # staging div
+        "13d9af5c2cde5124d56650e948d4161552fb527ad1639f4cd83bfbede4e2f28b",  # report bar on same line
+        "dafbe4d500f14244e9d2fe1ebcf230682c52fdcc28c8be15aa01a5f4fdf547f1",  # loading panel
+        "b6491e4064d09d89a54350b74e1ea76ca8d6aba73bd2bffc19d8e97148cbd600",  # standalone panel
+        "f18e079cb2c67903ce9e8c58f554d2161a7eaffc2d5cf8fc4982fbc98d602f2c",  # history reference
+        "15add1cc81d7c674a6a134dc5998ba314c976028a4ad7bf3741383953b662ce0",  # managed unavailable panel
+        "25fb9e106ad1a964ad4db7724bdfb1908be22180646c6adfee748fbcd7399fa9",  # managed panel
+    ),
+    "packages/coast/src/coast3d/viewer.ts": (
+        "27b30da9fee4c5bc16f2e3141ff215876d7b01764469124e52c5920f08557b85",  # loading failure
+        "52682c34e28ed31da426058790f763272f6fcc3bc5be6cc57b06faf1bc48752d",  # shore pin
+        "8b8c8d2dbf8e3ee175e6013b1689ebdedc3e587f7cb7e1e16c08b42b78c20a38",  # species pin
+    ),
+    "packages/coast/src/embed.ts": (
+        "7bf42f4811b45cdb6ddc75d1c947e1710affb69fbbcd38b617351da5de0f837f",  # managed embed template parser
+    ),
+}
 SOURCE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs"}
-# Every way web/ code could turn a string into DOM: innerHTML or outerHTML set
+# Literal markup sinks: innerHTML or outerHTML set
 # by property (`.x =`, `+=`, never `==`), by unquoted object key
 # (Object.assign(el, {innerHTML: s}); this also flags a type member of that
 # name) or named in any quoted string (`el['innerHTML'] =`, Reflect.set,
@@ -278,19 +288,30 @@ def strip_comments(source):
 
 
 def markup_sinks(root=ROOT):
-    """FE-75: only web/app/CoastMarkup.tsx may write markup into the DOM in web/ (comments ignored).
+    """Report markup sinks outside the web host and the existing Coast exceptions.
 
     This is static text matching, not analysis: a property name built at run
     time (`el['inner' + 'HTML']`, a variable holding the name) is not caught.
-    Review owns that case; the rule catches every literal spelling.
+    Review owns that case. Comments are ignored.
     """
     found = []
-    for path in sorted((root / "web").rglob("*")):
-        relative = path.relative_to(root).as_posix()
-        if path.suffix not in SOURCE_SUFFIXES or not path.is_file() or relative == MARKUP_HOST:
-            continue
-        code = strip_comments(path.read_text())
-        found += [f"{relative}:{code.count(chr(10), 0, m.start()) + 1}" for m in MARKUP_SINK.finditer(code)]
+    for tree in MARKUP_ROOTS:
+        for path in sorted((root / tree).rglob("*")):
+            relative = path.relative_to(root).as_posix()
+            if path.suffix not in SOURCE_SUFFIXES or not path.is_file() or relative == MARKUP_HOST:
+                continue
+            code = strip_comments(path.read_text())
+            allowed = Counter(COAST_MARKUP_ALLOWLIST.get(relative, ()))
+            for match in MARKUP_SINK.finditer(code):
+                if allowed:
+                    start = code.rfind("\n", 0, match.start()) + 1
+                    end = code.find("\n", match.end())
+                    context = code[start:end if end != -1 else len(code)].strip()
+                    digest = hashlib.sha256(context.encode("utf-8")).hexdigest()
+                    if allowed[digest] > 0:
+                        allowed[digest] -= 1
+                        continue
+                found.append(f"{relative}:{code.count(chr(10), 0, match.start()) + 1}")
     return found
 
 
@@ -347,7 +368,7 @@ def main():
     check_no_v1_sheets()
     check_bundled_licence_versions()
     sinks = markup_sinks()
-    assert not sinks, f"markup written into the DOM outside {MARKUP_HOST} (mount packages/coast markup through it): {sinks}"
+    assert not sinks, f"unlisted markup sinks (mount Coast markup in web through {MARKUP_HOST}): {sinks}"
     readiness = json.loads((WEB / 'data/california-atlas-readiness.json').read_text())
     usgs_leads = json.loads((WEB / 'data/usgs-ds781-source-leads.json').read_text())
     assert (WEB / 'data/usgs-ds781-source-leads.json').read_bytes() == (ROOT / 'catalog/usgs-ds781-source-leads.json').read_bytes()
@@ -412,9 +433,13 @@ def main():
     assert all(row['raw_cells_in_25_to_200_ft_mllw_band'] == 0 and
                row['nearshore_depth_lead'] is False for row in central_deep['sources'])
     assert (WEB / "data/atlas.json").read_bytes() == (ATLAS / "data/atlas.json").read_bytes()
-    for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx", "spot-notes.html"]:
-        assert (WEB / "downloads" / name).read_bytes() == (ATLAS / "exports" / name).read_bytes(), name
+    assert (WEB / "downloads/spot-notes.html").read_bytes() == (ATLAS / "exports/spot-notes.html").read_bytes()
     assert (WEB / "downloads/LICENSE.txt").read_bytes() == (ROOT / "LICENSE").read_bytes()
+    for directory in [WEB / "downloads", WEB / "client"]:
+        assert not any(p.is_file() and p.suffix.lower() == ".gpx" for p in directory.rglob("*")), directory
+    if (WEB / "client").is_dir():
+        for name in ["LICENSE.txt", "spot-notes.html"]:
+            assert (WEB / "client/downloads" / name).read_bytes() == (WEB / "downloads" / name).read_bytes(), name
     pinned = json.loads((ROOT / "scripts/web-vendor-sha256.json").read_text())
     for name, digest in pinned.items():
         assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest, name
@@ -429,10 +454,10 @@ def main():
             if not url.scheme and url.path:
                 assert (path.parent / unquote(url.path)).is_file(), (path, ref)
     ns = {"g": "http://www.topografix.com/GPX/1/1"}
-    full = ET.parse(WEB / "downloads/complete.gpx").getroot()
+    full = ET.parse(ATLAS / "exports/complete.gpx").getroot()
     assert len(full.findall("g:wpt", ns)) == 132
-    for path in (WEB / "downloads").glob("*.gpx"):
-        assert ET.parse(path).getroot().tag == "{http://www.topografix.com/GPX/1/1}gpx"
+    for name in ["complete.gpx", "waypoints.gpx", "reef-outlines.gpx", "drift-lines.gpx"]:
+        assert ET.parse(ATLAS / "exports" / name).getroot().tag == "{http://www.topografix.com/GPX/1/1}gpx", name
     check_native_depth_review('noaa-vr-native-depth-review.json',
                               'california-original-vr-native-depth-review')
     check_native_depth_review('noaa-regular-native-depth-review.json',

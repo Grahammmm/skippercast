@@ -16,7 +16,7 @@ globalThis.SHELLS = {'/': '/index.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 const {default: worker} = await import('../server/index.ts');
 const {createBlueBubbles, normalizePayload, envelopeError, serverInfoDetail, skipReason} = await import('../server/advisor/channels/bluebubbles.ts');
-const {splitForChannel, channelFor, ADAPTERS, IMESSAGE_CHUNK, SMS_CHUNK, ChannelNotImplemented} = await import('../server/advisor/channels/index.ts');
+const {splitForChannel, channelFor, ADAPTERS, IMESSAGE_CHUNK, SMS_CHUNK} = await import('../server/advisor/channels/index.ts');
 const {consumeAdvisor, releaseHeld, ADVISOR_QUEUE_NAME, WARM_UP_TEXT, HOLD_MAX_MS, RELEASE_BATCH} = await import('../server/advisor/consumer.ts');
 const {advisorCron, RELAY_KEY} = await import('../server/advisor/cron.ts');
 const {deriveKeys, encryptPhone, phoneHash} = await import('../server/advisor/contacts.ts');
@@ -174,9 +174,6 @@ test('channelFor: web for a web-only contact, else ADVISOR_CHANNEL (TA-C2 and TA
   // TA-C3: the web adapter is real; outside a request there is nobody to answer, so a send fails, and no cookie is unauthorized.
   assert.deepEqual(await ADAPTERS.web.send({id: 'x', to: 'y'}, {}), {providerId: null, status: 'failed', error: 'web-no-request'});
   assert.equal(await ADAPTERS.web.normalize(new Request('https://x.test'), {}), 'unauthorized');
-  // The stub factory still throws, for adapters that do not exist yet.
-  const {stubAdapter} = await import('../server/advisor/channels/index.ts');
-  await assert.rejects(stubAdapter('web').send({id: 'x', to: 'y'}, {}), ChannelNotImplemented);
 });
 
 // ---- send -----------------------------------------------------------------------

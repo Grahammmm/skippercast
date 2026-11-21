@@ -83,11 +83,11 @@ test('mixed notes are all shown, unmerged, in stored order, duplicates kept, and
   assert.equal(toText(compose([trip({last_assessment: assessed('unverified', [SWELL, BAR])})])), `2026-11-07\n${prefix}check incomplete Hazard note: ${SWELL} Hazard note: ${BAR}`);
 });
 
-test('a hazards value that is not a list of non-empty strings adds nothing; no hazards leaves the status-only line', () => {
+test('an empty or absent hazards list leaves the status-only line (malformed lists: tests/test_f14_09_audit.mjs)', () => {
   for (const [status, words] of STATUS_WORDS) {
     const only = `${prefix}${words}`;
     assert.equal(lineOf(assessed(status)), only);
-    for (const hazards of [[], null, 'Long-period swell.', {note: SWELL}, 5, true, [SWELL, 5], [SWELL, null], [SWELL, ''], [SWELL, '   '], [BAR, ['nested']], [{}], ['']]) {
+    for (const hazards of [[], null]) {
       assert.equal(lineOf(assessed(status, hazards)), only, JSON.stringify(hazards));
     }
   }

@@ -8,7 +8,8 @@
 //                       then the AC-1 offer when the ID was >= 0.6
 //                    -> anything else: "Nice shot. Want me to ID a fish, or can we share this with credit?"
 //   offer outstanding   (job_state advisor.share.<contact_id>, 24 h)
-//                       yes / sí / sure / ok ... -> queued for review, reason angler_photo; credit asked once
+//                       explicit share (or yes to share-only) -> queued for review; credit asked once
+//                       yes / sí / sure / ok ... after both choices -> ask which action
 //                       "id" (after "Nice shot") -> the fish ID of that photo
 //                       anything else            -> the offer lapses and the message goes on
 //   credit outstanding  a first name (1-4 words) or "anonymous" -> stored on advisor_media.credit
@@ -34,9 +35,10 @@ export const shareKey = (contactId: string): string => SHARE_KEY_PREFIX + contac
 export const SHARE_MAX_AGE_MS = 24 * 3600000;   // 04 § stage 2: the AC-1 offer answers YES for 24 h
 export const CREDIT_MAX = 40;
 
-/** 10 § TA-I3: the words that accept the AC-1 offer. */
-export const SHARE_YES: ReadonlySet<string> = new Set(['yes', 'y', 'yep', 'yeah', 'yup', 'sure', 'ok', 'okay', 'k', 'go ahead', 'share it', 'sure thing', 'of course',
-  'sí', 'si', 'claro', 'dale', 'va', 'de acuerdo', 'por supuesto', 'compártela', 'compartela']);
+/** 10 § TA-I3: generic assent accepts only a share-only offer. */
+export const SHARE_YES: ReadonlySet<string> = new Set(['yes', 'y', 'yep', 'yeah', 'yup', 'sure', 'ok', 'okay', 'k', 'go ahead', 'sure thing', 'of course',
+  'sí', 'si', 'claro', 'dale', 'va', 'de acuerdo', 'por supuesto']);
+const SHARE_WORDS: ReadonlySet<string> = new Set(['share', 'share it', 'compartir', 'compártela', 'compartela']);
 const ID_WORDS = /^(?:id|i\.d\.?|id it|id the fish|identify|identify it|what fish|what is it|what kind|which fish|identif[ií]calo|identif[ií]cala|identif[ií]ca|qu[eé] pez|qu[eé] pez es)$/u;
 const ANONYMOUS = /^(?:anonymous|anon|anonymously|no name|none|nobody|an[oó]nimo|an[oó]nima|sin nombre)$/u;
 const CREDIT_LEAD = /^(?:credit|call me|it'?s|i'?m|name'?s|just|me llamo|soy|ponle|pon)\s+/iu;
@@ -49,7 +51,8 @@ export function parseCredit(text: string | null | undefined): string | null {
   if (ANONYMOUS.test(raw.toLowerCase())) return 'anonymous';
   const name = raw.replace(CREDIT_LEAD, '').replace(/\s+/g, ' ').trim();
   if (!name || name.length > CREDIT_MAX || !NAME.test(name) || name.split(' ').length > 4) return null;
-  if (SHARE_YES.has(name.toLowerCase()) || /^(?:no|nope|nah|n)$/i.test(name)) return null;
+  const words = name.toLowerCase();
+  if (SHARE_YES.has(words) || SHARE_WORDS.has(words) || /^(?:no|nope|nah|n)$/.test(words)) return null;
   return name;
 }
 
@@ -136,7 +139,7 @@ async function mediaTurn(f: FlowContext): Promise<EngineResult | null> {
   if (!row || !f.env.ADVISOR_MEDIA) {
     if (rejected) { advisorLog('info', 'advisor_media_upload_offered', {bytes: rejected.bytes}); return {actions: [await uploadAction(f, 'media_use_upload')], intent: 'media.upload_link'}; }
     const video = rows.find(r => r.kind === 'video');
-    if (video) return {actions: [say(f.settings, f.language, 'fishid_nice_shot'), offeredState(video.id, f.now)], intent: 'media.nice_shot'};
+    if (video) return {actions: [say(f.settings, f.language, 'angler_video_offer'), offeredState(video.id, f.now)], intent: 'media.nice_shot'};
     return null;
   }
   let c: Classification;
@@ -148,7 +151,7 @@ async function mediaTurn(f: FlowContext): Promise<EngineResult | null> {
     return {actions: [say(f.settings, f.language, 'fishid_unavailable')], intent: 'fishid.unavailable'};
   }
   if (c.kind === 'fish') return idActions(f, row);
-  // Not a fish photo (a deck, a sunset, a person): offer both, never publish anything without a yes.
+  // Not a fish photo (a deck, a sunset, a person): offer both, so assent alone isn't consent to share.
   if (decideHold(c)) advisorLog('info', 'advisor_angler_photo_person', {count: 1});
   return {actions: [say(f.settings, f.language, 'fishid_nice_shot'), offeredState(row.id, f.now, true)], intent: 'media.nice_shot'};
 }
@@ -171,9 +174,12 @@ export async function anglerFlow(f: FlowContext): Promise<EngineResult | null> {
       f.carry.push({type: 'share_state', state: null});   // not a name: the photo stays queued without a credit
       return null;
     }
-    if (SHARE_YES.has(words)) {
+    if (SHARE_WORDS.has(words) || (!share.id_offered && SHARE_YES.has(words))) {
       const {actions} = await shareActions({db: f.db, settings: f.settings, contact: f.contact, mediaId: share.media_id, language: f.language, now: f.now});
       return {actions, intent: 'photo.share'};
+    }
+    if (share.id_offered && SHARE_YES.has(words)) {
+      return {actions: [say(f.settings, f.language, 'fishid_choose_action')], intent: 'photo.choose_action'};
     }
     if (share.id_offered && ID_WORDS.test(words)) {
       const [row] = await ownMedia(f.db, f.contact.id, [share.media_id]);

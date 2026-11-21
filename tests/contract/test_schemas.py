@@ -189,12 +189,19 @@ class ContractsCatchDrift(unittest.TestCase):
 
     def test_public_display_schema_rejects_unsafe_declarations(self):
         source = load(ROOT / 'catalog/sources.json')['sources'][0]
+        source = {**source, 'rights': {k: v for k, v in source['rights'].items() if k != 'owner_public_display'}}
         for display in (False, 'public', None):
             self.rejects('source', {**source, 'rights': {**source['rights'], 'public_display': display}})
         allowed = {**source, 'rights': {**source['rights'], 'public_display': 'allowed'}}
         self.accepts('source', allowed)
         self.rejects('source', {**allowed, 'review_status': 'candidate'})
+        decided = {'decision': 'allowed', 'basis': 'G decision 2026-11-18 (owner-accepted risk; revisit when paid)'}
+        owned = {**allowed, 'review_status': 'candidate', 'publication_allowed': False,
+                 'rights': {**allowed['rights'], 'owner_public_display': decided}}
+        self.accepts('source', owned)
+        self.rejects('source', {**owned, 'rights': {**owned['rights'], 'owner_public_display': {**decided, 'basis': 'unrecorded'}}})
         self.rejects('source', {**allowed, 'publication_allowed': False})
+        self.rejects('source', {**owned, 'rights': {k: v for k, v in owned['rights'].items() if k != 'owner_public_display'}})
         self.rejects('source', {**allowed, 'rights': {**allowed['rights'], 'attribution': ' '}})
 
     def test_region_contract(self):

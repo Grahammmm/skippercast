@@ -580,13 +580,16 @@ class OrientationTests(unittest.TestCase):
         self.assertTrue(near(public.getpixel((150, 10)), (30, 90, 160), 12), 'the band is at the top again')
         self.assertTrue(near(public.getpixel((150, 390)), (200, 120, 40), 12))
         self.assertEqual(r2.objects[keys('m6')['public']][1]['orientation'], '6')
-        # Unchanged: skipped. The same bytes derived earlier without the value (files from before) render again.
+        # Unchanged: skipped. Files derived before the render digest existed carry none and render again.
         mj.derive_media(item, r2, mj.load_spec(), None, log=lambda *_: None)
         self.assertEqual(len(r2.puts), 3)
         for key in keys('m6').values():
-            r2.objects[key][1].pop('orientation')
+            r2.objects[key][1].pop(mj.RENDER_META)
         mj.derive_media(item, r2, mj.load_spec(), None, log=lambda *_: None)
         self.assertEqual(len(r2.puts), 6)
+        # A changed orientation changes the decode input, hence the digest: rendered again.
+        mj.derive_media({**item, 'orientation': 1}, r2, mj.load_spec(), None, log=lambda *_: None)
+        self.assertEqual(len(r2.puts), 9)
 
 
 @unittest.skipUnless(HAVE_PILLOW, NO_PILLOW)
@@ -634,6 +637,30 @@ class GraphicTests(unittest.TestCase):
                                    'data': {'title': 'This week', 'lines': [{'label': 'Morro Bay', 'value': 'limits'}],
                                             'captions': ['Aboard Sea Example']}}, r2, self.spec, None, log=lambda *_: None)
         self.assertEqual(again, roundup, 'a rerun reports the same keys without rendering')
+
+    def test_a_roundup_cover_hit_needs_matching_slides(self):
+        # Contract: a roundup is skipped only when cover and every slide carry the current digest.
+        # Bug it catches: slides are written before the cover, so footer B can overwrite a slide, the
+        # cover write fail, the footer revert to A, and the old A cover alone would skip the retry.
+        data = photo_bytes((1200, 900))
+        r2 = FakeR2({'advisor/media/c1/m1.jpg': (data, {})})
+        source = {'id': 'm1', 'r2_key': 'advisor/media/c1/m1.jpg', 'mime': 'image/jpeg', 'public_key': 'advisor/derived/m1/public.jpg'}
+        item = {'id': 'r1', 'kind': 'roundup', 'out_key': 'advisor/posts/w1/roundup.jpg', 'media': [source, source],
+                'data': {'title': 'This week', 'lines': [], 'captions': []}}
+        slide = 'advisor/posts/w1/roundup-1.jpg'
+        mj.render_graphic(item, r2, self.spec, '+180****0100', log=lambda *_: None)
+        good = r2.objects[slide]
+        r2.objects[slide] = (good[0], {**good[1], mj.META: 'footer-b-digest'})  # slide left by a render whose cover write failed
+        r2.puts.clear()
+        mj.render_graphic(item, r2, self.spec, '+180****0100', log=lambda *_: None)
+        self.assertIn(slide, r2.puts, 'a stale slide forces a re-render')
+        self.assertEqual(r2.objects[slide][1][mj.META], good[1][mj.META])
+        r2.puts.clear()
+        mj.render_graphic(item, r2, self.spec, '+180****0100', log=lambda *_: None)
+        self.assertEqual(r2.puts, [], 'a consistent set is skipped')
+        del r2.objects[slide]
+        mj.render_graphic(item, r2, self.spec, '+180****0100', log=lambda *_: None)
+        self.assertIn(slide, r2.puts, 'a missing slide forces a re-render')
 
 
 if __name__ == '__main__':

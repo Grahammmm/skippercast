@@ -28,6 +28,82 @@ type Snapshot = {generation: string; files: Record<string, string>};
 const SNAPSHOTS = new Set(['conditions', 'data', 'forecasts']);
 const HASH = /^[a-f0-9]{64}$/;
 
+/** Fetch, hash-check and parse one release table. Throws on a missing, corrupt or malformed table. */
+async function loadRelease(selected: Pick<R2Bucket, 'get'>, prefix: string, generation: string): Promise<Snapshot & {bytes: number}> {
+  const object = await selected.get(`${prefix}/.r2-releases/${generation}.json`);
+  if (!object) throw Error('Feed release snapshot unavailable');
+  const bytes = await object.arrayBuffer();
+  const actual = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(x => x.toString(16).padStart(2, '0')).join('');
+  if (actual !== generation) throw Error('Feed release snapshot hash mismatch');
+  const snapshot = JSON.parse(new TextDecoder().decode(bytes));
+  if (snapshot?.schema_version !== 1 || !snapshot.files || typeof snapshot.files !== 'object' || Array.isArray(snapshot.files)) throw Error('Invalid feed release snapshot');
+  return {generation, files: Object.freeze(snapshot.files), bytes: bytes.byteLength};
+}
+
+/**
+ * SCA-032: validated release tables shared across requests in this isolate. A table is named by its generation
+ * (the SHA-256 of its bytes), so a held copy is exactly what a refetch would return. Only the table is shared:
+ * the release pointer is still read per operation (rotation and rollback apply at once), every file object is
+ * still read from R2 (a removed object still fails closed), and a file absent from the table is still missing.
+ * Only a table that passed its hash and schema checks is kept; a failure is never kept. Keys carry the bucket's
+ * namespace, the prefix and the generation; a bucket that cannot hold a namespace tag is read uncached.
+ * Bounded by entry count and by total table bytes. Set RELEASE_CACHE_ENTRIES to 0 to roll back (no sharing).
+ */
+export const RELEASE_CACHE_ENTRIES = 8;
+export const RELEASE_CACHE_BYTES = 8 * 1024 * 1024;
+const releases = new Map<string, {table: Promise<Snapshot>; bytes: number}>();  // held: verified, sized, counted against both bounds
+const loading = new Map<string, Promise<Snapshot>>();  // in flight: not held, so never counted against (or evicting from) the cache
+let activeReleaseLoads = 0;
+const releaseWaiters: Array<() => void> = [];
+async function withReleaseSlot<T>(load: () => Promise<T>): Promise<T> {
+  if (activeReleaseLoads < Math.max(1, RELEASE_CACHE_ENTRIES)) activeReleaseLoads++;
+  else await new Promise<void>(ready => releaseWaiters.push(ready));
+  try { return await load(); } finally {
+    const next = releaseWaiters.shift();
+    // Hand the slot directly to the oldest waiter so a new arrival cannot jump the queue.
+    if (next) next();
+    else activeReleaseLoads--;
+  }
+}
+// The per-request cost meter (cost-ceiling.ts) wraps the bound bucket in a fresh Proxy with only a `get` trap, so
+// own-property definition and lookup reach the bucket itself: the tag names the bucket, not the wrapper.
+const NAMESPACE = Symbol('skippercast.feedReleaseNamespace');
+let namespaces = 0;
+function namespaceOf(selected: object): number | null {
+  try {
+    if (!Object.hasOwn(selected, NAMESPACE)) Object.defineProperty(selected, NAMESPACE, {value: ++namespaces});
+    const id: unknown = Object.getOwnPropertyDescriptor(selected, NAMESPACE)?.value;
+    return typeof id === 'number' ? id : null;
+  } catch { return null; }  // frozen or exotic store: no sharing, same reads as before
+}
+function trimReleases(): void {
+  let total = 0;
+  for (const held of releases.values()) total += held.bytes;
+  for (const [name, held] of releases) {  // oldest (least recently used) first
+    if (releases.size <= RELEASE_CACHE_ENTRIES && total <= RELEASE_CACHE_BYTES) break;
+    releases.delete(name); total -= held.bytes;
+  }
+}
+function releaseTable(selected: Pick<R2Bucket, 'get'>, prefix: string, generation: string): Promise<Snapshot> {
+  const load = () => loadRelease(selected, prefix, generation);
+  const id = RELEASE_CACHE_ENTRIES > 0 ? namespaceOf(selected) : null;
+  if (id === null) return withReleaseSlot(load);
+  const name = `${id}/${prefix}/${generation}`, held = releases.get(name);
+  if (held) { releases.delete(name); releases.set(name, held); return held.table; }
+  const pending = loading.get(name);
+  if (pending) return pending;
+  // Overflow waits for a slot and reads uncached; it never enters the coalescing map or the held cache.
+  if (activeReleaseLoads >= RELEASE_CACHE_ENTRIES) return withReleaseSlot(load);
+  const table = withReleaseSlot(() => load().then(({bytes, ...snapshot}) => {
+    loading.delete(name);
+    // Held only once its size is known; an oversized table is served but never held and evicts nothing.
+    if (bytes <= RELEASE_CACHE_BYTES) { releases.set(name, {table: Promise.resolve(snapshot), bytes}); trimReleases(); }
+    return snapshot;
+  }, (error: unknown) => { loading.delete(name); throw error; }));
+  loading.set(name, table);
+  return table;
+}
+
 /** Capture the bucket and pin each prefix once for a multi-file operation. */
 function resolver(selected: Pick<R2Bucket, 'get'> | null) {
   const snapshots = new Map<string, Promise<Snapshot | null>>();
@@ -39,14 +115,7 @@ function resolver(selected: Pick<R2Bucket, 'get'> | null) {
       if (!pointer) return null; // compatible legacy layout, until the first snapshot
       const current = await pointer.json() as ExternalJSON;
       if (current?.schema_version !== 1 || !HASH.test(current?.generation || '')) throw Error('Invalid feed release pointer');
-      const object = await selected.get(`${prefix}/.r2-releases/${current.generation}.json`);
-      if (!object) throw Error('Feed release snapshot unavailable');
-      const bytes = await object.arrayBuffer();
-      const actual = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(x => x.toString(16).padStart(2, '0')).join('');
-      if (actual !== current.generation) throw Error('Feed release snapshot hash mismatch');
-      const snapshot = JSON.parse(new TextDecoder().decode(bytes));
-      if (snapshot?.schema_version !== 1 || !snapshot.files || typeof snapshot.files !== 'object' || Array.isArray(snapshot.files)) throw Error('Invalid feed release snapshot');
-      return {generation: current.generation, files: snapshot.files};
+      return releaseTable(selected, prefix!, current.generation);
     })());
     const snapshot = await snapshots.get(prefix!)!;
     if (!snapshot) return {key};
@@ -311,7 +380,9 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
         object = whole;
       }
       if (object.range && request.headers.has('Range')) {
-        const {offset = 0, length = object.size - offset} = object.range as {offset?: number; length?: number};
+        const range = object.range;
+        const {offset = 0, length = object.size - offset} = 'suffix' in range
+          ? {offset: Math.max(0, object.size - range.suffix)} : range;
         headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
         headers.set('Content-Length', String(length));
         if (fill) { const filled = fill({size: object.size, range: object.range}).catch(() => {}); if (ctx?.waitUntil) ctx.waitUntil(filled); else await filled; }

@@ -1,20 +1,20 @@
 # Fleet identity byte diagnostic (SP-16-v1)
 
-SP1603-FLEET-IDENTITY-DIAGNOSTIC is offline evidence, not an encoder fix.
-The required result is **PARITY_UNRESOLVED**. No stored identity, fact,
-registry, canonical store or product module is changed. Protocol selection,
-re-keying and migration remain with the operator; this diagnostic grants none
-of them. Machine-valid evidence is REVIEW REQUIRED, not semantic acceptance.
+SP1603-FLEET-IDENTITY-DIAGNOSTIC is offline evidence. The frozen pre-SCA-369
+baseline, replayable at `182f5dd921c2ff6421f838a22bcbdf25e149c45c`, has the
+required result **PARITY_UNRESOLVED**. The current-source successor requires
+**PARITY_RESOLVED** instead. Neither diagnostic rewrites or migrates stored
+identities. Machine-valid evidence is REVIEW REQUIRED, not semantic acceptance.
 
 ## What runs
 
 The committed synthetic [corpus](../../tests/fixtures/sp1603_fleet_identity_diagnostic/corpus.json)
 uses finite `value_json` shapes from the unchanged fleet job and sink tests.
-There are 13 ordinary controls, two exponent cases and two astral-key cases.
-The nested cases are subcases of the two root assertion IDs, not additional
-expected failures. The corpus, source modules, hash dependency and original
-regression selectors have frozen SHA-256 pins in
+There are two exponent cases and 15 controls, including two astral-key cases.
+The exponent cases share one root assertion ID. The corpus, source modules,
+hash dependency and original regression selectors have frozen SHA-256 pins in
 [pins.json](../../tests/fixtures/sp1603_fleet_identity_diagnostic/pins.json).
+The successor overlays only the two changed module hashes on the baseline pins.
 No plan directory, other candidate, extracted function or copied encoder is a
 runtime input.
 
@@ -27,43 +27,46 @@ A separate comparator hashes the returned bytes with Node's `createHash` and
 requires each actual value key to equal the independently derived first 16
 hex characters. It never regenerates JSON with a copied encoder oracle.
 
-The strict diagnostic makes real equality assertions with root IDs
-`exponent_parity` and `astral_key_parity`. At the pinned base both fail and the
-strict child exits 1. The report retains every nested mismatch and every
-ordinary control. Missing or changed evidence, unexpected agreement,
-corruption, source drift or runtime failure yields UNEXPECTED_ERROR and strict
-exit 2, not the approved expected-red result.
+The frozen strict diagnostic records `exponent_parity` as unresolved and exits
+1. The successor requires both exponent cases to agree and exits 0 on parity.
+Both require complete evidence and keep the nested cases and ordinary controls.
+Missing or changed evidence, corruption, source drift, runtime failure, or a
+parity outcome contrary to the selected mode fails closed.
 
-Measured scalar examples:
+Measured pre-fix scalar examples:
 
 | Value | Python text / key | Worker text / key |
 | --- | --- | --- |
 | `0.00001` | `1e-05` / `5a9530d3c6d5faad` | `0.00001` / `661710915adfa7c4` |
 | `1.5` | `1.5` / `9f29a130438b8117` | `1.5` / `9f29a130438b8117` |
 
-For U+E000 and U+10000 object keys, Python orders by code point and the
-Worker by UTF-16 code unit. Their actual bytes and keys consequently differ,
-also within nested arrays/objects. The report does not imply either encoding
-is the chosen protocol or that the two known classes exhaust all JSON-number
-or Unicode incompatibilities.
+The U+E000 and U+10000 object-key cases already agree at the pre-fix baseline
+and remain controls, including when nested. The successor uses the Worker's
+`0.00001` / `661710915adfa7c4` representation in both runtimes. This corpus
+alone does not cover all JSON-number or Unicode edge cases.
 
 ## Tests
 
-`node --test tests/test_sp1603_fleet_identity_diagnostic.mjs` uses this
-checkout's `.venv/bin/python3` when present, otherwise the installed `python3`
+`node --test tests/test_sp1603_fleet_identity_diagnostic.mjs` requires current
+parity. It uses this checkout's `.venv/bin/python3` when present, otherwise the installed `python3`
 on PATH (as provided by CI setup-python). It needs neither a stage manifest nor
 a virtualenv link. Producer reports retain the actual interpreter
 executable/version, and child receipts retain its launch argv. Explicit producer
 runtime overrides never fall back; a missing runtime still fails closed.
 
-The file runs the full A1-A4 characterization. A1 asserts the truthful root
-mismatches, A2 checks every ordinary control, A3 repeats fresh actual producers
-and compares exact nested evidence, and A4 tests corrupt bytes/keys,
-wrong/missing producer identities/cases, unexpected agreement, a corrupt
-fixture and a missing Python runtime. The last two require the strict
-diagnostic to exit 2 with the exact unexpected errors. Healthy evidence still
-passes after synthetic mutations. The green characterization suite does not
-hide or fix the strict red child.
+To replay the frozen baseline, run the same Node test command in a checkout of
+`182f5dd921c2ff6421f838a22bcbdf25e149c45c`; its unchanged strict entry point is
+`node tests/fixtures/sp1603_fleet_identity_diagnostic/diagnostic.mjs --output <new-output-dir>`.
+If staging this revision's wrapper and pins alongside the pinned sources, use
+`node tests/test_sp1603_fleet_identity_diagnostic.mjs --baseline` explicitly.
+The successor never falls back to baseline mode on source drift.
+
+The modes share the A1-A4 test cases and offline producer entry points. A1 checks
+the measured parity verdict, A2 checks every ordinary control, A3 compares
+fresh producer bytes and keys, and A4 rejects corrupt bytes/keys, wrong source
+identities, missing cases and a self-consistent but wrong parity outcome. A
+corrupt fixture or missing Python runtime still yields `UNEXPECTED_ERROR` and
+strict exit 2. The unchanged SQLite and offline sentinels run in both modes.
 
 ## Isolation and limits
 
@@ -86,7 +89,7 @@ Python also disables bytecode writes to the approved shared venv. Synthetic
 outputs and failed-development receipts are retained, never operationally
 deleted or resealed as successes. Review reruns must use separate output roots.
 
-All authored material on this card is by actual `gpt-6.1-sol` via
+The original SP1603 diagnostic was authored by actual `gpt-6.1-sol` via
 `openai-codex` (Sol builder admission). The sole independent reviewer is
 `opus-coder-bopus`, actual Claude Opus 5.5. This note records provenance, not
 self-approval. All source/live/download/legal/preview and existing release

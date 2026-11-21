@@ -51,6 +51,9 @@ QUERIES = {
   quantileExactWeighted(0.95)(double2, _sample_interval) AS p95_ms
 FROM {DATASET} WHERE index1 = 'request' AND {WINDOW}
 GROUP BY route ORDER BY requests DESC LIMIT 40""",
+    'route_totals': f"""SELECT SUM(_sample_interval * double3) AS requests,
+  sumIf(_sample_interval * double3, double1 >= 500) AS s5xx
+FROM {DATASET} WHERE index1 = 'request' AND {WINDOW}""",
     'llm': f"""SELECT blob2 AS feature, blob4 AS model, blob3 AS outcome,
   SUM(_sample_interval) AS calls, SUM(_sample_interval * double1) AS input_tokens,
   SUM(_sample_interval * double2) AS output_tokens, SUM(_sample_interval * double3) AS web_searches
@@ -80,7 +83,7 @@ FROM {DATASET} WHERE index1 = 'fleet_ais' AND {WINDOW}
 ORDER BY timestamp DESC LIMIT 1""",
 }
 FLEET_LABEL = 'fleet-ais-stale'
-LINES = frozenset({'fleet_ais'})
+LINES = frozenset({'fleet_ais', 'route_totals'})
 
 # Funnel steps in the order a visit takes them (server/telemetry.ts FUNNEL_EVENTS).
 FUNNEL = ('port_selected', 'map_viewed', 'forecast_viewed', 'spot_saved', 'offline_saved', 'install')
@@ -263,7 +266,7 @@ def r2_meter_line(now, snapshot=None):
 
 def report(results, fleet_issue='', now=None):
     out = ['# SkipperCast operations report', '']
-    routes = results.get('routes') or []
+    routes = results.get('route_totals') or []
     total = sum(finite(r.get('requests')) or 0 for r in routes)
     errors = sum(finite(r.get('s5xx')) or 0 for r in routes)
     skipped = sum(r.get(c) is not None and finite(r.get(c)) is None for r in routes for c in ('requests', 's5xx'))
@@ -298,6 +301,9 @@ def main(argv=None, environ=None, opener=urlopen, github_opener=urlopen, now=Non
         print(r2_meter_line(now, args.r2_meter))
         return 0
     environ = os.environ if environ is None else environ
+    if environ.get('ENABLE_ANALYTICS') != 'true':
+        print('Operations report skipped: ENABLE_ANALYTICS is not true (docs/cloudflare.md#observability).')
+        return 0
     token, account = environ.get('CF_ANALYTICS_TOKEN', '').strip(), environ.get('CLOUDFLARE_ACCOUNT_ID', '').strip()
     summary = environ.get('GITHUB_STEP_SUMMARY')
     if not token or not account:

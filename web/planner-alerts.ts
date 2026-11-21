@@ -3,6 +3,7 @@
 // the bounded request. The planner (web/planner.ts) supplies the resolved, screened stops; nothing here reads storage, a note or the network
 // except the one POST. Erasable syntax only: the node tests import this file by type stripping.
 import {distanceNm} from '../dist/spot-ranking.js';
+import {placeRefused, type PlaceVerdict} from '../dist/geo-screen.js';
 import {api, dateRange, formProblem, profileTripDefaults, tripBody, tripBoat, tripDefaults, type BoatFactors, type Limits, type TripBoat} from './alerts.ts';
 
 export type AlertRegion = {id: string; timezone: string; species?: string[]; forecast_points?: {id: string; name: string; latitude: number; longitude: number}[]};
@@ -10,7 +11,7 @@ export type AlertRegion = {id: string; timezone: string; species?: string[]; for
 export type AlertStop = {id: string; name: string; lat: number; lon: number; launch?: boolean};
 /** The planner's settings for one attempt (web/limits.ts and dist/boat-handling.js): the profile, whether Boat has its own limits, the profile's limits, the boat factors and saved boat. */
 export type AlertSettings = {profile: string; ownBoatLimits: boolean; limits: {wind: number; gust: number; seas: number}; factors: BoatFactors; boat: {name?: unknown} | null};
-export type AlertLegs = {legs: {from: string; to: string; nm: number; runMin: number | null; basis: 'water' | 'straight'; screen?: unknown}[]; skipped: string[]};
+export type AlertLegs = {legs: {from: string; to: string; nm: number; runMin: number | null; basis: 'water' | 'straight'; screen?: PlaceVerdict}[]; skipped: string[]};
 export type AlertInput = {
   region: AlertRegion; now: number; date: string; stops: AlertStop[]; unresolved: boolean; species: string; settings: AlertSettings;
   legs: (stops: AlertStop[]) => AlertLegs; refused: (stop: AlertStop) => boolean;
@@ -98,7 +99,11 @@ export function buildAlertPlan(i: AlertInput): AlertPlan {
   for (const l of computed.legs) {
     if (!finite(l.nm) || l.nm < 0 || l.nm > 300 || !finite(l.runMin) || l.runMin < 0 || l.runMin > 1440) return no(MSG.legs);
     const from = cleanName(l.from, 'Stop'), to = cleanName(l.to, 'Stop');
-    legs.push({from, to, nm: l.nm, minutes: l.runMin}); legList.push({from, to, nm: l.nm, minutes: l.runMin, basis: l.basis, screen: l.screen});
+    const screened = l.screen?.screened === true, inside = screened && l.screen?.inside === true;
+    const near = l.screen && screened && !inside && placeRefused(l.screen);
+    // Historical preview qualification only: no boundary name, measured offset or geometry travels.
+    legs.push({from, to, nm: l.nm, minutes: l.runMin, basis: l.basis, screen: {inside, screened, ...(near ? {near: true} : {})}});
+    legList.push({from, to, nm: l.nm, minutes: l.runMin, basis: l.basis, screen: l.screen});
   }
 
   const s = i.settings, own = s.profile === 'boat' && s.ownBoatLimits;

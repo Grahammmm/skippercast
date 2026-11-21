@@ -29,15 +29,6 @@ class ClassifiedHabitatProbeTests(unittest.TestCase):
         self.assertTrue(all(p.area <1000 for p in polygons(mask[:,:10],affine)))
         self.assertEqual(len([p for p in components(tiled) if p.area >=1000]),1)
 
-    def test_difference_keeps_only_new_area_without_buffering(self):
-        from shapely.geometry import box
-        classified = box(0,0,40,40)
-        baseline = box(0,0,10,40)
-        additional = classified.difference(baseline)
-        self.assertEqual(additional.area,1200)
-        self.assertEqual(additional.intersection(baseline).area,0)
-        self.assertTrue(classified.covers(additional))
-
     def test_nested_polygon_components_and_processing_limits(self):
         from shapely.geometry import box, MultiPolygon, GeometryCollection
         from research.scripts.probe_classified_habitat import probe

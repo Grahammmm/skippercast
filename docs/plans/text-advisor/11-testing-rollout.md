@@ -149,7 +149,7 @@ accounts, devices, money, approval or judgment.
 - [x] `R2_ADVISOR_TOKEN` (set): a Cloudflare API token with R2 object read and write on `skippercast-advisor-media` only.
 - [ ] `WATCHDOG_GITHUB_TOKEN`: not a repo secret yet; add it with Actions read and write, so the Worker can dispatch `advisor-media.yml`.
 - [ ] `CF_ANALYTICS_TOKEN` (Account Analytics: Read) for the admin Funnel.
-- [ ] `META_APP_ID` and `META_APP_SECRET`; then `node scripts/advisor/meta-token.mjs` for `META_PAGE_ID`, `META_PAGE_TOKEN` and `META_IG_USER_ID`; `META_VERIFY_TOKEN` (a long random string, for the inbox webhook).
+- [ ] `META_APP_ID` and `META_APP_SECRET`; then `node scripts/advisor/meta-token.mjs --token-file "$TOKEN_FILE"` for `META_PAGE_ID`, `META_PAGE_TOKEN` and `META_IG_USER_ID`. For `META_PAGE_TOKEN`, import from the file without displaying it, then remove the file ([09 § Setup](09-social.md#setup-owner-tasks-ta-o4-ta-o5-engineering-provides-scriptsadvisormeta-tokenmjs)). `META_VERIFY_TOKEN` is a long random string for the inbox webhook.
 - [ ] Only with B5: `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` (`TWILIO_FROM` only after a port).
 
 ### E. Variables (`gh variable set NAME --body VALUE`)

@@ -96,16 +96,6 @@ def test_skill_anchor_fails_without_the_page(tmp_path, monkeypatch):
         check(tmp_path, monkeypatch, '<a href="/skill">Skill</a>')
 
 
-def test_skill_anchor_fails_without_the_route_registration(tmp_path, monkeypatch):
-    (tmp_path / "skill.html").write_text("Forecast skill")
-    routes = tmp_path / "root" / "server" / "routes"
-    routes.mkdir(parents=True)
-    (routes / "assets.ts").write_text("if(path === '/status') return '/status.html';\n")
-    monkeypatch.setattr(checker, "ROOT", tmp_path / "root")
-    with pytest.raises(AssertionError):
-        check(tmp_path, monkeypatch, '<a href="/skill">Skill</a>')
-
-
 @pytest.mark.parametrize("html", [
     '<script src="/skill"></script>',
     '<link rel="stylesheet" href="/skill">',

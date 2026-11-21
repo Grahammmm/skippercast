@@ -178,8 +178,8 @@ def outlier_components(mask, med, dev, deepest):
     return out
 
 
-def find_outliers(v, water):
-    """(e) Pits and spikes against the NaN-aware 3x3 water median, with nearest-edge padding."""
+def outlier_masks(v, water):
+    """Shared EC1/EC2 masks against the NaN-aware 3x3 water median, with nearest-edge padding."""
     padded = np.pad(np.where(water, v, np.float32(np.nan)), 1, mode='edge')
     windows = np.lib.stride_tricks.sliding_window_view(padded, (3, 3))
     med = np.full(v.shape, np.nan, dtype=np.float32)
@@ -190,8 +190,14 @@ def find_outliers(v, water):
     dev = v - med
     limit = np.maximum(3.0, 0.20 * np.abs(med))  # ec.outlier_min_m, vectorised
     ok = water & np.isfinite(med)
-    deep = outlier_components(ok & (dev < -limit), med, dev, True)
-    spikes = outlier_components(ok & (dev > limit), med, dev, False)
+    return ok & (dev < -limit), ok & (dev > limit), med, dev
+
+
+def find_outliers(v, water):
+    """Summarize the detected pit and spike components for the v1 receipt."""
+    deep_mask, spike_mask, med, dev = outlier_masks(v, water)
+    deep = outlier_components(deep_mask, med, dev, True)
+    spikes = outlier_components(spike_mask, med, dev, False)
     pits = [p for p in deep if p['cells'] <= T.OUTLIER_MAX_CELLS]
     clusters = [p for p in deep if p['cells'] > T.OUTLIER_MAX_CELLS][:LIST_CAP]
     return pits, clusters, spikes

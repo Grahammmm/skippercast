@@ -91,8 +91,14 @@ function FunnelBody({f}: {f: Funnel}) {
           <Stat label={COPY.inbound} value={f.messages.inbound} />
           <Stat label={COPY.repliesSent} value={f.replies.outbound} />
           <Stat label={COPY.repliesPerContact} value={COPY.decimal(f.replies.per_contact)} />
+          <Stat label={COPY.repliesPending} value={f.unconfirmed_replies.pending} />
+          <Stat label={COPY.repliesHeld} value={f.unconfirmed_replies.held} />
+          <Stat label={COPY.repliesSending} value={f.unconfirmed_replies.sending} />
+          <Stat label={COPY.repliesUnknown} value={f.unconfirmed_replies.unknown} />
+          {f.unconfirmed_replies.other > 0 ? <Stat label={COPY.repliesOther} value={f.unconfirmed_replies.other} /> : null}
           <Stat label={COPY.returnRate} value={`${COPY.percent(f.return_rate.rate)} (${f.return_rate.returning} / ${f.return_rate.active})`} />
         </dl>
+        <p class="admin-muted">{COPY.repliesSentNote}</p>
       </section>
 
       <section aria-labelledby="f-intents">

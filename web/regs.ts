@@ -268,31 +268,39 @@ export const verifiedText = (s: RuleSummary, lang: Language = 'en'): string => s
 /** The region's reviewed registry, keyed by region so another region's never shows. */
 export const regsData = signal<{region: string; data: Data} | null>(null);
 let reading: {region: string; promise: Promise<void> | null; retry: boolean} | null = null;
+let shownDaily: Data = null;
 /** Forgets every read (tests only). */
 export const resetRegs = (): void => { reading = null; };
 /**
- * v1's load: the region's startup copy of the committed registry (its own species and their checks; the whole registry
- * when the copy is missing or not valid for the region), then the daily feed's regulation checks when they are
- * at least as recent; each must name the region's jurisdiction and pass the checks above. A failure
+ * Read the startup copy of the committed registry (or the whole registry if needed) alongside the daily feed.
+ * Publish each as soon as it is validated, never replacing a more recent review or a daily result of equal age
+ * with a registry result. Each must name the region's jurisdiction and pass the checks above. A failure
  * keeps what loaded; with nothing, the line reads "Check rules" with CDFW's page. A read that showed
  * nothing for the region, or met a transport, 429 or 5xx failure, is asked again by the next card.
  */
 export async function loadRegs(region: RulesRegion, fetchFn: typeof fetch = fetch): Promise<void> {
   if (reading?.region === region.id && (reading.promise || !reading.retry)) return reading.promise ?? undefined;
   const ours = reading = {region: region.id, promise: null as Promise<void> | null, retry: false as boolean};
+  const prior = regsData.peek();
+  const floor = prior?.region === region.id ? Date.parse(prior.data.reviewed_at) : -Infinity;
   let transient = false;
-  const accept = (candidate: Data): boolean => {
-    const current = regsData.peek(), mine = current?.region === region.id ? current.data : null;
+  const accept = (candidate: Data, daily = false): boolean => {
     // Only the request that is still current may publish: a first A answering after A -> B -> A is obsolete even at an equal or newer review time.
     if (reading !== ours || candidate?.jurisdiction_id !== region.jurisdiction_id || !validRegulations(candidate, region)) return false;
-    if (mine && Date.parse(candidate.reviewed_at) < Date.parse(mine.reviewed_at)) return false;
+    const reviewed = Date.parse(candidate.reviewed_at);
+    if (reviewed < floor) return false;
+    const current = regsData.peek(), mine = current?.region === region.id ? current.data : null;
+    const shown = mine ? Date.parse(mine.reviewed_at) : -Infinity;
+    // A usable registry still counts as loaded when the daily result wins. Do not trigger a fallback just because it lost.
+    if (reviewed < shown || (reviewed === shown && !daily && mine === shownDaily)) return true;
+    shownDaily = daily ? candidate : null;
     regsData.value = {region: region.id, data: candidate};
     return true;
   };
   const settled = async (url: string): Promise<{d: Data | null; transient: boolean}> => {
     let failed = false;
     try {
-      const r = await fetchFn(url, {cache: 'no-cache'}).catch((e: unknown) => { failed = true; throw e; });
+      const r = await fetchFn(url, {cache: 'no-cache', signal: AbortSignal.timeout(10_000)}).catch((e: unknown) => { failed = true; throw e; });
       if (!r.ok) { failed = r.status === 429 || (r.status >= 500 && r.status <= 599); throw new Error(String(r.status)); }
       // A body that dies in transit is transient; invalid JSON is the file's answer.
       const d = await r.json().catch((e: unknown) => { if (!(e instanceof SyntaxError)) failed = true; throw e; });
@@ -310,12 +318,10 @@ export async function loadRegs(region: RulesRegion, fetchFn: typeof fetch = fetc
     const loaded = registry.d !== null && accept(registry.d);
     transient ||= registry.transient || (!loaded && copy.transient);
   })();
-  const second = settled(dailyPartPath(region.id, 'regulations'));
-  return ours.promise = (async () => {
-    await first;
-    // Registry first, daily last, even when the daily answer arrived first (equal review times favour daily).
-    const b = await second;
+  const second = settled(dailyPartPath(region.id, 'regulations')).then(b => {
     transient ||= b.transient;
-    if (b.d && validDailyPart(b.d, 'regulations', region.id)) accept(b.d.regulations);
-  })().finally(() => { ours.retry = transient || regsData.peek()?.region !== region.id; ours.promise = null; });
+    if (b.d && validDailyPart(b.d, 'regulations', region.id)) accept(b.d.regulations, true);
+  });
+  return ours.promise = Promise.all([first, second]).then(() => undefined)
+    .finally(() => { ours.retry = transient || regsData.peek()?.region !== region.id; ours.promise = null; });
 }

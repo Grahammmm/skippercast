@@ -86,12 +86,16 @@ export function RulesView({jurisdiction: initial}: {jurisdiction: string}) {
 function RuleRow({rule, onEdit, onChanged}: {rule: Rule; onEdit: () => void; onChanged: (rule: Rule, text: string) => void}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [reviewOpen, setReviewOpen] = useState(false);
   async function run(fn: () => Promise<{rule: Rule}>, text: string): Promise<void> {
     if (busy) return;
     setBusy(true); setError('');
     try { onChanged((await fn()).rule, text); } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
   const label = `${rule.species_label}${rule.region !== '*' ? ` (${rule.region})` : ''}`;
+  const canReview = rule.status !== 'retired' && rule.due;
+  const reviewId = `review-rule-${rule.id}`;
+  const sourceLink = () => <a href={rule.source_url} target="_blank" rel="noopener noreferrer">{rule.source_name}</a>;
   return (
     <tr class={rule.due ? 'is-due' : rule.status === 'retired' ? 'is-retired' : undefined}>
       <th scope="row">{label}{rule.due ? <> <span class="admin-reason is-due">{COPY.dueBadge}</span></> : null}</th>
@@ -102,10 +106,23 @@ function RuleRow({rule, onEdit, onChanged}: {rule: Rule; onEdit: () => void; onC
       <td>{COPY.ruleStatus[rule.status]}</td>
       <td>{when(rule.reviewed_at)}</td>
       <td>{rule.review_due}</td>
-      <td><a href={rule.source_url} target="_blank" rel="noopener noreferrer">{rule.source_name}</a></td>
+      <td>{sourceLink()}</td>
       <td>
+        {canReview ? <>
+          <button type="button" class="admin-button is-small" disabled={busy} aria-expanded={reviewOpen} aria-controls={reviewId}
+            onClick={() => setReviewOpen(open => !open)}>Review restrictions</button>
+          <div id={reviewId}>
+            {reviewOpen ? <>
+              <p class="admin-cell-note">{COPY.depth}: {rule.depth_limit_ft ?? '—'}</p>
+              <p class="admin-cell-note">{COPY.areaNotes}: {rule.area_notes || '—'}</p>
+              <p class="admin-cell-note">{COPY.gearNotes}: {rule.gear_notes || '—'}</p>
+              <p class="admin-cell-note">{COPY.source}: {sourceLink()}</p>
+              <button type="button" class="admin-button is-primary is-small" disabled={busy}
+                onClick={() => void run(() => editRule(rule.id, {}), COPY.ruleSaved)}>{COPY.confirmRule}</button>
+            </> : null}
+          </div>
+        </> : null}
         <div class="admin-actions is-tight">
-          {rule.status !== 'retired' && rule.due ? <button type="button" class="admin-button is-primary is-small" disabled={busy} onClick={() => void run(() => editRule(rule.id, {}), COPY.ruleSaved)}>{COPY.confirmRule}</button> : null}
           <button type="button" class="admin-button is-small" disabled={busy} onClick={onEdit} aria-label={`${COPY.editRule}: ${label}`}>{COPY.editRule}</button>
           {rule.status !== 'retired' ? <button type="button" class="admin-button is-danger is-small" disabled={busy} aria-label={`${COPY.retireRule}: ${label}`}
             onClick={() => void run(() => retireRule(rule.id), COPY.ruleRetired)}>{COPY.retireRule}</button> : null}

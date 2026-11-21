@@ -19,7 +19,7 @@ globalThis.BUILD_ID = 'build-test';
 const {default: worker} = await import('../server/index.ts');
 const {mediaJobWork, mediaJobPending, mediaJobDone, videoHold, derivedVideoKey} = await import('../server/advisor/media.ts');
 const {decideReview} = await import('../server/advisor/admin/decisions.ts');
-const {listReviews} = await import('../server/advisor/admin/queue.ts');
+const {listReviews, reviewView} = await import('../server/advisor/admin/queue.ts');
 const {postDetail} = await import('../server/advisor/admin/posts.ts');
 const {reviewId} = await import('../server/advisor/contacts.ts');
 const P = await import('../server/advisor/social/publish.ts');
@@ -105,7 +105,8 @@ dbTest('a media review of a video cannot be approved (or edited) until its strip
   const edit = await decideReview(env, {reviewId: r1, decision: 'edit', patch: {credit: 'Sea Example'}, by: ADMIN, inId: r1, key: 'admin'}, {now: T0, send: async () => 0, dispatch: async () => 204});
   assert.equal(edit.status, 'conflict');
   assert.deepEqual([media(sql, 'v1').publish_state, media(sql, 'v1').credit], ['private', null], 'nothing applied');
-  const card = (await listReviews(db, {status: 'open', kind: 'media'})).items.find(i => i.id === r1);
+  const listed = (await listReviews(db, {status: 'open', kind: 'media'})).items.find(i => i.id === r1);
+  const card = await reviewView(db, listed.id);
   assert.match(card.detail.media.hold, /location metadata/);
   const noFfmpeg = await decide(env, r2);
   assert.equal(noFfmpeg.status, 'conflict');
@@ -114,7 +115,7 @@ dbTest('a media review of a video cannot be approved (or edited) until its strip
   sql.prepare("UPDATE advisor_media SET derived_at=? WHERE id='v1'").run(iso(T0));
   assert.equal((await quiet(() => decide(env, r1))).value.status, 'applied');
   assert.equal(media(sql, 'v1').publish_state, 'approved');
-  assert.equal((await listReviews(db, {status: 'all', kind: 'media'})).items.find(i => i.id === r1).detail.media.hold, null);
+  assert.equal((await reviewView(db, r1)).detail.media.hold, null);
   // Rejecting never waits.
   assert.equal((await quiet(() => decide(env, r3, 'reject'))).value.status, 'applied');
   assert.equal(media(sql, 'v3').publish_state, 'rejected');

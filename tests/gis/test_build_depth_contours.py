@@ -28,9 +28,25 @@ def _tif(path, values, x0, y0, cell=2.0, crs='EPSG:32610', dtype='float32', noda
 
 def _sources(*ids, native=2):
     return {i: {'id': i, 'review_status': 'approved', 'needs': ['bathymetry'], 'name': f'Synthetic {i}',
-                'documentation_url': 'https://example.invalid/doc', 'rights': {'attribution': 'Synthetic'},
+                'documentation_url': 'https://example.invalid/doc', 'rights': {'attribution': 'Synthetic', 'public_display': 'allowed'},
                 'survey_year': 2008, 'vertical_datum': None, 'native_resolution_m': native,
                 'reviewed_at': '2026-10-01'} for i in ids}
+
+
+@pytest.mark.parametrize('ident, publication_allowed, reason', [
+    ('usace-ncmp-ca-8482', False, 'publication_allowed is false'),
+    ('noaa-morro-bay-topobathy-2022-9630', False, 'publication_allowed is false'),
+    ('noaa-bluetopo', None, 'not an approved bathymetry source'),
+])
+def test_standalone_public_refusal_preserves_morro_legacy_reasons(ident, publication_allowed, reason):
+    # The display exception must not leak into the standalone builder's default path.
+    pytest.importorskip('rasterio')
+    from skippercast.platform.contracts import OWNER_DISPLAY_BASIS
+
+    sources = _sources(ident)
+    sources[ident].update(review_status='candidate', publication_allowed=publication_allowed)
+    sources[ident]['rights']['owner_public_display'] = {'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}
+    assert _load_builder().public_refusal(ident, {'source_bindings': {'bathymetry': []}}, sources) == reason
 
 
 def _run_builder(monkeypatch, grids, sources, *extra, captured=None):
@@ -111,7 +127,8 @@ def test_held_output_traces_a_candidate_grid_privately_and_the_default_still_ref
     import rasterio
     from skippercast.platform import depth_contours as dc
     sources = _sources('noaa-x')
-    sources['noaa-x'].update(review_status='candidate', rights={'attribution': 'Synthetic', 'license': 'CC0-1.0'})
+    sources['noaa-x'].update(review_status='candidate', rights={'attribution': 'Synthetic', 'license': 'CC0-1.0',
+                                                                 'public_display': 'allowed'})
     x = _tif(tmp_path / 'x.tif', _slope((64, 64)), X0, Y0)
     captured = {}
     doc = _run_builder(monkeypatch, {'noaa-x': x}, sources, '--held-output', str(tmp_path / 'held.geojson'), captured=captured)

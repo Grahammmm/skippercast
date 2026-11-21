@@ -13,6 +13,9 @@ from .contracts import REPO, atomic_json, read_json
 def compile_readiness(root=REPO):
     root = Path(root)
     sectors = read_json(root / 'dist/data/coastal-sectors.json')['sectors']
+    expected = {row['id'] for row in sectors}
+    if len(expected) != len(sectors):
+        raise ValueError('Duplicate sector IDs in statewide readiness roster')
     native = read_json(root / 'dist/data/noaa-native-sector-review.json')
     variable_depth = read_json(root / 'dist/data/noaa-vr-native-depth-expanded-review.json')
     regular_depth = read_json(root / 'dist/data/noaa-regular-native-depth-review.json')
@@ -110,7 +113,6 @@ def compile_readiness(root=REPO):
     regular_by_id = {row['sector_id']: row for row in regular_depth['sectors']}
     discovery_by_id = {row['sector_id']: row for row in discovery['sectors']}
     seabed_by_id = {row['sector_id']: row for row in seabed_samples['sectors']}
-    expected = {row['id'] for row in sectors}
     if not set(original_by_sector) <= expected:
         raise ValueError('Hard-footprint source review has an unknown sector')
     csumb_by_sector = {ident: set() for ident in expected}
@@ -216,6 +218,9 @@ def compile_readiness(root=REPO):
                            if (draft['fishing_bounds'][0] <= east and draft['fishing_bounds'][2] >= west
                                and draft['fishing_bounds'][1] < north and draft['fishing_bounds'][3] > south))
         points = sector['published_candidate_points']
+        # Older sector inventories have no affirmative qualification count.
+        qualified_points = sector.get('qualified_fishing_targets', 0)
+        research_points = points - qualified_points
         candidate_files = lead['eligible_for_native_substrate_review_bboxes']
         eligible_urls = set(lead.get('eligible_substrate_review_bag_urls', []))
         if len(eligible_urls) != candidate_files:
@@ -252,7 +257,7 @@ def compile_readiness(root=REPO):
                 held_variable_rows.append(row)
         unheld_variable_files = variable_files - len(held_variable_rows)
         # These are file-envelope leads, not a count of verified seabed cells.
-        if min(points, candidate_files, held_files, variable_files, regular_files) < 0:
+        if min(qualified_points, research_points, candidate_files, held_files, variable_files, regular_files) < 0:
             raise ValueError('Negative coverage count')
         if candidate_files and sector_cell_rows:
             next_step = 'Review original native cells, independent substrate, chart hazards and access for the in-sector file leads.'
@@ -300,7 +305,7 @@ def compile_readiness(root=REPO):
                 row['strict_1m_original_class3_unique_pixels'] for row in original_tiles.values()),
             'research_only': True,
         }
-        if footprint_summary['tiles_with_strict_original_hard_overlap'] and not points:
+        if footprint_summary['tiles_with_strict_original_hard_overlap'] and not qualified_points:
             next_step += (' Review the original NOAA contributor report and site chart, fish/habitat observations,'
                           ' local access and species/date rules before considering any fishing area.')
         rows.append({
@@ -308,7 +313,9 @@ def compile_readiness(root=REPO):
             'bounds': sector['bounds'], 'package_overlaps': package_rows,
             'unpublished_draft_package_ids': draft_ids,
             'published_candidate_points_in_band': points,
-            'status': 'partial-local-targets' if points else 'source-review-only',
+            'published_research_candidates_in_band': research_points,
+            'qualified_fishing_targets_in_band': qualified_points,
+            'status': 'partial-local-targets' if qualified_points else 'source-review-only',
             'noaa_catalog_survey_leads': lead['catalog_survey_leads'],
             'csumb_catalog_survey_lead_ids': sorted(csumb_by_sector[ident]),
             'usgs_ds781_map_area_leads': sorted(usgs_by_sector[ident], key=lambda area: area['name']),

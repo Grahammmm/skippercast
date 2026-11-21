@@ -10,7 +10,7 @@ from ..pipeline.regulations import validate_bindings, validate_region_binding, r
 from datetime import datetime, timezone
 from .qualified_scope import validate_qualified_scope, qualified_subset_satisfies
 from .coasts import compile_coasts
-from .sectors import compile_sectors
+from .sectors import compile_sectors, is_qualified_fishing_target
 from .readiness import compile_readiness
 from .shoreline import publish_shoreline
 from .depth_contours import publish_depth_contours
@@ -29,6 +29,8 @@ def chart_files(output):
 
 def target_options(region, targets):
     labels = region.get('target_labels', {})
+    if not isinstance(labels, dict):
+        raise ValueError('target_labels must be an object')
     if not set(labels) <= set(region['species']) or any(not isinstance(v, str) or not v.strip() or len(v) > 80 for v in labels.values()):
         raise ValueError('Regional target labels must name existing targets')
     return [{'id': ident, **targets[ident], 'name': labels.get(ident, targets[ident]['name'])} for ident in region['species']]
@@ -155,9 +157,11 @@ def build(root=REPO, now=None):
             if target["neighborhood_depth_ft"][1] > region["boat"]["bottom_depth_limit_ft"]:
                 raise ValueError("Target exceeds the configured fishing depth limit")
         report["published_targets"] = len(atlas["targets"])
-        # Count only depth-qualified coordinates; research-only candidates never qualify.
-        report['qualified_bottom_views']=sum(t.get("depth_qualified") is not False and not t.get("research_only")
-                                             for t in atlas['targets'])
+        qualified_targets = sum(is_qualified_fishing_target(target, atlas) for target in atlas['targets'])
+        report['qualified_fishing_targets'] = qualified_targets
+        report['published_research_candidates'] = report['published_targets'] - qualified_targets
+        # Preserve the legacy field, which counts target coordinates, not surveyed tiles.
+        report['qualified_bottom_views'] = qualified_targets
         if research_only:
             report["note"] = region.get("research_only_note") or (
                 f"The {len(atlas['targets'])} published coordinates are research-only; none is chart-depth qualified.")

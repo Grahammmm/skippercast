@@ -11,6 +11,12 @@ from ..util.units import FT_PER_M
 # The historical feed rounded this factor to five decimals; keep that so published threshold_ft stays byte-identical.
 _THRESHOLD_FT_PER_M = round(FT_PER_M, 5)
 
+# NOAA 0.25° probability product, first seven days only. Both checked-in regional
+# intelligence snapshots record these eight exceedance fields at every f000–f168
+# three-hour lead. This is inventory, not a test of populated regional sea cells.
+_LEAD_HOURS = tuple(range(0, 169, 3))
+_THRESHOLDS_M = (0.6, 1, 2, 3, 4, 5.5, 7, 9)
+
 
 def decode_probabilities(body, points):
     from eccodes import codes_grib_new_from_file,codes_get,codes_get_array,codes_release
@@ -57,36 +63,67 @@ def decode_probabilities(body, points):
 
 
 def wave_probabilities(client,region,now):
-    root='https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/';base=None;names=[];cycle=None
-    # A newly created directory may still be empty or incomplete. Require a complete horizon.
-    # Provider cycles are UTC; an equivalent zoned clock must pick the same run (aware input only).
-    if now.tzinfo is not None:now=now.astimezone(timezone.utc)
+    root='https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/'
+    # Cycle labels and GRIB timestamps are UTC, including for callers supplying a naive UTC clock.
+    now=now.replace(tzinfo=timezone.utc) if now.tzinfo is None else now.astimezone(timezone.utc)
     rounded=now.replace(hour=(now.hour//6)*6,minute=0,second=0,microsecond=0)
+    # Prefer the newest full listing, otherwise the most populated single run (newest on ties).
+    selected=None
     for hours_back in (0,6,12,18,24):
         candidate=rounded-timedelta(hours=hours_back)
         directory=f'gefs.{candidate:%Y%m%d}/{candidate:%H}/wave/gridded/'
         try:listing=client.get(root+directory)
         except Exception:continue
-        available=sorted(set(re.findall(r'gefs\.wave\.t\d{2}z\.prob\.global\.0p25\.f\d{3}\.grib2',listing)))
-        if any('.f168.' in f for f in available):base=directory;names=available;cycle=candidate;break
-    if not base:raise ValueError('No complete recent GEFS Wave probability run')
+        prefix=f'gefs.wave.t{candidate:%H}z.prob.global.0p25.f'
+        names=set(re.findall(r'(?<![\w.-])'+re.escape(prefix)+r'\d{3}\.grib2(?![\w.-])',listing))
+        expected={lead:f'{prefix}{lead:03}.grib2' for lead in _LEAD_HOURS}
+        files={lead:name for lead,name in expected.items() if name in names}
+        if len(files)==len(expected):
+            selected=(directory,candidate,files)
+            break
+        if files and (selected is None or len(files)>len(selected[2])):
+            selected=(directory,candidate,files)
+    if selected is None:raise ValueError('No recent GEFS Wave probability files')
+    base,cycle,files=selected
     west,south,east,north=region['bounds'];frames=[];failures=[]
-    # Three-hour source snapshots; exact times only, not an interpolated probability.
-    files=[f for f in names if int(re.search(r'\.f(\d+)',f)[1])<=168]
-    def fetch_file(filename):
+    cycle_timestamp=int(cycle.timestamp())
+    decoded_leads=set();incomplete_thresholds=[]
+
+    def fetch_file(item):
+        lead,filename=item
         params={'file':filename,'dir':'/'+base.rstrip('/'),'var_HTSGW':'on','lev_surface':'on','subregion':'',
                 'leftlon':west-.3,'rightlon':east+.3,'toplat':north+.3,'bottomlat':south-.3}
         url='https://nomads.ncep.noaa.gov/cgi-bin/filter_gefs_wave_0p25.pl?'+urlencode(params)
-        try:return filename,client.get(url,as_binary=True)
-        except Exception as e:return filename,e
+        try:return lead,filename,client.get(url,as_binary=True)
+        except Exception as e:return lead,filename,e
     with ThreadPoolExecutor(max_workers=3) as pool:
-        for filename,value in pool.map(fetch_file,files):
-            if isinstance(value,Exception):failures.append({'file':filename,'error':str(value)[:160]});continue
-            try:frames.extend(decode_probabilities(value,region['forecast_points']))
-            except Exception as e:failures.append({'file':filename,'error':str(e)[:160]})
+        for lead,filename,value in pool.map(fetch_file,files.items()):
+            try:
+                if isinstance(value,Exception):raise value
+                records=decode_probabilities(value,region['forecast_points'])
+            except Exception as e:
+                failures.append({'file':filename,'error':str(e)[:160]})
+                continue
+            same_cycle=[row for row in records if row['cycle']==cycle_timestamp]
+            valid_timestamp=cycle_timestamp+lead*3600
+            exact=[row for row in same_cycle if row['time']==valid_timestamp]
+            if len(exact)!=len(records):
+                reason='cycle' if len(same_cycle)!=len(records) else 'valid time'
+                failures.append({'file':filename,'error':f'Wave ensemble {reason} mismatch'})
+            if not exact:continue
+            frames.extend(exact)
+            decoded_leads.add(lead)
+            thresholds=sorted(row['threshold_m'] for row in exact)
+            # Allow only GRIB decimal-to-float noise; duplicates do not fill missing thresholds.
+            if len(thresholds)!=len(_THRESHOLDS_M) or not all(
+                math.isclose(actual,expected,rel_tol=0,abs_tol=1e-9)
+                for actual,expected in zip(thresholds,_THRESHOLDS_M)
+            ):incomplete_thresholds.append(lead)
     if not frames:raise ValueError('No valid regional GEFS wave probabilities: '+str(failures[:1]))
-    if any(f['cycle']!=int(cycle.timestamp()) for f in frames):raise ValueError('Wave ensemble cycle mismatch')
+    missing=sorted(set(_LEAD_HOURS)-decoded_leads)
     return {'provider':'NOAA GEFS Wave','issued_at':stamp(cycle),'frames':frames,'failed_files':failures,'resolution_km':25,'native_step_hours':3,
+            'horizon_status':'partial' if missing or incomplete_thresholds else 'complete',
+            'missing_lead_hours':missing,'incomplete_threshold_lead_hours':incomplete_thresholds,
             'source_url':'https://www.nco.ncep.noaa.gov/pmb/products/gens/gefs.wave.t00z.prob.global.0p25.f000.grib2.shtml',
             'sampling':'Nearest populated sea cell within 30 km; returned coordinates and distance accompany every sample.',
             'limitations':'Published uncalibrated ensemble probability at NOAA thresholds. 1 m is 3.28 ft, not the 3 ft comfort limit. No interpolation between thresholds or forecast hours. Regional sea-cell samples do not resolve an individual reef or harbor.'}

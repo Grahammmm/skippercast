@@ -114,23 +114,20 @@ export async function stubLiveFeeds(page, {id = 'morro-bay', feeds = true} = {})
   });
 }
 
-/**
- * Record JSON responses while `page` opens `path`; resolves once the network
- * has been quiet for QUIET_MS after `ready` (the app's map canvas) is visible.
- */
 /** The v2 app's map canvas (/map). */
 export const MAP_READY = '.app-chart canvas.maplibregl-canvas';
+
+/** Only a quiet capture with all selected JSON bodies read has budgetable totals. */
 export async function measureStartup(page, {path = '/map?region=morro-bay', ready = MAP_READY, timeout = 60_000} = {}) {
-  const entries = [];
-  let interactive = false, last = Date.now(), origin = null;
+  const entries = [], failed = [], pending = new Set(), inflight = new Set();
+  const started = Date.now(), remaining = () => started + timeout - Date.now();
+  let interactiveMs = null, last = started, origin = null, quiet = false, deadlineReached = false;
   // Requests still waiting for a response. A request counts as answered at its
   // response, not when its body finishes: a body the page never reads (a 404
-  // it ignores) may never "finish". JSON bodies are awaited through `reads`.
-  const reads = [], inflight = new Set();
-  const settle = request => { inflight.delete(request); last = Date.now(); };
-  page.on('request', request => { inflight.add(request); last = Date.now(); });
-  page.on('requestfailed', settle);
-  page.on('response', response => {
+  // it ignores) may never "finish". Selected JSON bodies are tracked separately.
+  const settle = request => { inflight.delete(request); last = Date.now(); quiet = false; };
+  const onRequest = request => { inflight.add(request); last = Date.now(); quiet = false; };
+  const onResponse = async response => {
     settle(response.request());
     const url = response.url();
     if (!url.startsWith('http')) return;
@@ -139,29 +136,59 @@ export async function measureStartup(page, {path = '/map?region=morro-bay', read
     const u = new URL(url), live = u.origin !== origin || isLive(u.pathname);
     const type = response.headers()['content-type'] || '';
     if (!isJSON(url, type) || response.status() >= 300) return;
-    const before = !interactive;
-    reads.push(response.body().then(body => {
-      entries.push({path: u.origin === origin ? u.pathname + u.search : u.origin + u.pathname, bytes: body.length, beforeInteractive: before, live});
-    }, () => {}));
-  });
-  const started = Date.now();
-  await page.goto(path);
-  await page.locator(ready).first().waitFor({state: 'visible', timeout});
-  interactive = true;
-  const interactiveMs = Date.now() - started;
-  while (Date.now() - started < timeout) {
-    if (!inflight.size && Date.now() - last >= QUIET_MS) break;
-    await page.waitForTimeout(250);
+    const entry = {path: u.origin === origin ? u.pathname + u.search : u.origin + u.pathname, beforeInteractive: interactiveMs === null, live};
+    pending.add(entry);
+    let bytes;
+    try {
+      bytes = (await response.body()).length;
+    } catch { /* Keep the path, not a fabricated zero-byte body. */ }
+    if (remaining() <= 0) return;
+    pending.delete(entry);
+    if (bytes === undefined) failed.push(entry.path);
+    else entries.push({...entry, bytes});
+  };
+  page.on('request', onRequest);
+  page.on('requestfailed', settle);
+  page.on('response', onResponse);
+  try {
+    await page.goto(path, {timeout: Math.max(1, remaining())});
+    if (remaining() > 0) await page.locator(ready).first().waitFor({state: 'visible', timeout: Math.max(1, remaining())});
+    if (remaining() > 0) interactiveMs = Date.now() - started;
+    while (remaining() > 0) {
+      quiet = !inflight.size && Date.now() - last >= QUIET_MS;
+      if (quiet && !pending.size) break;
+      await page.waitForTimeout(Math.min(250, remaining()));
+    }
+    deadlineReached = remaining() <= 0;
+  } catch (error) {
+    if (error.name !== 'TimeoutError') throw error;
+    deadlineReached = true;
+  } finally {
+    page.off('request', onRequest);
+    page.off('requestfailed', settle);
+    page.off('response', onResponse);
   }
-  await Promise.all(reads);
-  return {...summarise(entries), interactiveMs};
+  const incomplete = [...failed, ...[...pending].map(entry => entry.path)];
+  const complete = quiet && !deadlineReached && !incomplete.length;
+  const capture = {quiet, deadlineReached, complete, incomplete, interactiveMs};
+  const {rows, ...totals} = summarise(entries);
+  // Keep rows for diagnosis but never give the budget consumer a partial byte total.
+  return complete ? {...capture, rows, ...totals} : {
+    ...capture, rows, interactive: null, startup: null, static: null, live: null, observed: totals,
+  };
 }
 
 const kb = n => `${(n / 1024).toFixed(1)} KB`;
-export function formatTable({rows, interactive, startup, interactiveMs, static: fixed, live}) {
+export function formatTable({rows, interactive, startup, interactiveMs, static: fixed, live, complete, quiet, deadlineReached, incomplete, observed}) {
   const width = Math.max(40, ...rows.map(r => r.path.length));
   const lines = [`${'JSON response'.padEnd(width)}  ${'size'.padStart(10)}  kind    phase`];
   for (const r of rows) lines.push(`${r.path.padEnd(width)}  ${kb(r.bytes).padStart(10)}  ${r.live ? 'live  ' : 'static'}  ${r.beforeInteractive ? 'before interactive' : 'after interactive'}${r.requests > 1 ? ` (${r.requests} requests)` : ''}`);
+  if (complete === false) {
+    lines.push('', `Inconclusive capture (network quiet: ${quiet ? 'yes' : 'no'}; deadline reached: ${deadlineReached ? 'yes' : 'no'}).`,
+      `Observed only: ${observed.static} static bytes; ${observed.live} live bytes. Not a budget result.`);
+    if (incomplete.length) lines.push('Incomplete JSON bodies:', ...incomplete.map(path => `  ${path}`));
+    return lines.join('\n');
+  }
   lines.push('', `Static files (budgeted): ${kb(fixed)} (${fixed} bytes)`, `Live feeds (information only): ${kb(live)} (${live} bytes)`,
     `All JSON: ${kb(startup)} (${startup} bytes); before interactive (${interactiveMs} ms): ${kb(interactive)}`);
   return lines.join('\n');
@@ -207,6 +234,7 @@ async function main() {
     if (stub || mpaOnly) await stubLiveFeeds(page, {id: region, feeds: stub});
     const result = await measureStartup(page, {path: `/map?region=${encodeURIComponent(region)}`});
     console.log(asJSON ? JSON.stringify({region, stub, ...result}, null, 1) : `Region: ${region}${stub ? ' (live feeds stubbed)' : ''}\n${formatTable(result)}`);
+    if (!result.complete) process.exitCode = 1;
   } finally {
     await browser.close();
     server?.kill('SIGTERM');

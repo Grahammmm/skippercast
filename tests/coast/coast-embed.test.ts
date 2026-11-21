@@ -292,10 +292,10 @@ test('host-chrome setters change the scene and readings, target detail and sourc
   // Synthetic sources; the labels below are the native panel's own strings.
   v.manifest={sources:[{id:1,label:'Synthetic lidar',kind:'lidar',resolutionM:1,datum:'Synthetic datum',sourceDate:'2022-06-14',url:'https://example.test/lidar'},{id:2,label:'Synthetic model',kind:'model',resolutionM:30,datum:'Model sea level',sourceDate:'2013-01-01',url:'https://example.test/model'}]};
   v.listSources();
-  assert.deepEqual(coverage,[{sources:v.manifest.sources,key:node('.coverage-key').textContent}]);assert.ok(Object.isFrozen(coverage[0].sources[0]));assert.equal(node('source-list').children.length,2);
+  assert.deepEqual(coverage,[{sources:v.manifest.sources,key:node('.coverage-key').textContent}]);assert.ok(Object.isFrozen(coverage[0].sources[0]));assert.equal(node('source-list').children.length,1,'MAP-SOURCES-PAGE-1: one link to the Sources page, no source names in the sheet');
   v.showReading(0,0,{height:-6,source:1,spacing:2});v.showReading(0,0,{height:-40,source:2,spacing:30});
   assert.deepEqual(readings.map(r=>[r.label,r.source.sourceDate,r.value,r.heightM]),[['MEASURED LIDAR · NAVD88','2022-06-14','20 ft depth',-6],['REGIONAL MODEL','2013-01-01','131 ft depth',-40]]);
-  assert.ok(readings[0].detail.startsWith('Synthetic lidar · 2022-06-14 · 2 m display spacing. Synthetic datum.'));assert.ok(Number.isFinite(readings[0].latitude)&&Number.isFinite(readings[0].longitude));
+  assert.ok(readings[0].detail.startsWith('2022-06-14 · 2 m display spacing. Synthetic datum.'),'the reading keeps its date, spacing and datum, not the source name');assert.ok(!readings[0].detail.includes('Synthetic lidar'));assert.ok(Number.isFinite(readings[0].latitude)&&Number.isFinite(readings[0].longitude));
   v.setLocation({latitude:35.3,longitude:-120.9});v.setLocation({latitude:35.31,longitude:-120.9});assert.deepEqual(readings.slice(2),[null],'a cleared reading is reported once');
   const reef={id:'synthetic-reef',properties:{waypoint_latitude:35.9,waypoint_longitude:-121.5,region:'cambria-san-simeon',terrain_grade:'B',depth_min_ft:40,depth_max_ft:70,terrain_score:60,resolution_m:2,source_year:2020,metric_support_fraction:.9,screen_expires_at:'2027-01-01T00:00:00Z'}};
   v.selectFeature(reef,false);

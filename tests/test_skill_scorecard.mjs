@@ -1,6 +1,7 @@
 // BF-skill-scorecard: the public forecast skill page (dist/skill.html) and its publisher (scripts/publish_forecast_skill.py).
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {mkdirSync, mkdtempSync, readFileSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -94,6 +95,39 @@ test('the page says swell period and water temperature are not scored, and the s
   const published = JSON.parse(readFileSync(new URL('../dist/data/forecast-skill.json', import.meta.url), 'utf8'));
   assert.deepEqual(published.minimum, {valid_times: 30, days: 7, runs: 3});
   assert.ok(published.scores.every(r => !('swell_period' === r.variable || 'water_temperature' === r.variable)));
+});
+
+test('skill_page_spanish: below-minimum and missing windows remain unscored', {timeout: 2000}, async ({mock}) => {
+  const html = readFileSync(new URL('../dist/skill.html', import.meta.url), 'utf8');
+  const warning = {firstChild: {nodeValue: ''}, getAttribute: () => html.match(/data-i18n-lead="([^"]+)"/)?.[1]};
+  const rendered = Promise.withResolvers(), host = {set innerHTML(value) { rendered.resolve(value); }};
+  const doc = {documentElement: {lang: 'en'}, getElementById: id => id === 'skill-rows' ? host : null,
+    querySelectorAll: selector => selector === '[data-i18n-lead]' && warning.getAttribute() ? [warning] : []};
+  const sample = file({generated_at: '2099-01-01T00:00:00Z', scores: [row({n: 29, within: 25})]});
+  mock.method(globalThis, 'fetch', async url => ({ok: true, json: async () => url === '/regions/index.json' ? index : sample}));
+  const location = globalThis.location;
+  try {
+    globalThis.location = {search: '?lang=es'};
+    globalThis.document = doc;
+    await import('../dist/skill-page.js?spanish');
+    const scorecard = await rendered.promise;
+    assert.equal(doc.title, 'Acierto del pronóstico · SkipperCast');
+    assert.match(html, /<noscript>.*lang="es"/);
+    assert.match(warning.firstChild.nodeValue, /pronósticos anteriores en las boyas, no una promesa sobre la próxima salida/);
+    assert.match(scorecard, /Morro Bay[\s\S]*Cape San Martin <small>\(boya 46028\)/);
+    assert.match(scorecard, /fecha de publicación está en el futuro/);
+    assert.match(scorecard, /Aún no hay suficientes datos <small>\(29 comprobados, últimos 7 días\)/);
+    assert.match(scorecard, /Aún no hay suficientes datos <small>\(últimos 30 días\)/);
+    assert.match(scorecard, /margen de 5 nudos/);
+    assert.doesNotMatch(scorecard, /%/);
+    assert.match(renderScorecard(readScorecard(file(), index, NOW), 'es'), /80%<\/strong> <small>\(36 de 45 comprobados, últimos 7 días\)/);
+  } finally { globalThis.location = location; delete globalThis.document; }
+});
+
+test('skill_english_identical', () => {
+  const cases = [file(), file({scores: [row({n: 29, within: 25})]}), file({generated_at: '2026-11-02T00:00:00Z', scores: [null]}), file({ports: []})];
+  const html = cases.map(f => renderScorecard(readScorecard(f, index, NOW), 'en')).join('\n') + UNREADABLE;
+  assert.equal(createHash('sha256').update(html).digest('hex'), '264988444cf845b4b94d7aedaa46632351f175bb1a0d38ad46e6bef73496d43b');
 });
 
 // ---- the publisher, run on constructed archives ----

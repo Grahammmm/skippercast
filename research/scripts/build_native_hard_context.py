@@ -53,7 +53,7 @@ def compile_context(reviews, summary, mpa_snapshot, federal_snapshot, *, expecte
     mpa = mpa_union(mpa_snapshot)
     federal = federal_union(federal_snapshot)
     exclusion = set_precision(transform(TO_METERS, unary_union([mpa, federal])).buffer(100), 0.1)
-    accepted = None
+    display_claimed = None
     output = []
     for ident in sorted(expected):
         review, row = reviews[ident], rows[ident]
@@ -74,17 +74,17 @@ def compile_context(reviews, summary, mpa_snapshot, federal_snapshot, *, expecte
             if not original.is_valid or original.is_empty:
                 raise ValueError('Invalid original review geometry')
             # Simplification can expand an edge: intersect it with the original,
-            # then remove present-day closures and previously published overlap.
+            # then remove present-day closures and overlap claimed by earlier outlines.
             simplified = set_precision(original.simplify(8, preserve_topology=True), 0.1)
             polygon = polygon_only(simplified.intersection(original, grid_size=0.1))
             if polygon.is_empty:
                 continue
             polygon = polygon_only(polygon.difference(exclusion, grid_size=0.1))
-            if accepted is not None:
-                polygon = polygon_only(polygon.difference(accepted, grid_size=0.1))
+            if display_claimed is not None:
+                polygon = polygon_only(polygon.difference(display_claimed, grid_size=0.1))
             if polygon.is_empty or polygon.area < 2500:
                 continue
-            accepted = polygon if accepted is None else accepted.union(polygon)
+
             # The GIS review perimeter is jagged at native 1–2 m cells. Make
             # a smaller display-only interior, never expanding into a closure
             # or claiming the chart shows a precise reef edge.
@@ -112,6 +112,10 @@ def compile_context(reviews, summary, mpa_snapshot, federal_snapshot, *, expecte
                 'fishing_target': False, 'exportable': False, 'legal_clearance': False,
                 'fish_confirmed': False, 'depth_qualified_for_target': False,
             }})
+            # Reserve the pre-inset footprint only for emitted outlines, so
+            # later outlines do not fill their inset margins. This is display
+            # deduplication, not a measure of source support.
+            display_claimed = polygon if display_claimed is None else display_claimed.union(polygon)
     return {'type': 'FeatureCollection', 'schema_version': 1,
             'scope': f'{coast_id}-native-noaa-usgs-hard-bottom-context',
             'compiled_at': datetime.now(timezone.utc).isoformat(),

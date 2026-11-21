@@ -3,25 +3,33 @@
 // over a fake MapLibre and a fake terrain, so neither a GPU nor the library is
 // needed. The web/map/*.ts files run by type stripping.
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import util from 'node:util';
 import {existsSync, readFileSync} from 'node:fs';
 import test from 'node:test';
 import {RAIL_IDS} from '../web/profile.ts';
-import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
+import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, NEARSHORE_DRAW_ORDER, attributionFor, reliefWanted, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
 import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
 import {groundsOverlay} from '../web/map/charter-grounds.ts';
 import {markData, markScreen, markStyle} from '../web/map/marks.ts';
 import {assessScreen, CHECKING} from '../web/map/habitat.ts';
 import {beginWaypointPlacement, cancelWaypointPlacement, placementRefused, waypointPlacement} from '../web/waypoint-placement.ts';
 import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, SHORELINE_DETAIL_ZOOM} from '../web/map/coastline.ts';
-import {VIEW_ZOOM, ZOOM_OFFSET, collapseAttribution, createEngine, mapOptions} from '../web/map/engine.ts';
+import {VIEW_ZOOM, ZOOM_OFFSET, SOURCES_HREF, SourcesLinkControl, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
-import {mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
-import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from '../web/map/style.ts';
+import {MPA_FILL, mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
+import {createDepthContours, DEPTH_BOTTOM, DEPTH_HIT, DEPTH_LABEL, DEPTH_LINE, DEPTH_LINE_INDEX} from '../web/map/depth-contours.ts';
+import {createWaterTemp, waterTempOverlay} from '../web/map/sst.ts';
+import {chlorophyllOverlay, createChlorophyll} from '../web/map/chlorophyll.ts';
+import {createSwell, swellOverlay} from '../web/map/swell.ts';
+import {WAVE_MODEL} from '../web/map/forecast-grid.ts';
+import {fieldOpacity} from '../web/map/nearshore-paint.ts';
+import {NEARSHORE_STYLE} from '../web/map/nearshore-style.gen.ts';
+import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE, PLACE_LABELS} from '../web/map/style.ts';
 import {camera, cameraParam, choosePresentation, createStage, drape, terrainCoarsened, terrainFailed, terrainPick, zoomForSpan} from '../web/map/stage.ts';
 import {appView, configureStore, region, setParams, syncFromURL} from '../web/state.ts';
-import {effect} from '@preact/signals';
+import {effect, signal} from '@preact/signals';
 import {publishedChartFiles} from '../web/chart-files.ts';
 import {settlePicks} from './helpers/pick-settle.mjs';
 
@@ -63,6 +71,64 @@ test('a source error routes to the layer that owns it; attribution follows the d
   assert.equal(sourceLayer(undefined), null);
   assert.equal(attributionFor(['basemap', 'coastline']), `${BASEMAP_ATTRIBUTION} · NOAA NGS · CUSP shoreline`);
   assert.equal(layerEntry('basemap').attribution, '© OpenStreetMap contributors, © Protomaps');
+});
+
+// Key by the kit's slot names so an ID moving slots, or a newly added kit slot
+// with no web mapping, cannot pass a length-only check.
+test('MSK-2: nearshore slot IDs match generated draw_order, including reserved layers', () => {
+  const slots = {
+    'base relief (depth ramp x shade, bottom tint, pile tint)': ['bottom-relief'],
+    'colour fields': ['water-temp', 'chlorophyll', 'swell'],
+    'contours minor': ['depth-contours-line'],
+    'contours index': ['depth-contours-line-index'],
+    'hard edge': ['nearshore-hard-edge'],
+    'pile outline': ['nearshore-pile-outline'],
+    'contour labels': ['depth-contours-label'],
+    'pile labels': ['nearshore-pile-label'],
+    'pier + cast arcs': ['nearshore-pier', 'nearshore-cast-arcs'],
+    'place labels': ['labels-places'],
+  };
+  assert.deepEqual(NEARSHORE_DRAW_ORDER, NEARSHORE_STYLE.overlays.draw_order.map(name => slots[name]));
+});
+
+// A stale constant or unshifted kit zoom would draw the wrong opacity at the same camera.
+test('MSK-2: all three colour fields use the generated opacity curve at MapLibre zooms', () => {
+  const pairs = NEARSHORE_STYLE.overlays.field_opacity_by_zoom;
+  const stops = pairs.map(([zoom]) => zoom - ZOOM_OFFSET);
+  assert.deepEqual(stops, [7, 10, 12, 14], 'web kit z8/11/13/15 on the 512px MapLibre zoom scale');
+  const expected = ['interpolate', ['linear'], ['zoom'], ...pairs.flatMap(([, opacity], i) => [stops[i], opacity])];
+  const empty = {type: 'FeatureCollection', features: []};
+  const checkPaint = curve => {
+    for (const [overlay, id, property] of [
+      [waterTempOverlay(sentinel), 'water-temp', 'raster-opacity'],
+      [chlorophyllOverlay({}, sentinel, empty), 'chlorophyll', 'fill-opacity'],
+      [swellOverlay(sentinel), 'swell', 'raster-opacity'],
+    ]) assert.deepEqual(overlay.layers.find(layer => layer.id === id)?.paint[property], curve, id);
+  };
+  checkPaint(expected);
+
+  const edited = structuredClone(NEARSHORE_STYLE);
+  edited.overlays.field_opacity_by_zoom[1] = [12, 0.42];
+  const expectedEdit = [...expected];
+  expectedEdit.splice(5, 2, 11, 0.42);
+  assert.deepEqual(fieldOpacity(edited), expectedEdit, 'the shared paint builder honours an edited kit stop');
+  // Feed the same edit through each real layer builder without adding a production injection seam.
+  try {
+    NEARSHORE_STYLE.overlays.field_opacity_by_zoom = edited.overlays.field_opacity_by_zoom;
+    checkPaint(expectedEdit);
+  } finally {
+    NEARSHORE_STYLE.overlays.field_opacity_by_zoom = pairs;
+  }
+});
+
+// An omitted or unshifted minzoom would show lines or labels at the wrong zoom.
+test('MSK-2: SST lines and labels share the whole-layer z13 kit minimum', () => {
+  assert.equal(NEARSHORE_STYLE.overlays.isolines_from_zoom, 13);
+  const {layers} = waterTempOverlay(sentinel);
+  for (const id of ['water-temp-contours', 'water-temp-labels']) {
+    assert.equal(layers.find(layer => layer.id === id)?.minzoom, 13 - ZOOM_OFFSET, id);
+  }
+  assert.equal(layers.find(layer => layer.id === 'water-temp')?.minzoom, undefined, 'no isotherm gate on the field itself');
 });
 
 test('the coastline is a glow under a crisp line, coloured from the palette, and drawn last', () => {
@@ -154,6 +220,14 @@ function library() {
     // With `fake.lateStyle`, the style's layers and sources exist only once a test sets `styled` (as MapLibre's before `style.load`).
     get loaded() { return this.styled ?? !fake.lateStyle; }
     getLayer(id) { return this.loaded && this.options.style.layers.some(l => l.id === id) ? {} : undefined; }
+    addLayer(layer, before) {
+      const layers = this.options.style.layers, at = before === undefined ? layers.length : layers.findIndex(l => l.id === before);
+      assert.notEqual(at, -1, `unknown before-layer ${before}`);
+      layers.splice(at, 0, layer);
+    }
+    removeLayer(id) { this.options.style.layers = this.options.style.layers.filter(l => l.id !== id); }
+    addSource(id, source) { this.options.style.sources[id] = source; this.getSource(id).updateImage = () => {}; }
+    removeSource(id) { delete this.options.style.sources[id]; delete this.sources[id]; }
     setLayoutProperty(id, name, value) { this.visibility[id] = value; (this.layoutCalls ??= []).push([id, value]); }
     getSource(id) { return this.loaded && this.options.style.sources[id] ? this.sources[id] ??= {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
     queryRenderedFeatures(point, options) { const {layers} = options ?? point; return fake.features.filter(f => layers.includes(f.layer.id)); }
@@ -171,7 +245,7 @@ function library() {
   const control = kind => class { constructor(options) { this.kind = kind; this.options = options; } };
   fake.module = {
     lib: {
-      Map: FakeMap, NavigationControl: control('navigation'), ScaleControl: control('scale'), AttributionControl: control('attribution'),
+      Map: FakeMap, NavigationControl: control('navigation'), ScaleControl: control('scale'),
       setWorkerUrl: url => fake.workerUrls.push(url), addProtocol: (name, fn) => fake.protocols.push([name, fn]),
     },
     workerUrl: '/assets/maplibre-gl-worker.0123456789.js',
@@ -211,7 +285,7 @@ test('MapLibre init: north up, nautical scale, worker and protocol once, and err
   assert.equal(map.options.maxPitch, 0);
   assert.equal(map.keyboardRotation, false);
   assert.equal(map.touchRotation, false);
-  assert.deepEqual(map.controls.map(([c, at]) => [c.kind, at]), [['navigation', 'bottom-right'], ['scale', 'bottom-right'], ['attribution', 'bottom-right']]);
+  assert.deepEqual(map.controls.map(([c, at]) => [c instanceof SourcesLinkControl ? 'sources' : c.kind, at]), [['navigation', 'bottom-right'], ['scale', 'bottom-right'], ['sources', 'bottom-right']]);
   assert.equal(map.controls[0][0].options.showCompass, false, 'no compass: the chart never rotates');
   assert.equal(map.controls[1][0].options.unit, 'nautical');
   assert.deepEqual(mapOptions(host, options.style, options.camera).locale, {'Map.Title': 'Chart'});
@@ -237,40 +311,27 @@ test('a still engine (the landing\'s night map, FE-25) takes no input, fades no 
   assert.equal(mapOptions({}, style, camera).interactive, undefined, 'the Chart keeps its gestures');
 });
 
-/** A fake attribution <details>: its classes and whether it is `open`. */
-function attribElement(...classes) {
-  const names = new Set(classes), attributes = new Set(['open']);
-  return {names, attributes, classList: {contains: n => names.has(n), remove: n => names.delete(n)}, removeAttribute: n => attributes.delete(n)};
-}
-const state = el => [[...el.names].sort().join(' '), el.attributes.has('open')];
-
-test('BL-SC-1: collapseAttribution folds an opened compact control and leaves a folded or desktop one alone', () => {
-  const opened = attribElement('maplibregl-ctrl-attrib', 'maplibregl-compact', 'maplibregl-compact-show');
-  collapseAttribution(opened);
-  assert.deepEqual(state(opened), ['maplibregl-compact maplibregl-ctrl-attrib', false]);
-  collapseAttribution(opened);
-  assert.deepEqual(state(opened), ['maplibregl-compact maplibregl-ctrl-attrib', false], 'a second fold changes nothing');
-  const minimized = attribElement('maplibregl-ctrl-attrib', 'maplibregl-compact'), desktop = attribElement('maplibregl-ctrl-attrib');
-  for (const el of [minimized, desktop]) { const before = state(el); collapseAttribution(el); assert.deepEqual(state(el), before); }
-});
-
-test('BL-SC-1: the Chart\'s attribution uses MapLibre\'s width rule and folds each time it turns compact, not while it stays so', () => {
+// Contract (MAP-SOURCES-PAGE-1, G 2026-11-18: no source labels on the map): the Chart draws no MapLibre attribution control and
+// no credit text; its one source-related control is a "Sources" link to the generated list. Believable bug: an
+// AttributionControl or a customAttribution creeping back in, which the fake library (it has no AttributionControl) makes throw.
+test('MAP-SOURCES-PAGE-1: the Chart has no attribution control; its only source control is a bare "Sources" link to /sources', () => {
   const fake = library(), style = {version: 8, sources: {}, layers: []}, camera = {latitude: 35.37, longitude: -120.86, zoom: 12};
   createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}});
-  createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}, attribution: '© OSM'});
-  assert.deepEqual(fake.maps.map(m => m.controls[2][0].options), [{}, {customAttribution: '© OSM'}], 'no compact: false; the credit text is unchanged');
-  const [map] = fake.maps, el = map.controls[2][0]._container = attribElement('maplibregl-ctrl-attrib', 'maplibregl-compact', 'maplibregl-compact-show');
-  map.fire('styledata');
-  assert.deepEqual(state(el), ['maplibregl-compact maplibregl-ctrl-attrib', false], 'opened on load at phone width → folded');
-  el.names.add('maplibregl-compact-show'); el.attributes.add('open'); // one tap opens it
-  map.fire('resize'); map.fire('sourcedata');
-  assert.equal(el.names.has('maplibregl-compact-show'), true, 'a resize while compact keeps the reader\'s open panel');
-  el.names.delete('maplibregl-compact'); el.names.delete('maplibregl-compact-show'); // MapLibre: wider than 640 px
-  map.fire('resize');
-  assert.deepEqual(state(el), ['maplibregl-ctrl-attrib', true], 'the desktop width stays expanded');
-  el.names.add('maplibregl-compact').add('maplibregl-compact-show'); // MapLibre reopens it on narrowing
-  map.fire('resize');
-  assert.deepEqual(state(el), ['maplibregl-compact maplibregl-ctrl-attrib', false], 'narrow → wide → narrow ends folded');
+  const [map] = fake.maps;
+  assert.equal(map.controls.length, 3, 'zoom, scale and the one Sources link');
+  assert.equal(map.controls.some(([c]) => c.kind === 'attribution' || 'customAttribution' in (c.options ?? {})), false, 'no attribution control, no credit text');
+  assert.ok(map.controls[2][0] instanceof SourcesLinkControl);
+  const made = [], saved = globalThis.document;
+  globalThis.document = {createElement: tag => { const el = {tag, className: '', textContent: '', attrs: {}, kids: [], setAttribute(n, v) { this.attrs[n] = v; }, append(...k) { this.kids.push(...k); }, remove() { this.removed = true; }}; made.push(el); return el; }};
+  try {
+    const control = new SourcesLinkControl(), box = control.onAdd(), link = box.kids[0];
+    assert.equal(SOURCES_HREF, '/sources#data-sources');
+    assert.deepEqual([link.tag, link.href, link.textContent], ['a', SOURCES_HREF, 'Sources'], 'one small link and no source name');
+    assert.equal(box.kids.length, 1);
+    assert.match(box.className, /\bmap-sources-link\b/);
+    control.onRemove();
+    assert.equal(box.removed, true);
+  } finally { globalThis.document = saved; }
 });
 
 test('the engine\'s style gate: calls before style.load wait, then apply once with the latest value per layer and source', () => {
@@ -306,6 +367,84 @@ function browser(href) {
   syncFromURL(href);
   return {params: () => new URL(location.href).searchParams};
 }
+
+// Exercise the real controllers' before-layer choices, not a test copy of the anchor lists.
+// Losing DEPTH_BOTTOM/MPA_FILL (or reversing minor/index/hit/label) buries Chart detail.
+test('MSK-2: Chart inserts real fields and contours at their current MapLibre anchors', async t => {
+  const id = 'morro-bay', now = new Date('2026-10-20T12:00:00Z'), when = now.toISOString(), time = now.getTime() / 1000;
+  browser(`${PAGE}?region=${id}&presentation=chart&hour=${when}&layers=water-temp,swell,chlorophyll`);
+  const fake = library();
+  const style = chartStyle({palette: sentinel, archive: 'https://s.test/base.pmtiles', page: PAGE, region: id, base: 'night'});
+  const view = {latitude: 35.4, longitude: -121, zoom: 11};
+  const e = createEngine(fake.module, {host: {}, style, camera: view, onMove() {}, onLayerError() {}});
+  const [map] = fake.maps;
+  map.fire('style.load');
+  const engine = signal(e), controllers = [];
+  const savedCamera = camera.value, savedFiles = publishedChartFiles.value;
+  t.after(() => {
+    for (const controller of controllers.reverse()) controller.destroy();
+    e.destroy(); camera.value = savedCamera; publishedChartFiles.value = savedFiles;
+  });
+  camera.value = view;
+  publishedChartFiles.value = {region: id, files: ['depth-contours-overview.geojson']};
+  controllers.push(createDepthContours({engine, page: () => PAGE, now: () => now.getTime(), palette: () => sentinel,
+    fetchFn: async url => serveDist(url)}));
+  await tick();
+  const opts = {engine, page: () => PAGE, palette: () => sentinel, now: () => now, zone: () => 'UTC'};
+  const grid = [35.4, 35.5].flatMap(lat => [-121, -120.9].map(lon => ({lat, lon, tempF: 57, errorF: 1})));
+  const temperature = {sourceId: 'fixture', kind: 'analysis', analysedAt: when, fetchedAt: when,
+    sampleSpacingDeg: 0.1, nativeResolutionDeg: 0.1, points: grid};
+  const report = {spatial: {surfaceTemperature: temperature}, sources: [{id: 'fixture', label: 'Fixture', outcome: 'ok', kind: 'analysis'}]};
+  const makeWaterTemp = () => createWaterTemp({...opts, place: () => ({regionId: id}), data: {coastStatus: signal({report: 'ready'}),
+    coastReport: signal({data: report}), setPlace() {}, load() {}}});
+  const waterTemp = makeWaterTemp();
+  controllers.push(waterTemp);
+
+  const wave = {utc_offset_seconds: 0, hourly_units: {time: 'unixtime', swell_wave_height: 'ft', swell_wave_period: 's', swell_wave_direction: '°'},
+    hourly: {time: [time], swell_wave_height: [2], swell_wave_period: [12], swell_wave_direction: [290]}};
+  const forecast = {region_id: id, retrieved: now.getTime(), requested_points: grid.map(({lat, lon}, i) => [`offshore-${i}`, lat, lon]),
+    models: {[WAVE_MODEL.id]: {data: grid.map(() => wave), meta: {last_run_initialisation_time: time - 3600, data_end_time: time}}}};
+  controllers.push(createSwell({...opts, fetchFn: async () => Response.json(forecast)}));
+  await tick();
+
+  const layerId = 'chlorophyll-observation', fields = ['latitude', 'longitude', 'chlorophyll_mg_m3'];
+  const bounds = [-121.5, 35, -121, 35.5], resolution_degrees = [.0375, .0375];
+  const frame = {time, valid_cells: 1};
+  const tile = JSON.stringify({schema_version: 1, region_id: id, layer_id: layerId, fields, bounds, resolution_degrees,
+    frames: [{time, cells: [[35.1, -121.2, .1]]}]});
+  const sha256 = createHash('sha256').update(tile).digest('hex');
+  const layer = {id: layerId, kind: 'observation', fields, resolution_degrees, frames: [frame], sample_at: when,
+    status: 'ok', max_age_hours: 96, native_stride: 1,
+    tiles: [{path: `habitat-tiles/${layerId}--243-70-${sha256.slice(0, 16)}.json`, bounds, sha256, bytes: Buffer.byteLength(tile)}]};
+  const manifest = {schema_version: 1, region_id: id, layers: {[layerId]: layer},
+    sources: {[layerId]: {name: 'Fixture chlorophyll', data_retrieved_at: when}}};
+  controllers.push(createChlorophyll({...opts, fetchFn: async url => url.endsWith('/habitat-dynamics.json') ? Response.json(manifest) : new Response(tile)}));
+  const ids = () => map.options.style.layers.map(l => l.id);
+  for (const end = Date.now() + 2000; !ids().includes('chlorophyll') && Date.now() < end;) await tick();
+  const order = (...wanted) => {
+    const actual = ids();
+    assert.deepEqual(actual.filter(layer => wanted.includes(layer)), wanted);
+  };
+  order('water-temp', 'chlorophyll', 'swell', DEPTH_BOTTOM, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL, PLACE_LABELS, MPA_FILL);
+
+  // Place labels are the kit's top slot: the contour labels and every field draw under them, not over.
+  order('boundaries', DEPTH_LABEL, PLACE_LABELS, MPA_FILL);
+  // Without Swell, chlorophyll still goes under the depth contours (before DEPTH_BOTTOM), not before MPA_FILL.
+  setParams({layers: 'water-temp,chlorophyll'});
+  // Draw chlorophyll anew so the engine has to choose the fallback rather than retain its layer.
+  controllers.pop().destroy();
+  controllers.push(createChlorophyll({...opts, fetchFn: async url => url.endsWith('/habitat-dynamics.json') ? Response.json(manifest) : new Response(tile)}));
+  for (const end = Date.now() + 2000; !ids().includes('chlorophyll') && Date.now() < end;) await tick();
+  order('water-temp', 'chlorophyll', DEPTH_BOTTOM, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL, PLACE_LABELS, MPA_FILL);
+
+  // Arrival order must not matter: Water temperature drawn after chlorophyll still lands under it (kit: water-temp, chlorophyll, swell).
+  controllers.splice(controllers.indexOf(waterTemp), 1);
+  waterTemp.destroy();
+  controllers.push(makeWaterTemp());
+  for (const end = Date.now() + 2000; !ids().includes('water-temp') && Date.now() < end;) await tick();
+  order('water-temp', 'chlorophyll', DEPTH_BOTTOM, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL, PLACE_LABELS, MPA_FILL);
+});
+
 const doc = () => ({hidden: false, addEventListener() {}, removeEventListener() {}});
 
 /** A fake terrain whose renderer reports a camera through onView and keeps the overlays it is given. */
@@ -318,7 +457,7 @@ function terrain() {
       fake.sets++; fake.overlays.set(id, overlay);
       return fake.silent ? null : {cell: 1, step: fake.coarse.has(id) ? 3 : 1, coarsened: fake.coarse.has(id)};
     }, removeOverlay: id => fake.overlays.delete(id)};
-  for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible']) handle[name] = () => true;
+  for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible', 'setRelief']) handle[name] = () => true;
   fake.module = {styles: [], mountCoast(_host, options) { fake.options = options; return handle; }};
   return fake;
 }
@@ -326,7 +465,7 @@ function terrain() {
 /** The published file under dist/ for a page-relative URL (the region packages FE-19's protected areas read), or a 404. */
 function serveDist(url) {
   const file = new URL(`../dist${new URL(url).pathname}`, import.meta.url);
-  return existsSync(file) ? {ok: true, json: async () => JSON.parse(readFileSync(file, 'utf8'))} : {ok: false, status: 404, json: async () => ({})};
+  return existsSync(file) ? new Response(readFileSync(file)) : {ok: false, status: 404, json: async () => ({})};
 }
 
 function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette, flyoverGate, idleReady} = {}) {
@@ -359,7 +498,7 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
     'https://s.test/api/daily?region=morro-bay&part=mpa-boundaries', 'https://s.test/feeds/data/regions/morro-bay/latest.json',
   ].sort());
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
-  assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
+  assert.ok(map.controls[2][0] instanceof SourcesLinkControl, 'no basemap credit is drawn while it draws; the corner holds only the Sources link');
   // #617: the first view (?view= zoom 12, MapLibre 11) draws the overview shoreline.
   assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline-overview.geojson');
   // The startup budget: the style's own source loads the shoreline once (it is not set again for the
@@ -492,7 +631,7 @@ test('a failing source marks its layer unavailable and the rest of the Chart kee
   await tick(); await tick();
   const [map] = fake.maps;
   assert.deepEqual(unavailable.value, ['basemap'], 'no manifest: the basemap is unavailable');
-  assert.equal(map.controls[2][0].options.customAttribution, undefined, 'and is not credited');
+  assert.ok(map.controls[2][0] instanceof SourcesLinkControl, 'the Sources link stays when the basemap is unavailable');
   assert.ok(map.options.style.sources[COASTLINE_SOURCE], 'the coastline still draws');
   map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('503')});
   map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('503 again')});
@@ -723,7 +862,10 @@ test('FE-82: protected areas, reef marks and charter grounds drape on the terrai
   // Coast overlays retain their general UI roles; the Chart's independent roles have equal defaults.
   const ring = markStyle({...sentinel, mapInkHalo: sentinel.bg, markRing: sentinel.mint}).marks.find(l => l.id === 'marks-ring').paint, marks = layerEntry('marks').terrain;
   assert.deepEqual([marks.kind, sentinel[marks.color], marks.opacity, sentinel[marks.outline]], ['point', ring['circle-color'], ring['circle-opacity'], ring['circle-stroke-color']]);
-  assert.equal(marks.size, ring['circle-radius'] * 2, 'the ring\'s diameter');
+  // MB-16: the Chart ring's radius is a cluster/spot expression; the terrain draws single spots, so it matches the spot (last, non-cluster) branch.
+  const spotRadius = ring['circle-radius'].at(-1);
+  assert.equal(typeof spotRadius, 'number', 'the non-cluster branch is a plain radius');
+  assert.equal(marks.size, spotRadius * 2, 'the ring\'s diameter');
   const grounds = groundsOverlay(sentinel, {outlines: {type: 'FeatureCollection', features: []}, hatch: {type: 'FeatureCollection', features: []}});
   const charter = layerEntry('charter-grounds').terrain;
   assert.deepEqual([sentinel[charter.color], sentinel[charter.outline]], [grounds.layers.find(l => l.id === 'charter-grounds-line').paint['line-color'], sentinel.amber]);
@@ -731,7 +873,7 @@ test('FE-82: protected areas, reef marks and charter grounds drape on the terrai
   assert.equal(drawsIn('fleet', '3d'), true);
   assert.equal(drawsIn('fleet', '2d'), true);
   assert.deepEqual(drapeStyle(mpas, OVERLAY_PALETTE), {color: 'mpaFill', opacity: 0.18, outline: 'mpaLine'}, 'roles stay roles; the opacity token is a number');
-  assert.deepEqual(drapeStyle(marks, OVERLAY_PALETTE), {color: 'bg', opacity: 0.75, outline: 'mint', size: 18});
+  assert.deepEqual(drapeStyle(marks, OVERLAY_PALETTE), {color: 'bg', opacity: 0.75, outline: 'mint', size: 14});
 });
 
 test('FE-82: the stage drapes each feed in § 9 order, replaces what changed, removes what went and survives a refusal', t => {
@@ -1027,4 +1169,19 @@ test('chart_closed_pick_context_never_picks: with the Chart still mounted but an
     settlePicks();
     assert.equal(chartMark.value.name, 'Shoreline', 'back on the coast an isolated click selects');
   } finally { appView.value = 'coast'; cancelWaypointPlacement(); stage.destroy(); }
+});
+
+// Contract: DATA-LIVE-9. The bottom relief is public: the gate takes no admin/preview-access input, so a signed-out visitor is
+// asked for the same overlay as an owner, and the pointer (not a session) decides whether anything draws. Its honesty line is
+// fixed copy with no source names. Believable bugs: re-adding an admin gate; wording drifting to a source credit.
+test('relief gate is public on the coast Chart; the honesty line names no source', () => {
+  const base = {presentation: 'chart', view: 'coast', basemapAvailable: true, studyPreviewOn: false};
+  assert.equal(reliefWanted(base), true);
+  for (const edit of [{presentation: '2d'}, {presentation: '3d'}, {view: 'fleet'}, {basemapAvailable: false}, {studyPreviewOn: true}])
+    assert.equal(reliefWanted({...base, ...edit}), false, JSON.stringify(edit));
+  const row = JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['layer.relief.shading'];
+  // MB-11 copy update: the honesty line no longer carries "blank = no survey data" (same change as tests/test_map_loading_status.mjs).
+  assert.equal(row.en, 'Depth shading: estimated from survey grids · NOT FOR NAVIGATION');
+  assert.match(row.es, /NAVEGACI/);
+  assert.doesNotMatch(row.en + row.es, /csumb|sfml|mbari|usgs|noaa|planet|attribution|credit/i);
 });

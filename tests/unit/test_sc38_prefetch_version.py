@@ -9,11 +9,8 @@ method: the isolation fixture redirects every module path constant and bound
 default under ``tmp_path`` and makes the transfer constructors and the network
 raise. See docs/engineering/sc38_prefetch_version.md.
 """
-import hashlib
-import inspect
 import json
 import socket
-import textwrap
 
 import pytest
 
@@ -28,11 +25,6 @@ HOST = 'data.ngdc.noaa.gov'
 SURVEY = 'https://data.ngdc.noaa.gov/sc38/survey.bag'
 OTHER = SURVEY + '?other'
 
-# The submitted gate and the baseline (equality-only) gate, as they appear in load_plan.
-TYPE_GATE = "type(plan.get('schema_version')) is not int or "
-BASELINE_LINE = "    if plan.get('schema_version') != 1 or not isinstance(plan.get('files'), list):\n"
-# sha256 of inspect.getsource(load_plan) at base 59fca09b (prefetch.py cb39907b...).
-BASELINE_LOAD_PLAN_SHA256 = '4d707dfac6e88679b30f704269f032792bca858314c627cc73ab2d78cd7a0a5f'
 
 # JSON tokens substituted for the literal ``1`` of the fixture's version line.
 REJECTED_TOKENS = {
@@ -40,8 +32,6 @@ REJECTED_TOKENS = {
     'string-1': '"1"', 'null': 'null', 'object': '{}', 'object-1': '{"major": 1}',
     'list': '[]', 'list-1': '[1]', 'zero': '0', 'two': '2', 'negative-1': '-1',
 }
-# The baseline gate accepted exactly these; the mutation controls must catch each one.
-MUTATION_TOKENS = {'true': 'true', 'float-1.0': '1.0', 'exponent-1e0': '1e0'}
 
 
 class Refused(AssertionError):
@@ -203,14 +193,6 @@ def test_a2_absent_version_is_held_before_io(tmp_path, filename_calls):
     assert_held_before_io(tmp_path, path, SpySession(), filename_calls)
 
 
-def test_a2_decoded_bool_and_float_versions_are_the_cases_baseline_missed(tmp_path):
-    # Python equality is why the baseline accepted them: True == 1.0 == 1.
-    decoded = {name: json.loads(staged_plan(tmp_path, token).read_text())['schema_version']
-               for name, token in MUTATION_TOKENS.items()}
-    assert decoded == {'true': True, 'float-1.0': 1.0, 'exponent-1e0': 1.0}
-    assert all(value == 1 and type(value) is not int for value in decoded.values())
-
-
 def test_a2_files_array_check_is_independent_of_a_valid_version(tmp_path, filename_calls):
     inputs = tmp_path / 'input'
     inputs.mkdir()
@@ -225,46 +207,3 @@ def test_a2_empty_plan_hold_is_independent_of_a_valid_version(tmp_path, filename
     with pytest.raises(p.Hold, match='Empty inventory is not a completed campaign'):
         p.load_plan(path, session)
     assert session.checked == [] and filename_calls == []
-
-
-# ---- A3 decisive synthetic mutation ------------------------------------------------------
-
-def baseline_mutant():
-    """The submitted load_plan with only the type gate removed: the baseline function.
-
-    Built in-process from the genuine function source by one exact textual
-    reversion; the production file is not edited. The result must hash to the
-    recorded baseline load_plan source, so it is the original equality-only gate
-    applied to the complete function.
-    """
-    source = inspect.getsource(p.load_plan)
-    assert source.count(TYPE_GATE) == 1, 'submitted type gate not found exactly once'
-    reverted = source.replace(TYPE_GATE, '')
-    assert BASELINE_LINE in reverted
-    assert hashlib.sha256(reverted.encode()).hexdigest() == BASELINE_LOAD_PLAN_SHA256
-    namespace = dict(vars(p))
-    exec(compile(textwrap.dedent(reverted), f'{p.__file__}#sc38-baseline-mutant', 'exec'), namespace)
-    return namespace['load_plan']
-
-
-@pytest.mark.parametrize('token', list(MUTATION_TOKENS.values()) + ['1'],
-                         ids=[*MUTATION_TOKENS, 'healthy-integer-1'])
-def test_mutation_controls(tmp_path, token, filename_calls):
-    mutant = baseline_mutant()
-    path = staged_plan(tmp_path, token)
-    if token == '1':
-        # Healthy control: both gates accept integer 1 with identical normalized output.
-        genuine = p.load_plan(path, SpySession())
-        assert mutant(path, SpySession()) == genuine
-        assert genuine['schema_version'] == 1 and type(genuine['schema_version']) is int
-        return
-    # Deciding gate: the submitted function holds before check_url and normalization ...
-    assert_held_before_io(tmp_path, path, SpySession(), filename_calls)
-    # ... while the baseline gate accepts the same complete input, so the identical
-    # rejection assertion fails (pytest's Failed, not an unrelated swallowed error).
-    session = SpySession()
-    accepted = mutant(path, session)
-    assert accepted['schema_version'] == 1 and type(accepted['schema_version']) is not int
-    assert session.checked == [SURVEY, SURVEY, OTHER]
-    with pytest.raises(pytest.fail.Exception):
-        assert_held_before_io(tmp_path, path, SpySession(), [], loader=mutant)

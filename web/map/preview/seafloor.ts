@@ -17,10 +17,14 @@ export function seafloorOverlay(archive: string): Overlay {
 
 export const attach: PreviewAttach = async ctx => {
   const archive = ctx.url(PREVIEW_DATA.seafloor);
-  // One byte, so a missing archive reads as unavailable here and the map never asks MapLibre for a 404 source.
   const probe = await ctx.fetchFn(archive, {headers: {Range: 'bytes=0-0'}, cache: 'no-store', signal: ctx.signal});
-  if (!probe.ok) throw new Error(`seafloor relief archive not found (HTTP ${probe.status})`);
+  // The probe only needs headers. Cancel even if the server ignored Range and sent the whole archive.
+  await probe.body?.cancel();
   if (ctx.signal.aborted) return null;
+  if (!probe.ok) throw new Error(`seafloor relief archive not found (HTTP ${probe.status})`);
+  if (probe.status !== 206 || !/^bytes 0-0\/(?:0*[1-9]\d*|\*)$/i.test(probe.headers.get('Content-Range') ?? '')) {
+    throw new Error(`seafloor relief archive did not return the requested one-byte range (HTTP ${probe.status})`);
+  }
   ctx.engine.setOverlay(SEAFLOOR_ID, seafloorOverlay(archive), SEAFLOOR_BEFORE);
   ctx.report({state: 'ready', text: 'Medium relief with 2 m shallow bathymetry. Tan or clear = no survey.'});
   return handle(() => ctx.engine.setOverlay(SEAFLOOR_ID, null));

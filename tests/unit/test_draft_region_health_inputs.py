@@ -79,7 +79,7 @@ def mutate(evidence, rules, case):
 ])
 def test_misshaped_key_is_named(tmp_path, case, message):
     evidence = write(tmp_path, {'harbor': 'failed', 'tides': 'ok'})
-    rules = {'review_required': []}
+    rules = {'region_id': REGION, 'review_required': []}
     mutate(evidence, rules, case)
     (folder(tmp_path) / 'latest.json').write_text(json.dumps(evidence))
     (folder(tmp_path) / 'regulations-health.json').write_text(json.dumps(rules))

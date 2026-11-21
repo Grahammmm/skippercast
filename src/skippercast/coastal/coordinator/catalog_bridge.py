@@ -196,23 +196,24 @@ def _canonical_tiles(tile, width, height, origin):
             for y in range(origin[1], height, tile) for x in range(origin[0], width, tile)]
 
 
+def _is_crs84_degree_grid(crs):
+    # Both consumers use always_xy coordinates. Compare CRS semantics, not spelling.
+    from pyproj import CRS
+    return CRS.from_user_input(crs).equals(CRS("OGC:CRS84"), ignore_axis_order=True)
+
+
 def tiling_affine_problem(tiling, definition):
     """Why a window-set ``tiling`` disagrees with its grid's ``affine_transform``, or None.
 
-    ``anchor`` and ``cell`` decide which tiles are required; the affine decides
-    ownership and footprint. A rotated affine never matches the axis-aligned tiling.
+    A rotated affine never matches the axis-aligned tiling.
     For a CRS84-degree raster the anchor must be the affine at ``origin`` and the
     cell must be ``(a, -e)``. Projected rasters have no exact degree cell; their
-    binding is not checked here.
+    membership must be checked from native footprints, not by this helper.
     """
     a, b, c, d, e, f = definition["affine_transform"]
     if b != 0 or d != 0:
         return "window-set grid affine must not be rotated"
-    # Both consumers use always_xy coordinates, so EPSG:4326 and CRS84's
-    # axis-order variants have the same degree affine/tiling contract. Compare
-    # CRS semantics, not spelling: lowercase, URN and WKT must not skip N2.
-    from pyproj import CRS
-    if not CRS.from_user_input(definition["raster_crs"]).equals(CRS("OGC:CRS84"), ignore_axis_order=True):
+    if not _is_crs84_degree_grid(definition["raster_crs"]):
         return None
     (x, y), (west, north), (dx, dy) = tiling["origin"], tiling["anchor"], tiling["cell"]
     if not (math.isclose(dx, a, rel_tol=1e-9) and math.isclose(dy, -e, rel_tol=1e-9)):
@@ -239,7 +240,8 @@ def _check_window_set(selection, segment):
     that cell's CRS84 ``anchor``, and the ``cell``
     size in CRS84 degrees. Its ``windows`` must be exactly the deterministic tiling
     of that grid, row-major from the anchor, restricted to tiles whose footprint
-    intersects the segment bbox.
+    intersects the segment bbox according to the plan's degree hints. The
+    bridge has no native affine; this is not proof of projected-grid completeness.
 
     Every violation -- a missing or malformed ``tiling``, an over-cap window, a
     non-canonical shape, an out-of-bounds, duplicated, out-of-order or bbox-miss

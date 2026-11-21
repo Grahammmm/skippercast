@@ -86,7 +86,10 @@ export interface Funnel {
   days: FunnelDays; since: string; generated_at: string;
   contacts: {new: number; sources: string[]; by_day: {day: string; total: number; by_source: Record<string, number>}[]};
   messages: {inbound: number; by_intent: {intent: string; count: number}[]};
+  // SCA-214: `outbound` and `contacts` count rows whose status is 'sent' (accepted by the adapter, not proof of delivery or reading)
+  // and their distinct recipients. Held, sending, unknown and any other not-yet-sent status are `unconfirmed`, never replies.
   replies: {outbound: number; contacts: number; per_contact: number | null};
+  unconfirmed_replies: {held: number; sending: number; unknown: number; other: number; pending: number};
   return_rate: {active: number; returning: number; rate: number | null};
   boats: {verified: number; verified_total: number; pending: number; reports_published: number; boats_reporting: number; reports_per_boat: number | null};
   photos: {submitted: number; approved: number};
@@ -139,8 +142,16 @@ async function d1Part(db: D1Database, days: FunnelDays, now: number): Promise<Om
   if (rest) top.push({intent: 'other', count: rest});
   const inbound = intents.reduce((s, r) => s + num(r.n), 0);
 
-  const out = await db.prepare(`SELECT COUNT(*) AS n, COUNT(DISTINCT contact_id) AS contacts FROM advisor_messages WHERE direction='out' AND status<>'failed' AND created_at>=?`)
-    .bind(since).first<{n: number; contacts: number}>();
+  // SCA-214: confirmed replies are the 'sent' rows only; failed rows are neither, the rest are reported as unconfirmed.
+  const outByStatus = (await db.prepare(`SELECT status, COUNT(*) AS n, COUNT(DISTINCT contact_id) AS contacts FROM advisor_messages WHERE direction='out' AND created_at>=? GROUP BY status`)
+    .bind(since).all<{status: string; n: number; contacts: number}>()).results;
+  const out = outByStatus.find(r => r.status === 'sent');
+  const unconfirmed = {held: 0, sending: 0, unknown: 0, other: 0, pending: 0};
+  for (const r of outByStatus) {
+    if (r.status === 'sent' || r.status === 'failed') continue;
+    const key: 'held' | 'sending' | 'unknown' | 'other' = r.status === 'held' || r.status === 'sending' || r.status === 'unknown' ? r.status : 'other';
+    unconfirmed[key] += num(r.n); unconfirmed.pending += num(r.n);
+  }
   const active = await db.prepare(`SELECT COUNT(*) AS active, SUM(CASE WHEN days>=2 THEN 1 ELSE 0 END) AS back FROM
       (SELECT contact_id, COUNT(DISTINCT substr(created_at,1,10)) AS days FROM advisor_messages WHERE direction='in' AND created_at>=? GROUP BY contact_id)`)
     .bind(since).first<{active: number; back: number | null}>();
@@ -157,6 +168,7 @@ async function d1Part(db: D1Database, days: FunnelDays, now: number): Promise<Om
     contacts: {new: byDay.reduce((s, d) => s + d.total, 0), sources, by_day: byDay},
     messages: {inbound, by_intent: top},
     replies: {outbound, contacts, per_contact: ratio(outbound, contacts)},
+    unconfirmed_replies: unconfirmed,
     return_rate: {active: actives, returning, rate: ratio(returning, actives)},
     boats: {
       verified: await count(db, "SELECT COUNT(*) AS n FROM advisor_boats WHERE status='verified' AND verified_at>=?", since),

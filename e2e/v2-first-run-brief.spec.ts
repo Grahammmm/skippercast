@@ -2,7 +2,7 @@ import {test, expect, THROTTLED_MOBILE} from './fixtures.ts';
 import type {CDPSession, Page} from '@playwright/test';
 import {stubLiveFeeds, stubForecast} from '../scripts/measure_startup.mjs';
 import {readFileSync} from 'node:fs';
-import {forecastFixture} from './forecast-fixture.ts';
+import {sharedForecastPoint} from './forecast-fixture.ts';
 import {regionWarmList} from '../web/landing/region-warm.ts';
 
 const FUNNEL_BUDGET_MS = 30_000;
@@ -24,12 +24,8 @@ async function prepare(page: Page, region = 'morro-bay') {
   const definition = JSON.parse(readFileSync(new URL(`../dist/regions/${region}/region.json`, import.meta.url), 'utf8'));
   await page.route('**/api/forecast?*', route => {
     const feed = stubForecast(definition);
-    for (const model of Object.values(feed.models)) model.data = model.data.map(point => {
-      const url = new URL('https://fixture.invalid/forecast');
-      url.search = new URLSearchParams({latitude: String(point.latitude), longitude: String(point.longitude),
-        hourly: Object.keys(point.hourly).filter(key => key !== 'time').join(',')}).toString();
-      return forecastFixture(url);
-    });
+    for (const model of Object.values(feed.models)) model.data = model.data.map(
+      (point: Parameters<typeof sharedForecastPoint>[0]) => sharedForecastPoint(point));
     return route.fulfill({json: feed});
   });
   await page.addInitScript(() => {
@@ -68,7 +64,10 @@ async function port(page: Page, query: string) {
 async function verdict(page: Page, cdp: CDPSession, started: number, label: string) {
   const word = page.locator('.app-verdict .app-verdict-word');
   await test.step(`${label}: verdict word within the funnel budget (throttled)`, async () => {
-    await expect(word).toBeVisible({timeout: FUNNEL_BUDGET_MS});
+    // The clock stops on an accepted verdict word, not on a placeholder: a placeholder inside the budget followed by a
+    // late word must fail, so the accepted-word assertion itself carries the budget while the throttle is still on.
+    // The locator itself carries the accepted text, so a hidden placeholder that later receives a word cannot pass.
+    await expect(word.filter({hasText: /^(Comfortable|Marginal|Rough)$/})).toBeVisible({timeout: Math.max(1, FUNNEL_BUDGET_MS - (Date.now() - started))});
     const elapsed = Date.now() - started;
     console.log(`FUNNEL ${label}: ${elapsed} ms`);
     expect(elapsed).toBeLessThanOrEqual(FUNNEL_BUDGET_MS);

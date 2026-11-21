@@ -2,13 +2,13 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 from skippercast.pipeline import wave_ensemble
 
 REGION = {"bounds": [-122.0, 34.0, -120.0, 36.0], "forecast_points": []}
 UTC_NOW = datetime(2026, 9, 27, 9, 30, tzinfo=timezone.utc)
 ZONES = (timezone.utc, timezone(timedelta(hours=5, minutes=30)), timezone(timedelta(hours=-7)))
-LISTING = " ".join(f"gefs.wave.t06z.prob.global.0p25.{n}.grib2" for n in ("f000", "f168"))
 
 
 def cycle_ts(*args):
@@ -17,25 +17,28 @@ def cycle_ts(*args):
 
 class Client:
     def __init__(self, complete):
-        self.complete = complete  # set of "YYYYMMDD/HH" listings that have f168
+        self.complete = complete  # set of "YYYYMMDD/HH" listings with the full lead grid
         self.urls = []
 
     def get(self, url, as_binary=False):
         self.urls.append(url)
         if as_binary:
-            return b"GRIB"
+            name = parse_qs(urlparse(url).query)["file"][0]
+            return int(name.split(".")[-2][1:])
         key = url.split("gefs.")[1][:11]
         if key in self.complete:
-            return LISTING
-        return "gefs.wave.t06z.prob.global.0p25.f000.grib2"
+            return " ".join(f"gefs.wave.t{key[-2:]}z.prob.global.0p25.f{lead:03}.grib2" for lead in range(0, 169, 3))
+        return ""
 
 
 def run(now, complete, decoded_cycle):
     client = Client(complete)
-    frames = [{"cycle": decoded_cycle, "time": decoded_cycle, "points": []}]
-    with patch.object(wave_ensemble, "decode_probabilities", lambda body, points: frames):
+    def decode(lead, points):
+        return [{"cycle": decoded_cycle, "time": decoded_cycle + lead * 3600, "threshold_m": 1, "points": []}]
+    with patch.object(wave_ensemble, "decode_probabilities", decode):
         out = wave_ensemble.wave_probabilities(client, REGION, now)
-    return client.urls, out
+    # Listing order is significant; worker thread scheduling for file requests is not.
+    return [u for u in client.urls if "?" not in u] + sorted(u for u in client.urls if "?" in u), out
 
 
 class WaveCycleZoneTests(unittest.TestCase):
@@ -68,7 +71,7 @@ class WaveCycleZoneTests(unittest.TestCase):
             self.assertEqual(urls, results[0][0])
             self.assertEqual(out["issued_at"], "2026-09-27T00:00:00Z")
         for z in ZONES:
-            with self.assertRaisesRegex(ValueError, "No complete recent GEFS Wave"):
+            with self.assertRaisesRegex(ValueError, "No recent GEFS Wave probability files"):
                 run(UTC_NOW.astimezone(z), set(), want)
 
     def test_cycle_mismatch_still_refuses_genuine_wrong_run(self):

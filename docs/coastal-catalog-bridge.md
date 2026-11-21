@@ -230,14 +230,32 @@ foreign jobs and render successors are not claimed. Foreign job rows, events,
 leases and charges are compared after every tick. A change is uncertainty, not
 success. Global tick/semantic-progress telemetry is not foreign-job evidence.
 
-The immutable `coast-run-summary-v1` partitions all admission windows into
+The immutable `coast-run-summary-v3` partitions all admission windows into
 `map_done`, `held`, `failed_terminal`, `failed_uncertain`, `stale`, `cancelled`,
 or `unfinished`. Missing stages have reasons, not success. It pins stage
 results/products, qualify support and mask SHA, and copies the producer's map
 `native_valid_count` and complete `depth_m` verbatim (including `unknown`; no
 invented median). Usage comes from durable charges; unique-source byte reporting
-does not reduce bridge/Store accounting. `store_status` is the read-only
-`coastal.cli.queue_status` snapshot unchanged.
+does not reduce bridge/Store accounting. `windows_sha256` is the canonical digest
+of those inline per-window details.
+
+`store_status` is a run-scoped count object (`coastal-coordinator-scope-v1`):
+this run's lineage jobs by state and its charge totals, and every other job only
+as totals (`foreign.jobs`, `foreign.queued_jobs`, `foreign.charges`). Foreign job
+rows, IDs and charges are never embedded, so unrelated queue history cannot push a
+summary past the 4 MiB metadata bound its continuation reads under. `problems`
+lists at most 64 entries plus one explicit omitted-count line. If a summary would
+still exceed the bound, the writer withholds every window's details, says so in
+`problems` and stops with `integrity_error`; it never truncates silently. The
+`status` commands remain the full read-only queue inspection.
+
+Version 3 replaces the native `coast-run-summary-v1` (whose `store_status` was the
+global `coastal.cli.queue_status` snapshot). Existing v1 receipts keep their
+meaning: the screener, the shared-v2 adapter (`coast_receipt_versions.py`) and
+the validator read both, and a v3 run may continue a v1 predecessor. The v3
+schema is the v1 schema file with those fields overlaid in
+`coast_receipt_versions.run_v3_schema`. The adapter's `store_status_evidence`
+binds exactly the embedded object of either version; nothing is synthesized.
 
 Stop reasons are `terminal`, `deadline`, `max_ticks`, `not_claimable`,
 `preflight_refused`, `integrity_error`, or `failed_uncertain`. Only the first
@@ -245,7 +263,9 @@ three bounded unfinished reasons (`deadline`, `max_ticks`, `not_claimable`)
 permit ordinary continuation. Use the run command again with
 `--continuation-of "$PREVIOUS_RUN"` and a new `RUN` ending in `run-01.json`
 (then 02, etc.). It pins the previous file's full-byte hash, increments sequence,
-and preserves all root IDs. Never call bridge/enqueue again. Legitimate
+and preserves all root IDs. Before any tick, a v3 predecessor must still carry
+run-scoped counts, match its `windows_sha256`, and every per-window Ref it lists
+must match its bytes; otherwise the continuation refuses. Never call bridge/enqueue again. Legitimate
 qualify/map/render successors may increase the total row count. Stale identities
 need replacement admission; uncertain work needs operator recovery. Neither is
 a successful empty frontier. CLI exit 3 means a written refusal/integrity/

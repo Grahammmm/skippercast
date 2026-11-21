@@ -16,7 +16,12 @@ spec = importlib.util.spec_from_file_location("recent_intel_previous", ROOT / "s
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 NOW = datetime(2026, 9, 22, 20, tzinfo=timezone.utc)
-LEAD = {"id": "old", "url": "https://example.org/old", "published_at": "2026-09-15T00:00:00+00:00", "review_status": "candidate"}
+LEAD = {"id": "ef5c821ff49a5c014237", "url": "https://example.org/old", "published_at": "2026-09-15T00:00:00+00:00",
+        "region_id": "morro-bay", "query_id": "reef", "source": "reddit",
+        "title": "Morro Bay lingcod discussion", "summary": "A synthetic search lead",
+        "location_basis": "text mentions region", "review_status": "candidate", "reported_catch": None,
+        "species": [], "fishing_date": None, "geometry": None,
+        "note": "Search lead only; no catch, species, trip date, or fishing position verified."}
 
 
 class Frozen(datetime):
@@ -34,7 +39,8 @@ def config():
 
 def runner(cmd, **kwargs):
     output = Path(next(x.split("=", 1)[1] for x in cmd if x.startswith("--output=")))
-    output.write_text(json.dumps({"schema_version": "1.3", "results": [], "source_status": {"reddit": "no-results"}}))
+    output.write_text(json.dumps({"schema_version": "1.3", "results": [],
+                                  "source_status": {"reddit": "no-results", "grounding": "no-results"}}))
     return type("Result", (), {"returncode": 0, "stderr": ""})()
 
 
@@ -82,7 +88,7 @@ class PreviousSnapshotTests(unittest.TestCase):
     def test_valid_previous_file_through_main_keeps_lead_without_line(self):
         data, err = self.run_main(json.dumps({"candidates": [LEAD]}).encode())
         self.assertEqual(err, "")
-        self.assertEqual([c["id"] for c in data["candidates"]], ["old"])
+        self.assertEqual([c["id"] for c in data["candidates"]], [LEAD["id"]])
 
     def test_candidates_not_a_list_retains_nothing(self):
         for value in ("old", {"id": "old"}, None):
@@ -93,7 +99,7 @@ class PreviousSnapshotTests(unittest.TestCase):
 
     def test_malformed_entries_are_skipped_and_counted(self):
         result = self.gather({"candidates": [1, {}, {"id": ""}, {"id": 5}, LEAD]})
-        self.assertEqual([c["id"] for c in result["candidates"]], ["old"])
+        self.assertEqual([c["id"] for c in result["candidates"]], [LEAD["id"]])
         self.assertTrue(result["candidates"][0]["retained"])
         self.assertEqual(result["health"]["previous_skipped"], 4)
 

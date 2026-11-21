@@ -18,20 +18,23 @@ build=${1:-latest}
 out=${2:-var/basemap}
 publish=${3:-}
 pmtiles=${PMTILES:-pmtiles}
-regions() { python "$here/regions.py" "$@" --dir "$out"; }
+regions() { python "$here/regions.py" "$@"; }
 
-mkdir -p "$out"
-if [ "$build" = latest ]; then build=$(python "$here/regions.py" latest); fi
-read -r source overview overview_max detail_min detail_max archive < <(regions plan --build "$build")
-# Refuse stale/missing detail boxes before any extract or removal of an old archive.
-python "$here/check_detail.py" --dir "$out"
-rm -f "$out/overview.pmtiles" "$out/detail.pmtiles" "$out/$archive"
+mkdir -p -- "$out"
+if [ "$build" = latest ]; then build=$(regions latest); fi
+# Keep the old build intact until the new archive and manifest are ready.
+stage=$(mktemp -d -- "$out/.basemap-build.XXXXXXXX")
+trap 'rm -rf -- "$stage"' EXIT
+plan=$(regions plan --build "$build" --dir "$stage")
+read -r source overview overview_max detail_min detail_max archive <<< "$plan"
+python "$here/check_detail.py" --dir "$stage"
 start=$(date +%s)
-"$pmtiles" extract "$source" "$out/overview.pmtiles" --bbox="$overview" --minzoom=0 --maxzoom="$overview_max"
-"$pmtiles" extract "$source" "$out/detail.pmtiles" --region="$out/detail.geojson" --minzoom="$detail_min" --maxzoom="$detail_max"
-"$pmtiles" merge "$out/overview.pmtiles" "$out/detail.pmtiles" "$out/$archive"
-"$pmtiles" verify "$out/$archive"
+"$pmtiles" extract "$source" "$stage/overview.pmtiles" --bbox="$overview" --minzoom=0 --maxzoom="$overview_max"
+"$pmtiles" extract "$source" "$stage/detail.pmtiles" --region="$stage/detail.geojson" --minzoom="$detail_min" --maxzoom="$detail_max"
+"$pmtiles" merge "$stage/overview.pmtiles" "$stage/detail.pmtiles" "$stage/$archive"
+"$pmtiles" verify "$stage/$archive"
 seconds=$(( $(date +%s) - start ))
-rm -f "$out/overview.pmtiles" "$out/detail.pmtiles"
-regions manifest --seconds "$seconds"
-if [ "$publish" = --publish ]; then regions publish; fi
+regions manifest --seconds "$seconds" --dir "$stage"
+# Same filesystem: rename finished files into place, with the manifest last.
+mv -f -- "$stage/plan.json" "$stage/detail.geojson" "$stage/$archive" "$stage/manifest.json" "$out/"
+if [ "$publish" = --publish ]; then regions publish --dir "$out"; fi

@@ -18,15 +18,16 @@ job (``fleet/ais/listener.py``). aisstream keeps no history, so ``history`` is
 ``Unsupported``.
 
 Times. ``MetaData.time_utc`` is when aisstream received the message. A position
-report also carries ``Timestamp``, the UTC second the transponder took its fix
-(60 to 63 mean "not available"). When present, ``ts`` is that second within the
-minute of receipt, moved back a minute when it would lie more than
-``FUTURE_SLACK_MS`` after receipt; so the same report heard by two stations gets
-the same ``(mmsi, ts, source)`` key and the store keeps it once. Otherwise, and
-for static records, ``ts`` is the receipt time. A report that reaches aisstream
-more than about 55 s after its fix lands in the wrong minute; such a position has
-``received_at - ts > LATE_MS`` and the processor (CF-43) must treat its time as
-suspect. The store keeps the earliest receipt of a key (``store.py``).
+report also carries ``Timestamp``, the UTC second of the fix, not its minute
+or date (60 to 63 mean "not available"). ``ts`` is inferred by placing that
+second in the receipt minute and moving it back a minute if it would be more
+than ``FUTURE_SLACK_MS`` ahead of receipt. Without a usable second, and for
+static records, ``ts`` is the receipt time. Neither is an independently dated
+fix. An on-time report and one delayed by exactly a minute can have identical
+inputs and both yield zero inferred lag. The ``LATE_MS`` check (CF-43) flags
+large inferred gaps, not all late reports; an unflagged report does not prove
+low latency. The store keeps the earliest receipt per ``(mmsi, ts, source)``
+key (``store.py``).
 
 "Not available" values (SOG 102.3, COG 360, heading 511, latitude 91,
 longitude 181, navigational status 15, zero dimensions, ship type 0, IMO 0)
@@ -56,8 +57,7 @@ MESSAGE_TYPES = POSITION_TYPES + STATIC_TYPES
 MAX_MMSI_FILTER = 200          # aisstream's limit on FiltersShipMMSI
 SUBSCRIBE_MMSI_MIN = 100_000_000   # a filter names ship stations: 9 digits, no leading zero
 FUTURE_SLACK_MS = 5_000        # receipt-clock skew tolerated before a fix second is read as last minute
-# A position with received_at - ts above this may sit in the wrong minute (module docstring);
-# CF-43 treats its time as suspect.
+# CF-43 flags inferred receipt-minus-fix gaps above this; whole minutes can be hidden.
 LATE_MS = 55_000
 
 _CLASS = {"PositionReport": "A", "ShipStaticData": "A",
@@ -160,7 +160,7 @@ def _dimensions(node) -> tuple[int | None, int | None, int | None, int | None]:
 
 
 def _fix_time(received: int, second) -> int:
-    """The fix time from the report's UTC second, within the minute of receipt (module docstring)."""
+    """Infer a timestamp from receipt and the UTC second, not an independent fix date."""
     if isinstance(second, bool) or not isinstance(second, int) or not 0 <= second <= 59:
         return received
     candidate = received - received % 60_000 + second * 1000

@@ -44,6 +44,7 @@ export const RETENTION_DAYS = {bodies: 180, media: 90, reviews: 90, daily: 30, s
 export const RETENTION_LIMITS = {bodies: 20000, media: 500, reviews: 5000, daily: 5000, stats: 5000, contacts: 100, jobState: 2000, exports: 2000} as const;
 /** Rows per D1 statement. */
 export const RETENTION_CHUNK = 500;
+const D1_BIND_LIMIT = 100;
 /** Post statuses whose media stay (02: an approved or posted post; scheduled, publishing and partial are on the way or half posted). */
 export const KEEP_POST_STATUSES = ['approved', 'scheduled', 'publishing', 'posted', 'partial'] as const;
 /** job_state prefixes the age rule clears (02 § Reusing job_state). */
@@ -107,7 +108,8 @@ async function pruneMedia(db: D1Database, bucket: R2Bucket, now: number, max: nu
       WHERE p.status IN (${keepPosts}) AND j.value=m.id)`;
   let changed = 0, objects = 0;
   while (changed < max) {
-    const limit = Math.min(chunk, max - changed);
+    // The shared-original check binds one ID and up to one distinct key per selected row.
+    const limit = Math.min(chunk, max - changed, Math.floor(D1_BIND_LIMIT / 2));
     const rows = (await db.prepare(`SELECT m.id,m.r2_key FROM advisor_media m WHERE ${unreferenced} ORDER BY m.created_at,m.id LIMIT ?`).bind(cutoff, limit)
       .all<{id: string; r2_key: string}>()).results.filter(r => ID.test(r.id));
     if (!rows.length) return {changed, objects, more: false};
@@ -179,7 +181,7 @@ async function pruneJobState(db: D1Database, bucket: R2Bucket | undefined, now: 
   // Graphic requests whose post is gone or rejected: the files under advisor/posts/<id>/ first, then the key
   // (only with the bucket bound, like the media rule).
   while (bucket && changed < max) {
-    const limit = Math.min(chunk, max - changed);
+    const limit = Math.min(chunk, max - changed, D1_BIND_LIMIT); // one bind per graphic key
     const keys = (await db.prepare(`SELECT key FROM job_state WHERE key LIKE 'advisor.graphic.%' AND updated_at<?
         AND NOT EXISTS (SELECT 1 FROM advisor_posts p WHERE p.id=substr(job_state.key, length('advisor.graphic.')+1) AND p.status<>'rejected') ORDER BY key LIMIT ?`)
       .bind(cutoff, limit).all<{key: string}>()).results.map(r => r.key);

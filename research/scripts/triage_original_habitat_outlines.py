@@ -10,6 +10,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from skippercast.platform.contracts import atomic_json
@@ -17,6 +18,10 @@ from skippercast.platform.contracts import atomic_json
 
 def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _finite(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def triage(context: dict, depths: dict, enc: dict, profile: dict) -> dict:
@@ -55,8 +60,13 @@ def triage(context: dict, depths: dict, enc: dict, profile: dict) -> dict:
             raise ValueError("Research outline was unexpectedly promoted")
         area = p["approx_display_area_m2"]
         relief = p["sampled_relief_5_95_m"]
-        if (area < context["minimum_display_area_m2"] or relief < 0
-                or z["minimum"] < 25 or z["maximum"] > profile["maximum_screened_depth_ft"]
+        # Every value used below must be a finite number, and the whole
+        # minimum <= median <= maximum range must sit inside the screen, not
+        # just its two endpoints (NaN never satisfies a plain < test).
+        depth = [z.get(k) if isinstance(z, dict) else None for k in ("minimum", "median", "maximum")]
+        if (not all(_finite(v) for v in (area, relief, *depth))
+                or not 25 <= depth[0] <= depth[1] <= depth[2] <= profile["maximum_screened_depth_ft"]
+                or area < context["minimum_display_area_m2"] or relief < 0
                 or d["qualified_original_cells"] < 1):
             raise ValueError("Original-cell measurements violate review scope")
         if (id_ in held or area < profile["minimum_display_area_m2"]

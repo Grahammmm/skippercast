@@ -131,6 +131,13 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False, s
     reach = next((r for r in catalog['reaches'] if r['id'] == reach_id), None)
     if reach is None:
         raise ValueError('Unknown reach')
+    # Deferred screening is a property of the requested run, even if it
+    # selects only public inputs or finds no usable surveys at all.
+    if context is not None:
+        from .scoped_processing import reach_folder
+        folder = reach_folder(context, reach_id)
+    else:
+        folder = root / 'var/seafloor' / ('private-reaches' if physical_only else 'reaches') / reach_id
     cells = [c for c in baseline_cells if c['reach'] == reach_id]
     scope = unary_union([cell_geometry(c) for c in cells])
     project = Transformer.from_crs(4326, 3310, always_xy=True).transform
@@ -143,8 +150,8 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False, s
         if not transform(project, box(*bounds)).intersects(scope):
             continue
         receipt, _, _ = ingest(row, bounds, root=root, fetch=fetch)
-        folder = root / 'var/seafloor/cache' / row['sha256']
-        paths = [p.with_suffix('.tif') for p in folder.glob('*.json')
+        cache = root / 'var/seafloor/cache' / row['sha256']
+        paths = [p.with_suffix('.tif') for p in cache.glob('*.json')
                  if read_json(p).get('cog_sha256') == receipt['cog_sha256']
                  and p.with_suffix('.tif').exists()]
         if not paths:
@@ -183,12 +190,6 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False, s
     inputs['screen'] = input_identity(screen)
     inputs['screen_implementation_sha256'] = sha256(Path(__file__).parent/'screen.py')
     digest = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
-    private_sources = context is not None or any(s['row']['status'] == 'physical-only' for s in sources)
-    if context is not None:
-        from .scoped_processing import reach_folder
-        folder = reach_folder(context, reach_id)
-    else:
-        folder = root / 'var/seafloor' / ('private-reaches' if private_sources else 'reaches') / reach_id
     receipt_path = folder / 'run.json'
     outputs = [folder / name for name in ('cells.json', 'terrain.json', 'habitat.geojson', 'atlas-comparison.json',
                                         'held.geojson', 'candidates.geojson', 'physical.json')]
@@ -197,7 +198,7 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False, s
         if previous['input_hash'] == digest and all(p.exists() for p in outputs):
             if previous['outputs'] != {p.name: sha256(p) for p in outputs}:
                 raise ValueError('Reach outputs failed hash verification')
-            if not private_sources:
+            if not physical_only:
                 apply_ledger(root, reach_id, previous['ledger_summary'])
             return previous, True
     # Physical outputs are immutable relative to survey/rule inputs. A changed
@@ -287,13 +288,13 @@ def run(reach_id, *, root=REPO, force=False, fetch=False, physical_only=False, s
     atomic_json(folder / 'habitat.geojson', habitat)
     atomic_json(folder / 'held.geojson', held)
     receipt = {'input_hash': digest, 'inputs': inputs, 'ledger_summary': summary,
-               'publication_prohibited': private_sources,
+               'publication_prohibited': physical_only,
                'physical_reused': reuse_physical, 'physical_input_hash': physical_hash,
                'timings_seconds': {'coverage': coverage_seconds, 'terrain': terrain_seconds, 'habitat': habitat_seconds,
                                    'screen': screen_seconds, 'total': monotonic() - started},
                'outputs': {p.name: sha256(p) for p in outputs},
                'source_receipts': [s['receipt'] for s in sources]}
     atomic_json(receipt_path, receipt, indent=2)
-    if not private_sources:
+    if not physical_only:
         apply_ledger(root, reach_id, summary)
     return receipt, False

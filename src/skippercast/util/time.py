@@ -13,5 +13,7 @@ def stamp(moment=None, *, to_utc=True):
     """
     moment = moment or datetime.now(timezone.utc)
     if not to_utc:
-        return moment.strftime('%Y-%m-%dT%H:%M:%SZ')
+        # Explicit year width: platform strftime('%Y') does not pad years < 1000.
+        return (f'{moment.year:04d}-{moment.month:02d}-{moment.day:02d}'
+                f'T{moment.hour:02d}:{moment.minute:02d}:{moment.second:02d}Z')
     return moment.astimezone(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
