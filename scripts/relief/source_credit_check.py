@@ -9,6 +9,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
+import re
 from typing import Literal
 
 from scripts import build_sources_register as register
@@ -38,7 +39,12 @@ class _Element:
 
     @property
     def visible(self):
-        return 'hidden' not in self.attrs and self.tag not in {'script', 'style', 'template'}
+        # Be conservative when inline declarations hide a subtree: even an
+        # overridden display:none must not be used as proof of public credit.
+        style = self.attrs.get('style') or ''
+        hidden_display = re.search(r'(?:^|;)\s*display\s*:\s*none\s*(?:!\s*important\s*)?(?:;|$)', style, re.I)
+        return ('hidden' not in self.attrs and not hidden_display
+                and self.tag not in {'script', 'style', 'template'})
 
 
 class _Markup(HTMLParser):

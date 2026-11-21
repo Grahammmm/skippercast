@@ -81,6 +81,8 @@ def test_credit_in_right_region_but_wrong_layer_is_missing(reviewed):
     pytest.param('Credit: Some other attribution ·', id='wrong-attribution'),
     pytest.param('<!-- Credit: © Fixture &amp; Partners, &quot;Survey&quot; · -->', id='comment-only'),
     pytest.param('<span hidden>Credit: © Fixture &amp; Partners, &quot;Survey&quot; · </span>', id='hidden-text'),
+    pytest.param('<span style="display:none">Credit: © Fixture &amp; Partners, &quot;Survey&quot; · </span>', id='display-none'),
+    pytest.param('<span style="color: red; DISPLAY : none !important"><em>Credit: © Fixture &amp; Partners, &quot;Survey&quot; · </em></span>', id='display-none-nested'),
     pytest.param('</li><li>Credit: © Fixture &amp; Partners, &quot;Survey&quot; ·', id='separate-item'),
 ])
 def test_name_and_visible_attribution_must_share_the_same_entry(reviewed, replacement):
