@@ -14,3 +14,13 @@ import './chart.css';
 export {PMTiles, Protocol} from 'pmtiles';
 export {workerUrl};
 export const lib = maplibregl;
+
+let prewarmStarted = false;
+
+/** Start MapLibre's worker pool once, using the same URL the Chart uses. */
+export function prewarm() {
+  if (prewarmStarted) return;
+  prewarmStarted = true;
+  lib.setWorkerUrl(workerUrl);
+  lib.prewarm();
+}

@@ -10,6 +10,8 @@ import './coast/coast-streaming-seams.test.ts';
 import './coast/coast-shading.test.ts';
 import './coast/bottom-loader.test.ts';
 import './coast/coast-habitat-event.test.ts';
+import './coast/coast3d-grid-origin.test.ts';
+import './coast/shore-review.test.ts';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {coastPath} from '../packages/coast/src/transport.ts';

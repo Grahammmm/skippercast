@@ -132,6 +132,9 @@ export function coastTargetsFor(profile: Profile): TargetOption[] {
 
 const title = (id: string): string => id.split('-').map(w => w ? w[0]!.toUpperCase() + w.slice(1) : w).join(' ');
 
+/** The picker label for a target with no search plan name. */
+export const pickerLabel = (id: string): string => speciesOptions.find(o => o.id === (coastTarget(id) ?? id))?.label ?? title(id);
+
 /**
  * The region facts a target's state reads. `unavailable` is region.json `map.unavailable_targets`;
  * `plansLoaded` is false until the region's plans load (a target nothing ranks then has no state yet);
@@ -170,7 +173,7 @@ export function targetsFor(profile: Profile, region: string | null, plans: Reado
   const terrain = !!region && hasCoastTerrain(region);
   const cover: TargetCoverage = {...coverage, ranks: coverage.ranks ?? terrain};
   const coast = terrain ? coastTargetsFor(profile) : [];
-  const label = (id: string): string => plans[id]?.name ?? speciesOptions.find(o => o.id === (coastTarget(id) ?? id))?.label ?? title(id);
+  const label = (id: string): string => plans[id]?.name ?? pickerLabel(id);
   const list: TargetOption[] = speciesForProfile(plans, profile).map(id => ({id, label: label(id), group: Object.hasOwn(plans, id) ? 'plan' : 'profile'}));
   const named = new Set(list.map(t => coastTarget(t.id) ?? t.id));
   for (const t of coast) if (!named.has(t.id)) { list.push(t); named.add(t.id); }

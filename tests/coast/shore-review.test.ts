@@ -38,6 +38,5 @@ test('evidence never turns an absent clock into a date, "checked" or "expired"',
   assert.match(none, /Access inventory not yet reviewed\. Current legal\/access conditions require rechecking; legal review: not yet reviewed\.$/);
   assert.doesNotMatch(none, /1970|1969|Invalid Date|expired|checked/);
   const dated = shoreEvidence({checkedAt: '2026-09-01', legalReviewExpiresAt: '2026-09-30'});
-  assert.equal(dated, 'Original NOAA shoreline vertices; no offshore depth or species fit inferred. Physical context only. Access inventory checked '
-    + new Date('2026-09-01').toLocaleDateString() + '. Current legal/access conditions require rechecking; the prior legal review expired ' + new Date('2026-09-30').toLocaleDateString() + '.');
+  assert.equal(dated, 'Original NOAA shoreline vertices; no offshore depth or species fit inferred. Physical context only. Access inventory checked Sep 1, 2026. Current legal/access conditions require rechecking; the prior legal review expired Sep 30, 2026.');
 });

@@ -346,6 +346,17 @@ def render(data):
            'The map itself shows no source names; its measured, estimated and unsurveyed labels describe data quality and stay as they are. '
            'Eligibility for public display is a rights decision that does not release a layer.</p>',
            f'{h}<p>{len(shown)} sources are in use on live layers; {len(eligible)} more are eligible for public display but no layer uses them yet.</p>']
+    # Match the map labels in survey-detail.ts and the English legend's no-survey chip.
+    out += [f'{h}<section id="depth-confidence">',
+            f'{h}  <h3>Depth confidence</h3>',
+            f'{h}  <ul>',
+            f'{h}    <li><strong>1 m measured</strong> applies only where a survey is certified for 1 m detail. '
+            'Other measured areas show the grid size, such as <strong>2 m</strong> or <strong>5 m</strong>.</li>',
+            f'{h}    <li><strong>estimated (8 m grid)</strong> means the depths come from a compiled grid. '
+            'The number is the grid size in that area.</li>',
+            f'{h}    <li><strong>no survey</strong> means no survey data is available in this map area.</li>',
+            f'{h}  </ul>',
+            f'{h}</section>']
     if any(is_csumb(sources[ident]) for ident in shown + eligible if ident in sources):
         out += [f'{h}<h3 id="data-sources-credits">Required credit</h3>',
                 f'{h}<p class="data-source-credit">{_esc(CSUMB_CREDIT)}</p>']
