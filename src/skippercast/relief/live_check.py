@@ -13,6 +13,8 @@ from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from skippercast.platform.contracts import indexed, read_json
+from skippercast.platform.depth_contours import publish_depth_contours
 from skippercast.relief import live_archive, live_deploy, package, receipts
 from skippercast.relief.stage_transport import ARCHIVE_LIMIT
 
@@ -60,6 +62,9 @@ class Site:
         if response.status != 200:
             response.close()
             raise FetchError(key, f'http-{response.status}')
+        if max_bytes is None:  # presence check: never read an unmerged object's body
+            response.close()
+            return iter(())
 
         def blocks():
             remaining = max_bytes + 1  # one sentinel byte distinguishes an oversized object
@@ -109,7 +114,28 @@ def _reviewed(repo, region, key):
             or type(low) is not int or type(high) is not int or not 8 <= low <= high <= 17
             or type(size) is not int or not 1 <= size <= ARCHIVE_LIMIT):
         raise LocalError('invalid reviewed region pointer in HEAD')
-    return raw, merge, pointer
+    return head, raw, merge, pointer
+
+
+def _project_contours(repo, head, region, scratch):
+    key = f'catalog/depth-contours/{region}.geojson'
+    if not _git(repo, 'ls-tree', head, '--', key).stdout:
+        return None
+    # Use the same pinned tree for all projection inputs, never the working copy.
+    root = scratch / 'contours-input'
+    region_key = f'regions/{region}/region.json'
+    sources_key = 'catalog/sources.json'
+    for name in (key, region_key, sources_key):
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(_git(repo, 'show', f'{head}:{name}').stdout)
+    definition = read_json(root / region_key)
+    if definition.get('id') != region:
+        raise LocalError('region directory and id differ in HEAD')
+    sources = indexed(read_json(root / sources_key), 'sources')
+    output = scratch / 'contours-output'
+    publish_depth_contours(root, definition, output, sources)
+    return (output / 'depth-contours.geojson').read_bytes()
 
 
 def _fetch_history(repo, history):
@@ -134,7 +160,27 @@ def _failure(check, reason):
     return {'check': check, 'status': 'FAIL', 'reason': reason}
 
 
-def _check(site, history, merge, key, raw, pointer):
+def _contours_check(site, region, expected):
+    key = f'regions/{region}/depth-contours.geojson'
+    # fetch reads at most max_bytes + 1. An extra byte is a mismatch;
+    # reading the next sentinel distinguishes the specified oversize threshold.
+    limit = None if expected is None else len(expected) + 1
+    body = site.fetch(key, max_bytes=limit)
+    if expected is None:
+        reason = 'none-merged' if body is None else 'unexpected'
+    elif body is None:
+        reason = 'missing'
+    else:
+        served = b''.join(body)
+        if len(served) > len(expected) + 1:
+            reason = 'oversize'
+        else:
+            reason = 'identical' if served == expected else 'differs'
+    return dict(check='contours', key=key,
+                status='PASS' if reason in ('identical', 'none-merged') else 'FAIL', reason=reason)
+
+
+def _check(site, history, merge, key, raw, pointer, contours):
     try:
         data = site.metadata('deploy.json')
         if data is None:
@@ -152,7 +198,9 @@ def _check(site, history, merge, key, raw, pointer):
             checks.append(_failure('pointer', exc.reason))
     if checks[-1]['status'] == 'PASS':
         try:
-            checks.extend(live_archive.check_archive(pointer, site.fetch, budget=_LIMIT - site.requests))
+            checks.extend(live_archive.check_archive(pointer, site.fetch, budget=_LIMIT - site.requests - 1))
+            if all(row['status'] == 'PASS' for row in checks):
+                checks.append(_contours_check(site, pointer['region'], contours))
         except FetchError as exc:
             checks.append({**_failure('fetch', exc.reason), 'key': exc.key})
     return deployed, checks
@@ -185,16 +233,17 @@ def _run(args):
     _ = url.port
     repo, out = args.repo.resolve(), args.out.resolve()
     key = f'catalog/relief/{args.region}.json'
-    raw, merge, pointer = _reviewed(repo, args.region, key)
+    head, raw, merge, pointer = _reviewed(repo, args.region, key)
     parent = (out / args.region / 'live' / pointer['generation']).resolve()
     if out.is_relative_to(repo) or parent.is_relative_to(repo) or not parent.is_relative_to(out):
         raise LocalError('receipt must stay under OUT and outside --repo')
     out.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(prefix='relief-history-', dir=out) as scratch:
         history = Path(scratch)
+        contours = _project_contours(repo, head, args.region, history)
         _fetch_history(repo, history)
         site = Site(base)
-        deployed, checks = _check(site, history, merge, key, raw, pointer)
+        deployed, checks = _check(site, history, merge, key, raw, pointer, contours)
     passed = all(row['status'] == 'PASS' for row in checks)
     _write(parent / 'live.json', dict(region=args.region, base=base, merge=merge, deployed=deployed,
                                     checks=checks, verdict='PASS' if passed else 'FAIL', requests=site.requests))
