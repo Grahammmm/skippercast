@@ -302,8 +302,9 @@ export async function fbVideoReel(cfg: MetaConfig, pageId: string, input: {video
     throw new MetaError('video_upload', 0, null, null, null);
   }
   if (!uploaded.ok) { const error = await failure('video_upload', uploaded); logFailure(error, 1, false); throw error; }
-  const done = await graph<{success?: boolean; post_id?: string}>(cfg, 'POST', `/${page}/video_reels`, {upload_phase: 'finish', video_id: videoId, video_state: 'PUBLISHED', description: input.description});
-  if (done.success === false) throw new MetaError('video_reels', 200, null, null, null);
+  const done = await graph<{success?: boolean; post_id?: string}>(cfg, 'POST', `/${page}/video_reels`, {upload_phase: 'finish', video_id: videoId, video_state: 'PUBLISHED', description: input.description}, 'page-create');
+  if (done?.success === false) throw new MetaError('video_reels', 200, null, null, null);
+  if (done?.success !== true) throw new MetaCreateUncertain('video_reels', 200, null, null, null);
   return {video_id: videoId, post_id: typeof done.post_id === 'string' && ID.test(done.post_id) ? done.post_id : null};
 }
 
@@ -323,8 +324,8 @@ export async function fbFeed(cfg: MetaConfig, pageId: string, input: {message?: 
 /** A Page photo Story: an unpublished photo (POST /<page-id>/photos published=false), then POST /<page-id>/photo_stories photo_id. Returns the story's post id. */
 export async function fbPhotoStory(cfg: MetaConfig, pageId: string, input: {url: string}): Promise<{photo_id: string; post_id: string}> {
   const photo = await fbPhoto(cfg, pageId, {url: input.url, published: false});
-  const r = await graph<{post_id?: string; success?: boolean}>(cfg, 'POST', `/${requireId(pageId, 'page')}/photo_stories`, {photo_id: photo.id});
-  return {photo_id: photo.id, post_id: requireId(String(r.post_id ?? ''), 'story')};
+  const r = await graph<{post_id?: string; success?: boolean}>(cfg, 'POST', `/${requireId(pageId, 'page')}/photo_stories`, {photo_id: photo.id}, 'page-create');
+  return {photo_id: photo.id, post_id: pageCreateId('photo_stories', r?.post_id)};
 }
 
 export interface PageInfo {id: string; name: string | null; instagram: {id: string; username: string | null} | null}

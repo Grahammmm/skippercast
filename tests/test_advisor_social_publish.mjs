@@ -418,6 +418,50 @@ dbTest('a Page create accepted by Meta whose id write is lost is held for reconc
   assert.equal(publishState(d.sql), null, 'the per-post state is cleared once posted');
 });
 
+// H8 #1: a lost or unusable acknowledgement of a final Page publish must hold for reconciliation.
+// Without the hold, an admin retry can create a second Story or Reel. Definite failures must still allow retry.
+for (const [kind, phase, label, respond, uncertain] of [
+  ['reel', 'finish', '500', () => jsonResponse({}, 500), true],
+  ['reel', 'finish', 'network failure', () => { throw new TypeError('synthetic connection loss'); }, true],
+  ['story', undefined, '500', () => jsonResponse({}, 500), true],
+  ['story', undefined, '200 without post_id', () => jsonResponse({success: true}), true],
+  ['story', undefined, 'definite Graph 400', () => jsonResponse(fixture('error-page-photo'), 400), false],
+  ['reel', 'start', '500', () => jsonResponse({}, 500), false],
+]) {
+  const reel = kind === 'reel', edge = reel ? 'video_reels' : 'photo_stories';
+  dbTest(`H8 #1 Page ${kind} ${phase ?? 'create'}: ${label} ${uncertain ? 'holds for reconciliation' : 'permits retry'}`, async () => {
+    const s = setup(), path = `/${PAGE}/${edge}`;
+    let reject = true, failures = 0;
+    const fake = graphFake({on: {[`POST ${path}`]: ({params}) => {
+      if (!reject || params.upload_phase !== phase) return;
+      failures++;
+      return respond();
+    }}});
+    addMedia(s.sql, 'm1', {kind: reel ? 'video' : 'image'});
+    addPost(s.sql, {kind, targets: [reel ? 'facebook' : 'facebook_story']});
+    const {value: first} = await quiet(() => P.publish(s.env, 'p1', deps(s, fake).deps));
+    assert.equal(first.outcome, 'failed');
+    assert.ok(first.error, 'the run reports a Page publish error');
+    assert.ok(failures > 0, 'the intended provider phase failed');
+    const {fb_pending, fb_uncertain} = publishState(s.sql);
+    const before = fake.count('POST', path);
+    reject = false;
+    const {value: retry} = await quiet(() => P.publish(s.env, 'p1', deps(s, fake).deps, {retry: true}));
+    const retryPosts = fake.count('POST', path) - before;
+    if (uncertain) {
+      assert.deepEqual({pending: fb_pending?.op, uncertain: fb_uncertain, retryPosts, retryOutcome: retry.outcome},
+        {pending: kind, uncertain: true, retryPosts: 0, retryOutcome: 'failed'}, 'retain the hold and issue no Page POST on retry');
+      assert.equal(failures, 1, 'the ambiguous final POST is not retried within the first run either');
+      assert.match(first.error, /reconcile before retrying/);
+      assert.deepEqual(publishState(s.sql).fb_pending, fb_pending, 'the admin retry leaves the marker intact');
+    } else {
+      assert.deepEqual([fb_pending, fb_uncertain], [undefined, undefined], 'no reconciliation hold for a definite failure');
+      assert.equal(retry.outcome, 'posted');
+      assert.equal(retryPosts, reel ? 2 : 1, 'the admin retry issues a new publish');
+    }
+  });
+}
+
 // ---- idempotency --------------------------------------------------------------------------------------------------
 
 dbTest('idempotent: a stored container is polled and published, never created again; a concurrent run is busy; a carousel keeps its children', async () => {
