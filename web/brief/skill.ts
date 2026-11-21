@@ -6,6 +6,8 @@
 // more ahead has no published score. Never a navigation or go/no-go statement.
 import {signal} from '@preact/signals';
 import {t, type Language} from '../i18n.ts';
+import {dateKey} from '../trip-times.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 
 const VARIABLES = [['wind_speed_10m', 'wind'], ['wave_height', 'seas']] as const;
 const WINDOWS = [30, 7] as const, MAX_AGE = 14 * 86_400_000, FUTURE = 10 * 60_000;
@@ -32,7 +34,7 @@ export function skillLead(at: number, now: number): SkillLead | null {
 const percent = (within: number, n: number) => within === n ? 100 : within === 0 ? 0 : Math.min(99, Math.max(1, Math.round(100 * within / n)));
 
 /** The skill for the forecast of the hour `at` (default now), from that lead's rows only; freshness is judged at `now`. */
-export function skillSummary(file: unknown, region: string, now: number, at: number = now): SkillSummary {
+export function skillSummary(file: unknown, region: string, now: number, at: number = now, timeZone = DEFAULT_ZONE): SkillSummary {
   const LEAD = skillLead(at, now);
   if (LEAD === null) return {state: 'unavailable', reason: Number.isFinite(at) && at - now >= 259_200_000 ? 'range' : 'invalid'};
   const f = file as {schema_version?: unknown; generated_at?: unknown; minimum?: {valid_times?: unknown}; scores?: unknown} | null;
@@ -40,7 +42,7 @@ export function skillSummary(file: unknown, region: string, now: number, at: num
   const minimum = f?.minimum?.valid_times;
   if (!f || f.schema_version !== 1 || !Array.isArray(f.scores) || !whole(minimum) || minimum < 1 || !Number.isFinite(generated)
     || generated - now > FUTURE || now - generated > MAX_AGE) return {state: 'unknown', lead: LEAD, published: null};
-  const published = new Date(generated).toISOString().slice(0, 10);
+  const published = dateKey(generated, timeZone);
   type Row = {port?: unknown; station?: unknown; variable?: unknown; lead_hours?: unknown; window_days?: unknown; n?: unknown; within?: unknown; enough?: unknown};
   const rows = (f.scores as Row[]).filter(r => r && r.port === region && r.lead_hours === LEAD && r.enough === true && typeof r.station === 'string'
     && whole(r.n) && whole(r.within) && r.within <= r.n && r.n >= minimum);

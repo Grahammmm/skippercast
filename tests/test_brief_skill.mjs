@@ -14,9 +14,9 @@ test('a measured figure carries its sample, window, buoy and publish date', () =
   const s = skillSummary(file([row(), row({variable: 'wave_height', n: 40, within: 30})]), 'morro-bay', NOW);
   assert.equal(s.state, 'known');
   assert.deepEqual(s.parts.map(p => [p.variable, p.pct, p.within, p.n, p.station, p.window]), [['wind', 82, 41, 50, '46215', 30], ['seas', 75, 30, 40, '46215', 30]]);
-  assert.equal(s.published, '2026-11-04');
+  assert.equal(s.published, '2026-11-03');
   const line = skillLine(s, 'en');
-  assert.match(line, /last 30 days/); assert.match(line, /wind 82% \(41 of 50 checked, buoy 46215\)/); assert.match(line, /2026-11-04/); assert.match(line, /Not for navigation/);
+  assert.match(line, /last 30 days/); assert.match(line, /wind 82% \(41 of 50 checked, buoy 46215\)/); assert.match(line, /2026-11-03/); assert.match(line, /Not for navigation/);
 });
 
 test('too little history says UNKNOWN with no percentage', () => {
@@ -106,6 +106,67 @@ test('the brief shows the skill line under the model line, UNKNOWN on thin histo
 
 const H = 3_600_000, M = 60_000;
 const leads = file([row(), row({lead_hours: 48, within: 35}), row({lead_hours: 72, within: 20})]);
+
+const wind = {variable: 'wind', pct: 82, within: 41, n: 50, station: '46215', window: 30};
+
+test('C1: the requested zone dates generation, not the selected forecast hour or the current clock', () => {
+  const scorecard = {...leads, generated_at: '2026-11-03T18:00:00Z'};
+  assert.deepEqual(skillSummary(scorecard, 'morro-bay', NOW, NOW + 30 * H, 'Asia/Tokyo'), {
+    state: 'known', lead: 48, parts: [{...wind, pct: 70, within: 35}], published: '2026-11-04',
+  });
+});
+
+for (const [label, generated_at, published, zone] of [
+  ['before Pacific midnight in November', '2026-11-04T03:00:00Z', '2026-11-03'],
+  ['after Pacific midnight in November', '2026-11-04T08:30:00Z', '2026-11-04'],
+  ['one minute before midnight on spring-forward night', '2026-03-08T07:59:00Z', '2026-03-07'],
+  ['at midnight on spring-forward night', '2026-03-08T08:00:00Z', '2026-03-08'],
+  ['an explicit UTC zone preserves the UTC day', '2026-11-04T03:00:00Z', '2026-11-04', 'UTC'],
+]) {
+  test(`C2: ${label}`, () => {
+    const now = Date.parse(generated_at) + H;
+    assert.deepEqual(skillSummary(file([row()], {generated_at}), 'morro-bay', now, undefined, zone), {
+      state: 'known', lead: 24, parts: [wind], published,
+    });
+  });
+}
+
+test('C3: the 7-day fallback keeps the requested lead, and thin history cannot borrow a score', () => {
+  const at = NOW + 30 * H;
+  assert.deepEqual(skillSummary(file([row(), row({lead_hours: 48, n: 29, within: 24})]), 'morro-bay', NOW, at), {
+    state: 'unknown', lead: 48, published: '2026-11-03',
+  });
+  assert.deepEqual(skillSummary(file([row(), row({lead_hours: 48, window_days: 7, n: 31, within: 31})]), 'morro-bay', NOW, at), {
+    state: 'known', lead: 48, parts: [{...wind, pct: 100, within: 31, n: 31, window: 7}], published: '2026-11-03',
+  });
+});
+
+test('C3: the freshness gates accept the exact limits and suppress the date one millisecond outside', () => {
+  for (const [delta, published] of [[10 * M, '2026-11-05'], [-14 * 24 * H, '2026-10-22']]) {
+    const atLimit = file([row()], {generated_at: new Date(NOW + delta).toISOString()});
+    const outOfBounds = file([row()], {generated_at: new Date(NOW + delta + Math.sign(delta)).toISOString()});
+    assert.deepEqual(skillSummary(atLimit, 'morro-bay', NOW), {state: 'known', lead: 24, parts: [wind], published});
+    assert.deepEqual(skillSummary(outOfBounds, 'morro-bay', NOW), {state: 'unknown', lead: 24, published: null});
+  }
+  assert.deepEqual(skillSummary(null, 'morro-bay', NOW, NOW + 48 * H), {state: 'unknown', lead: 72, published: null});
+});
+
+test('C3: range and invalid hours keep distinct unavailable reasons even with a valid scorecard', () => {
+  assert.deepEqual(skillSummary(leads, 'morro-bay', NOW, NOW + 72 * H), {state: 'unavailable', reason: 'range'});
+  for (const at of [NOW - 1, NaN, Infinity]) {
+    assert.deepEqual(skillSummary(leads, 'morro-bay', NOW, at), {state: 'unavailable', reason: 'invalid'});
+  }
+});
+
+test('C4: English keeps the published wording, changing only the day', () => {
+  assert.equal(skillLine(skillSummary(file([row(), row({variable: 'wave_height', n: 40, within: 30})]), 'morro-bay', NOW), 'en'),
+    'Forecast skill 24 h ahead, last 30 days: wind 82% (41 of 50 checked, buoy 46215); seas 75% (30 of 40 checked, buoy 46215). Compared with buoy readings; scorecard published 2026-11-03. Not for navigation.');
+});
+
+test('C4: Spanish keeps the published wording, changing only the day', () => {
+  assert.equal(skillLine(skillSummary(file([]), 'morro-bay', NOW), 'es'),
+    'Acierto del pronóstico a 24 h: DESCONOCIDO. Aún no hay suficiente historial de boyas para medirlo (tabla publicada 2026-11-03). No apto para navegar.');
+});
 
 test('the lead uses the publisher\'s half-open buckets: exactly 24 h is 48 h ahead, exactly 72 h has no score', () => {
   const cases = [[0, 24], [24 * H - M, 24], [24 * H, 48], [24 * H + M, 48], [48 * H - M, 48], [48 * H, 72], [48 * H + M, 72], [72 * H - M, 72], [72 * H, null], [72 * H + M, null], [200 * H, null]];
