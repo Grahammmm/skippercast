@@ -4,6 +4,7 @@ import {linePath} from '../charts/series.ts';
 import {escapeHTML as esc,time,value,ageLabel} from './format.ts';
 import {icon} from './icons.ts';
 import type {CoastCopy,CoastCopyKey} from './copy.ts';
+import {METRES_PER_FOOT} from '../units.ts';
 const HOUR=3600000;
 const metrics:Record<HistoryMetric,{label:string;unit:string;color:string}>={waterTempF:{label:'Sea temperature',unit:'°F',color:'var(--coast-coral)'},waveFt:{label:'Wave height',unit:'ft',color:'var(--coast-blue)'},windKnots:{label:'Wind',unit:'kt',color:'var(--coast-mint)'},airTempF:{label:'Air temperature',unit:'°F',color:'var(--coast-amber)'},gustKnots:{label:'Reported gust',unit:'kt',color:'var(--coast-series-gust)'},periodS:{label:'Dominant wave period',unit:'sec',color:'var(--coast-series-violet)'}};
 const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
@@ -15,7 +16,7 @@ function historyDisplay(metric:HistoryMetric,units?:HistoryUnits):HistoryDisplay
  const scale=(unit:string,factor:number)=>{const convert=(n:number)=>n*factor;return {unit,convert,delta:convert};};
  if(units?.temp==='C'&&(metric==='waterTempF'||metric==='airTempF'))return {unit:'°C',convert:n=>(n-32)*5/9,delta:n=>n*5/9};
  // Exact definitions, matching the web unit factors without depending on the web app.
- if(units?.height==='m'&&metric==='waveFt')return scale('m',0.3048);
+ if(units?.height==='m'&&metric==='waveFt')return scale('m',METRES_PER_FOOT);
  if(metric==='windKnots'||metric==='gustKnots'){
   if(units?.wind==='mph')return scale('mph',1852/1609.344);
   if(units?.wind==='kmh')return scale('km/h',1852/1000);

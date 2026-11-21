@@ -54,12 +54,18 @@ bundle.stations[0].baseline.months = Object.entries(baseline).map(([metric, [p10
 }));
 const digest = docs => createHash('sha256').update(docs.join('\n')).digest('hex');
 const renderHistory = (metric, copy, units) => app.historyView(ctx, bundle, selection(metric), copy, units);
-// Captured on origin/main 7335068e before the change, over all six full views.
-const prior = {en: '7af5393d50f239fc10cfa2e8e757904995877fda8742af777c3bc433b1cf17f5', es: '7cb25ec505cf8a5265a0da32ed4dbb4626424538583215180537d6c986734c28'};
+// ICU's localized date punctuation varies between Node builds. Pin the time formatter
+// for the byte-level baseline while leaving the real Spanish copy and numbers intact.
+const baselineCopy = lang => {
+  const copy = app.historyCopy(lang);
+  return copy && {...copy, time: (at, tz, options) => `${at}|${tz}|${JSON.stringify(options)}`};
+};
+// Captured with baselineCopy from origin/main 7335068e, over all six full views.
+const prior = {en: '7af5393d50f239fc10cfa2e8e757904995877fda8742af777c3bc433b1cf17f5', es: 'b46811aa783b4e8908bab488ec542ad1348f7b11f0977a6cbc029b566a0bd806'};
 
 test('C1: no units argument preserves all English and Spanish history bytes', () => {
   const rendered = Object.fromEntries(['en', 'es'].map(lang => [lang, digest(Object.keys(baseline).map(
-    metric => app.historyView(ctx, bundle, selection(metric), app.historyCopy(lang)),
+    metric => app.historyView(ctx, bundle, selection(metric), baselineCopy(lang)),
   ))]));
   assert.deepEqual(rendered, prior);
   for (const metric of Object.keys(baseline)) {
@@ -69,8 +75,12 @@ test('C1: no units argument preserves all English and Spanish history bytes', ()
 
 test('C4: explicit default preferences preserve the complete pre-change output in both languages', () => {
   assert.deepEqual(Object.fromEntries(['en', 'es'].map(lang => [lang, digest(Object.keys(baseline).map(
-    metric => renderHistory(metric, app.historyCopy(lang), defaults),
+    metric => renderHistory(metric, baselineCopy(lang), defaults),
   ))])), prior);
+  for (const lang of ['en', 'es']) for (const metric of Object.keys(baseline)) {
+    const copy = app.historyCopy(lang);
+    assert.equal(renderHistory(metric, copy, defaults), renderHistory(metric, copy));
+  }
 });
 
 const stats = html => html.match(/<div class="history-stats">.*<\/div>/)[0];
