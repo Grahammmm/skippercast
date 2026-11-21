@@ -84,10 +84,12 @@ test('a caller aborting while the body arrives rejects alone; the read completes
   const shared = shareStatic(fetchFn);
   const ctl = new AbortController();
   const early = shared(FILE, {signal: ctl.signal});
+  const remaining = shared(FILE);
   await new Promise(r => setTimeout(r, 10));
   ctl.abort(new Error('caller gave up'));
   await assert.rejects(early, /caller gave up/);
   finish();
+  assert.deepEqual(await (await remaining).json(), {id: 'morro-bay'});
   assert.deepEqual(await (await shared(FILE)).json(), {id: 'morro-bay'});
   assert.equal(calls.length, 1, 'no second request');
   assert.notEqual(calls[0][1].signal, ctl.signal, 'the shared request carries no caller signal');
