@@ -107,6 +107,51 @@ export function fieldTexture(field: SurfaceField, range: readonly [number, numbe
   return {width, height, data, coordinates: [[west, north], [east, north], [east, south], [west, south]]};
 }
 
+/** A display grid has explicit pixel centres (Mercator on Chart; fixtures may use another projection). */
+export type DisplayGrid = {lon: readonly number[]; lat: readonly number[]; mask?: ArrayLike<number>};
+export type ScalarSample = (lon: number, lat: number) => number;
+
+/** Locate a bracketing pair on an ascending axis without extrapolating. */
+function bracket(axis: readonly number[], point: number): number {
+  let lo = 0, hi = axis.length - 1;
+  if (hi < 1 || point < axis[lo]! || point > axis[hi]!) return -1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >>> 1;
+    if (point < axis[mid]!) hi = mid;
+    else lo = mid;
+  }
+  return lo;
+}
+
+/** Rectilinear source values; all four neighbours must be finite, even at a cell edge. */
+export function scalarGrid(lon: readonly number[], lat: readonly number[], values: ArrayLike<number>): ScalarSample {
+  if (values.length !== lon.length * lat.length || [lon, lat].some(axis => axis.length < 2 ||
+    axis.some((x, i) => !Number.isFinite(x) || (i > 0 && x <= axis[i - 1]!)))) throw new Error('invalid scalar grid');
+  return (x, y) => {
+    const i = bracket(lon, x), j = bracket(lat, y);
+    if (i < 0 || j < 0) return NaN;
+    const sw = j * lon.length + i, nw = sw + lon.length;
+    const a = values[sw]!, b = values[sw + 1]!, c = values[nw]!, d = values[nw + 1]!;
+    const u = (x - lon[i]!) / (lon[i + 1]! - lon[i]!), v = (y - lat[j]!) / (lat[j + 1]! - lat[j]!);
+    return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+  };
+}
+
+/** Resample only display pixels, never generate a new analysis or fill a gap. */
+export function sampleDisplay(view: DisplayGrid, sample: ScalarSample): Float64Array {
+  const {lon, lat, mask} = view;
+  return Float64Array.from({length: lon.length * lat.length}, (_, i) =>
+    mask && !mask[i] ? NaN : sample(lon[i % lon.length]!, lat[Math.floor(i / lon.length)]!));
+}
+
+export function mercatorDisplay([west, south, east, north]: SurfaceField['bounds'], width: number, height: number): DisplayGrid {
+  const top = mercator(north), bottom = mercator(south);
+  return {
+    lon: Array.from({length: width}, (_, x) => west + (x + 0.5) * (east - west) / width),
+    lat: Array.from({length: height}, (_, y) => latitude(top - (y + 0.5) * (top - bottom) / height)),
+  };
+}
+
 export type Isoline = {type: 'Feature'; properties: {level: number; label: string; major: boolean}; geometry: {type: 'LineString'; coordinates: number[][]}};
 const end = (p: number[]): string => `${Math.round(p[0]! * 1e7)},${Math.round(p[1]! * 1e7)}`;
 /**
