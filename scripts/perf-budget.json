@@ -5,7 +5,7 @@
       "label": "Landing page scripts (first load)",
       "kind": "first_load_js",
       "entry": "landing.html",
-      "max_bytes": 100000,
+      "max_bytes": 106000,
       "history": [
         {
           "max_bytes": 445000,
@@ -30,6 +30,10 @@
         {
           "max_bytes": 100000,
           "reason": "SC-NEXT-01: inject each page's reader into the shared cost-ceiling notice, removing the full English app catalogue from the landing static graph. Measured 95,000 raw bytes after the change versus 308,897 on main def43f14d; ceiling = ceil(95,000 x 1.05 / 1,000) x 1,000. Other budgets unchanged."
+        },
+        {
+          "max_bytes": 106000,
+          "reason": "MAIN-RED-SKIPPERCAST: landing first-load JavaScript measured 97,449 bytes immediately before #3151 (c057751) and 100,202 bytes after it (6f64f5d), unchanged on main 1f5e7c42514fd44f46a55481abbc82c6b359fb60 (Offline checks run 44864722022). #3151 shares the landing's region metadata requests and bounds the shared metadata body and cancellation. Keep that behavior and restore SC-CI-2 headroom: ceil(100,202 x 1.05 / 1,000) x 1,000 = 106,000. No other budget changes."
         }
       ]
     },
