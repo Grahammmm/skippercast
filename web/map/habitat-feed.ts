@@ -30,6 +30,8 @@ const MAX_TILES = 64;
 const MAX_TILE_BYTES = 5_000_000;
 const TILE_CONCURRENCY = 4;
 const TILE_PATH = /^habitat-tiles\/[a-z0-9-]+-[a-f0-9]{16}\.json$/;
+const HISTORY_TILE_PATH = /^habitat-history\/[a-z0-9-]+-[a-f0-9]{16}\.json$/;
+const MAX_HISTORY_DAYS = 7;
 const SHA256 = /^[a-f0-9]{64}$/;
 const REGION_ID = /^[a-z0-9-]+$/;
 const HOUR = 3_600_000;
@@ -70,13 +72,20 @@ export function habitatManifestURL(regionId: string, page: string): string {
   return new URL(`/feeds/conditions/regions/${regionId}/habitat-dynamics.json`, page).href;
 }
 
-/** A tile reference's URL, only inside the manifest's own region folder. */
-export function habitatTileURL(manifestURL: string, record: unknown, regionId: string): string {
-  if (!object(record) || typeof record.path !== 'string' || !TILE_PATH.test(record.path) || typeof record.sha256 !== 'string' || !SHA256.test(record.sha256)
-    || !numeric(record.bytes) || !Number.isInteger(record.bytes) || record.bytes < 1 || record.bytes > MAX_TILE_BYTES || !box(record.bounds)) throw new Error('Invalid ocean tile reference');
+const tileReference = (record: unknown, pattern: RegExp): record is Record<string, unknown> & {path: string} =>
+  object(record) && typeof record.path === 'string' && pattern.test(record.path) && typeof record.sha256 === 'string' && SHA256.test(record.sha256)
+    && numeric(record.bytes) && Number.isInteger(record.bytes) && record.bytes >= 1 && record.bytes <= MAX_TILE_BYTES && box(record.bounds);
+
+function tileURL(manifestURL: string, record: unknown, regionId: string, pattern: RegExp): string {
+  if (!tileReference(record, pattern)) throw new Error('Invalid ocean tile reference');
   const url = new URL(record.path, manifestURL), root = new URL('.', manifestURL);
   if (url.origin !== root.origin || !url.pathname.startsWith(root.pathname) || !root.pathname.endsWith(`/regions/${regionId}/`)) throw new Error('Ocean tile outside region');
   return url.href;
+}
+
+/** A current tile reference's URL, only inside the manifest's own region folder. */
+export function habitatTileURL(manifestURL: string, record: unknown, regionId: string): string {
+  return tileURL(manifestURL, record, regionId, TILE_PATH);
 }
 
 /** The product's name: the source's name before any comma ("NOAA Geo-Polar Blended night SST, 5 km" gives "NOAA Geo-Polar Blended night SST"). */
@@ -124,6 +133,36 @@ export function layerOf(data: unknown, regionId: string, id: string, kind: strin
 /** The layer's populated frame times (epoch seconds), ascending. */
 const populated = (layer: Layer): number[] => layer.frames.filter(f => !numeric(f.valid_cells) || f.valid_cells > 0).map(f => f.time).sort((a, b) => a - b);
 
+// Require a dated observation with an explicit zone. Date.parse alone also accepts shorthand
+// and rolls nonexistent calendar dates into the next month.
+function historyTime(sample: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(sample)) return NaN;
+  const day = sample.slice(0, 10), midnight = new Date(`${day}T00:00:00Z`);
+  return Number.isFinite(midnight.getTime()) && midnight.toISOString().slice(0, 10) === day ? Date.parse(sample) : NaN;
+}
+
+function historyEntries(layer: Layer) {
+  const days = new Map<number, {sampleAt: string; tiles: readonly Record<string, unknown>[]}>();
+  if (layer.raw.kind === 'forecast' || !Array.isArray(layer.raw.history)) return [];
+  const latest = populated(layer).at(-1);
+  const sample = instant(layer.raw.sample_at);
+  const current = latest === undefined ? Date.parse(sample ?? '') : latest * 1000;
+  for (const day of layer.raw.history) {
+    if (!object(day) || typeof day.sample_at !== 'string') continue;
+    const time = historyTime(day.sample_at), tiles: unknown = day.tiles;
+    // Bounds are part of the existing tile descriptor, including for archived tiles.
+    if (!(time < current) || days.has(time) || !Array.isArray(tiles) || !tiles.length || tiles.length > MAX_TILES
+      || !tiles.every(t => tileReference(t, HISTORY_TILE_PATH)) || new Set(tiles.map(t => t.path)).size !== tiles.length) continue;
+    days.set(time, {sampleAt: day.sample_at, tiles});
+  }
+  return [...days].sort(([a], [b]) => b - a).slice(0, MAX_HISTORY_DAYS);
+}
+
+/** Past sample times with valid manifest references, newest first. Tile bodies are checked on selection. */
+export function historyDays(layer: Layer): string[] {
+  return historyEntries(layer).map(([, day]) => day.sampleAt);
+}
+
 async function sha256(bytes: ArrayBuffer): Promise<string> {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), n => n.toString(16).padStart(2, '0')).join('');
 }
@@ -146,9 +185,10 @@ export async function tileRows(bytes: ArrayBuffer, record: Record<string, unknow
 }
 
 type Get = (url: string, signal?: AbortSignal) => Promise<Response>;
-interface ReadOptions {fetchFn: typeof fetch; page: string; now: Date; signal?: AbortSignal}
+interface FetchOptions {fetchFn: typeof fetch; page: string; signal?: AbortSignal}
+interface ReadOptions extends FetchOptions {now: Date}
 class NetworkReadError extends Error {}
-const getter = (o: ReadOptions): Get => async (url, signal = o.signal) => {
+const getter = (o: FetchOptions): Get => async (url, signal = o.signal) => {
   signal?.throwIfAborted();
   const timeout = AbortSignal.timeout(TIMEOUT_MS);
   try {
@@ -188,8 +228,10 @@ async function readTile(response: Response, bytes: number, signal: AbortSignal):
 }
 
 /** Every tile's rows, merged in manifest order; one failed tile refuses the layer. */
-async function allRows(get: Get, manifestURL: string, regionId: string, layer: Layer, caller?: AbortSignal): Promise<Map<number, unknown[][]>> {
-  const records = layer.tiles.map(record => ({record, url: habitatTileURL(manifestURL, record, regionId)}));
+async function allRows(get: Get, manifestURL: string, regionId: string, layer: Pick<Layer, 'id' | 'fields' | 'resolution' | 'frames' | 'tiles'>,
+  caller?: AbortSignal, historyFrame?: number): Promise<Map<number, unknown[][]>> {
+  const pattern = historyFrame === undefined ? TILE_PATH : HISTORY_TILE_PATH;
+  const records = layer.tiles.map(record => ({record, url: tileURL(manifestURL, record, regionId, pattern)}));
   const stop = new AbortController();
   const signal = caller ? AbortSignal.any([caller, stop.signal]) : stop.signal;
   const parts: Map<number, unknown[][]>[] = [];
@@ -200,7 +242,9 @@ async function allRows(get: Get, manifestURL: string, regionId: string, layer: L
         signal.throwIfAborted();
         const i = next++, {record, url} = records[i]!;
         const response = await get(url, signal);
-        parts[i] = await tileRows(await readTile(response, record.bytes as number, signal), record, regionId, layer);
+        const rows = await tileRows(await readTile(response, record.bytes as number, signal), record, regionId, layer);
+        if (historyFrame !== undefined && !rows.has(historyFrame)) throw new Error('Ocean tile missing the history frame');
+        parts[i] = rows;
       }
     } catch (error) {
       stop.abort(error);
@@ -218,7 +262,7 @@ async function allRows(get: Get, manifestURL: string, regionId: string, layer: L
 }
 
 /** The manifest, or a terminal state: 'none' for no manifest or no such layer, 'error' for a failed read. */
-async function manifestLayer(regionId: string, o: ReadOptions, read: (data: unknown) => Layer | null): Promise<{layer: Layer; manifestURL: string; get: Get} | 'none' | 'error'> {
+async function manifestLayer(regionId: string, o: FetchOptions, read: (data: unknown) => Layer | null): Promise<{layer: Layer; manifestURL: string; get: Get} | 'none' | 'error'> {
   const get = getter(o), manifestURL = habitatManifestURL(regionId, o.page), response = await get(manifestURL);
   if (response.status === 404) return 'none';
   if (!response.ok) return 'error';
@@ -227,6 +271,32 @@ async function manifestLayer(regionId: string, o: ReadOptions, read: (data: unkn
 }
 
 const loads = (layer: Layer): boolean => layer.status === 'ok' || layer.status === 'retained';
+
+type HistoryDay = {readonly state: 'none' | 'error'}
+  | {readonly state: 'ready'; readonly sampleAt: string; readonly fields: Layer['fields']; readonly resolution: Layer['resolution'];
+    readonly rows: readonly (readonly unknown[])[]};
+
+/** Read only the selected observation. Its validity does not depend on Today's freshness gate. */
+export async function loadHistoryDay(regionId: string, layerId: string, sampleAt: string, o: FetchOptions): Promise<HistoryDay> {
+  const time = historyTime(sampleAt);
+  if (!Number.isFinite(time) || (layerId !== SST_LAYER_ID && layerId !== CHLOROPHYLL_LAYER_ID)) return {state: 'none'};
+  try {
+    const read = layerId === SST_LAYER_ID
+      ? (data: unknown) => layerOf(data, regionId, layerId, 'analysis', ['temperature_c', 'analysis_error_c'])
+      : (data: unknown) => layerOf(data, regionId, layerId, 'observation', ['chlorophyll_mg_m3']);
+    const found = await manifestLayer(regionId, o, read);
+    if (typeof found === 'string') return {state: found};
+    const {layer, manifestURL, get} = found;
+    const selected = historyEntries(layer).find(([t]) => t === time)?.[1];
+    if (!selected) return {state: 'none'};
+    const frame = time / 1000;
+    const rows = await allRows(get, manifestURL, regionId, {...layer, tiles: selected.tiles, frames: [{time: frame}]}, o.signal, frame);
+    return {state: 'ready', sampleAt: selected.sampleAt, fields: layer.fields, resolution: layer.resolution, rows: rows.get(frame)!};
+  } catch (error) {
+    if (o.signal?.aborted) throw error;
+    return {state: 'error'};
+  }
+}
 
 export interface ChlorophyllObservation {
   readonly product: string;
