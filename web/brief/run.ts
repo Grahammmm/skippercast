@@ -13,9 +13,12 @@
 //   computed, else the straight line from it (web/ranking.ts), labelled as such;
 //   the real run is at least the straight line, so the fishing time is at most this;
 // - the speed is the one the user typed on this device (web/limits.ts
-//   cruiseSpeed); there is no default, and without it the brief says so.
-// Sea state, the bar crossing itself and fuel are left to the skipper; this
-// is a planning sum, not a passage plan or a promise of a safe return.
+//   cruiseSpeed); there is no default, and without it the brief says so;
+// - fuel uses the water route and the user's cruise speed and burn rate for a
+//   round-trip estimate, not a fuel plan. Tank capacity is optional and used
+//   only for the thirds rule. Sea state, load and detours can change fuel use.
+// Sea state and the bar crossing itself are left to the skipper; this is a
+// planning sum, not a passage plan or a promise of a safe return.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import type {Window} from '../../packages/coast/src/types.ts';
@@ -53,6 +56,26 @@ const iso = (ms: number) => new Date(ms).toISOString();
 export function runMinutes(nm: number, speedKn: number): number | null {
   if (!Number.isFinite(nm) || nm < 0 || !Number.isFinite(speedKn) || speedKn <= 0) return null;
   return Math.max(ROUND_MIN, up(nm / speedKn * 60));
+}
+
+/** Round-trip fuel on a water route at the supplied cruise settings; an estimate, not a fuel plan. */
+export function fuelEstimate(
+  place: RunPlace | null | undefined,
+  cruiseKn: number | null | undefined,
+  burnGph: number | null | undefined,
+  tankGal?: number | null,
+): {gallons: number; thirds: 'ok' | 'check' | null} | null {
+  if (place?.basis !== 'water' || !Number.isFinite(place.nm) || place.nm <= 0) return null;
+  // Cruise and tank bounds match the boat profile; burn bounds come from roadmap 08.
+  if (cruiseKn == null || !Number.isFinite(cruiseKn) || cruiseKn < 2 || cruiseKn > 60) return null;
+  if (burnGph == null || !Number.isFinite(burnGph) || burnGph < 0.5 || burnGph > 200) return null;
+  if (tankGal != null && (!Number.isFinite(tankGal) || tankGal < 0 || tankGal > 1500)) return null;
+
+  // Keep positive consumption even if an extremely small distance underflows.
+  const roundTrip = Math.max(Number.MIN_VALUE, 2 * place.nm / cruiseKn * burnGph);
+  if (!Number.isFinite(roundTrip)) return null;
+  // Compare the estimate before rounding gallons for display.
+  return {gallons: Math.ceil(roundTrip), thirds: tankGal == null ? null : roundTrip <= 2 * tankGal / 3 ? 'ok' : 'check'};
 }
 
 /** Why a Boat brief has no window to plan a return in, naming the input that is missing. */

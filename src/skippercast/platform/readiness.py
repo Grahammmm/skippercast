@@ -13,6 +13,9 @@ from .contracts import REPO, atomic_json, read_json
 def compile_readiness(root=REPO):
     root = Path(root)
     sectors = read_json(root / 'dist/data/coastal-sectors.json')['sectors']
+    expected = {row['id'] for row in sectors}
+    if len(expected) != len(sectors):
+        raise ValueError('Duplicate sector IDs in statewide readiness roster')
     native = read_json(root / 'dist/data/noaa-native-sector-review.json')
     variable_depth = read_json(root / 'dist/data/noaa-vr-native-depth-expanded-review.json')
     regular_depth = read_json(root / 'dist/data/noaa-regular-native-depth-review.json')
@@ -110,7 +113,6 @@ def compile_readiness(root=REPO):
     regular_by_id = {row['sector_id']: row for row in regular_depth['sectors']}
     discovery_by_id = {row['sector_id']: row for row in discovery['sectors']}
     seabed_by_id = {row['sector_id']: row for row in seabed_samples['sectors']}
-    expected = {row['id'] for row in sectors}
     if not set(original_by_sector) <= expected:
         raise ValueError('Hard-footprint source review has an unknown sector')
     csumb_by_sector = {ident: set() for ident in expected}

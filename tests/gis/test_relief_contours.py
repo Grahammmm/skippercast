@@ -2,6 +2,7 @@
 import hashlib
 import importlib.util
 import json
+import shutil
 import sys
 
 import pytest
@@ -183,6 +184,209 @@ def pin_support(sidecar, support, name='pinned-sidecar.json'):
     return pinned
 
 
+@pytest.mark.parametrize('cell,native,certified', [(2, 2, True), (4, 4, False), (1, 4, True), (1, 1, False), (1, 1, True)])
+def test_v3_native_tiers_and_pier(tmp_path, cell, native, certified):
+    # Interpolated or merely fine-looking cells cannot acquire fine or pier contours.
+    import numpy as np
+    from pyproj import Transformer
+    from rasterio.transform import from_origin
+    from skippercast import style
+    from skippercast.relief import contours
+
+    tool = contours.producer()
+    view = style.load().view('contours')
+    region = {'bounds': [-122, 34, -120, 36]}
+    values = np.tile(np.linspace(-0.2, -100, 100, dtype='float32'), (50, 1))
+    values[20:30, :] = -9999
+    proj = 'EPSG:32610'
+    grid = write_grid(tmp_path / 'native.tif', values, proj, from_origin(690000, 3915000, cell, cell))
+    mask = write_support(tmp_path / 'support.tif', grid)
+    with tool.open_geotiff(grid, normalized=True) as ds, tool.open_geotiff(mask, normalized=True) as support:
+        lines = list(tool.v3_grid(ds, region, view, {'source_id': 'synthetic'}, native,
+                                  support=support if certified else None, certified=certified))
+    if native > cell:
+        assert not lines
+        return
+    props = [f['properties'] for f in lines]
+    assert {p['tier'] for p in props} == ({'z8', 'z11', 'z13'} | ({'z15'} if cell <= 2 else set())
+                                           | ({'pier'} if cell == 1 and certified else set()))
+    for tier, step, indices in [('z8', 60, {60, 150, 300}), ('z11', 30, {60, 150, 300}),
+                                ('z13', 10, set(range(50, 301, 50))), ('z15', 5, set(range(10, 301, 10)))]:
+        rows = [p for p in props if p['tier'] == tier]
+        if rows:
+            assert {p['depth_ft'] for p in rows} == set(range(step, 301, step)) | indices
+            assert {p['depth_ft'] for p in rows if p['index']} == indices
+    xy = Transformer.from_crs('EPSG:4326', proj, always_xy=True)
+    for f in lines:
+        for line in f['geometry']['coordinates']:
+            ys = [xy.transform(*point)[1] for point in line]
+            assert min(ys) > 3915000 - 20 * cell or max(ys) < 3915000 - 30 * cell
+
+
+def test_standalone_v3_support_alone_does_not_certify_pier(builder, tmp_path, monkeypatch):
+    import numpy as np
+    from rasterio.transform import from_origin
+    from skippercast.relief import contours
+
+    tool = contours.producer()
+    _, source = builder
+    source['native_resolution_m'] = 1
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36],
+              'source_bindings': {'bathymetry': [SOURCE]}}
+    values = np.tile(np.linspace(-0.2, -100, 100, dtype='float32'), (50, 1))
+    grid = write_grid(tmp_path / 'grid.tif', values, 'EPSG:32610', from_origin(690000, 3915000, 1, 1))
+    support = write_support(tmp_path / 'support.tif', grid)
+    monkeypatch.setattr(tool.dc, 'check_contours', lambda *args: None)
+    with tool.open_geotiff(grid, normalized=True) as ds:
+        doc = tool.v3_cli(region, {SOURCE: source}, [SOURCE], [ds],
+                          {SOURCE: {'name': source['name'], 'survey_date': '2008',
+                                    'vertical_datum': 'MLLW', 'native_cell_m': 1}},
+                          {SOURCE: digest(grid)}, {SOURCE: support}, {}, False)
+    tiers = {feature['properties']['tier'] for feature in doc['features']}
+    assert 'z15' in tiers
+    assert 'pier' not in tiers
+
+
+@pytest.mark.parametrize('cap,zoom,native,expect_pier', [(2, 17, True, False), (3, 15, True, False),
+                                                        (3, 17, False, False), (3, 17, True, True)])
+def test_selected_v3_pier_requires_attested_native_eligibility(builder, tmp_path, cap, zoom, native, expect_pier):
+    import numpy as np
+    from rasterio.transform import from_origin
+    from skippercast import style
+    from skippercast.relief import contours
+
+    tool = contours.producer()
+    _, source = builder
+    source['native_resolution_m'] = 1
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36]}
+    transform = from_origin(690000, 3915000, 1, 1)
+    values = np.tile(np.linspace(-0.2, -100, 100, dtype='float32'), (50, 1))
+    grid = write_grid(tmp_path / 'grid.tif', values, 'EPSG:32610', transform)
+    support = write_support(tmp_path / 'support.tif', grid)
+    sidecar = tmp_path / 'sidecar.json'
+    sidecar.write_text(json.dumps({'schema': 'sc-relief-normalized/1', 'original_sha256': digest(grid),
+                                   'outputs': {'grid.tif': digest(grid), 'support.tif': digest(support)},
+                                   'units': 'm', 'value_convention': 'elevation_positive_up',
+                                   'vertical_datum': 'MLLW', 'crs': 'EPSG:32610', 'shape': list(values.shape),
+                                   'transform': list(transform)[:6], 'resolution_m': 1}))
+    row = {'id': 'tile', 'source_id': SOURCE, 'sha256': digest(grid), 'support_sha256': digest(support),
+           'value_convention': 'elevation_positive_up', 'vertical_datum': 'MLLW',
+           'support_class_cap': cap, 'max_zoom': zoom}
+    job = (tool, region, {SOURCE: source}, [(row, grid, sidecar, digest(sidecar), support)],
+           {'tile'} if native else set(), None, None)
+    doc = contours.trace_v3(job, style.load().view('contours'))
+    tiers = {feature['properties']['tier'] for feature in doc['features']}
+    assert 'z15' in tiers
+    assert ('pier' in tiers) is expect_pier
+
+
+def v3_selected_job(builder, tmp_path, *, convention='elevation_positive_up', native=None, tile_res=None,
+                    sidecar_on=True, cell=1, upsample=1):
+    import numpy as np
+    from rasterio.transform import from_origin
+    from skippercast.relief import contours
+
+    tool = contours.producer()
+    _, source = builder
+    source.pop('native_resolution_m')
+    if native is not None:
+        source['native_resolution_m'] = native
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36]}
+    transform = from_origin(690000, 3915000, cell, cell)
+    values = np.tile(np.linspace(-0.2, -100, 100 // upsample, dtype='float32'), (50 // upsample, 1))
+    if convention == 'depth_positive_down':
+        values = -values
+    original = None
+    if upsample != 1:
+        original = write_grid(tmp_path / 'original.tif', values, 'EPSG:32610',
+                              from_origin(690000, 3915000, cell * upsample, cell * upsample))
+        values = values.repeat(upsample, axis=0).repeat(upsample, axis=1)
+    grid = write_grid(tmp_path / 'grid.tif', values, 'EPSG:32610', transform)
+    support = write_support(tmp_path / 'support.tif', grid)
+    row = {'id': 'tile', 'source_id': SOURCE, 'sha256': digest(grid), 'support_sha256': digest(support),
+           'value_convention': convention, 'vertical_datum': 'MLLW', 'support_class_cap': 3, 'max_zoom': 17}
+    if tile_res is not None:
+        row['resolution_m'] = tile_res
+    sidecar = pin = support_in = None
+    if sidecar_on:
+        sidecar = tmp_path / 'sidecar.json'
+        sidecar.write_text(json.dumps({'schema': 'sc-relief-normalized/1', 'original_sha256': digest(original or grid),
+                                       'outputs': {'grid.tif': digest(grid), 'support.tif': digest(support)},
+                                       'units': 'm', 'value_convention': 'elevation_positive_up',
+                                       'vertical_datum': 'MLLW', 'crs': 'EPSG:32610', 'shape': list(values.shape),
+                                       'transform': list(transform)[:6], 'resolution_m': cell}))
+        pin, support_in = digest(sidecar), support
+    else:
+        row['support_sha256'] = None
+    return tool, (tool, region, {SOURCE: source}, [(row, grid, sidecar, pin, support_in)], set(), None, None)
+
+
+def test_v3_positive_down_matches_positive_up(builder, tmp_path):
+    from skippercast import style
+    from skippercast.relief import contours
+
+    view = style.load().view('contours')
+    docs = {}
+    for convention in ('elevation_positive_up', 'depth_positive_down'):
+        folder = tmp_path / convention
+        folder.mkdir()
+        _, job = v3_selected_job(builder, folder, convention=convention, native=1, sidecar_on=False)
+        docs[convention] = contours.trace_v3(job, view)
+    up, down = (sorted(docs[c]['features'], key=lambda f: f['id']) for c in docs)
+    assert up
+    assert [(f['id'], f['geometry'], f['properties']['depth_ft'], f['properties']['tier']) for f in up] == \
+           [(f['id'], f['geometry'], f['properties']['depth_ft'], f['properties']['tier']) for f in down]
+
+
+@pytest.mark.parametrize('dates, expected', [({'survey_year': None}, 'unstated'),
+                                             ({'survey_date': '2011-05-06'}, '2011-05-06'),
+                                             ({}, '2008')])
+def test_v3_survey_date_follows_selected_survey_date(builder, tmp_path, dates, expected):
+    # Contract: v3 reads the date via dc.selected_survey_date, so a source with no survey_year
+    # (every Morro source) is 'unstated' instead of KeyError; a reviewed survey_date wins.
+    from skippercast import style
+    from skippercast.relief import contours
+    from skippercast.platform import depth_contours as dc
+
+    _, source = builder
+    if dates == {'survey_year': None}:
+        source.pop('survey_year')
+    else:
+        source.update(dates)
+    _, job = v3_selected_job(builder, tmp_path, native=1, sidecar_on=False)
+    view = style.load().view('contours')
+    doc = contours.trace_v3(job, view)
+    assert doc['features']
+    assert {f['properties']['survey_date'] for f in doc['features']} == {expected}
+    assert {s['survey_date'] for s in doc['provenance']['sources']} == {expected}
+    dc.check_selected_contours(doc, job[1], job[2], {SOURCE}, view=view)
+
+
+def test_v3_unknown_value_convention_raises(builder, tmp_path):
+    from skippercast import style
+    from skippercast.relief import contours
+
+    _, job = v3_selected_job(builder, tmp_path, native=1, sidecar_on=False)
+    job[3][0][0]['value_convention'] = 'depth_sideways'
+    with pytest.raises(ValueError, match='unknown value_convention'):
+        contours.trace_v3(job, style.load().view('contours'))
+
+
+@pytest.mark.parametrize('sidecar_on,tile_res,upsample', [(True, 1, 2), (False, 1, 1), (True, 2, 1),
+                                                         (True, None, 1)])
+def test_v3_requires_reviewed_original_resolution(builder, tmp_path, caplog, sidecar_on, tile_res, upsample):
+    # A matching tile declaration is not original sampling evidence: the 2 m original is resampled to 1 m.
+    from skippercast import style
+    from skippercast.relief import contours
+
+    _, job = v3_selected_job(builder, tmp_path, tile_res=tile_res, sidecar_on=sidecar_on, upsample=upsample)
+    doc = contours.trace_v3(job, style.load().view('contours'))
+    assert doc['features'] == []
+    assert doc['provenance']['sources'] == []
+    assert doc['provenance']['sources_omitted'] == [{'source_id': SOURCE, 'review_status': 'approved'}]
+    assert f'{SOURCE}/tile: missing or invalid reviewed original native resolution' in caplog.text
+
+
 def test_normalized_twin_retains_original_identity_and_shelf_lines(builder, geographic_twin, tmp_path):
     # A derivative may not replace the original digest, leak its path or move lines in this planar control.
     from pyproj import Transformer
@@ -320,7 +524,7 @@ def test_standalone_normalized_native_detail_only_over_measured_support(builder,
         run(normalized, tmp_path / 'shifted.geojson', sidecar=pin_support(sidecar, shifted, 'shifted.json'), support=shifted)
 
 
-@pytest.mark.parametrize('downgraded_from_col', [None, 50])
+@pytest.mark.parametrize('downgraded_from_col', [None, 50, 'kit'])
 def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp_path, monkeypatch, builder, downgraded_from_col):
     # A valid R4 code alone must not admit a denied source, replace native lines, or evict tiles/zone.
     # downgraded_from_col protects: cells the support raster marks interpolated (class 2) in a 2 m normalised
@@ -331,7 +535,7 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
     from rasterio.transform import from_origin
 
     from skippercast.platform import depth_contours as dc
-    from skippercast.relief import contours, receipts
+    from skippercast.relief import contours, receipts, render_config
 
     region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36], 'source_bindings': {'bathymetry': ['coarse', 'excluded']}}
     _, source = builder
@@ -356,6 +560,15 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
     real_producer = contours.producer()
     monkeypatch.setattr(contours, 'producer', lambda: real_producer)
     monkeypatch.setattr(contours, 'repo_root', lambda: root)
+    monkeypatch.setattr(render_config, 'repo_root', lambda: root)
+    shutil.copytree(ROOT / 'style', root / 'style')
+    index_path = root / 'style/index.json'
+    index = json.loads(index_path.read_bytes())
+    kit = downgraded_from_col == 'kit'
+    base_version = index['default']
+    if not kit:
+        index['default'] = render_config.LEGACY
+        index_path.write_bytes(receipts.canonical(index))
     r = receipts.Region(tmp_path / 'out', region['id'])
     crs, x, y = 'EPSG:32610', 690000, 3915000
     native_transform = from_origin(x, y, 2, 2)
@@ -368,16 +581,23 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
                                             'value_convention': 'elevation_positive_up', 'vertical_datum': 'MLLW',
                                             'crs': crs, 'shape': list(depths.shape), 'resolution_m': 2,
                                             'transform': list(native_transform)[:6]}))
-    coarse = write_grid(tmp_path / 'coarse.tif', np.tile(np.linspace(-1, -120, 20, dtype='float32'), (40, 1)),
-                        crs, from_origin(x + 200, y, 10, 10))
+    coarse_cell = 4 if kit else 10
+    coarse_count = 200 // coarse_cell
+    coarse = write_grid(tmp_path / 'coarse.tif', np.tile(np.linspace(-1, -120, coarse_count, dtype='float32'), (2 * coarse_count, 1)),
+                        crs, from_origin(x + 200, y, coarse_cell, coarse_cell))
 
     support = tmp_path / 'support.tif'
     classes = np.full(depths.shape, 3, dtype='uint8')
-    if downgraded_from_col is not None:
+    if downgraded_from_col == 50:
         classes[:, downgraded_from_col:] = 2
     with rasterio.open(support, 'w', driver='GTiff', count=1, dtype='uint8', height=classes.shape[0],
                        width=classes.shape[1], crs=crs, transform=native_transform) as ds:
         ds.write(classes, 1)
+
+    if kit:
+        normalized = json.loads(sidecar.read_bytes())
+        normalized['outputs']['support.tif'] = digest(support)
+        sidecar.write_bytes(receipts.canonical(normalized))
 
     def row(ident, grid):
         return {'id': f'{ident}-tile', 'source_id': ident, 'path': str(grid),
@@ -431,6 +651,67 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
     assert cli.main(args) == 0 and path.read_bytes() == first
     receipt = json.loads(first)
     assert receipt['status'] == 'ok' and receipt['attempt'] == 1 and receipts.check(r, 'contours').done
+    if kit:
+        # Non-contour tokens and style IDs must not invalidate the real StageRun.
+        from scripts.style.gen_style import group_digests
+        from tests.unit.test_relief_package import inputs as package_inputs, run_package
+        from skippercast.relief import package, qa
+        default = index['versions'][base_version]
+        tokens = json.loads((root / 'style' / default['file']).read_bytes())
+        rules = json.loads((root / 'style/groups.json').read_bytes())
+        c = default['digests']['contours']
+        assert receipt['params'].keys() == {'set', 'refused_sources', 'contours'}
+        assert receipt['params']['contours'] == c and receipt['params']['set'] == 'ft-v3'
+        assert receipt['metrics']['style'] == {'built_with': base_version, 'sha256': default['sha256'], 'contours': c}
+        assert all('style/' not in item['path'] for item in receipt['inputs'])
+        v3 = json.loads((r.dir / 'layers/contours/contours.geojson').read_bytes())
+        props = [f['properties'] for f in v3['features']]
+        assert {p['source_id'] for p in props if p['tier'] == 'z13' and p['depth_ft'] == 10} == {SOURCE, 'coarse'}
+        assert {p['source_id'] for p in props if p['tier'] == 'z15' and p['depth_ft'] == 5} == {SOURCE}
+        assert set(qa._contour_counts(r.dir, r.id)) == {'5', '10', '30', '60'}
+        package_root = tmp_path / 'package-root'
+        shutil.copytree(root, package_root)
+        (package_root / 'catalog/relief').mkdir()
+        shutil.copyfile(ROOT / 'catalog/relief/pointer.schema.json', package_root / 'catalog/relief/pointer.schema.json')
+        catalog = package_root / 'catalog/sources.json'
+        catalog.write_bytes(receipts.canonical({'sources': [{'id': 'synthetic-grid', 'review_status': 'approved',
+                                                             'rights': {'public_display': 'allowed', 'license': 'public-domain'}}]}))
+        monkeypatch.setattr(package, 'repo_root', lambda: package_root)
+        _, manifest = package_inputs(r.out_root, style={'built_with': base_version, 'baked': default['digests']['baked']})
+        assert run_package(r, manifest) == 0
+        before_package = receipts.check(r, 'package').receipt
+        assert before_package is not None
+        prior = before_package['generation']
+        for name in ('paint', 'id', 'baked', 'contours'):
+            changed = json.loads(json.dumps(tokens))
+            if name == 'paint':
+                changed['overlays']['field_opacity_by_zoom'][0][1] += 0.01
+            elif name == 'baked':
+                changed['shading']['hillshade']['ve_min'] += 0.01
+            elif name == 'contours':
+                changed['contours']['tiers'][0]['sigma_m'] += 0.01
+            version = f'nearshore-{name}'
+            file = root / 'style' / f'{version}.json'
+            file.write_bytes(receipts.canonical(changed))
+            new_entry = {**default, 'file': file.name, 'sha256': digest(file), 'digests': group_digests(changed, rules)}
+            index['versions'][version] = new_entry
+            index['default'] = version
+            index_path.write_bytes(receipts.canonical(index))
+            assert cli.main(args) == 0
+            if name != 'contours':
+                assert path.read_bytes() == first
+            else:
+                rebuilt = json.loads(path.read_bytes())
+                assert rebuilt['generation'] != receipt['generation']
+                assert rebuilt['metrics']['style']['contours'] == new_entry['digests']['contours'] != c
+                assert run_package(r, manifest) == 0
+                after_package = receipts.check(r, 'package').receipt
+                assert after_package is not None
+                gen = after_package['generation']
+                assert gen != prior
+                release = json.loads((r.dir / 'release' / gen / 'release.json').read_bytes())
+                assert release['style']['contours'] == new_entry['digests']['contours']
+        return
     # Selection may bind the owner-cleared original, but neither a valid mosaic nor an owner marker
     # grants clearance to nonpublic, MBARI, excluded or unlicensed rows.
     assert {entry['source_id']: entry['reason'] for entry in receipt['params']['refused_sources']} == {

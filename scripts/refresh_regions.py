@@ -32,8 +32,7 @@ RUNS = REPO/"var/runs"
 # Per-region files recorded as run outputs (pointers only: history, tiles and archives are not hashed).
 OUTPUTS = {"daily": ("latest.json", "health.json", "regulations-health.json"), "live": ("latest.json", "health.json"),
            "intelligence": ("intelligence.json",), "habitat": ("habitat-dynamics.json", "habitat-health.json", "sst-fronts.json")}
-PREVIOUS = {"daily": "latest.json", "live": "latest.json", "intelligence": "intelligence.json",
-            "habitat": "habitat-dynamics.json"}
+PREVIOUS = {"intelligence": "intelligence.json", "habitat": "habitat-dynamics.json"}
 
 
 def default_region():
@@ -47,8 +46,8 @@ def failed_row(ident, error):
             "error":str(error)[:ERROR_CHARS],"completed_at":None,"issues":["refresh-failed"]}
 
 
-def record_region(run, kind, ident, data, output, previous_root, duration_ms):
-    """Add one collected region to the run manifest: its sources, status, inputs and outputs."""
+def record_region(run, kind, ident, data, output, duration_ms):
+    """Add one collected region to the run manifest: its sources, status and outputs."""
     sources = data.get("sources") if isinstance(data.get("sources"), dict) else {}
     rows = {sid: row for sid, row in sources.items() if isinstance(row, dict) and isinstance(row.get("status"), str)}
     for sid, row in rows.items():
@@ -60,9 +59,7 @@ def record_region(run, kind, ident, data, output, previous_root, duration_ms):
     run.region(ident, health.get("status") or "ok", sources_ok=sum(r["status"] == "ok" for r in rows.values()),
                sources_total=len(rows), duration_ms=duration_ms, issues=health.get("issues"),
                coverage_gaps=health.get("coverage_gaps") or None)
-    if previous_root:
-        prior = Path(previous_root)/"regions"/ident/PREVIOUS[kind]
-        run.add_input(prior, optional=True)
+
     for name in OUTPUTS[kind]:
         if (output/"regions"/ident/name).is_file():
             run.add_output(output/"regions"/ident/name)
@@ -94,12 +91,20 @@ def refresh_region(kind, region, output, previous_root, now, default, manifest=N
             from skippercast.pipeline.habitat_dynamics import run
         data=run(ident,output,previous_root,now)
         if kind=='habitat': publish_fronts(ident,output,now)
-        if manifest: record_region(manifest,kind,ident,data,output,previous_root,round((time.monotonic()-started)*1000))
+        if manifest:
+            if previous_root:
+                manifest.add_input(Path(previous_root)/"regions"/ident/PREVIOUS[kind], optional=True)
+            record_region(manifest,kind,ident,data,output,round((time.monotonic()-started)*1000))
         return {'region_id':ident,'status':data['health']['status'],'completed_at':data['completed_at'],'issues':data['health']['issues'],'coverage_gaps':data['health'].get('coverage_gaps',[]),
                 'forecast_coverage':data['health'].get('forecast_coverage') if kind=='intelligence' else None}
     prior_path=previous_root/"regions"/ident/"latest.json" if previous_root else None
     if prior_path and not prior_path.exists() and ident==default: prior_path=previous_root/"latest.json"
-    prior=read_json(prior_path) if prior_path and prior_path.is_file() else None
+    prior=None
+    if prior_path and prior_path.is_file():
+        prior=read_json(prior_path)
+        if manifest:
+            # Record the selected file before writes can replace it in an in-place refresh.
+            manifest.add_input(prior_path, optional=True)
     data=(daily(now,prior,region_id=ident) if kind=="daily" else live(now,prior,region_id=ident))
     target=output/"regions"/ident
     if kind=="daily":  # computed before any write, so a failure leaves no partial region
@@ -117,7 +122,7 @@ def refresh_region(kind, region, output, previous_root, now, default, manifest=N
         atomic_json(history/(now.strftime("%Y-%m-%d")+".json"),data)
         for old in history.glob("*.json"):
             if old.stem<(now-timedelta(days=90)).strftime("%Y-%m-%d"):old.unlink()
-    if manifest: record_region(manifest,kind,ident,data,output,previous_root,round((time.monotonic()-started)*1000))
+    if manifest: record_region(manifest,kind,ident,data,output,round((time.monotonic()-started)*1000))
     return {"region_id":ident,"status":data["health"]["status"],"completed_at":data["completed_at"],"issues":data["health"]["issues"]}
 
 

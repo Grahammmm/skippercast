@@ -94,6 +94,11 @@ def _checked(stream, obj, size, *, phase, output=None):
         raise StageError(f'{phase}: SHA-256 or size mismatch')
 
 
+def _require_new_stage_directory(output):
+    if output.exists() or output.is_symlink():
+        raise StageError('choose a new stage directory')
+
+
 def prepare_release(release_dir, envelope, *, scope_path, pointer,
                     approval_from_queue: Callable[[str, str], Path], output):
     """Local only: emit checked assets into a *new* directory; no release API writes.
@@ -111,6 +116,7 @@ def prepare_release(release_dir, envelope, *, scope_path, pointer,
     """
     from skippercast.relief import envelope as review, publish
 
+    _require_new_stage_directory(output)
     package.validate_schema(pointer, package.pointer_schema())
     approval = approval_from_queue(pointer['region'], pointer['envelope_sha256'])
     plan = publish.plan(release_dir, approval, envelope, scope_path=scope_path)
@@ -146,8 +152,7 @@ def prepare_release(release_dir, envelope, *, scope_path, pointer,
             raise StageError('approved inventory differs from pointer digest chain')
         for obj in chunks:
             stage_one(obj, rows[obj.key])
-        if output.exists() or output.is_symlink():
-            raise StageError('choose a new stage directory')
+        _require_new_stage_directory(output)
         stage.rename(output)
     return release_tag(pointer)
 
