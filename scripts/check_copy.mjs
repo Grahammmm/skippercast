@@ -267,7 +267,7 @@ export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/F
   'web/app/MarkCard.tsx', 'web/saved-spots.ts', 'web/mark-copy.ts', 'web/map/status-copy.ts',
   'web/app/PlanView.tsx', 'web/plan.ts', 'web/app/ControlsTour.tsx', 'web/tour.ts', 'web/app/Presets.tsx', 'web/app/presets.ts',
   'web/app/TripAlerts.tsx', 'web/alerts.ts', 'web/digest.ts', 'web/app/PortAlert.tsx',
-  'web/app/views/Reports.tsx', 'web/reports.ts', 'web/reports-copy.ts', 'web/app/views/Fleet.tsx',
+  'web/app/views/Reports.tsx', 'web/app/views/LazyReports.tsx', 'web/reports.ts', 'web/reports-copy.ts', 'web/app/views/Fleet.tsx',
   'dist/account.js', 'web/account-copy.ts', 'web/app/PrivateMapLog.tsx',
   'web/app/PlanRules.tsx', 'web/app/RuleReason.tsx', 'web/landing/LayerDots.tsx'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
