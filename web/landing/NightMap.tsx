@@ -27,6 +27,7 @@ import {COASTLINE_SOURCE} from '../map/layers.ts';
 import {readPalette, type Palette} from '../map/palette.ts';
 import {terrainHour} from '../map/stage.ts';
 import {basemapArchive, basemapStyle} from '../map/style.ts';
+import {sharedFetch} from '../shared-fetch.ts';
 import {language, t} from './i18n.ts';
 
 /** The order the landing looks for a fresh frame in: the forecast (the app's proposed boat default, #482), then observed HF radar. */
@@ -118,7 +119,7 @@ export interface NightMapProps {
 
 const loadLibrary = (): Promise<MapLibraryModule> => import('../map/maplibre.js');
 
-export function NightMap({page, region, onState, load = loadLibrary, fetchFn = (...a) => fetch(...a)}: NightMapProps) {
+export function NightMap({page, region, onState, load = loadLibrary, fetchFn = sharedFetch}: NightMapProps) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let alive = true, engine: Engine | null = null, currents: Currents | null = null;
