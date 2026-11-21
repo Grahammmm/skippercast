@@ -36,13 +36,13 @@ def _summary(shallow, deep, reaches):
 EMPTY_BAND = (0, 0, 0, None, None, None)
 
 
-def test_c1_default_json_sums_areas_before_calculating_percentages(tmp_path, capsys):
+def test_c1_json_sums_areas_before_calculating_percentages(tmp_path, capsys):
     """C1: Unequal region sizes expose averaging percentages or counting unknown-band area."""
     _write_report(tmp_path, 'b', (0, 7, 1), (19, 8, 9))
     _write_report(tmp_path, 'a', (1, 1, 1), (1, 2, 1), reaches=True)
     (tmp_path / 'not-reported').mkdir()
 
-    assert coast.main(['--out', str(tmp_path), '--json']) == 0
+    assert coast.main(['--out', str(tmp_path), '--json', 'a', 'b']) == 0
     captured = capsys.readouterr()
     assert captured.err == ''
     assert json.loads(captured.out) == {
@@ -73,7 +73,6 @@ def test_c1_explicit_cli_table_lists_missing_and_excludes_unselected(tmp_path):
 
 
 @pytest.mark.parametrize(('regions', 'rows'), [
-    pytest.param([], [], id='C1: no reports discovered'),
     pytest.param(['missing'], [{'region': 'missing', 'status': 'no report'}], id='C1: all requested reports missing'),
 ])
 def test_c1_no_reports_do_not_claim_measured_zero_percent(tmp_path, capsys, regions, rows):
@@ -111,10 +110,10 @@ def test_c2_directory_mismatch_refuses_without_partial_output(tmp_path, capsys):
     message = f"{path}: region 'a' does not match directory 'b'"
     before = _snapshot(tmp_path)
     with pytest.raises(ValueError) as exc:
-        coast.summarize(tmp_path)
+        coast.summarize(tmp_path, ['a', 'b'])
     assert type(exc.value) is ValueError
     assert str(exc.value) == message
-    assert coast.main(['--out', str(tmp_path), '--json']) == 1
+    assert coast.main(['--out', str(tmp_path), '--json', 'a', 'b']) == 1
     assert capsys.readouterr() == ('', f'coast_depth_report: {message}\n')
     assert _snapshot(tmp_path) == before
 
@@ -127,3 +126,28 @@ def test_c2_rejects_region_path_in_place_of_directory_id(tmp_path, capsys):
     output = capsys.readouterr()
     assert output.out == ''
     assert output.err.splitlines()[-1].endswith("expected a region directory name, got '../a'")
+
+
+def test_default_includes_release_regions_without_reports(tmp_path):
+    release_ids = sorted(row['id'] for row in json.loads(
+        (ROOT / 'dist/regions/index.json').read_text(encoding='utf-8'))['regions'])
+    assert len(release_ids) > 1
+    _write_report(tmp_path, release_ids[0], (1, 0, 0), (0, 0, 0))
+    result = subprocess.run([
+        sys.executable, str(ROOT / 'scripts/relief/coast_depth_report.py'),
+        '--out', str(tmp_path), '--json',
+    ], capture_output=True, text=True, check=True)
+    rows = json.loads(result.stdout)['regions']
+    assert [row['region'] for row in rows] == release_ids
+    assert all(row['status'] == 'no report' for row in rows[1:])
+
+
+def test_default_nonexistent_output_root_is_not_silent(tmp_path):
+    result = subprocess.run([
+        sys.executable, str(ROOT / 'scripts/relief/coast_depth_report.py'),
+        '--out', str(tmp_path / 'missing'), '--json',
+    ], capture_output=True, text=True, check=True)
+    report = json.loads(result.stdout)
+    rows = report['regions']
+    assert rows and all(row['status'] == 'no report' for row in rows)
+    assert report['total'] == _summary(EMPTY_BAND, EMPTY_BAND, None)

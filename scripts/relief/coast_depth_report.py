@@ -11,6 +11,7 @@ import sys
 BANDS = ('0-66ft', '66-300ft')
 CLASSES = ('measured', 'estimated', 'unsurveyed')
 REPORT = Path('coverage/depth-coverage.json')
+RELEASE_INDEX = Path(__file__).resolve().parents[2] / 'dist/regions/index.json'
 
 
 def _band(areas):
@@ -23,8 +24,11 @@ def _band(areas):
 
 
 def summarize(out, regions=()):
-    paths = ([(out / region / REPORT) for region in dict.fromkeys(regions)] if regions
-             else sorted(out.glob(f'*/{REPORT}')))
+    if not regions:
+        regions = sorted(row['id'] for row in json.loads(RELEASE_INDEX.read_text(encoding='utf-8'))['regions'])
+        if not regions:
+            raise ValueError(f'{RELEASE_INDEX}: no release regions')
+    paths = [out / region / REPORT for region in dict.fromkeys(regions)]
     totals = {band: {key + '_m2': 0 for key in CLASSES} for band in BANDS}
     reaches = None
     rows = []
@@ -73,7 +77,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', required=True, type=Path, help='pipeline output root')
     parser.add_argument('--json', action='store_true', help='print machine-readable JSON')
-    parser.add_argument('regions', metavar='REGION', nargs='*', help='defaults to regions with a report')
+    parser.add_argument('regions', metavar='REGION', nargs='*', help='defaults to all release regions')
     args = parser.parse_args(argv)
     for region in args.regions:
         if not region or Path(region).name != region or region in {'.', '..'}:
