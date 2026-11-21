@@ -22,7 +22,7 @@
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
-import {mapMayLoad, markMapIdle} from '../map-ready.ts';
+import {mapMayLoad, markChartMounted, markMapIdle} from '../map-ready.ts';
 import {effect, signal, untracked, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, current, habitat, layers as selectedLayers, region, selection, setParams, view} from '../state.ts';
@@ -311,6 +311,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       // Before `engine` is set: its effect would otherwise send the style's own shoreline again (a second 0.6 MB request).
       drawnRegion = id;
       engine.value = e;
+      markChartMounted();
       // RF0905-1: below the 1024 px layout break the centre draws in the open band, at mount and on resize only (never on a detent change).
       // After show(start): setPadding's moveend then reads the shown camera, so it writes no ?view= and leaves the first idle's flyover.
       // `data-pad` (top,bottom px) says where the centre draws; the e2e helpers click there (MAINRED-1).

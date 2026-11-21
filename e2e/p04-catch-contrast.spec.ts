@@ -98,6 +98,9 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // and publishes; web/app/LayerRail.tsx changes only Look for's option text and disables the region's unavailable
 // targets. Reports reads only regionInfo's id and charters (unchanged) and never imports species.ts, the target
 // menu or the rail; no CSS, class, token or catch markup is touched, and contrast() is untouched. All three rebound.
+// SAS0411-01: species.ts extracts the existing picker-label fallback unchanged for rules target naming.
+// BODY09 hashes every INPUT even when Reports does not import it, so the species.ts pin must track that edit.
+// Reports catch rendering, CSS, contrast math, thresholds and all assertions remain unchanged; rebind species.ts only.
 // CI6-02 merge-forward onto main: union of the entries above; only the species/App/LayerRail hashes rebound.
 // CI6-02 review fix: species.ts marks the region's unavailable targets on every menu option and LayerRail's Look for
 // disables by that mark. Reports never imports either; no CSS, token or catch markup changes. Both rebound.
@@ -174,7 +177,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2207-01 (#1501): species.ts changes only Plan.source_links' type member from href to url.
   // The interface is erased at runtime; Reports/CatchCards markup, styles, paint and source data
   // are unchanged. contrast(), assertions and thresholds are untouched. Rebind only species.ts.
-  "web/species.ts": "6c34e52ed3d9aa5e95a26646038bb7eb483e47da738e0d0f0c60ba23b6f83082",
+  "web/species.ts": "e215a5080a6d466ab1cfd41837510c5d992f6bc2839a943e9c486cc5abdd41b3",
   // BF-one-answer (#1456): App.tsx adds FirstAnswerLine and a desktop shell row. BODY09 mounts
   // Reports/CatchCards directly, never App or FirstAnswerLine; the new hook runs only when
   // FirstAnswerLine mounts. RegionInfo and Reports' id/charters reads are unchanged, with no

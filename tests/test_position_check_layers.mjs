@@ -110,7 +110,7 @@ test('a first layer that is gone is "not available", whatever the second layer h
 
 test('old, future-dated and undated check times are each told apart from missing data', async () => {
   const cases = [
-    ['old', {closuresAt: at(-5 * 86400000)}, /last checked \d{4}-\d{2}-\d{2}, more than 36 hours ago/],
+    ['old', {closuresAt: at(-5 * 86400000)}, new RegExp(`last checked ${new Intl.DateTimeFormat('en-US', {timeZone: 'America/Los_Angeles', year: 'numeric', month: 'short', day: 'numeric'}).format(new Date(at(-5 * 86400000)))}, more than 36 hours ago`)],
     ['future', {closuresAt: at(3 * 86400000)}, /in the future, so we cannot tell how current/],
     ['unknown', {closuresAt: 'not a date'}, /missing or unreadable, so we cannot tell how current/],
   ];

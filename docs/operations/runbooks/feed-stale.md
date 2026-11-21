@@ -96,9 +96,25 @@ Nothing to roll back for a restart. If a fix PR made things worse, revert it thr
 
 ## Coast report source
 
-Run `node scripts/check_coast_report_source.mjs` (one read-only GET of `/api/coast/report`; `--from-file <saved headers>` reads a saved block instead). It prints one line per `X-Coast-Upstream` source, then `PASS` (report reads `skippercast`) or `FAIL: ...` naming each source still on Fish or a missing header; exit 2 means the report could not be read.
-Rollback: remove `report` from the `COAST_FEEDS` repository variable and redeploy (G taps the variable in GitHub mobile).
-The command and this section change no switch.
+**SCB-06 cutover (operator only, after review and merge):** In the `COAST_FEEDS`
+repository variable, keep the current names and add `report,nearshore,water-quality`.
+For example, `ocean,history` becomes `ocean,history,report,nearshore,water-quality`.
+Deploy from `main` through the normal release path. This does not retire Fish.
+
+Check `/deploy.json` for the deployed commit and switch value. Run
+`node scripts/check_coast_report_source.mjs` (one read-only GET; `--from-file
+<saved headers>` checks a saved block). For this cutover, require **all three**
+in `X-Coast-Upstream`: `report=skippercast`, `nearshore=skippercast`, and
+`water-quality=skippercast`. The script's `PASS` alone only proves the report
+base. A Fish entry is a fallback, not proof of a complete cutover. Check that
+the readable `/report` shows linked Scripps/CDIP credit next to the nearshore
+section. Rerun the ITEM-18 Morro Bay cold/warm phone benchmark at 390 × 844,
+4× CPU slowdown and slow 4G; record first verdict, report arrival, report bytes
+and upstream header. Do not attribute other changes since the original baseline
+to this switch.
+
+**Rollback:** Remove just `report`, `nearshore` and `water-quality` from
+`COAST_FEEDS`, redeploy, and check that the coast report returns to Fish.
 
 ## Escalate
 

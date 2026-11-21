@@ -1,9 +1,9 @@
 // SC-PERF-LAZY-1 (PERF-BASELINE-1 B1, P6, P7): the reef export (habitat-export.geojson.gz, ~15 MB, ~11 s of screening work) is
-// not fetched with the first page. It starts only after the map has first painted (or failed to start), and never silently on
+// not fetched with the first page. It waits for first map idle (or failure), bounded once Chart mounts, and never fetches silently on
 // Save-Data or a slow link: there the brief offers "Load fishing spots (about N MB) on Wi-Fi" and waits for a tap.
 // The brief and the map work without it (web/ranking.ts falls back to the atlas list), and say so plainly (WhereToLook).
 // Planner: web/planner.ts loads its own copy when the user opens a plan, so that path is already on demand.
-import {mapFirstIdle, markMapIdle} from './map-ready.ts';
+import {chartMounted, mapFirstIdle, markMapIdle, REEF_WAIT_MAX_MS} from './map-ready.ts';
 import {loadManifest} from '../dist/seafloor-data.js';
 import {loadReefPublication, reefPublication, reloadReefPublication, supersedeReefLoads} from './ranking.ts';
 
@@ -55,6 +55,8 @@ export function pageTimings(perf: Pick<Performance, 'getEntriesByType'> | undefi
 export interface LazyDeps {
   /** Resolves when the map has first painted (or failed). */
   readonly mapIdle: () => Promise<void>;
+  /** Resolves after a bounded wait that starts only once Chart mounts. */
+  readonly ceiling: () => Promise<void>;
   /** Resolves when the browser is idle. */
   readonly idle: () => Promise<void>;
   readonly link: () => LinkVerdict;
@@ -66,6 +68,14 @@ export interface LazyDeps {
 const whenMapIdle = (): Promise<void> => new Promise(resolve => {
   let stop: (() => void) | undefined, done = false;
   stop = mapFirstIdle.subscribe(v => { if (v && !done) { done = true; queueMicrotask(() => stop?.()); resolve(); } });
+});
+const whenReefWaitExpires = (): Promise<void> => new Promise(resolve => {
+  if (chartMounted.peek()) { setTimeout(resolve, REEF_WAIT_MAX_MS); return; }
+  const stop = chartMounted.subscribe(mounted => {
+    if (!mounted) return;
+    stop();
+    setTimeout(resolve, REEF_WAIT_MAX_MS);
+  });
 });
 const whenIdle = (): Promise<void> => new Promise(resolve => {
   const ric = (globalThis as {requestIdleCallback?: (cb: () => void, o?: {timeout: number}) => number}).requestIdleCallback;
@@ -80,12 +90,12 @@ const manifestSize = async (region: string): Promise<number | null> => {
   } catch { return null; }
 };
 const DEFAULTS: LazyDeps = {
-  mapIdle: whenMapIdle, idle: whenIdle, size: manifestSize, load: r => loadReefPublication(r),
+  mapIdle: whenMapIdle, ceiling: whenReefWaitExpires, idle: whenIdle, size: manifestSize, load: r => loadReefPublication(r),
   link: () => linkVerdict((globalThis.navigator as {connection?: LinkInfo} | undefined)?.connection, pageTimings()),
 };
 
 /**
- * Ask for the region's reef publication the lazy way: wait for the map's first paint and an idle moment, then fetch it on a fast
+ * Ask for the region's reef publication the lazy way: wait for first map idle (or the Chart ceiling) and an idle moment, then fetch it on a fast
  * link, or offer it (state 'offer') on Save-Data or a slow one. Safe to call again: a region already waiting, offered, loading or
  * answered is left alone. The newest region wins if the address changes while waiting.
  */
@@ -97,10 +107,10 @@ export async function requestReefPublication(region: string, given: Partial<Lazy
   reefPublication.value = {state: 'deferred', region};
   const mine = reefPublication.peek();
   // Save-Data or a 2g/3g type is known at once, so the offer does not wait for a map that may never mount (a terrain-first visit
-  // never starts Chart); the measured throughput needs the page's own first downloads, so it is read again after the first paint.
+  // never starts Chart); the measured throughput needs the page's own first downloads, so it is read again after the wait.
   let verdict = deps.link();
   if (!verdict.slow) {
-    await deps.mapIdle();
+    await Promise.race([deps.mapIdle(), deps.ceiling()]);
     await deps.idle();
     if (reefPublication.peek() !== mine) return; // another region, or the user's own tap, took over
     verdict = deps.link();

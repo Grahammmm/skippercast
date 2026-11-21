@@ -6,7 +6,7 @@
 // than two curve points (no local coast report binds the place, or the day
 // is outside the curve) it still lists the events and says there is no curve
 // for this place (TIDE_NO_CURVE), or "Tide series unavailable" with no events. The trend is the tide tile's (web/tides.ts).
-// Its words and the events' clock follow the chosen language (SC1137-03); heights, datum and instants stay as published.
+// Its words and the events' clock follow the chosen language (SC1137-03); height units follow the reader's choice.
 import {CoastMarkup} from '../app/CoastMarkup.tsx';
 import {zone} from '../app/region-info.ts';
 import {fixed} from '../view-copy.ts';
@@ -14,6 +14,8 @@ import {selectHour} from '../app/TimeDock.tsx';
 import {language, t} from '../i18n.ts';
 import {hour} from '../state.ts';
 import {sparkArgs} from '../tides.ts';
+import {units} from '../unit-choice.ts';
+import {M_PER_FT} from '../units.ts';
 import {eventClock} from './tide-copy.ts';
 import {tideEmptyText} from './tile-copy.ts';
 import type {Brief} from './types.ts';
@@ -25,7 +27,8 @@ export function sparkAt(chosen: string | null, now: Date): string {
 
 export function TideSpark({brief, now = new Date()}: {brief: Brief | null; now?: Date}) {
   const tz = zone(), lang = language.value;
-  const built = brief ? sparkArgs(brief, sparkAt(hour.value, now), tz) : null;
+  const heightUnit = units.value.height;
+  const built = brief ? sparkArgs(brief, sparkAt(hour.value, now), tz, undefined, heightUnit) : null;
   // Only the row's label is said in the chosen language; the series, colours, gaps and geometry are the model's.
   const args = built && lang !== 'en' ? [built[0].map(row => ({...row, label: t('tile.tide', lang)})), built[1], built[2], built[3], built[4], built[5]] as typeof built : built;
   return (
@@ -35,7 +38,15 @@ export function TideSpark({brief, now = new Date()}: {brief: Brief | null; now?:
       {brief?.tideEvents.length ? (
         <figcaption>
           <ul class="app-spark-events">
-            {brief.tideEvents.map(e => <li key={e.at}>{t(e.type === 'H' ? 'tideSpark.high' : 'tideSpark.low', lang)} <span class="ui-mono">{eventClock(e.at, tz, lang)}{brief.tideDatum ? ` · ${fixed(lang === 'en' ? e.heightFt : Number(e.heightFt.toFixed(1)), 1, lang)} ft ${brief.tideDatum}` : null}</span></li>)}
+            {brief.tideEvents.map(e => {
+              const datum = brief.tideDatum;
+              const feet = datum ? ` · ${fixed(lang === 'en' ? e.heightFt : Number(e.heightFt.toFixed(1)), 1, lang)} ft ${datum}` : null;
+              const reading = datum && heightUnit === 'm' ? <>
+                <span class="app-screen-height">{` · ${fixed(e.heightFt * M_PER_FT, 1, lang)} m ${datum}`}</span>
+                <span class="app-print-height">{feet}</span>
+              </> : feet;
+              return <li key={e.at}>{t(e.type === 'H' ? 'tideSpark.high' : 'tideSpark.low', lang)} <span class="ui-mono">{eventClock(e.at, tz, lang)}{reading}</span></li>;
+            })}
           </ul>
         </figcaption>
       ) : null}
