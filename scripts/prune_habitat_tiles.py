@@ -24,8 +24,11 @@ def prune(published,incoming):
     """Check every manifest first; only then delete the planned stale tiles (all-or-nothing)."""
     if (published/'regions').is_symlink():raise ValueError('Habitat regions folder is a link')
     plan=[]
-    for manifest in sorted((incoming/'regions').glob('*/habitat-dynamics.json')):
-        ident=manifest.parent.name
+    # A literal leaf in Path.glob can omit dangling symlinks on Python 3.11.
+    for region in sorted((incoming/'regions').glob('*/')):
+        manifest=region/'habitat-dynamics.json'
+        if not manifest.is_symlink() and not manifest.exists():continue
+        ident=region.name
         if not re.fullmatch(r'[a-z][a-z0-9-]{1,63}',ident):raise ValueError(f'Invalid region: {ident}')
         target=published/'regions'/ident
         if target.is_symlink():raise ValueError(f'Habitat region folder is a link: {ident}')
