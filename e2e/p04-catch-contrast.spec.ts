@@ -99,6 +99,7 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // targets. Reports reads only regionInfo's id and charters (unchanged) and never imports species.ts, the target
 // menu or the rail; no CSS, class, token or catch markup is touched, and contrast() is untouched. All three rebound.
 // SAS0411-01: species.ts extracts the existing picker-label fallback unchanged for rules target naming.
+// BODY09 hashes every INPUT even when Reports does not import it, so the species.ts pin must track that edit.
 // Reports catch rendering, CSS, contrast math, thresholds and all assertions remain unchanged; rebind species.ts only.
 // CI6-02 merge-forward onto main: union of the entries above; only the species/App/LayerRail hashes rebound.
 // CI6-02 review fix: species.ts marks the region's unavailable targets on every menu option and LayerRail's Look for
