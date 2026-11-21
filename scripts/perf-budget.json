@@ -41,7 +41,7 @@
       "label": "Landing page styles (first load)",
       "kind": "first_load_css",
       "entry": "landing.html",
-      "max_bytes": 39000,
+      "max_bytes": 40000,
       "history": [
         {
           "max_bytes": 26000,
@@ -66,6 +66,10 @@
         {
           "max_bytes": 39000,
           "reason": "MSKL-1 layer tokens: the additive skl block in web/tokens.css (all-layers kit v1.0.0) adds 6,132 bytes to this group; main 2aaa85a63b124c331db3d5fd1f37cd86f8baa68b measures 31,917, this build 38,049; ceiling = next 1,000 above the build."
+        },
+        {
+          "max_bytes": 40000,
+          "reason": "Budget drift, raised by the budget-drift bot (main ae5b9ee86a). Landing page styles (first load): main measures 38,049 bytes, 97.6% of the 39,000 byte budget; ceiling = ceil(38,049 x 1.05 / 1,000) x 1,000 = 40,000 (5.1% headroom)."
         }
       ]
     },
@@ -73,7 +77,7 @@
       "label": "App page (brief, map) scripts (first load)",
       "kind": "first_load_js",
       "entry": "app.html",
-      "max_bytes": 1172000,
+      "max_bytes": 1208000,
       "history": [
         {
           "max_bytes": 1160000,
@@ -118,6 +122,10 @@
         {
           "max_bytes": 1172000,
           "reason": "Budget drift, raised by the budget-drift bot (main 0d38840e5e). App page (brief, map) scripts (first load): main measures 1,115,737 bytes, 100.0% of the 1,116,000 byte budget; ceiling = ceil(1,115,737 x 1.05 / 1,000) x 1,000 = 1,172,000 (5.0% headroom)."
+        },
+        {
+          "max_bytes": 1208000,
+          "reason": "Budget drift, raised by the budget-drift bot (main ae5b9ee86a). App page (brief, map) scripts (first load): main measures 1,150,133 bytes, 98.1% of the 1,172,000 byte budget; ceiling = ceil(1,150,133 x 1.05 / 1,000) x 1,000 = 1,208,000 (5.0% headroom)."
         }
       ]
     },
@@ -125,7 +133,7 @@
       "label": "App page (brief, map) styles (first load)",
       "kind": "first_load_css",
       "entry": "app.html",
-      "max_bytes": 91000,
+      "max_bytes": 95000,
       "history": [
         {
           "max_bytes": 71000,
@@ -186,6 +194,10 @@
         {
           "max_bytes": 91000,
           "reason": "MSKL-1 layer tokens: the additive skl block in web/tokens.css (all-layers kit v1.0.0) adds 6,132 bytes to this group; main 2aaa85a63b124c331db3d5fd1f37cd86f8baa68b measures 84,243, this build 90,375; ceiling = next 1,000 above the build."
+        },
+        {
+          "max_bytes": 95000,
+          "reason": "Budget drift, raised by the budget-drift bot (main ae5b9ee86a). App page (brief, map) styles (first load): main measures 90,375 bytes, 99.3% of the 91,000 byte budget; ceiling = ceil(90,375 x 1.05 / 1,000) x 1,000 = 95,000 (5.1% headroom)."
         }
       ]
     },
