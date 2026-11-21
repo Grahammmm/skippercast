@@ -54,7 +54,8 @@ def test_malformed_mvt_fails_content_gate():
     reference = rough_first.load_reference(ROOT, 'morro-bay')
     control = {(z, 0, 0): tile() for z in (8, 9, 10, 11, 12)}
     for candidate, valid in ((control, True), ({**control, (10, 0, 0): tile(1)}, False)):
-        with patch.object(rough_first, 'read_tiles', side_effect=[control, candidate]):
+        with patch.object(rough_first, 'read_tiles', side_effect=[control, candidate]), \
+                patch.object(rough_first, 'decode_tiles'):  # isolate the content gate; decoding has its own tests
             item = rough_first.evaluate('morro-bay', b'c', b'r', reference)['gate']['item4_content_z9_11']
         assert item['pass'] is valid
         assert ('error' in item) is not valid
