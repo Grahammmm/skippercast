@@ -7,6 +7,8 @@ const hour = Object.freeze({
   swell: 4, swell_period: 11, swell_from: 0, secondary: 0, secondary_from: null,
   other_wind: 8, other_gust: 11, other_sea: 5.5,
 });
+const rollBoat = {sea: 1.5, wind: 1, chopPeriod: 5};
+const rollHour = {...hour, wind: 2, other_wind: 2, gust: 3, other_gust: 3, sea: 2.9, other_sea: 3, chop: 0.2, swell: 1, swell_period: 7.5};
 
 test('heading sectors include their lower bound and are symmetric around the swell bearing', () => {
   // Both sides of each cutoff catch shifted bounds, reversed bearings, and swapped factors.
@@ -40,34 +42,32 @@ test('heading scales seas or chop, never wind, gust, crossing or short-chop char
   assert.deepEqual(scores(windOnly, [0, 45, 90, 135, 180]), [8.7, 8.7, 8.7, 8.7, 8.7]);
 });
 
-test('head comfort does not exceed beam comfort when beam roll is charged', () => {
-  const boat = {sea: 1.5, wind: 1, chopPeriod: 5};
-  const h = {...hour, wind: 2, other_wind: 2, gust: 3, other_gust: 3, sea: 2.9, other_sea: 3, chop: 0.2, swell: 1, swell_period: 7.5};
-  const [head, beam, following] = [0, 90, 180].map(course => headingRating(h, course, boat).score);
-  assert.ok(head <= beam, `head ${head} exceeds beam ${beam}`);
-  assert.ok(beam <= following, `beam ${beam} exceeds following ${following}`);
-  assert.equal(beam, 9.1); // Preserve the specified full beam-roll charge.
+test('head <= beam <= following for swell periods above the beam roll cutoff', () => {
+  const swell_period = 7.51; // Above 1.5 × rollBoat.chopPeriod (7.5 s).
   // Different wind overlap, wave heights, and limited inputs keep the same uncalibrated ordering.
   for (const sea of [3, 4, 7]) for (const wind of [2, 12, 20]) for (const chop of [0.2, 3]) {
     for (const other_wind of [wind, null]) {
-      const sample = {...h, sea, other_sea: sea, wind, other_wind, gust: wind + 1, other_gust: wind + 1, chop};
-      const scores = [0, 90, 180].map(course => headingRating(sample, course, boat).score);
-      assert.ok(scores[0] <= scores[1] && scores[1] <= scores[2], `unordered scores ${scores}`);
+      const sample = {...rollHour, swell_period, sea, other_sea: sea, wind, other_wind, gust: wind + 1, other_gust: wind + 1, chop};
+      const [head, beam, following] = [0, 90, 180].map(course => headingRating(sample, course, rollBoat).score);
+      assert.ok(head <= beam && beam <= following, `unordered scores ${head}, ${beam}, ${following}`);
     }
   }
-  assert.equal(headingRating(h, 0, boat, {head: 1}).score, 10); // Offsets remain independent.
+});
+
+test('R29 regression #1: beam can score below head at the inclusive roll cutoff', () => {
+  // The beam roll charge must not spill into the independent 1.25× head-seas cost.
+  assert.deepEqual([0, 90, 180].map(course => headingRating(rollHour, course, rollBoat).score), [9.6, 9.1, 9.7]);
+  assert.equal(headingRating(rollHour, 0, rollBoat, {head: 1}).score, 10); // Offsets remain independent.
 });
 
 test('beam roll is a flat charge only at sufficient combined seas and short enough swell period', () => {
-  const boat = {sea: 1.5, wind: 1, chopPeriod: 5};
-  const beam = {...hour, wind: 2, other_wind: 2, gust: 3, other_gust: 3, sea: 2.9, other_sea: 3, chop: 0.2, swell: 1, swell_period: 7.5};
   // Both bounds are inclusive and boat-scaled. The secondary model supplies the qualifying sea height.
   for (const [course, changes, score] of [
     [79.75, {}, 9.6], [80, {}, 9.1], [109.75, {}, 9.1], [110, {}, 9.7],
     [90, {other_sea: 2.99}, 9.6], [90, {swell_period: 7.51}, 9.6],
     [90, {swell_period: null}, 9.6],
   ]) {
-    assert.equal(headingRating({...beam, ...changes}, course, boat).score, score);
+    assert.equal(headingRating({...rollHour, ...changes}, course, rollBoat).score, score);
   }
 });
 

@@ -166,7 +166,6 @@ async function fallbackGeometry(page: Page, manual: boolean) {
 for (const lang of ['en', 'es'] as const) for (const narrow of [false, true]) {
   test(`fallback geometry ${lang} ${narrow ? '320px enlarged text' : 'project viewport'}`, async ({page, context, v2, pageErrors}) => {
     if (narrow) await page.setViewportSize({width: 320, height: 844});
-    await page.clock.install();
     await stubShare(context);
     await storage(context, 'morro-bay', 'boat');
     const today = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Los_Angeles'}).format(new Date());
@@ -185,8 +184,6 @@ for (const lang of ['en', 'es'] as const) for (const narrow of [false, true]) {
     const button = page.locator('.app-share button');
     const idleHeight = await page.locator('.app-share').evaluate(el => el.getBoundingClientRect().height);
 
-    // Keep the short-lived feedback present through both geometry snapshots even on a busy runner.
-    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
     await button.click();
     await expect(status(page)).toHaveText(lang === 'es' ? 'Enlace copiado' : 'Link copied');
     expect((await copies(page)).length).toBe(1);
@@ -197,9 +194,7 @@ for (const lang of ['en', 'es'] as const) for (const narrow of [false, true]) {
     expect(second).toBe(first);
     expect([...new URL(first!).searchParams.keys()]).toEqual(['region', 'port', 'profile', 'day']);
     await fallbackGeometry(page, false);
-    await page.clock.runFor(3000);
     await expect(status(page)).toBeEmpty({timeout: 5000});
-    await page.clock.resume();
     expect(await page.locator('.app-share').evaluate(el => el.getBoundingClientRect().height)).toBe(idleHeight);
 
     for (const mode of ['missing', 'rejected', 'native-rejected']) {

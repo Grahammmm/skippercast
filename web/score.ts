@@ -87,7 +87,8 @@ export const THRESHOLDS = Object.freeze({
   shortChopPenalty: 0.8,
   /** Wind and wave burdens overlap: the larger in full, this share of the smaller. */
   overlap: 0.45,
-  /** Ride-by-heading heuristics. Lower edges are inclusive; following includes 180°. */
+  /** Ride-by-heading heuristics. Lower edges are inclusive; following includes 180°.
+   * The beam roll charge can make beam comfort lower than head comfort. */
   heading: Object.freeze({
     sectors: [
       {from: 0, sector: 'head', factor: 1.25},
@@ -376,10 +377,7 @@ export function headingRating(
   const group = sector === 'bow' ? 'head' : sector === 'stern' ? 'following' : sector;
   const wave = Math.max(costs.seas, costs.chop);
   const burden = combinedBurden(costs.wind, wave * factor) + (sector === 'beam' ? roll : 0);
-  // Keep the full beam roll charge, but do not rate uncalibrated head seas as easier.
-  const beamFactor = T.sectors.find(({sector: name}) => name === 'beam')!.factor;
-  const orderedBurden = sector === 'head' ? Math.max(burden, combinedBurden(costs.wind, wave * beamFactor) + roll) : burden;
-  const score = clamp(10 - orderedBurden - costs.crossing - costs.short + (offset?.[group] ?? 0));
+  const score = clamp(10 - burden - costs.crossing - costs.short + (offset?.[group] ?? 0));
   return {course, relative, sector, score: limited ? Math.min(THRESHOLDS.capLimited, score) : score, factor, limited};
 }
 
