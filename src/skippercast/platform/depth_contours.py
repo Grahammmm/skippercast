@@ -121,9 +121,13 @@ V2_MINZOOM = {depth: zoom for zoom, depths in V2_DEPTHS.items() for depth in dep
 FEET_PER_M = round(FT_PER_M, DECIMALS)
 UNVERIFIED_DATUM = 'unverified source datum'
 KINDS = ('contour', 'survey-edge', 'unresolved-area')
-# Size budgets (decoded bytes) for the two published forms; the build fails past them.
+# Legacy ft-v1 size budgets (decoded bytes); the build fails past them.
 MAX_BYTES = 1_000_000
 OVERVIEW_MAX_BYTES = 64_000
+# Full: owner amendment in ROLL-A-CONTOUR-BYTES-DISPOSITION.md (Morro v2: 1,523,139 B).
+# Overview: MAP-DESIGN-LOCK §4, “overview ≤ 300 KB”.
+V2_MAX_BYTES = 3_000_000
+V2_OVERVIEW_MAX_BYTES = 300_000
 # At MapLibre zoom 11 (where the map opens) one pixel is about 31 m here, so 60 m is about 2 pixels.
 OVERVIEW_TOLERANCE_M = 60
 OVERVIEW_MIN_SPAN_M = 300
@@ -135,6 +139,13 @@ SOURCE_REVIEW_DAYS = 365
 YEAR = re.compile(r'\d{4}(-\d{2}(-\d{2})?)?')
 SHA256 = re.compile(r'[0-9a-f]{64}')
 SURVEY_DATE = re.compile(r'([0-9]{4})(?:-([0-9]{2})(?:-([0-9]{2}))?)?')
+
+
+def size_budgets(collection) -> tuple[int, int]:
+    """Return the full and overview byte limits for the full collection's set."""
+    if collection['provenance'].get('set') in (FT_V2, FT_V3):
+        return V2_MAX_BYTES, V2_OVERVIEW_MAX_BYTES
+    return MAX_BYTES, OVERVIEW_MAX_BYTES
 
 
 def levels(low_ft, high_ft, interval=INTERVAL_FT, limit=SHELF_LIMIT_FT):
@@ -576,10 +587,11 @@ def _uses_withdrawn_source(path, region, sources):
 
 
 def _stage_and_replace(full, overview, collection, light, region_id):
+    full_budget, overview_budget = size_budgets(collection)
     full.parent.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(dir=full.parent) as staging:
         staging = Path(staging)
-        for path, value, budget in ((full, collection, MAX_BYTES), (overview, light, OVERVIEW_MAX_BYTES)):
+        for path, value, budget in ((full, collection, full_budget), (overview, light, overview_budget)):
             size = atomic_json(staging / path.name, value)['bytes']
             if size > budget:
                 raise ValueError(f"{path.name} for {region_id} is {size} bytes, over its {budget}-byte budget")
