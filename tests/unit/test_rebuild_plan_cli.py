@@ -10,10 +10,11 @@ import pytest
 from scripts.relief import rebuild_plan as cli
 from skippercast.relief import mosaic, package, receipts, render_config, tiles
 from tests._support import ROOT
+from tests.unit.test_relief_rebuild_plan import write_style_tree
 
 
 KEYS = ('select', 'mosaic.public', 'tiles.public', 'zone.public', 'digests',
-        'inventory', 'contours', 'package', 'shots', 'qa', 'envelope')
+        'inventory', 'contours', 'package', 'shots', 'qa', 'envelope', 'nearshore_vectors.public')
 STAMP = '1' * 64
 
 
@@ -236,3 +237,60 @@ def test_c3_missing_installed_select(tmp_path, monkeypatch, capsys):
     """C3: Cannot report missing receipts as guesses when select's code cannot be located."""
     monkeypatch.setattr(cli, 'find_spec', lambda _: None)
     assert_error(['--out', str(tmp_path), 'test-bay'], 'select has no installed source file', capsys)
+
+
+@pytest.mark.parametrize(('version', 'pins', 'affected'), [
+    pytest.param('paint-v2', (), set(), id='C2: paint default keeps every region reusable'),
+    pytest.param('baked-v2', ('west-test=base', 'mid-test=paint-v2'), {'east-test'},
+                 id='C2: baked default with two scoped pins'),
+    pytest.param(None, ('mid-test=baked-v2',), {'mid-test'}, id='C2: standalone pin targets one region'),
+])
+def test_cli_style_simulation(tmp_path, monkeypatch, capsys, version, pins, affected):
+    """C2: The CLI must forward all overrides to the proper regions, in order."""
+    _, base = write_style_tree(tmp_path)
+    monkeypatch.setattr(cli.rebuild_plan, 'repo_root', lambda: tmp_path)
+    monkeypatch.setattr(render_config, 'repo_root', lambda: tmp_path)
+    out = tmp_path / 'out'
+    current = cli._stage_digests()
+    regions = ('west-test', 'east-test', 'mid-test')
+    for region in regions:
+        for key in KEYS:
+            params = {'baked': base['baked']} if key == 'tiles.public' else None
+            upstream = [('tiles', 'public')] if key == 'digests' else []
+            record(out, region, key, current[key], params=params, upstream=upstream)
+    args = ['--out', str(out), '--json', regions[0]]
+    if version is not None:
+        args.extend(['--style-default', version])
+    for pin in pins:
+        args.extend(['--style-pin', pin])
+    before = snapshot(tmp_path)
+    assert cli.main([*args, *regions[1:]]) == 0
+    result = capsys.readouterr()
+    assert result.err == ''
+    reuse = [row(key) for key in KEYS]
+    rebuild = [*reuse[:2], row('tiles.public', 'style:baked'), reuse[3],
+               row('digests', 'upstream:tiles.public'), *reuse[5:]]
+    assert json.loads(result.out) == report(
+        [(region, rebuild if region in affected else reuse) for region in regions], len(affected)
+    )
+    assert snapshot(tmp_path) == before
+
+
+@pytest.mark.parametrize(('args', 'message'), [
+    pytest.param(['--style-pin', 'west-test'], '--style-pin requires REGION=VERSION',
+                 id='C2: malformed pin'),
+    pytest.param(['--style-pin', 'north-test=base'], '--style-pin region not in report: north-test',
+                 id='C2: pin would be ignored'),
+    pytest.param(['--style-pin', 'west-test=base', '--style-pin', 'west-test=paint-v2'],
+                 'duplicate --style-pin for region: west-test', id='C2: conflicting pins'),
+    pytest.param(['--style-default', 'unknown'], 'unavailable render style: unknown',
+                 id='C3: unknown default exits clearly'),
+    pytest.param(['--style-pin', 'east-test=retired'], 'unavailable render style: retired',
+                 id='C3: retired pin exits without a partial report'),
+])
+def test_cli_style_proposal_errors(tmp_path, monkeypatch, capsys, args, message):
+    """C2: Pin typos cannot silently succeed; C3: refusals use the CLI usage error."""
+    write_style_tree(tmp_path)
+    monkeypatch.setattr(cli.rebuild_plan, 'repo_root', lambda: tmp_path)
+    monkeypatch.setattr(render_config, 'repo_root', lambda: tmp_path)
+    assert_error(['--out', str(tmp_path), 'west-test', *args, 'east-test'], message, capsys)

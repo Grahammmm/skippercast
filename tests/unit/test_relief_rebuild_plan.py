@@ -1,11 +1,13 @@
 """Synthetic, whole-plan checks for the selective rebuild preview."""
 from copy import deepcopy
+from hashlib import sha256
 import json
 from pathlib import Path
 
 import pytest
 
 from skippercast.relief import rebuild_plan, receipts
+from tests._support import ROOT
 
 
 OLD = '1' * 64
@@ -255,3 +257,100 @@ def test_c3_preserves_receipt_reader_refusals(tmp_path, region):
     with pytest.raises(receipts.ReceiptError) as error:
         rebuild_plan.load_receipts(tmp_path, region)
     assert type(error.value) is receipts.ReceiptError
+
+
+def write_style_tree(repo):
+    """Small independent token/index pairs for the real style loader."""
+    directory = repo / 'style'
+    directory.mkdir()
+
+    def encoded(data):
+        return json.dumps(data, sort_keys=True, separators=(',', ':')).encode()
+
+    groups = dict.fromkeys(('baked', 'contours', 'habitat', 'paint'), 1)
+    (directory / 'groups.json').write_bytes(encoded({key: key for key in groups}))
+    versions = {'deep-fixed-v1': {'legacy': True, 'status': 'active'}}
+    for name, changed in [('base', ()), ('paint-v2', ('paint',)), ('baked-v2', ('baked',)),
+                          ('vectors-v2', ('contours', 'habitat')), ('retired', ('baked',))]:
+        tokens = groups | dict.fromkeys(changed, 2)
+        raw = encoded(tokens)
+        file = f'{name}.json'
+        (directory / file).write_bytes(raw)
+        versions[name] = {
+            'file': file, 'sha256': sha256(raw).hexdigest(),
+            'status': {'baked-v2': 'rolling', 'retired': 'retired'}.get(name, 'active'),
+            'digests': {group: sha256(encoded({group: value})).hexdigest()
+                        for group, value in tokens.items()},
+        }
+    (directory / 'index.json').write_bytes(encoded({'default': 'base', 'versions': versions}))
+    return directory, versions['base']['digests']
+
+
+@pytest.fixture
+def simulation(tmp_path, monkeypatch):
+    directory, base = write_style_tree(tmp_path)
+    monkeypatch.setenv('SKIPPERCAST_ROOT', str(tmp_path))
+    docs = {
+        'tiles.public': _receipt('tiles.public', baked=base['baked'], paint=base['paint']),
+        'contours': _receipt('contours', contours=base['contours']),
+        'digests': _receipt('digests', ('tiles.public',)),
+        'vectors.public': _receipt('vectors.public', ('tiles.public',), habitat=base['habitat']),
+    }
+    return directory, docs
+
+
+@pytest.mark.parametrize(('options', 'reasons'), [
+    pytest.param({}, ((), (), (), ()), id='C1: indexed default'),
+    pytest.param({'default': 'paint-v2'}, ((), (), (), ()), id='C1: paint-only change'),
+    pytest.param({'default': 'baked-v2'}, (('style:baked',), ('upstream:tiles.public',), (),
+                                          ('upstream:tiles.public',)), id='C1: baked change'),
+    pytest.param({'pin': 'vectors-v2'}, ((), (), ('style:contours',), ('style:habitat',)),
+                 id='C1: independent contours and habitat digests'),
+    pytest.param({'pin': 'deep-fixed-v1'}, (('style:baked',), ('upstream:tiles.public',),
+                                           ('style:contours',), ('style:habitat', 'upstream:tiles.public')),
+                 id='C1: legacy has no build digests'),
+])
+def test_simulated_style_digests(simulation, options, reasons):
+    """C1: Version identity or mismatched group selection must not trigger unrelated stages."""
+    root, docs = simulation
+    keys = ('tiles.public', 'digests', 'contours', 'vectors.public')
+    assert rebuild_plan.simulate_style('test-bay', docs, root=root, **options) == [
+        _row(key, *why) for key, why in zip(keys, reasons)
+    ]
+
+
+def test_simulated_pin_precedence(simulation):
+    """C1: A default cannot unpin a region, but a proposed pin can replace its saved pin."""
+    root, docs = simulation
+    schema = root.parent / 'schemas/sc-render-v1.schema.json'
+    schema.parent.mkdir()
+    schema.write_bytes((ROOT / 'schemas' / schema.name).read_bytes())
+    config = root.parent / 'regions/test-bay/render.json'
+    config.parent.mkdir(parents=True)
+    saved = b'{"schema":"sc-render/1","region":"test-bay","style":"base","previews":[],"piers":[]}'
+    config.write_bytes(saved)
+    assert rebuild_plan.simulate_style('test-bay', docs, default='baked-v2') == [
+        _row(key) for key in ('tiles.public', 'digests', 'contours', 'vectors.public')
+    ]
+    assert rebuild_plan.simulate_style('test-bay', docs, default='paint-v2', pin='baked-v2') == [
+        _row('tiles.public', 'style:baked'), _row('digests', 'upstream:tiles.public'),
+        _row('contours'), _row('vectors.public', 'upstream:tiles.public'),
+    ]
+    assert config.read_bytes() == saved
+
+
+@pytest.mark.parametrize(('options', 'message'), [
+    pytest.param({'default': 'unknown'}, 'unavailable render style: unknown', id='C3: unknown default'),
+    pytest.param({'pin': 'retired'}, 'unavailable render style: retired', id='C3: retired pin'),
+    pytest.param({'default': 'retired', 'pin': 'base'}, 'unavailable render style: retired',
+                 id='C3: retired default even when shadowed'),
+    pytest.param({'pin': 'paint-v2'}, 'paint-v2: sha256 mismatch', id='C1: reject tampered version bytes'),
+])
+def test_simulated_style_refusals(simulation, options, message):
+    """C3: Refuse unavailable selections; C1: selected bytes must verify, not just parse."""
+    root, docs = simulation
+    tokens = root / 'paint-v2.json'
+    tokens.write_bytes(tokens.read_bytes() + b'\n')
+    with pytest.raises(ValueError, match=message) as error:
+        rebuild_plan.simulate_style('test-bay', docs, root=root, **options)
+    assert type(error.value) is ValueError
