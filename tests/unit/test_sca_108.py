@@ -35,6 +35,9 @@ def replay(work, changelog, *, version='1.2.3', tag_kind: str | None = 'annotate
         git('tag', '-a', TAG, '-m', 'Fixture tag')
     elif tag_kind == 'lightweight':
         git('tag', TAG)
+    elif tag_kind == 'similarly-named':
+        # Revision lookup can accept this ref even though the literal tag is absent.
+        git('tag', f'refs/tags/{TAG}')
 
     shutil.copyfile(ROOT / 'scripts/changelog_section.py', parser)
     (work / 'package.json').write_text('{"version":"1.2.3"}', encoding='utf-8')
@@ -82,6 +85,7 @@ class TaggedReleaseNotesTests(unittest.TestCase):
         for version, tag_kind, error in (
             ('1.2.2', 'annotated', 'different package.json version'),
             ('1.2.3', None, 'does not resolve to a commit'),
+            ('1.2.3', 'similarly-named', 'does not resolve to a commit'),
         ):
             with self.subTest(error=error), tempfile.TemporaryDirectory() as tmp:
                 result, notes = replay(Path(tmp), TAGGED, version=version, tag_kind=tag_kind)
