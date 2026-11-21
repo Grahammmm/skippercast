@@ -3,6 +3,7 @@
 // It explains the ranking from the records web/ranking.ts read for the place (`targetEvidence`: the atlas or published
 // mark's own survey record and the atlas's protected-area check), so no second story can disagree with the number.
 // Erasable syntax only: tests/test_area_reasons.mjs imports it.
+import {DEFAULT_ZONE} from './zone.ts';
 
 /** One dated evidence record about one area, as a feed or the atlas carries it. */
 export interface EvidenceRecord {
@@ -49,7 +50,7 @@ function dated(v: unknown, now: number, timeZone: string): {ms: number; label: s
         timeZone: zone, year: 'numeric', month: 'numeric', day: 'numeric',
       });
       let local: Intl.DateTimeFormat;
-      try { local = formatter(timeZone); } catch { local = formatter('America/Los_Angeles'); }
+      try { local = formatter(timeZone); } catch { local = formatter(DEFAULT_ZONE); }
       const parts = Object.fromEntries(local.formatToParts(Math.floor(now)).map(({type, value}) => [type, value]));
       if (ms > Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day))) return null;
     }
@@ -75,7 +76,7 @@ const collate = (a: string, b: string): number => a.localeCompare(b) || (a < b ?
  * future date, no text or no source is left out (an undated reason is not shown), and so is any record of another area.
  * Ties fall to kind, link presence, source, text (each by locale order, then code-unit order), then canonical HTTPS link (code-unit order).
  */
-export function reasonsFor(area: string, evidence: readonly EvidenceRecord[] | null | undefined, now: number, timeZone = 'America/Los_Angeles'): Reason[] {
+export function reasonsFor(area: string, evidence: readonly EvidenceRecord[] | null | undefined, now: number, timeZone = DEFAULT_ZONE): Reason[] {
   if (!Array.isArray(evidence) || !str(area)) return [];
   const eligible: {ms: number; key: string; kind: string; reason: Reason}[] = [];
   for (const r of evidence) {
