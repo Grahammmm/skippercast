@@ -28,7 +28,7 @@ export const IconButton = () => null, useScrollCue = () => {}, PortDialog = ({ch
 export const closeTrip = () => { probe.closes++; };
 export const loadPlanner = () => { probe.loads++; return probe.loader(); };
 export const listPacks = async () => [], canSaveCoastal = async () => false, readCoastal = async () => null, deleteCoastal = async () => {}, saveCoastal = async () => {}, savePack = async () => ({});
-export const KEEP_WORDS = {agreed: '', already: '', refused: '', unavailable: ''}, storageLine = async () => null, estimateWords = () => '', savePackKept = async save => ({meta: await save(), keep: 'unavailable'});
+export const KEEP_WORDS = {agreed: '', already: '', refused: '', unavailable: ''}, keepWords = () => '', storageLine = async () => null, estimateWords = () => '', savePackKept = async save => ({meta: await save(), keep: 'unavailable'});
 `;
 
 async function load() {
