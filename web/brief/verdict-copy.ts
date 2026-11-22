@@ -178,11 +178,11 @@ export function windowCopy(raw: string, lang: Language, shown: {wind: keyof type
   // "Using your limits (<parts>); the default ..." with <parts> in the producer's own order (limits.ts limitsText).
   const note = fixed === null && bar === null ? english('lower.limits', {limits: '(.+)'}).exec(raw) : null;
   const units = {v: NUM, u: `(?:${WIND_SPEED.kt.label}|ft)`};
-  const [pw, pg, ps, px] = note ? note[1]!.split(', ') : [];
+  const [pw, pg, ps, px, ...extra] = note ? note[1]!.split(', ') : [];
   const part = (key: string, captures: Readonly<Record<string, string>>, text: string | undefined) => text === undefined ? null : english(key, captures).exec(text);
   const wind = part('lower.limits.wind', units, pw), gust = part('lower.limits.gust', units, pg);
   const seas = part('lower.limits.seas', units, ps), surf = part('lower.limits.surf', units, ps), surge = part('lower.limits.surge', {band: '(low|moderate|strong)'}, px);
-  const own = wind && gust && (seas || surf) && (px === undefined || surge) ? {wind: wind[1]!, gust: gust[1]!, surf: !!surf, height: (seas ?? surf)![1]!, surge: surge?.[1] ?? null} : null;
+  const own = wind && gust && (seas || surf) && (px === undefined || surge) && extra.length === 0 ? {wind: wind[1]!, gust: gust[1]!, surf: !!surf, height: (seas ?? surf)![1]!, surge: surge?.[1] ?? null} : null;
   if (lang === 'en' && (!own || (shown.wind === 'kt' && shown.height === 'ft'))) return {text: raw, known: true};
   if (fixed !== null) return {text: say(fixed), known: true};
   if (bar) return {text: say('lower.reason.bar', {entrance: bar[1]!}), known: true};

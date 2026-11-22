@@ -360,6 +360,10 @@ test('lower_exposure_window_copy_en_es: every known label and reason in Spanish,
     language.value = 'es'; setUnits({wind: 'kt', height: 'ft'});
     const odd = show(win('Brand new label', ['Using your limits (wind 12 kt, gusts 18 kt, seas 4 ft, tide 2 ft); the default limits would not suggest all of it']));
     assert.ok(odd.includes('<span lang="en">Brand new label</span>') && odd.includes('<span lang="en">Using your limits (wind 12 kt, gusts 18 kt, seas 4 ft, tide 2 ft); the default'));
+    const fiveParts = own('wind 12 kt, gusts 18 kt, surf 3.5 ft, surge strong, tide 2 ft');
+    assert.ok(show(win('Lower surf & wind', [fiveParts])).includes(`<span lang="en">${fiveParts}</span>`), 'Spanish preserves all unknown limits');
+    language.value = 'en'; setUnits({wind: 'kmh', height: 'm'});
+    assert.ok(show(win('Lower surf & wind', [fiveParts])).includes(fiveParts), 'English conversion preserves all unknown limits');
     // The stored window is untouched: display only.
     assert.equal(base.label, 'Lower wind & offshore seas');
   } finally { language.value = 'en'; setUnits({wind: 'kt', height: 'ft'}); }
