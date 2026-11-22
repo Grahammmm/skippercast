@@ -78,6 +78,13 @@ export function hourlyCells(r: HourlyRow, lang: Language = 'en', windUnit: Units
     r.score === null ? '—' : `${r.score.toFixed(1)}${r.limited ? '*' : ''}`];
 }
 
+/** The limit as the over-limit marker's label says it, in the table's units with hourlyCells' conversion and rounding; the page's decimal comma in Spanish. The default units keep the stored number's own text. */
+export function limitText(field: LimitField, limit: number, lang: Language = 'en', windUnit: Units['wind'] = 'kt', heightUnit: Units['height'] = 'ft'): string {
+  if (field === 'seas') return heightUnit === 'ft' ? `${limit} ft` : `${(limit * M_PER_FT).toFixed(1)} m`.replace(/^(\d+)\.(\d)/, lang === 'en' ? '$1.$2' : '$1,$2');
+  const {factor, label} = WIND_SPEED[windUnit];
+  return windUnit === 'kt' ? `${limit} kt` : `${(limit * factor).toFixed(0)} ${label}`;
+}
+
 /** Which of wind, gust and seas are over the person's own limits: the strictly-greater, finite-only comparison of packages/coast/src/daily.ts buildDaily's overLimit. `null` (default limits) marks nothing. */
 export function overLimits(r: HourlyRow, limits: ComfortLimits | null): Record<LimitField, boolean> {
   const over = (v: number | null, max: number | undefined) => !!limits && v !== null && Number.isFinite(v) && typeof max === 'number' && v > max;
