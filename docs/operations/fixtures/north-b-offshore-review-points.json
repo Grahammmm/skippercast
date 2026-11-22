@@ -1,0 +1,21 @@
+{
+  "purpose": "Offline estimated-grid review points only; not camera tiers, new survey evidence, or a substitute for the RMSC-119 coarse check.",
+  "selection": "First forecast point in each region.json's bounds with offshore set to true, in recorded order.",
+  "regions": {
+    "fort-bragg-point-arena": {
+      "status": "pinned",
+      "sample_id": "point-arena-reference",
+      "longitude": -123.98,
+      "latitude": 39.225
+    },
+    "shelter-cove-north-mendocino": {
+      "status": "unavailable"
+    },
+    "humboldt-bay-cape-mendocino": {
+      "status": "pinned",
+      "sample_id": "offshore",
+      "longitude": -124.67,
+      "latitude": 40.65
+    }
+  }
+}
