@@ -426,3 +426,31 @@ test('MB-13: the menu writes the lists the rules say (press the rows)', async t 
   press('Depth shading');
   assert.equal(m.depthLinesOn(s.layers.value), true, 'Depth shading is the base map and cannot be switched off');
 });
+
+// SC2052-01: the rail reads the Spanish table installed after the bundle was imported (a fresh module graph, no prior install).
+test('rail_uses_late_catalogue', async () => {
+  const out = join(await mkdtemp(join(tmpdir(), 'rail-cold-')), 'rail.mjs');
+  await build({
+    stdin: {resolveDir: ROOT, loader: 'ts', contents: `
+      export {LayerRail} from './web/app/LayerRail.tsx';
+      export {railEntries} from './web/app/rail.ts';
+      export {prepareCatalogue} from './web/i18n-catalogue.ts';
+      export {language} from './web/i18n.ts';
+      export {render} from 'preact-render-to-string';
+      export {h} from 'preact';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+  });
+  const m = await import(pathToFileURL(out).href);
+  assert.equal(m.railEntries('es')[0].label, 'Seafloor', 'before the install the fallback is English');
+  await m.prepareCatalogue('es');
+  const es = m.railEntries('es');
+  assert.deepEqual(es.map(e => e.label).slice(0, 3), ['Fondo marino', 'Corrientes', 'Temperatura del agua']);
+  assert.deepEqual(es.map(e => e.id), m.railEntries('en').map(e => e.id), 'order and ids do not depend on the language');
+  assert.equal(m.railEntries('en')[0].label, 'Seafloor');
+  m.language.value = 'es';
+  try {
+    const html = m.render(m.h(m.LayerRail));
+    assert.match(html, /rail-label">Corrientes</);
+    assert.doesNotMatch(html, /rail-label">Currents</);
+  } finally { m.language.value = 'en'; }
+});
