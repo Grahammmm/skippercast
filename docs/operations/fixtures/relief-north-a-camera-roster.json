@@ -1,0 +1,53 @@
+{
+  "description": "Offline North A relief QA roster only. Themes are render variants of the same preview ID. Null evidence slots mean not reviewed and confer no readiness. The distant Bodega Harbor view for Point Arena–Bodega is a planning reference, not reviewer location evidence.",
+  "regions": {
+    "point-arena-bodega": {
+      "harbor_orientation": [
+        {
+          "preview_id": "bodega-harbor-distant-planning-origin-z13",
+          "reviewer_location_evidence": null,
+          "survey_support_evidence": null
+        }
+      ],
+      "shelf_detail": [
+        {
+          "preview_id": "arena-nearshore-z15",
+          "reviewer_location_evidence": null,
+          "survey_support_evidence": null
+        }
+      ]
+    },
+    "bodega-point-reyes": {
+      "harbor_orientation": [
+        {
+          "preview_id": "bodega-harbor-z13",
+          "reviewer_location_evidence": null,
+          "survey_support_evidence": null
+        }
+      ],
+      "shelf_detail": [
+        {
+          "preview_id": "bodega-nearshore-z15",
+          "reviewer_location_evidence": null,
+          "survey_support_evidence": null
+        }
+      ]
+    },
+    "point-reyes-pigeon": {
+      "harbor_orientation": [
+        {
+          "preview_id": "pillar-point-harbor-z13",
+          "reviewer_location_evidence": null,
+          "survey_support_evidence": null
+        }
+      ],
+      "shelf_detail": [
+        {
+          "preview_id": "reyes-south-z15",
+          "reviewer_location_evidence": null,
+          "survey_support_evidence": null
+        }
+      ]
+    }
+  }
+}
