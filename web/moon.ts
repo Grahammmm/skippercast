@@ -1,4 +1,4 @@
-// The moon's phase for an instant (SC2037-03). Pure: no imports, no clock, no network.
+// The moon's phase for an instant (SC2037-03). The calculation is pure: no clock, no network.
 //
 // Algorithm: Jean Meeus, "Astronomical Algorithms", 2nd ed., chapter 48 ("Illuminated Fraction of the
 // Moon's Disk"), equation 48.4: the phase angle i from the mean elongation D (47.2), the Sun's mean
@@ -7,6 +7,8 @@
 // fraction is good to about 0.5 percentage points and the elongation, hence a phase time, to under an hour.
 // Time is taken as UT (the ~70 s difference from dynamical time is far inside that).
 // This is the phase only: no rise or set, no tide or fishing claim.
+// The phase maths takes no clock or network; only the line's wording reads the string catalogue (SC2137-03).
+import {num, t, type Language, type StringId} from './i18n.ts';
 
 export type PhaseName = 'new' | 'waxing crescent' | 'first quarter' | 'waxing gibbous' | 'full' | 'waning gibbous' | 'last quarter' | 'waning crescent';
 export interface MoonPhase {readonly name: PhaseName; readonly fraction: number}
@@ -54,8 +56,17 @@ export function localNoon(day: string, tz: string): Date {
   return new Date(guess - offset(first));
 }
 
-/** "Moon: waxing gibbous, 78% lit" for the local day `day` in `tz`, taken at local noon. */
-export function moonLine(day: string, tz: string): string {
+/** The catalogue id of each phase name (SC2137-03); the internal phase keys above stay English. */
+const PHASE_ID = {
+  'new': 'conditions.moon.phase.new', 'waxing crescent': 'conditions.moon.phase.waxingCrescent',
+  'first quarter': 'conditions.moon.phase.firstQuarter', 'waxing gibbous': 'conditions.moon.phase.waxingGibbous',
+  'full': 'conditions.moon.phase.full', 'waning gibbous': 'conditions.moon.phase.waningGibbous',
+  'last quarter': 'conditions.moon.phase.lastQuarter', 'waning crescent': 'conditions.moon.phase.waningCrescent',
+} as const satisfies Record<PhaseName, StringId>;
+
+/** "Moon: waxing gibbous, 78% lit" for the local day `day` in `tz`, taken at local noon; `lang` picks the catalogue text and number format. */
+export function moonLine(day: string, tz: string, lang: Language = 'en'): string {
   const {name, fraction} = moonPhase(localNoon(day, tz));
-  return `Moon: ${name}, ${Math.round(fraction * 100)}% lit`;
+  const percent = Math.round(fraction * 100);
+  return t('conditions.moon.line', lang, {phase: t(PHASE_ID[name], lang), percent: lang === 'es' ? num(percent, lang, 0) : percent});
 }
