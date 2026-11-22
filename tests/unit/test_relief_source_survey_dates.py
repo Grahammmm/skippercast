@@ -73,6 +73,29 @@ def test_date_disagreement_retains_both_versions_for_review(tmp_path, release, c
     ]
 
 
+@pytest.mark.parametrize(('release', 'year', 'review'), [
+    ('2003', 2008, ['survey_year_differs']),
+    ('2003-11-14', 2003, []),
+    ('2003-11', 2008, ['survey_year_differs']),
+    ('unstated', 2008, []),
+    (None, 2008, []),
+    ('2023-02-29', 2008, ['invalid_release_survey_date']),
+])
+def test_catalogue_year_is_compared_without_replacing_saved_date(tmp_path, release, year, review):
+    paths = _write_inputs(tmp_path, [{'source_id': 'survey', 'survey_date': release}],
+                          [{'id': 'survey', 'survey_year': year}])
+    row = reconcile(*paths)['sources'][0]
+    assert row['release'] == {'survey_date': release}
+    assert row['catalogue'] == {'survey_year': year}
+    assert row['review'] == review
+
+
+def test_date_and_year_disagreements_are_independently_reported(tmp_path):
+    paths = _write_inputs(tmp_path, [{'source_id': 'survey', 'survey_date': '2003'}],
+                          [{'id': 'survey', 'survey_date': '2004', 'survey_year': 2008}])
+    assert reconcile(*paths)['sources'][0]['review'] == ['survey_date_differs', 'survey_year_differs']
+
+
 def test_bad_release_date_is_not_valid_evidence_or_explicitly_unstated(tmp_path):
     # Nonempty text alone is not survey-date evidence; a calendar-invalid leap day is decisive.
     paths = _write_inputs(tmp_path, [{'source_id': 'survey', 'survey_date': '2023-02-29'}],

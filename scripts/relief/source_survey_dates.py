@@ -3,7 +3,7 @@
 
 Run with two local files (the contour GeoJSON and catalog/sources.json). Only
 provenance.sources supplies release dates. Catalogue date text and catalogue
-years are separate evidence; date-text disagreements are for human review,
+years are separate evidence; date-text and year disagreements are for human review,
 not proof that survey periods are disjoint. Output is JSON on stdout.
 """
 from __future__ import annotations
@@ -68,6 +68,10 @@ def reconcile(contours: Path, catalogue: Path) -> dict:
             if (status != 'metadata_missing' and isinstance(catalogue_date, str)
                     and catalogue_date.strip() and catalogue_date != value):
                 review.append('survey_date_differs')
+            catalogue_year = evidence.get('survey_year')
+            if (status == 'release_date_supplied' and isinstance(value, str) and type(catalogue_year) is int
+                    and 1 <= catalogue_year <= 9999 and int(value[:4]) != catalogue_year):
+                review.append('survey_year_differs')
         rows.append({'source_id': ident, 'status': status, 'release': release,
                      'catalogue': evidence, 'review': review})
     return {'region_id': region_id, 'sources': rows}
