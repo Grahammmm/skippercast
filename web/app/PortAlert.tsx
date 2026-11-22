@@ -8,7 +8,9 @@ import {Button} from '../ui/Button.tsx';
 import {regionalForecast} from '../brief/Brief.tsx';
 import {briefForecast} from '../conditions.ts';
 import {language, num, t, type Language} from '../i18n.ts';
-import {clearThresholds, evaluatePortAlert, loadThresholds, saveThresholds, WINDOW_HOURS, type Thresholds} from '../port-alert.ts';
+import {units} from '../unit-choice.ts';
+import {WIND_SPEED} from '../units.ts';
+import {clearThresholds, evaluatePortAlert, limitsFromForm, loadThresholds, shownLimits, shownSwell, shownWind, WINDOW_HOURS, type Thresholds} from '../port-alert.ts';
 import {loadPorts, savedPortId, type Port} from '../ports.ts';
 import {region} from '../state.ts';
 import {localTime} from '../view-copy.ts';
@@ -17,8 +19,11 @@ const when = (iso: string, tz: string, lang: Language) => !Number.isFinite(Date.
 
 export function PortAlert({now, tz}: {now: Date; tz: string}) {
   const lang = language.value;
+  const u = units.value;
+  const windUnit = WIND_SPEED[u.wind].label, swellUnit = t(u.height === 'ft' ? 'portAlert.unit.ft' : 'portAlert.unit.m', lang);
   const [port, setPort] = useState<Port | null>(null);
   const [limits, setLimits] = useState<Thresholds | null>(() => loadThresholds());
+  const shown = shownLimits(limits, u);
   const [note, setNote] = useState<'saved' | 'cleared' | 'invalid' | null>(null);
   useEffect(() => {
     const id = savedPortId();
@@ -32,7 +37,7 @@ export function PortAlert({now, tz}: {now: Date; tz: string}) {
   const save = (event: TargetedSubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const f = new FormData(event.currentTarget);
-    const saved = saveThresholds({windKt: Number(f.get('windKt')), swellFt: Number(f.get('swellFt'))});
+    const saved = limitsFromForm({wind: String(f.get('windKt')), swell: String(f.get('swellFt'))}, limits, u);
     if (saved) setLimits(saved);
     setNote(saved ? 'saved' : 'invalid');
   };
@@ -45,14 +50,14 @@ export function PortAlert({now, tz}: {now: Date; tz: string}) {
       <h3 id="app-port-alert-title" class="ui-eyebrow">{t('portAlert.title', lang)}</h3>
       <p class="small">{t('portAlert.intro', lang, {port: port.name})}</p>
       <form class="insight-form" onSubmit={save}>
-        <label>{t('portAlert.wind', lang)}<input name="windKt" type="number" min="1" max="60" step="1" defaultValue={limits?.windKt ?? 15} required /></label>
-        <label>{t('portAlert.swell', lang)}<input name="swellFt" type="number" min="0.5" max="30" step="0.5" defaultValue={limits?.swellFt ?? 6} required /></label>
+        <label>{t('portAlert.wind', lang, {unit: windUnit})}<input name="windKt" type="number" min={shown.wind.min} max={shown.wind.max} step={shown.wind.step} defaultValue={shown.wind.value} key={`w${u.wind}${shown.wind.value}`} required /></label>
+        <label>{t('portAlert.swell', lang, {unit: swellUnit})}<input name="swellFt" type="number" min={shown.swell.min} max={shown.swell.max} step={shown.swell.step} defaultValue={shown.swell.value} key={`s${u.height}${shown.swell.value}`} required /></label>
         <Button type="submit" variant="primary">{t('portAlert.save', lang)}</Button>
         {limits ? <Button type="button" onClick={() => { clearThresholds(); setLimits(null); setNote('cleared'); }}>{t('portAlert.clear', lang)}</Button> : null}
       </form>
-      <p role="status" class="small">{note ? t(note === 'saved' ? 'portAlert.saved' : note === 'cleared' ? 'portAlert.cleared' : 'portAlert.invalid', lang) : ''}</p>
+      <p role="status" class="small">{note ? t(note === 'saved' ? 'portAlert.saved' : note === 'cleared' ? 'portAlert.cleared' : 'portAlert.invalid', lang, {windMin: num(shown.wind.min, lang), windMax: num(shown.wind.max, lang), windUnit, swellMin: num(shown.swell.min, lang), swellMax: num(shown.swell.max, lang), swellUnit}) : ''}</p>
       <p role="status"><strong>{t(stateId, lang, {hours: WINDOW_HOURS})}</strong></p>
-      {result?.exceedances.length ? <ul>{result.exceedances.map(e => <li key={e.kind}>{t(e.kind === 'wind' ? 'portAlert.hit.wind' : 'portAlert.hit.swell', lang, {value: num(e.value, lang), time: when(e.at, tz, lang), limit: num(e.kind === 'wind' ? limits!.windKt : limits!.swellFt, lang)})}</li>)}</ul> : null}
+      {result?.exceedances.length ? <ul>{result.exceedances.map(e => <li key={e.kind}>{t(e.kind === 'wind' ? 'portAlert.hit.wind' : 'portAlert.hit.swell', lang, {unit: e.kind === 'wind' ? windUnit : swellUnit, value: num(e.kind === 'wind' ? shownWind(e.value, u) : shownSwell(e.value, u), lang), time: when(e.at, tz, lang), limit: num(e.kind === 'wind' ? shownWind(limits!.windKt, u) : shownSwell(limits!.swellFt, u), lang)})}</li>)}</ul> : null}
       {result && result.source ? <p class="small">{t('portAlert.source', lang, {source: result.source, issued: when(result.issuedAt!, tz, lang), fetched: when(result.fetchedAt!, tz, lang)})}</p> : null}
       <p class="small">{t('portAlert.notnav', lang)}</p>
     </section>

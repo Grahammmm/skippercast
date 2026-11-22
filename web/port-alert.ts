@@ -6,6 +6,8 @@
 //
 // Erasable syntax only: the node tests import this file by type stripping.
 import type {RegionalForecast} from './brief/types.ts';
+import type {Units} from './unit-choice.ts';
+import {M_PER_FT, WIND_SPEED} from './units.ts';
 
 /** Device-only key for the two thresholds. */
 export const PORT_ALERT_KEY = 'skippercast-port-alert-v1';
@@ -64,6 +66,31 @@ export function saveThresholds(thresholds: Thresholds, storage: PortAlertStorage
 
 export function clearThresholds(storage: PortAlertStorage | null = browserStorage()): void {
   try { storage?.removeItem?.(PORT_ALERT_KEY); } catch { /* blocked */ }
+}
+
+/** Defaults shown when nothing is saved, in stored units. */
+export const DEFAULT_LIMITS: Thresholds = Object.freeze({windKt: 15, swellFt: 6});
+type Shown = {value: string; min: number; max: number; step: number};
+
+/** A stored limit as the person's own wind and height units show it: knots and feet exactly as stored, others rounded (wind to 1, metres to 0.1). */
+export const shownWind = (kt: number, u: Units): number => u.wind === 'kt' ? kt : Math.round(kt * WIND_SPEED[u.wind].factor);
+export const shownSwell = (ft: number, u: Units): number => u.height === 'ft' ? ft : Number((ft * M_PER_FT).toFixed(1));
+
+/** Field values, bounds and step in the chosen units. Bounds round inward, so anything the form accepts is inside BOUNDS. */
+export function shownLimits(t: Thresholds | null, u: Units): {wind: Shown; swell: Shown} {
+  const s = t ?? DEFAULT_LIMITS, f = WIND_SPEED[u.wind].factor;
+  const wind = u.wind === 'kt' ? {min: BOUNDS.windKt.min, max: BOUNDS.windKt.max} : {min: Math.ceil(BOUNDS.windKt.min * f), max: Math.floor(BOUNDS.windKt.max * f)};
+  const swell = u.height === 'ft' ? {min: BOUNDS.swellFt.min, max: BOUNDS.swellFt.max} : {min: Math.ceil(BOUNDS.swellFt.min * M_PER_FT * 10) / 10, max: Math.floor(BOUNDS.swellFt.max * M_PER_FT * 10) / 10};
+  return {wind: {value: String(shownWind(s.windKt, u)), step: 1, ...wind}, swell: {value: String(u.height === 'ft' ? s.swellFt : shownSwell(s.swellFt, u).toFixed(1)), step: u.height === 'ft' ? 0.5 : 0.1, ...swell}};
+}
+
+/** Saves the submitted strings. A field equal to what was shown keeps its stored number bit for bit; an edited one converts once to knots or feet and is checked against BOUNDS there. */
+export function limitsFromForm(fields: {wind: string; swell: string}, stored: Thresholds | null, u: Units, storage?: PortAlertStorage | null): Thresholds | null {
+  const base = stored ?? DEFAULT_LIMITS, shown = shownLimits(stored, u);
+  const num = (s: string) => s.trim() === '' ? NaN : Number(s);
+  const windKt = fields.wind === shown.wind.value ? base.windKt : num(fields.wind) / WIND_SPEED[u.wind].factor;
+  const swellFt = fields.swell === shown.swell.value ? base.swellFt : u.height === 'ft' ? num(fields.swell) : num(fields.swell) / M_PER_FT;
+  return storage === undefined ? saveThresholds({windKt, swellFt}) : saveThresholds({windKt, swellFt}, storage);
 }
 
 /**
