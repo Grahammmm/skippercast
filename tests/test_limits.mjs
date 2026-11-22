@@ -263,6 +263,7 @@ async function load() {
       export {LowerExposure} from './web/brief/Brief.tsx';
       export {configureStore, profile} from './web/state.ts';
       export {language} from './web/i18n.ts';
+      export {setUnits} from './web/unit-choice.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
@@ -322,6 +323,46 @@ test('Lower exposure keeps the safety caveat visible beside the "using your limi
   const text = render(h(LowerExposure, {brief: plain}));
   assert.match(text, /Harbor entrance and full return route need a separate check/);
   assert.ok(!text.includes('Using your limits'));
+});
+
+// SC2022-04: the window's label, known reasons and limits note in the page's language and chosen units.
+test('lower_exposure_window_copy_en_es: every known label and reason in Spanish, the limits in the chosen units, unknown text stays English', async () => {
+  const {LowerExposure, render, h, language, setUnits} = await load();
+  const mine = buildCoastBrief({report: report({wind: 12, gust: 17}), county: slo, areaId: 'central', profile: 'boat', date, now, limits: {wind: 12, gust: 18}});
+  const base = mine.windows[0], bar = 'Test <Entrance> & Co: bar caution or unknown at departure or return (estimate); check the bar status';
+  const show = (window, extra = {}) => render(h(LowerExposure, {brief: {...mine, windows: [window], ...extra}}));
+  const win = (label, reasons) => ({...base, label, reasons});
+  const own = n => `Using your limits (${n}); the default limits would not suggest all of it`;
+  const english = show(win('Lower wind & offshore seas', [own('wind 12 kt, gusts 18 kt, seas 4 ft'), 'Harbor entrance and full return route need a separate check', bar]));
+  assert.match(english, /Lower wind &amp; offshore seas\. Harbor entrance and full return route need a separate check\. Using your limits \(wind 12 kt, gusts 18 kt, seas 4 ft\); the default limits would not suggest all of it/, 'English at kt and ft is byte-identical');
+  assert.ok(!english.includes('lang="en"') && !english.includes('bar caution'), 'English keeps the first caveat only');
+  try {
+    language.value = 'es';
+    const labels = [['Lower surf & wind', 'Menor oleaje y viento'], ['Lower surge & wind', 'Menor resaca y viento'], ['Lower wind & seas', 'Menor viento y oleaje'], ['Lower wind & offshore seas', 'Menor viento y oleaje mar adentro'], ['Lower offshore exposure', 'Menor exposición mar adentro']];
+    for (const [en, es] of labels) assert.ok(show(win(en, [])).includes(`${es}.`), en);
+    for (const [en, es] of [['Harbor entrance and full return route need a separate check', 'La entrada del puerto'], ['Breaking surf and exact entry conditions are not measured', 'No se miden el oleaje'], ['Underwater visibility is not measured', 'No se mide la visibilidad']]) {
+      const html = show(win('Lower surf & wind', [en]));
+      assert.ok(html.includes(es) && !html.includes('lang="en"'), en);
+    }
+    // An appended bar caution shows once, escaped, between the first caveat and the limits note.
+    const es = show(win('Lower wind & offshore seas', [own('wind 12 kt, gusts 18 kt, seas 4 ft'), 'Harbor entrance and full return route need a separate check', bar]));
+    assert.match(es, /La entrada del puerto[^<]*\. Test &lt;Entrance> &amp; Co: precaución en la barra[^<]*\. Con tus límites \(viento 12 kt, ráfagas 18 kt, oleaje 4 ft\); los límites predeterminados no sugerirían todo/);
+    assert.equal(es.split('precaución en la barra').length, 2);
+    // Units: km/h and metres round UP (12 kt = 22.2 km/h, 18 kt = 33.3, 4 ft = 1.2192 m); Spanish uses a decimal comma.
+    setUnits({wind: 'kmh', height: 'm'});
+    assert.ok(show(win('Lower surf & wind', [own('wind 12 kt, gusts 18 kt, seas 4 ft')])).includes('Con tus límites (viento 23 km/h, ráfagas 34 km/h, oleaje 1,3 m)'));
+    assert.ok(show(win('Lower surf & wind', [own('wind 12 kt, gusts 18 kt, surf 3.5 ft, surge strong')])).includes('oleaje de rompiente 1,1 m, resaca fuerte)'));
+    language.value = 'en';
+    assert.ok(show(win('Lower surf & wind', [own('wind 12 kt, gusts 18 kt, seas 4 ft')])).includes('Using your limits (wind 23 km/h, gusts 34 km/h, seas 1.3 m); the default'));
+    setUnits({wind: 'mph', height: 'ft'});
+    assert.ok(show(win('Lower surf & wind', [own('wind 12 kt, gusts 18 kt, seas 4 ft')])).includes('(wind 14 mph, gusts 21 mph, seas 4 ft)'), 'mixed units: only the chosen dimensions convert');
+    // Unknown text stays English and is tagged in Spanish; nothing is substituted.
+    language.value = 'es'; setUnits({wind: 'kt', height: 'ft'});
+    const odd = show(win('Brand new label', ['Using your limits (wind 12 kt, gusts 18 kt, seas 4 ft, tide 2 ft); the default limits would not suggest all of it']));
+    assert.ok(odd.includes('<span lang="en">Brand new label</span>') && odd.includes('<span lang="en">Using your limits (wind 12 kt, gusts 18 kt, seas 4 ft, tide 2 ft); the default'));
+    // The stored window is untouched: display only.
+    assert.equal(base.label, 'Lower wind & offshore seas');
+  } finally { language.value = 'en'; setUnits({wind: 'kt', height: 'ft'}); }
 });
 
 // SC0707-06: Your limits in Spanish (catalogue ids limits.*; web/i18n.ts language signal).

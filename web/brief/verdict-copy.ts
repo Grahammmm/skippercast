@@ -9,6 +9,7 @@
 // Erasable syntax only: Node tests import this file by type stripping.
 import {localeOf, num, t, type Language, type StringId} from '../i18n.ts';
 import type {ComfortRating, FeedHour} from '../score.ts';
+import {M_PER_FT, WIND_SPEED} from '../units.ts';
 
 export const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const r0 = (n: number) => String(Math.round(n));
@@ -135,3 +136,42 @@ export function verdictCopy(lang: Language = 'en') {
 }
 
 export type VerdictCopy = ReturnType<typeof verdictCopy>;
+
+// SC2022-04: the lower-exposure window's words (packages/coast daily.ts and assessment.ts write them in English).
+// The web side parses the known English forms, as the profile reasons above are parsed: packages/coast keeps its
+// strings and shape, the window's times and screening stay on the stored kt and ft, and only this display changes.
+const LOWER_FIXED = ['label.surf', 'label.surge', 'label.seas', 'label.boat', 'label.offshore', 'reason.route', 'reason.surf', 'reason.visibility'].map(key => `lower.${key}`);
+const NUM = '(\\d+(?:\\.\\d+)?)';
+/** The English template of catalogue id `key` as an anchored pattern: each {name} becomes its capture. */
+const english = (key: string, captures: Readonly<Record<string, string>> = {}): RegExp =>
+  new RegExp(`^${t(key as StringId, 'en').replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{(\w+)\}/g, (_, name: string) => captures[name] ?? '(.*)')}$`, 's');
+const barPattern = () => english('lower.reason.bar', {entrance: '([\\s\\S]+)'});
+/** True for the appended bar caution (packages/coast daily.ts): the entrance's name, then the fixed words. */
+export const isBarReason = (raw: string): boolean => barPattern().test(raw);
+/** Rounded UP in the shown unit, so a displayed limit is never below the stored one (1e-9 absorbs float noise). */
+const upTo = (value: number, digits: number) => Math.ceil(value * 10 ** digits - 1e-9) / 10 ** digits;
+
+/** A lower-exposure window label or reason in `lang`; `known` is false for text this file does not recognise (shown as given). */
+export function windowCopy(raw: string, lang: Language, shown: {wind: keyof typeof WIND_SPEED; height: 'ft' | 'm'} = {wind: 'kt', height: 'ft'}): {text: string; known: boolean} {
+  const say = (suffix: string, vars: Readonly<Record<string, string | number>> = {}) => t(suffix as StringId, lang, vars);
+  const fixed = LOWER_FIXED.find(key => t(key as StringId, 'en') === raw) ?? null;
+  const bar = fixed === null ? barPattern().exec(raw) : null;
+  // "Using your limits (<parts>); the default ..." with <parts> in the producer's own order (limits.ts limitsText).
+  const note = fixed === null && bar === null ? english('lower.limits', {limits: '(.+)'}).exec(raw) : null;
+  const units = {v: NUM, u: `(?:${WIND_SPEED.kt.label}|ft)`};
+  const [pw, pg, ps, px] = note ? note[1]!.split(', ') : [];
+  const part = (key: string, captures: Readonly<Record<string, string>>, text: string | undefined) => text === undefined ? null : english(key, captures).exec(text);
+  const wind = part('lower.limits.wind', units, pw), gust = part('lower.limits.gust', units, pg);
+  const seas = part('lower.limits.seas', units, ps), surf = part('lower.limits.surf', units, ps), surge = part('lower.limits.surge', {band: '(low|moderate|strong)'}, px);
+  const own = wind && gust && (seas || surf) && (px === undefined || surge) ? {wind: wind[1]!, gust: gust[1]!, surf: !!surf, height: (seas ?? surf)![1]!, surge: surge?.[1] ?? null} : null;
+  if (lang === 'en' && (!own || (shown.wind === 'kt' && shown.height === 'ft'))) return {text: raw, known: true};
+  if (fixed !== null) return {text: say(fixed), known: true};
+  if (bar) return {text: say('lower.reason.bar', {entrance: bar[1]!}), known: true};
+  if (!own) return {text: raw, known: false};
+  const show = (stored: string, value: number | null): string => lang === 'es' ? num(value ?? Number(stored), lang, 1) : value === null ? stored : String(value);
+  const speed = (stored: string) => show(stored, shown.wind === 'kt' ? null : upTo(Number(stored) * WIND_SPEED[shown.wind].factor, 0));
+  const height = show(own.height, shown.height === 'ft' ? null : upTo(Number(own.height) * M_PER_FT, 1)), u = WIND_SPEED[shown.wind].label;
+  const parts = [say('lower.limits.wind', {v: speed(own.wind), u}), say('lower.limits.gust', {v: speed(own.gust), u}), say(own.surf ? 'lower.limits.surf' : 'lower.limits.seas', {v: height, u: shown.height})];
+  if (own.surge) parts.push(say('lower.limits.surge', {band: say(`lower.surge.${own.surge}`)}));
+  return {text: say('lower.limits', {limits: parts.join(', ')}), known: true};
+}
