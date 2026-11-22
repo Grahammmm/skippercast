@@ -50,8 +50,9 @@ processes (``python3 -u run_region.py`` included) is repeated before every stage
 When the cap state cannot be established (``/proc`` unreadable, slot directory not safely
 ours) the run is refused, exit 3.
 
-``--dry-run`` prints the chain and the state of every guard and runs nothing: it creates no
-file or directory. Nothing here downloads, uploads, pushes or publishes, and this script writes
+``--dry-run`` prints the chain and the state of every guard. With an output root it also
+previews the region's receipt-based rebuild plan. It runs nothing and creates no file or
+directory. Nothing here downloads, uploads, pushes or publishes, and this script writes
 only the lock file inside ``OUT/<region>/`` and the two slot files. The stages themselves keep
 their own receipts.
 
@@ -510,7 +511,27 @@ def say(text):
     print(text, flush=True)
 
 
-def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap):
+def show_rebuild_plan(cfg, out, region):
+    if __package__:
+        from . import rebuild_plan as report
+    else:
+        import rebuild_plan as report
+
+    if under(out, cfg.forbidden_root) or under(out / region / 'stages', cfg.forbidden_root):
+        say('rebuild plan unavailable: receipt directory is under the forbidden root')
+        return
+    try:
+        rows = report._region_plan(out, region, report._stage_digests())
+    except (OSError, ValueError) as exc:
+        say(f'rebuild plan unavailable: {exc}')
+        return
+    say('rebuild plan (from receipts):')
+    for row in rows:
+        reasons = ', '.join(row['reasons']) or '-'
+        say(f"  {row['stage']} {row['action']} ({reasons})")
+
+
+def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap, *, show_plan):
     source_root = Path(__file__).resolve().parents[2] / 'src'
     if str(source_root) not in sys.path:
         sys.path.insert(0, str(source_root))
@@ -545,6 +566,8 @@ def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap):
         note = f'  # verify {attest}' if attest else ''
         say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, extra))}{note}')
     say('not run: ' + ', '.join(STAGES[STAGES.index(through) + 1:]) if through != STAGES[-1] else 'not run: (none)')
+    if show_plan:
+        show_rebuild_plan(cfg, out, region)
     say('guards (re-checked before every stage):')
     refused = bool(missing)
     for stage, flags in missing:
@@ -735,7 +758,14 @@ def main(argv=None, cfg=None):
     inputs = [Path(p) for p in (*(getattr(args, name) for name in PATH_OPTIONS),
                                 *(path for _, path in args.qa_fine_proof or ())) if p]
     if args.dry_run:
-        return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing, args.basemap)
+        # Lazy imports for the preview must not create bytecode caches on a cold checkout.
+        previous = sys.dont_write_bytecode
+        sys.dont_write_bytecode = True
+        try:
+            return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing, args.basemap,
+                           show_plan=args.out is not None)
+        finally:
+            sys.dont_write_bytecode = previous
     try:
         return run_chain(cfg, args.region, out, norm, args.through, extra, inputs, args.basemap)
     except KeyboardInterrupt:

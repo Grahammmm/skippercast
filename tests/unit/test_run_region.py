@@ -5,7 +5,6 @@ contract a careless edit could break. region.py is replaced by a stub that logs 
 exits with a scripted code; no test starts a real stage.
 """
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -13,18 +12,11 @@ import sys
 
 import pytest
 
+from scripts.relief import rebuild_plan as report_cli, run_region as RR
 from skippercast.relief import receipts
 from tests._support import ROOT
 
 
-def _load():
-    spec = importlib.util.spec_from_file_location('relief_run_region_cli', ROOT / 'scripts' / 'relief' / 'run_region.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-RR = _load()
 STAGE_ORDER = ['select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'nearshore_vectors', 'package',
                'status', 'shots', 'status', 'qa', 'envelope']
 ZONE_ARGS = ['--coarse', '/in/coarse.tif', '--water', '/in/water.geojson', '--coarse-source', 'src-1']
@@ -757,9 +749,8 @@ def test_unsafe_slot_directory_refuses(box, capsys, make):
     assert box.ran() == [] and 'cannot take a run slot' in capsys.readouterr().out
 
 
-def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
-    # Contract: --dry-run shows the commands in order and every guard's state, runs nothing and
-    # creates no file or directory (not even the lock). Bug caught: dry run that starts stage one.
+def test_c2_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
+    """C2: Preview preserves commands and guards without starting a stage or taking a slot."""
     assert box.run('--dry-run', through='mosaic') == 0
     text = capsys.readouterr().out
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
@@ -768,8 +759,89 @@ def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
     assert 'not run: tiles, zone, digests, inventory, contours, nearshore_vectors, package, shots, qa, envelope' in text
     for name in ('stop-file', 'cpu-pressure', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap'):
         assert f'ok     {name}' in text
-    assert 'a real run would start' in text
+    assert text.splitlines()[-1] == 'dry run: a real run would start; nothing was run and nothing was written'
     assert box.ran() == [] and box.out_tree() == [] and not box.slots.exists()
+
+
+PLAN_STAGES = ('select mosaic.public tiles.public zone.public digests inventory contours '
+               'package shots qa envelope nearshore_vectors.public').split()
+
+
+@pytest.mark.parametrize('saved', [
+    pytest.param(False, id='C1: empty OUT rebuilds every stage'),
+    pytest.param(True, id='C1: matching, stale and downstream receipts match the report'),
+])
+def test_c1_dry_run_rebuild_plan(box, capsys, saved):
+    # A partial preview must neither omit stages with no receipt nor invent its own reuse rules.
+    region = 'test-bay'
+    expected = [f'{stage} rebuild (missing)' for stage in PLAN_STAGES]
+    if saved:
+        select_path = ROOT / 'src/skippercast/relief/select.py'
+        current = receipts.stage_digest([('select.py', select_path)])
+        location = receipts.Region(box.out, region)
+        location.stages_dir.mkdir(parents=True)
+        for stage, scope, digest, params, upstream in (
+            ('select', None, current, {}, []),
+            ('tiles', 'public', '0' * 64, {'baked': '0' * 64}, []),
+            ('digests', None, '0' * 64, {}, [{'stage': 'tiles', 'scope': 'public', 'generation': GEN}]),
+        ):
+            location.receipt_path(stage, scope).write_bytes(receipts.canonical(dict(
+                schema=receipts.SCHEMA, region=region, stage=stage, scope=scope,
+                status='ok', attempt=1, generation=GEN, code={'stage_digest': digest},
+                params=params, upstream=upstream, outputs=[],
+            )))
+        expected[0] = 'select reuse (-)'
+        expected[2] = 'tiles.public rebuild (code, style:baked)'
+        expected[4] = 'digests rebuild (code, upstream:tiles.public)'
+
+    def snapshot():
+        return {path: (path.stat().st_mtime_ns, path.read_bytes() if path.is_file() else None)
+                for path in (box.root, *box.root.rglob('*'))}
+
+    before = snapshot()
+    assert box.run('--dry-run', region=region, through='mosaic') == 0
+    out, err = capsys.readouterr()
+    rows = [line.strip() for line in out.splitlines() if re.fullmatch(r'  \S+ (reuse|rebuild) \(.*\)', line)]
+    assert (rows, err) == (expected, '')
+    assert (snapshot(), box.calls()) == (before, [])  # C2: existing receipts, locks and slots unchanged
+    assert report_cli.main(['--out', str(box.out), '--json', region]) == 0
+    report, err = capsys.readouterr()
+    stages = json.loads(report)['regions'][0]['stages']
+    assert (rows, err) == ([f"{row['stage']} {row['action']} ({', '.join(row['reasons']) or '-'})"
+                            for row in stages], '')
+
+
+def test_c1_dry_run_without_out_keeps_plan_absent(box, capsys):
+    """C1: The placeholder OUT is not a receipt directory."""
+    assert RR.main(['test-bay', '--through', 'select', '--dry-run'], box.cfg) == 0
+    out, err = capsys.readouterr()
+    assert ([line for line in out.splitlines() if 'rebuild plan' in line], err) == ([], '')
+    assert [line for line in out.splitlines() if 'REFUSE pipeline' in line] == [
+        '  REFUSE pipeline inputs: a real run through select needs --out',
+    ]
+
+
+@pytest.mark.parametrize('forbidden, reason', [
+    pytest.param(False, 'select.json: not a JSON object', id='C2: unreadable plan preserves stop refusal'),
+    pytest.param(True, 'receipt directory is under the forbidden root', id='C2: protected receipts are not read'),
+])
+def test_c2_dry_run_with_unavailable_plan_still_shows_guards(box, capsys, forbidden, reason):
+    # A parse failure cannot suppress the guards. A protected OUT must not be read at all.
+    box.local_stop.touch()
+    receipt = receipts.Region(box.out, 'test-bay').receipt_path('select')
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text('[]')
+    if forbidden:
+        box.cfg.forbidden_root = str(box.out)
+    before = box.out_tree()
+    assert box.run('--dry-run', region='test-bay', through='select') == 0
+    out, err = capsys.readouterr()
+    assert [line for line in out.splitlines() if 'rebuild plan' in line or 'REFUSE stop-file' in line] == [
+        f'rebuild plan unavailable: {reason}',
+        f'  REFUSE stop-file: {box.local_stop} present',
+    ]
+    assert out.splitlines()[-1] == 'dry run: a real run would be refused now; nothing was run and nothing was written'
+    assert (box.out_tree(), receipt.read_text(), box.calls(), box.slots.exists(), err) == (before, '[]', [], False, '')
 
 
 @pytest.mark.parametrize('partial, census, input_lines', [
@@ -820,3 +892,19 @@ def test_script_runs_as_a_command(box):
     done = subprocess.run([sys.executable, str(ROOT / 'scripts' / 'relief' / 'run_region.py'), 'morro-bay',
                            '--out', str(box.out), '--through', 'bogus'], capture_output=True, text=True)
     assert done.returncode == 2 and 'unknown stage' in done.stderr
+
+
+def test_c2_dry_run_as_a_command_leaves_no_planner_bytecode(box):
+    """C2: The direct command finds its sibling planner without caching its imports."""
+    import subprocess
+    cache = box.root / 'pycache'
+    env = {**os.environ, 'PYTHONPYCACHEPREFIX': str(cache)}
+    env.pop('PYTHONDONTWRITEBYTECODE', None)
+    done = subprocess.run([sys.executable, str(ROOT / 'scripts/relief/run_region.py'), 'test-bay',
+                           '--out', str(box.out), '--through', 'select', '--dry-run'],
+                          cwd=box.root, env=env, capture_output=True, text=True)
+    assert (done.returncode, done.stderr) == (0, '')
+    assert [line for line in done.stdout.splitlines() if line.startswith('  select rebuild')] == [
+        '  select rebuild (missing)',
+    ]
+    assert (list(cache.rglob('rebuild_plan.*.pyc')), box.out_tree()) == ([], [])
