@@ -532,7 +532,7 @@
     "markForecast.gridAbout": {"en": "about {km} km", "es": "aproximadamente {km} km"},
     "markForecast.unstated": {"en": "unstated", "es": "no indicada"},
     "markForecast.from": {"en": " from {compass} {degrees}°", "es": " desde {compass} {degrees}°"},
-    "markForecast.gusts": {"en": " · gusts {gust} kt", "es": " · ráfagas de {gust} kt"},
+    "markForecast.gusts": {"en": " · gusts {gust} {unit}", "es": " · ráfagas de {gust} {unit}"},
     "markForecast.towardTrue": {"en": "{speed} kt toward {degrees}° true", "es": "{speed} kt hacia {degrees}° verdadero"},
     "tile.clock.ended": {"en": "coverage ended {age} ago", "es": "la cobertura terminó hace {age}"},
     "tile.clock.runs": {"en": "coverage runs {age} more", "es": "la cobertura continúa durante {age} más"},

@@ -36,6 +36,8 @@ import {sample} from '../map/forecast-grid.ts';
 import {forecastTime} from '../map/frames.ts';
 import {localeOf, t, type Language} from '../i18n.ts';
 import {fixed} from '../view-copy.ts';
+import {M_PER_FT, WIND_SPEED} from '../units.ts';
+import {units, type Units} from '../unit-choice.ts';
 
 const HOUR = 3_600_000;
 /** A WCOFS cell farther than this many grid lengths from the mark is not the mark's cell. */
@@ -197,20 +199,22 @@ const gapRow = (label: MarkReading['label'], model: string, grid: string, gap: s
   ({label, model, grid, value: null, gap, point: null, cell: null, validAt: null, issuedAt: null, ...extra});
 
 /** What a model's sample reads at epoch seconds `t`: the row's text and the numbers behind it, or null when a needed value is missing. */
-function modelValue(label: 'Wind' | 'Seas', series: unknown, sec: number, end: number | null, lang: Language): {text: string; sampled: NonNullable<MarkReading['sampled']>} | null {
+function modelValue(label: 'Wind' | 'Seas', series: unknown, sec: number, end: number | null, lang: Language, u: Units): {text: string; sampled: NonNullable<MarkReading['sampled']>} | null {
   const meta = end === null ? null : {data_end_time: end}, at = (v: string, unit: string) => sample(series, v, sec, unit, meta);
   if (label === 'Wind') {
     const speed = at('wind_speed_10m', 'kn'), from = at('wind_direction_10m', '°'), gust = at('wind_gusts_10m', 'kn');
     if (speed === null) return null;
     // v1's rule: a gust below the sustained wind is left out.
     const gusts = gust !== null && gust >= speed ? gust : null;
-    return {text: `${Math.round(speed)} kt${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}${gusts !== null ? t('markForecast.gusts', lang, {gust: Math.round(gusts)}) : ''}`,
+    const w = WIND_SPEED[u.wind];
+    return {text: `${Math.round(speed * w.factor)} ${w.label}${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}${gusts !== null ? t('markForecast.gusts', lang, {gust: Math.round(gusts * w.factor), unit: w.label}) : ''}`,
       sampled: {windKn: speed, gustKn: gusts, seasFt: null, periodS: null}};
   }
   // v1's rule: seas without a positive period are left out.
   const period = at('wave_period', 's'), height = period !== null && period > 0 ? at('wave_height', 'ft') : null, from = at('wave_direction', '°');
   if (height === null || period === null) return null;
-  return {text: `${fixed(lang === 'en' ? height : Number(height.toFixed(1)), 1, lang)} ft · ${Math.round(period)} s${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}`,
+  const shown = u.height === 'm' ? height * M_PER_FT : height;
+  return {text: `${fixed(lang === 'en' ? shown : Number(shown.toFixed(1)), 1, lang)} ${u.height} · ${Math.round(period)} s${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}`,
     sampled: {windKn: null, gustKn: null, seasFt: height, periodS: period}};
 }
 
@@ -219,7 +223,7 @@ function modelValue(label: 'Wind' | 'Seas', series: unknown, sec: number, end: n
  * latitude and longitude (the dominant cell) are never read: the value is the point's, not that cell's.
  */
 function modelRow(label: 'Wind' | 'Seas', id: string, f: Feed, points: readonly {id: string; lat: number; lon: number}[], index: number,
-  at: number, now: number, tz: string, lang: Language): MarkReading {
+  at: number, now: number, tz: string, lang: Language, u: Units): MarkReading {
   const name = MODEL_NAMES[id] ?? id, grid = gridText(MODEL_GRIDS[id] ?? 'unstated', lang), point = points[index]!.id;
   const m = f.models?.[id], data = Array.isArray(m?.data) && m.data.length === points.length ? m.data as unknown[] : null;
   if (!data) return gapRow(label, name, grid, t('markForecast.gap.noModel', lang, {model: name}), {point, gapKind: 'other'});
@@ -232,7 +236,7 @@ function modelRow(label: 'Wind' | 'Seas', id: string, f: Feed, points: readonly 
     const reason = gateReason(listed, issued, retrieved, at, now);
     return gapRow(label, name, grid, gateText(reason, name, issued, tz, lang), {point, issuedAt: issued, gapKind: reason === 'outside' ? 'outside-hours' : reason === 'noHour' ? 'no-hour' : 'other'});
   }
-  const value = modelValue(label, data[index], hr / 1000, end, lang);
+  const value = modelValue(label, data[index], hr / 1000, end, lang, u);
   if (value === null) return gapRow(label, name, grid, t(label === 'Wind' ? 'markForecast.gap.noWind' : 'markForecast.gap.noSeas', lang, {model: name, hour: hourText(hr, tz, lang)}), {point, issuedAt: issued, gapKind: 'other'});
   return {label, model: name, grid, value: value.text, gap: '', point, cell: null, validAt: hr, issuedAt: issued, sampled: value.sampled};
 }
@@ -286,7 +290,7 @@ function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: num
  * The forecast for a mark at `mark` and the dock's hour `at` (epoch ms), from the regional forecast `f` as the
  * brief loaded it; null without that region's feed or its regional point.
  */
-export function markForecast(f: ConditionsForecast | null, region: string, mark: LatLon, at: number, now: number, tz: string, lang: Language = 'en'): MarkForecast | null {
+export function markForecast(f: ConditionsForecast | null, region: string, mark: LatLon, at: number, now: number, tz: string, lang: Language = 'en', u: Units = units.value): MarkForecast | null {
   const feed = f?.region === region ? f.feed as Feed | undefined : undefined;
   const points = feed && feed.region_id === region ? feedPoints(feed) : null;
   if (!f || !feed || !points) return null;
@@ -294,7 +298,7 @@ export function markForecast(f: ConditionsForecast | null, region: string, mark:
   if (regional < 0) return null;
   const families = (Object.keys(FAMILIES) as Family[]).map(family => ({
     family, label: FAMILIES[family].label,
-    rows: [modelRow('Wind', FAMILIES[family].wind, feed, points, regional, at, now, tz, lang), modelRow('Seas', FAMILIES[family].wave, feed, points, regional, at, now, tz, lang)],
+    rows: [modelRow('Wind', FAMILIES[family].wind, feed, points, regional, at, now, tz, lang, u), modelRow('Seas', FAMILIES[family].wave, feed, points, regional, at, now, tz, lang, u)],
   }));
   return {kind: 'points', at, point: f.point.id, families, current: currentRow(feed, points, mark, regional, at, now, tz, lang)};
 }
