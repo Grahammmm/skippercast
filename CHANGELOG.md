@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SC2022-02: the brief's fleet and local-report lines read Spanish when the page does; port names stay as published and English is unchanged.
 - SC2022-08: the harbor entrance block shows the bar swell in the height unit you chose (metres or feet). The bar judgement and the WCOFS current speed (knots) are unchanged.
 - SC2052-02: on phones the Boat / Shore / Spear / Kayak chips fit their icons and labels in English and Spanish, in portrait and landscape; "Pesca submarina" wraps instead of running over its neighbour.
 - SCB-06: the coastal report and nearshore swell tile name Scripps/CDIP. After the operator switches the three report feeds on, the report uses SkipperCast's own fresh data and keeps Fish as the fallback for missing or stale feeds.

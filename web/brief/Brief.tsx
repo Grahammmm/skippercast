@@ -35,7 +35,7 @@ import {regionInfo, type RegionInfo} from '../app/region-info.ts';
 import {RuleReason} from '../app/RuleReason.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {Button} from '../ui/Button.tsx';
-import {buildCoastBrief, buildRegionalBrief} from './model.ts';
+import {buildCoastBrief, buildRegionalBrief, FLEET_WINDOW_DAYS} from './model.ts';
 import {Tiles} from './Tiles.tsx';
 import {sourceGapText} from './tile-copy.ts';
 import {TideStationControl} from './TideStationControl.tsx';
@@ -965,8 +965,8 @@ export function BriefLinks({brief}: {brief: BriefModel | null}) {
       {brief.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">{t('brief.notice', lang, {name: brief.notice.name})}</a></li> : null}
       {fleet ? <li>{'notAvailable' in fleet ? (fleet.lastSourceDay
         ? t('reports.evidence.not_available_since', lang, {date: reportDay(fleet.lastSourceDay, lang)})
-        : t('reports.evidence.not_available', lang)) : <a href={fleet.href}>{fleet.text}</a>}</li> : null}
-      <li class="app-local" data-available={String(brief.localReport.available)}>{brief.localReport.text}</li>
+        : t('reports.evidence.not_available', lang)) : <a href={fleet.href}>{lang === 'en' ? fleet.text : t(fleet.count === 1 ? 'brief.fleet.one' : 'brief.fleet.other', lang, {n: fleet.count, port: fleet.port, days: FLEET_WINDOW_DAYS})}</a>}</li> : null}
+      <li class="app-local" data-available={String(brief.localReport.available)}>{lang === 'en' ? brief.localReport.text : t(brief.localReport.available ? 'brief.local.available' : 'brief.local.unavailable', lang)}</li>
     </ul>
   );
 }
