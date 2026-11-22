@@ -319,6 +319,8 @@ const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublica
   'parseStoredSpear', 'loadSpear', 'saveSpear', 'shoreSwimLimit', 'parseStoredLaunch', 'loadLaunch', 'saveLaunch', 'isReachProfile', 'routeAfterPaint', 'choosePick',
   // Only aggregates confidence percentages; it neither names nor returns a place.
   'sharedConfidence', 'pickRun', 'routeWhyText',
+  // SC2052-09: reorders the ids it is handed by straight-line distance; names, screens and returns no place of its own.
+  'shorterRunOrder',
   // Only words a verdict it is handed (a refused placement's status, a leg's line); it screens nothing and names no place of its own.
   'verdictLine', 'verdictParts', 'diveText', 'WhereToLook']);
 test('every exported function of the owned modules either carries a screen verdict or is listed as naming no place', () => {
