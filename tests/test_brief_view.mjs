@@ -30,6 +30,7 @@ async function load() {
       export {Brief} from './web/app/Desktop.tsx';
       export {regionInfo} from './web/app/App.tsx';
       export {hour} from './web/state.ts';
+      export {language, prepareCatalogue} from './web/i18n.ts';
       export {createCoastData} from './web/coast-data.ts';
       export {regionPlace} from './web/map/currents.ts';
       import {render} from 'preact-render-to-string';
@@ -386,4 +387,26 @@ test('P5 gaps: source gaps stay visible; what the model could not check folds in
   assert.match(html, /<li data-status="failed">NOAA tides: latest check failed; no earlier reading on hand\.<\/li>/);
   assert.match(html, /<details class="app-gaps-more"><summary>Not checked in this brief \(2\)<\/summary>/);
   assert.equal(render(h(BriefGaps, {brief: {gaps: [], missing: []}})), '', 'nothing missing renders nothing');
+});
+
+// SC2022-02: the fleet and local-report lines follow the page language; the model's English text and the English markup stay.
+test('fleet_and_local_copy: Spanish templates from count, port and window; English unchanged', async () => {
+  const {BriefLinks, render, h, language, prepareCatalogue} = await load();
+  const fleet = (count, port) => ({count, port, text: `${count} boat${count === 1 ? '' : 's'} reported from ${port} in the last 7 days`, href: '/report'});
+  const local = available => ({available, text: available ? 'Local coast report for this area.' : 'Local coast report unavailable here; this brief uses SkipperCast regional feeds.'});
+  const view = (f, available = true) => render(h(BriefLinks, {brief: {notice: null, fleet: f, localReport: local(available)}}));
+  const en = view(fleet(3, 'Morro Bay & Avila Beach'), false);
+  assert.equal(en, '<ul class="app-brief-links"><li><a href="/report">3 boats reported from Morro Bay &amp; Avila Beach in the last 7 days</a></li>'
+    + '<li class="app-local" data-available="false">Local coast report unavailable here; this brief uses SkipperCast regional feeds.</li></ul>', 'English keeps the model text');
+  try {
+    await prepareCatalogue('es');
+    language.value = 'es';
+    assert.ok(view(fleet(1, 'Morro Bay')).includes('<a href="/report">1 barco informó desde Morro Bay en los últimos 7 días</a>'));
+    assert.ok(view(fleet(3, 'Morro Bay')).includes('3 barcos informaron desde Morro Bay en los últimos 7 días'));
+    assert.ok(view(fleet(2, 'Morro Bay & Avila Beach')).includes('2 barcos informaron desde Morro Bay &amp; Avila Beach en los últimos 7 días'), 'ports stay as published');
+    assert.ok(view(null, true).includes('data-available="true">Informe costero local para esta zona.</li>'));
+    assert.ok(view(null, false).includes('data-available="false">El informe costero local no está disponible aquí; este resumen usa las fuentes regionales de SkipperCast.</li>'));
+    assert.ok(!view(fleet(3, 'Morro Bay'), false).includes('reported from'), 'no raw English field reaches the Spanish DOM');
+  } finally { language.value = 'en'; }
+  assert.equal(view(fleet(3, 'Morro Bay & Avila Beach'), false), en);
 });
