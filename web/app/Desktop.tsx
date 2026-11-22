@@ -19,7 +19,7 @@
 // Mobile.tsx (FE-06) composes the same pieces into
 // the sheet in its own order. The Reports view (FE-52) covers the brief and
 // the map; the stage stays mounted beneath it.
-import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief} from '../brief/Brief.tsx';
+import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief, leadDayText, shownRegion} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
@@ -37,10 +37,19 @@ import {PlanView} from './PlanView.tsx';
 import {appView} from '../state.ts';
 import {useHourNow, type HourClock} from '../clock.ts';
 import {BRIEF_ID} from './SkipLinks.tsx';
-import {language, t} from '../i18n.ts';
+import {language, t, type Language} from '../i18n.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 
 export {emptyTiles} from '../brief/Tiles.tsx';
 export {DISCLAIMER} from '../brief/Brief.tsx';
+
+/** The evidence heading: English keeps the model's own label; Spanish names the brief's date in the page's words (hoy, mañana, else the date), capitalised. */
+export function briefHeading(brief: {label: string; date: string} | null, now: Date, lang: Language): string {
+  if (!brief) return t('shell.todayBrief', lang);
+  if (lang === 'en') return brief.label;
+  const day = leadDayText(brief.date, now, shownRegion()?.timezone ?? DEFAULT_ZONE, lang);
+  return day.charAt(0).toUpperCase() + day.slice(1);
+}
 
 export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Date} = {}) {
   const brief = currentBrief(now);
@@ -48,7 +57,7 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
     <aside class="app-brief" id={BRIEF_ID} tabIndex={-1} aria-label={t('shell.brief', language.value)} data-basis={brief?.basis}>
       {/* SC-LAUNCH-3: the lead names its own day (tomorrow until a time is chosen); the eyebrow heads the evidence for the dock's day. */}
       <Guard name="verdict"><Verdict now={now} /></Guard>
-      <span class="ui-eyebrow">{brief ? brief.label : t('shell.todayBrief', language.value)}</span>
+      <span class="ui-eyebrow">{briefHeading(brief, now, language.value)}</span>
       <Guard name="tiles"><BriefTiles brief={brief} dense /></Guard>
       <Guard name="details"><Details brief={brief} /></Guard>
       <Guard name="tide"><TideSpark brief={brief} now={now} /></Guard>
