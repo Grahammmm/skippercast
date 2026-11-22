@@ -1,5 +1,5 @@
 """R5b: trace the eligible selection into a disjoint, unpublished ft-v2 pair."""
-from collections import defaultdict
+from collections import Counter, defaultdict
 import contextlib
 from importlib.util import module_from_spec, spec_from_file_location
 import json
@@ -414,6 +414,144 @@ def trace_v3(job, view):
     return tool.v3_collection(region, view, features, list(listed.values()), omitted)
 
 
+def _json_bytes(value):
+    # Same compact UTF-8 encoding as atomic_json, excluding the final LF.
+    return len(json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(',', ':')).encode())
+
+
+def _line_group(feature):
+    p = feature['properties']
+    # Keep distinct zoom ranges even if contributors to one tier turn off at
+    # different zooms (e.g. only some have an eligible finer tier).
+    return p['source_id'], p['tier'], p['depth_ft'], p['minzoom'], p.get('maxzoom')
+
+
+def _line_counts(document):
+    counts = Counter()
+    for feature in document['features']:
+        if feature['properties'].get('kind') == 'contour':
+            geometry = feature['geometry']
+            counts[_line_group(feature)] += (1 if geometry['type'] == 'LineString'
+                                             else len(geometry['coordinates']))
+    return counts
+
+
+def _with_features(document, features):
+    return {**document, 'features': features, 'provenance': {**document['provenance'], 'features': len(features)}}
+
+
+def _budget_error(filename, size, budget):
+    return receipts.ReceiptError(f'{filename} exceeds its byte budget ({size} bytes, budget {budget} bytes)')
+
+
+_PAIR_NAMES = ('contours.geojson', 'contours-overview.geojson')
+
+
+def _compact_morro(full, overview, budgets, sizes, view):
+    """Reserve one original part per uncovered group before preferring wider parts."""
+    # The ft-v3 projection keeps the original feature objects, unmodified.
+    visible = {id(feature) for feature in overview['features']}
+    pier = view['pier_view']['contours_tier']
+    protected, candidates = {}, defaultdict(list)
+    covered = set()
+    overflow = next(_budget_error(name, size, cap) for name, size, cap in zip(_PAIR_NAMES, sizes, budgets)
+                    if size > cap)
+    for i, feature in enumerate(full['features']):
+        p, geometry = feature['properties'], feature['geometry']
+        if p.get('kind') != 'contour' or geometry['type'] not in ('LineString', 'MultiLineString'):
+            raise receipts.ReceiptError(f'{overflow}; cannot compact protected feature {feature.get("id")}')
+        group = _line_group(feature)
+        if (p.get('estimated') is not True or p['tier'] == pier or 'provenance' in p
+                or geometry['type'] != 'MultiLineString'):
+            protected[i] = feature
+            covered.add(group)
+            continue
+        overhead = _json_bytes({**feature, 'geometry': {**geometry, 'coordinates': []}})
+        for j, line in enumerate(geometry['coordinates']):
+            xs, ys = zip(*line)
+            span = max(max(xs) - min(xs), max(ys) - min(ys))
+            candidates[group].append((-span, feature['id'], j, i, overhead + _json_bytes(line)))
+
+    # Low-zoom groups first. Keep original feature order in the serialized pair.
+    ranked = sorted((sorted(parts) for group, parts in candidates.items() if group not in covered),
+                    key=lambda parts: (id(full['features'][parts[0][3]]) not in visible, parts[0][:4]))
+    if not ranked and not protected:
+        raise receipts.ReceiptError(f'{overflow}; no original contour lines to retain')
+
+    # Start from exact protected output sizes; each new feature adds its encoded
+    # bytes, the array comma (unless first), and any growth in the count field.
+    floor_full = _with_features(full, list(protected.values()))
+    floor_pair = (floor_full, dc.overview_contours(floor_full))
+    used = [_json_bytes(document) + 1 for document in floor_pair]
+    counts = [len(document['features']) for document in floor_pair]
+
+    def check(index, group):
+        if used[index] > budgets[index]:
+            raise receipts.ReceiptError(f'{_budget_error(_PAIR_NAMES[index], used[index], budgets[index])}; '
+                                        f'cannot retain group {group}')
+
+    for k, document in enumerate(floor_pair):
+        if used[k] > budgets[k]:
+            groups = list(dict.fromkeys(_line_group(f) for f in document['features']))
+            check(k, f'protected {groups}')
+
+    choices = []
+    for parts in ranked:
+        least = min(parts, key=lambda part: part[-1])
+        _, _, _, i, cost = least
+        indices = (1, 0) if id(full['features'][i]) in visible else (0,)
+        for k in indices:
+            n = counts[k]
+            used[k] += cost + int(n > 0) + len(str(n + 1)) - len(str(n))
+            counts[k] += 1
+            check(k, _line_group(full['features'][i]))
+        choices.append((parts, least, indices))
+
+    # Share the remaining bytes among the groups, without spending a later
+    # group's reserved minimum. Stable span/ID/part order breaks ties.
+    remaining = [cap - size for cap, size in zip(budgets, used)]
+    pending = [len(choices), sum(1 in indices for _, _, indices in choices)]
+    for parts, least, indices in choices:
+        ceiling = least[-1] + min(remaining[k] // pending[k] for k in indices)
+        _, _, j, i, cost = next(part for part in parts if part[-1] <= ceiling)
+        for k in indices:
+            remaining[k] -= cost - least[-1]
+            pending[k] -= 1
+        feature = full['features'][i]
+        geometry = feature['geometry']
+        protected[i] = {**feature, 'geometry': {**geometry, 'coordinates': [geometry['coordinates'][j]]}}
+    return _with_features(full, [protected[i] for i in sorted(protected)])
+
+
+def _retention_metrics(before, after):
+    original, retained = _line_counts(before), _line_counts(after)
+    fields = ('source_id', 'tier', 'depth_ft', 'minzoom', 'maxzoom')
+    return {'original_lines': sum(original.values()), 'retained_lines': sum(retained.values()),
+            'original_groups': len({key[:3] for key in original}),
+            'retained_groups': len({key[:3] for key in retained}),
+            'dropped_lines_by_group': [dict(zip(fields, key), dropped=count - retained[key])
+                                       for key, count in original.items() if count != retained[key]]}
+
+
+def _selected_pair(collection, region, view):
+    """The serializer boundary shared by the stage and the read-only replay."""
+    overview = dc.overview_contours(collection)
+    budgets = dc.size_budgets(collection)
+    metrics = {}
+    if (view is not None and region.get('id') == 'morro-bay'
+            and collection['provenance'].get('set') == dc.FT_V3):
+        original = (collection, overview)
+        sizes = tuple(_json_bytes(document) + 1 for document in original)
+        compacted = any(size > cap for size, cap in zip(sizes, budgets))
+        if compacted:
+            collection = _compact_morro(collection, overview, budgets, sizes, view)
+            overview = dc.overview_contours(collection)
+        metrics['compacted'] = compacted
+        for name, before, after in zip(('full', 'overview'), original, (collection, overview)):
+            metrics[name] = _retention_metrics(before, after)
+    return collection, overview, budgets, metrics
+
+
 def build(ctx, out):
     _, region, sources, entries, *_ = ctx.contour_job
     if not entries:
@@ -426,13 +564,12 @@ def build(ctx, out):
             metrics = {'style': ctx.contour_style}
     except SystemExit as exc:
         raise receipts.ReceiptError(str(exc)) from None
-    overview = dc.overview_contours(collection)
-    full_budget, overview_budget = dc.size_budgets(collection)
+    collection, overview, budgets, size_metrics = _selected_pair(collection, region, ctx.contour_view)
+    metrics.update(size_metrics)
     selected = {row['source_id'] for row, *_ in entries}
-    for filename, value, budget in (('contours.geojson', collection, full_budget),
-                                    ('contours-overview.geojson', overview, overview_budget)):
+    for filename, value, budget in zip(_PAIR_NAMES, (collection, overview), budgets):
         dc.check_selected_contours(value, region, sources, selected, view=ctx.contour_view)
         size = atomic_json(out / filename, value)['bytes']
         if size > budget:
-            raise receipts.ReceiptError(f'{filename} exceeds its byte budget ({size} bytes, budget {budget} bytes)')
+            raise _budget_error(filename, size, budget)
     return metrics
