@@ -8,16 +8,18 @@ import type {Port} from '../ports.ts';
 
 /** The hosts the static page marks: `data-i18n` (the element's text), `data-i18n-lead` (only its first text node: the planning line keeps its Terms link) and `data-i18n-aria` (its aria-label). */
 type Host = {getAttribute(name: string): string | null; setAttribute(name: string, value: string): void; textContent: string | null; firstChild?: {nodeType: number; nodeValue: string | null} | null};
-type Page = {querySelectorAll(selector: string): ArrayLike<Host>};
+type Page = {title: string; querySelectorAll(selector: string): ArrayLike<Host>};
 
 const TEXT_NODE = 3;
 
 /**
  * Put the page's static hosts into `lang`. Only text and aria-label of the marked hosts are written (never markup, links,
- * metadata or structured data); an unknown id leaves the host as it is. English writes nothing.
+ * metadata or structured data); an unknown id leaves the host as it is. English writes nothing. SC2052-05: the tab title is
+ * the one document-level write, Spanish only (the meta description and social tags stay the static English).
  */
 export function applyLandingCopy(doc: Page, lang: Language): void {
   if (lang === 'en') return;
+  doc.title = t('landing.title', lang);
   const safe = (id: string | null): string | null => id && Object.hasOwn(STRINGS, id) ? t(id as StringId, lang) : null;
   for (const host of Array.from(doc.querySelectorAll('[data-i18n]'))) {
     const next = safe(host.getAttribute('data-i18n'));
