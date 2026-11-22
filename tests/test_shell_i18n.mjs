@@ -9,7 +9,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins, rendererPlugin} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const ORIGIN = 'https://s.test/map';
@@ -24,6 +24,7 @@ async function load() {
     export {Masthead, ViewNav, Location, FreshnessDot, ChatEntry, VIEW_LABELS, viewLabel, TAB_VIEWS, MASTHEAD_VIEWS} from './web/app/Masthead.tsx';
     export {CommandBar, PortControl, ShareControl, ProfileSwitch, shellTargetText, shellGroupLabel} from './web/app/CommandBar.tsx';
     export {AccountMenu} from './web/app/AccountMenu.tsx';
+    export {bindShellTitle} from './web/app/LanguageChoice.tsx';
     export {briefHeading} from './web/app/Desktop.tsx';
     export {Mobile, LayersPanel, ReportsLink} from './web/app/Mobile.tsx';
     export {regionInfo, regionLoad, freshness} from './web/app/App.tsx';
@@ -208,6 +209,78 @@ test('shell_language_switch: en -> es -> en restores the exact English markup, t
   const shape = html => html.replace(/<span lang="en">([^<]*)<\/span>/g, '$1').replace(/>[^<]*</g, '><').replace(/\s(?:aria-label|aria-valuetext|placeholder|title|label|aria-pressed|data-on)="[^"]*"/g, '').replace(/id="[^"]*"|aria-labelledby="[^"]*"|aria-controls="[^"]*"/g, '');
   assert.equal(shape(first), shape(es), 'switching language changes words only: same elements, order and attributes');
   m.setLanguage('en', {storage: none, doc: null});
+});
+
+// SC2052-05. Contract: the map's tab title follows the effective page language (not the menu being open); English is the static
+// dist/app.html literal and is never rewritten, a pending, superseded or failed Spanish load keeps English, and the static head is unchanged.
+// Bugs caught: the title staying English after a Spanish switch, Spanish surviving a switch back, a Spanish title written before the table is
+// ready, and the bootstrap binding before readiness or only when the menu mounts.
+const EN_TITLE = 'SkipperCast · Map', ES_TITLE = 'SkipperCast · Mapa';
+const titleSink = () => { const writes = []; let title = EN_TITLE; return {writes, get title() { return title; }, set title(v) { writes.push(v); title = v; }}; };
+/** A fresh bundle (own language signal, own cold table) whose Spanish table transport is the test's own: `gate()` settles when the table "arrives". */
+async function cold(gate) {
+  globalThis.__esGate = gate;
+  const transport = {name: 'es-transport', setup: b => b.onLoad({filter: /strings\.es\.generated\.json$/}, async args => ({contents: `await globalThis.__esGate();\nexport default ${await readFile(args.path, 'utf8')};`, loader: 'js'}))};
+  const out = join(await mkdtemp(join(tmpdir(), 'shell-title-')), 'cold.mjs');
+  await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
+    export {bindShellTitle} from './web/app/LanguageChoice.tsx';
+    export {initReadyLanguage, chooseReadyLanguage, language} from './web/i18n.ts';`},
+  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin, transport]});
+  return import(pathToFileURL(out).href);
+}
+const env = (search = '') => ({search, languages: [], doc: null, storage: {getItem: () => null, setItem() {}}});
+
+test('shell_tab_title: English is the static literal, Spanish and back follow the language signal, dispose stops it, the static head is unchanged', async () => {
+  const m = await load();
+  const html = await readFile(join(ROOT, 'dist/app.html'), 'utf8');
+  assert.ok(html.includes(`<title>${EN_TITLE}</title>`) && (html.match(/<title>/g) || []).length === 1, 'the served English title is the literal, byte for byte');
+  assert.ok(html.includes(`<meta property="og:title" content="${EN_TITLE}" />`), 'the social tag keeps the English title');
+  assert.ok(!html.includes(ES_TITLE) && /<meta name="description" content="Wind, swell, tide and water temperature for the Central California coast/.test(html), 'no Spanish in the static head');
+  const sink = titleSink();
+  const stop = m.bindShellTitle(sink);
+  try {
+    assert.ok(util.isDeepStrictEqual(sink.writes, []), 'English at start: the static title is not rewritten');
+    m.setLanguage('es', {storage: none, doc: null});
+    assert.ok(util.isDeepStrictEqual(sink.writes, [ES_TITLE]) && sink.title === ES_TITLE, 'Spanish: the catalogue title, with the menu never mounted');
+    m.setLanguage('en', {storage: none, doc: null});
+    assert.equal(sink.title, EN_TITLE, 'back to English restores the exact literal');
+    stop();
+    m.setLanguage('es', {storage: none, doc: null});
+    assert.equal(sink.title, EN_TITLE, 'a disposed binding leaves the title alone');
+  } finally { stop(); m.setLanguage('en', {storage: none, doc: null}); }
+  // main.tsx: bound once, after the readiness gate, from the bootstrap and not from a component that mounts with the menu.
+  const main = await readFile(join(ROOT, 'web/app/main.tsx'), 'utf8'), start = main.indexOf('async function start()');
+  assert.ok(start > 0 && main.indexOf('await ready', start) > 0 && main.indexOf('bindShellTitle(document)', start) > main.indexOf('await ready', start), 'bound after readiness, inside start()');
+  assert.equal((main.match(/bindShellTitle\(/g) || []).length, 1);
+  assert.ok(!/bindShellTitle\(/.test((await readFile(join(ROOT, 'web/app/LanguageChoice.tsx'), 'utf8')).replace(/export function bindShellTitle\(/, '')), 'the menu component does not bind it');
+});
+
+test('shell_tab_title_failed_pending_superseded: English stays until the Spanish table is ready; a failed or superseded load never writes Spanish', async () => {
+  // failed initial Spanish: the page resolves English, the title is untouched.
+  let m = await cold(() => Promise.reject(new Error('table transport down')));
+  let sink = titleSink();
+  m.bindShellTitle(sink);
+  assert.equal(await m.initReadyLanguage(env('?lang=es')), 'en');
+  assert.ok(util.isDeepStrictEqual([sink.writes, m.language.value], [[], 'en']), 'a failed Spanish load keeps the English title');
+  // delayed Spanish: English while pending, Spanish once the table arrives (no menu, no reload).
+  let release; const gate = new Promise(resolve => { release = resolve; });
+  m = await cold(() => gate);
+  sink = titleSink();
+  m.bindShellTitle(sink);
+  const pending = m.chooseReadyLanguage('es', env());
+  await Promise.resolve();
+  assert.ok(util.isDeepStrictEqual(sink.writes, []), 'pending Spanish: English title');
+  release(); await pending;
+  assert.ok(util.isDeepStrictEqual(sink.writes, [ES_TITLE]) && m.language.value === 'es', 'ready Spanish: the Spanish title');
+  // superseded Spanish: a later English choice wins over the slow table.
+  let free; const slow = new Promise(resolve => { free = resolve; });
+  m = await cold(() => slow);
+  sink = titleSink();
+  m.bindShellTitle(sink);
+  const first = m.chooseReadyLanguage('es', env());
+  await m.chooseReadyLanguage('en', env());
+  free(); await first;
+  assert.ok(util.isDeepStrictEqual([sink.writes, m.language.value], [[], 'en']), 'a superseded Spanish load never changes the title');
 });
 
 test('compact_account_css_is_masthead_band_only: the narrow-desktop rule is media-bounded, masthead-direct-child scoped, non-inline and keeps the label in the DOM', async () => {

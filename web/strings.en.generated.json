@@ -807,6 +807,8 @@
 "landing.hero.title":{"en":"Know the water before you leave the dock."},
 "landing.hero.lede":{"en":"Wind, swell, water temperature and tide from fixed Central Coast buoys and a tide gauge, each with its station and age, beside the seafloor and currents on one map."},
 "landing.aria.public":{"en":"Public information"},
+"landing.title":{"en":"SkipperCast · Central Coast fishing weather, tides and seafloor map"},
+"shell.title":{"en":"SkipperCast · Map"},
 "landing.aria.site":{"en":"Site"},
 "landing.link.about":{"en":"About"},
 "landing.link.report":{"en":"Readable report"},
