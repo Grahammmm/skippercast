@@ -7,7 +7,7 @@ import pytest
 
 from scripts.relief import rebuild_plan
 from tests._support import ROOT
-from tests.unit.test_rebuild_plan_cli import record
+from tests.unit.test_rebuild_plan_cli import KEYS, record
 
 
 EAST, WEST = 'east-test', 'west-test'
@@ -34,13 +34,16 @@ def candidate(saved_plan):
     return plan, allow
 
 
-def invoke(tmp_path, plan, allow):
-    plan_path, allow_path = tmp_path / 'plan.json', tmp_path / 'allow.json'
+def invoke(tmp_path, plan, allow, expected_stages=None):
+    plan_path, allow_path, inventory_path = (tmp_path / name for name in ('plan.json', 'allow.json', 'inventory.json'))
     plan_path.write_text(json.dumps(plan), encoding='utf-8')
     allow_path.write_text(json.dumps(allow), encoding='utf-8')
+    if expected_stages is None:
+        expected_stages = {EAST: list(KEYS), WEST: list(KEYS)}
+    inventory_path.write_text(json.dumps(expected_stages), encoding='utf-8')
     return subprocess.run([
         sys.executable, '-B', str(ROOT / 'scripts/relief/rebuild_scope_check.py'),
-        '--plan', str(plan_path), '--allow', str(allow_path), EAST, WEST,
+        '--plan', str(plan_path), '--allow', str(allow_path), '--expected-stages', str(inventory_path), EAST, WEST,
     ], cwd=tmp_path, capture_output=True, text=True, timeout=10)
 
 
@@ -95,6 +98,39 @@ def test_missing_downstream_stage_fails_even_with_consistent_summary(tmp_path, c
     report = json.loads(result.stdout)
     assert report['missing_stages'] == {EAST: ['digests']}
     assert report['summary_matches'] is True
+
+
+@pytest.mark.parametrize('omitted', ['zone.private', 'legacy.private'])
+def test_missing_historical_or_upstream_rebuild_fails(tmp_path, omitted):
+    out = tmp_path / 'receipts'
+    out.mkdir()
+    current = rebuild_plan._stage_digests()
+    record(out, EAST, 'zone.private', '0' * 64)
+    record(out, EAST, 'digests', current['digests'], upstream=[('legacy', 'private')])
+    result = subprocess.run([
+        sys.executable, '-B', str(ROOT / 'scripts/relief/rebuild_plan.py'),
+        '--out', str(out), '--json', EAST, WEST,
+    ], cwd=out, capture_output=True, text=True, timeout=20, check=True)
+    plan = json.loads(result.stdout)
+    rows = plan['regions'][0]['stages']
+    assert {row['stage'] for row in rows if row['action'] == 'rebuild'} >= {'zone.private', 'legacy.private'}
+    allow = {block['region']: [row['stage'] for row in block['stages'] if row['action'] == 'rebuild']
+             for block in plan['regions']}
+    inventory = {EAST: [*KEYS, 'zone.private', 'legacy.private'], WEST: list(KEYS)}
+    assert invoke(tmp_path, plan, allow, inventory).returncode == 0
+    allow[EAST].remove(omitted)
+    rows[:] = [row for row in rows if row['stage'] != omitted]
+    result = invoke(tmp_path, plan, allow, inventory)
+    assert result.returncode == 1
+    assert json.loads(result.stdout)['missing_stages'] == {EAST: [omitted]}
+
+
+@pytest.mark.parametrize('inventory', [{EAST: list(KEYS)}, {EAST: [], WEST: list(KEYS)}])
+def test_incomplete_inventory_is_rejected(tmp_path, candidate, inventory):
+    plan, allow = candidate
+    result = invoke(tmp_path, plan, allow, inventory)
+    assert (result.returncode, result.stdout) == (2, '')
+    assert 'stage inventory' in result.stderr
 
 
 def test_inconsistent_summary_fails(tmp_path, candidate):

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Compare a saved rebuild_plan.py --json report with a synthetic review ceiling."""
+"""Compare a saved rebuild plan with a ceiling and an independent stage inventory.
+
+The inventory must come from the receipt/upstream inputs for the planning run,
+not the saved report: completeness cannot be inferred from that report alone.
+The result is only as complete as the supplied inventory.
+"""
 import argparse
 import json
 from pathlib import Path
@@ -35,11 +40,17 @@ def _allowed_pairs(ceiling):
     return pairs
 
 
-def _check(plan, ceiling, expected):
+def _check(plan, ceiling, expected, expected_stages):
     allowed = _allowed_pairs(ceiling)
+    inventory = _allowed_pairs(expected_stages)
     expected_set = set(expected)
+    if set(expected_stages) != expected_set:
+        raise ValueError('stage inventory regions must match expected region roster')
     if len(expected_set) != len(expected):
         raise ValueError('duplicate expected region')
+    for region in expected_set:
+        if not REQUIRED_STAGES <= {key for name, key in inventory if name == region}:
+            raise ValueError(f'{region}: stage inventory omits current runner keys')
     blocks = plan.get('regions') if isinstance(plan, dict) else None
     if not isinstance(blocks, list):
         raise ValueError('expected a rebuild plan object with a regions list')
@@ -56,7 +67,8 @@ def _check(plan, ceiling, expected):
         type(summary.get(key)) is int and summary[key] == count for key, count in counts.items())
     missing_stages = {}
     for region, rows in regions.items():
-        missing = REQUIRED_STAGES - {row['stage'] for row in rows}
+        required = REQUIRED_STAGES | {key for name, key in inventory if name == region}
+        missing = required - {row['stage'] for row in rows}
         if missing:
             missing_stages[region] = sorted(missing)
     outside = [{'region': region, **row} for region, row in rebuilds
@@ -81,13 +93,16 @@ def main(argv=None):
     parser.add_argument('--plan', required=True, type=Path, help='saved rebuild_plan.py --json output')
     parser.add_argument('--allow', required=True, type=Path,
                         help='ceiling JSON, e.g. {"sample-bay": ["tiles.public"]}; {} allows no rebuilds')
+    parser.add_argument('--expected-stages', required=True, type=Path,
+                        help='independent complete region-to-stage inventory, including historical and upstream keys; '
+                             'do not derive it from the saved plan being checked')
     parser.add_argument('regions', metavar='REGION', nargs='+',
                         help='independent roster of regions requested from the planner')
     args = parser.parse_args(argv)
     try:
-        plan, ceiling = (json.loads(path.read_text(encoding='utf-8'), object_pairs_hook=_unique_object)
-                         for path in (args.plan, args.allow))
-        report = _check(plan, ceiling, args.regions)
+        plan, ceiling, inventory = (json.loads(path.read_text(encoding='utf-8'), object_pairs_hook=_unique_object)
+                                    for path in (args.plan, args.allow, args.expected_stages))
+        report = _check(plan, ceiling, args.regions, inventory)
     except (OSError, ValueError, RecursionError) as exc:
         parser.error(str(exc))
     print(json.dumps(report, sort_keys=True))
