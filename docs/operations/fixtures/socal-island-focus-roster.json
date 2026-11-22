@@ -1,0 +1,15 @@
+{
+  "region_id": "southern-california",
+  "purpose": "Offline QA checklist only; pending is not evidence of review or release approval.",
+  "review_rule": "Closing a pending slot requires a screenshot of that exact focus ID. Mainland and umbrella views do not count. The parent habitat_policy keeps withheld slots closed to promotion.",
+  "focus_slots": {
+    "anacapa": "pending",
+    "santa-cruz": "pending",
+    "santa-rosa": "pending",
+    "san-miguel": "pending",
+    "santa-barbara-island": "pending",
+    "catalina": "pending",
+    "san-nicolas": "withheld",
+    "san-clemente": "withheld"
+  }
+}
