@@ -3,6 +3,7 @@
 ## Unreleased
 
 - SC2052-06: the Trip dialog's saved-pack forecast end and browser-storage answer read Spanish when the page does, with the day and hour in the region's time zone; English is unchanged.
+- SC2052-05: the landing and the map show a Spanish browser-tab title when the page is Spanish. The English titles, search description and link previews are unchanged.
 - SC2022-02: the brief's fleet and local-report lines read Spanish when the page does; port names stay as published and English is unchanged.
 - SC2022-08: the harbor entrance block shows the bar swell in the height unit you chose (metres or feet). The bar judgement and the WCOFS current speed (knots) are unchanged.
 - SC2052-02: on phones the Boat / Shore / Spear / Kayak chips fit their icons and labels in English and Spanish, in portrait and landscape; "Pesca submarina" wraps instead of running over its neighbour.
