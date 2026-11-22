@@ -104,8 +104,8 @@ class StaleAlertTests(unittest.TestCase):
                   {"feed": "region:monterey", "last_published": None, "reason": "HTTP 404"}]
         issues = []
         acts = alert.plan(events, issues, T0)
-        self.assertEqual([a[1] for a in acts], ["Published feed is stale: conditions", "Published feed is stale: region:monterey"])
-        self.assertIn("no readable publish time (HTTP 404)", acts[1][2])
+        self.assertEqual([a[1] for a in acts], ["Published feed is stale: conditions", "Feed freshness unknown: region:monterey"])
+        self.assertIn("Could not read the last publish time for region:monterey. Reason: HTTP 404", acts[1][2])
         closed = [{"number": 1, "title": "Published feed is stale: conditions", "createdAt": T0.isoformat(), "comments": []}]
         self.assertEqual(alert.plan([], closed, T0 + timedelta(hours=2))[0][:2], ("close", 1))
 
@@ -114,7 +114,7 @@ class StaleAlertTests(unittest.TestCase):
         report = Path(self.tmp.name) / "missing.json"  # the check crashed before writing its report
         acts = alert.plan(alert.load_events(report, "true"), legacy, T0)
         self.assertEqual([a[0] for a in acts], ["create", "close"])
-        self.assertIn("freshness-check", acts[0][1])
+        self.assertIn("Feed freshness check could not confirm results", acts[0][1])
         self.assertEqual(alert.load_events(report, "false"), [])
 
     def test_skipped_interval_then_repeat_posts_once(self):
@@ -148,7 +148,7 @@ class StaleAlertTests(unittest.TestCase):
         conditions, check = gh.issues
         self.assertEqual((conditions["title"], conditions["state"], conditions["comments"]),
                          ("Published feed is stale: conditions", "open", []))
-        self.assertEqual((check["title"], check["state"]), ("Published feed is stale: freshness-check", "open"))
+        self.assertEqual((check["title"], check["state"]), ("Feed freshness check could not confirm results", "open"))
         pass_(["--report", str(self.report(STALE_STAMP))], T0 + timedelta(hours=2))  # still stale: same incident
         self.assertEqual(len([c for c in gh.calls if c[:2] == ("issue", "create")]), 2)
         self.assertEqual((conditions["state"], conditions["comments"]), ("open", []))

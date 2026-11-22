@@ -1,10 +1,12 @@
 """Offline regional ocean masks using the reviewed north-B shoreline opening.
 
 Also the receipted region stage ``region.py water --region ID --out OUT
---shoreline-manifest FILE [--region-config FILE]``. It reads one admitted CUSP
+--shoreline-manifest FILE [--region-config FILE] [--us-boundary FILE]``. It reads one admitted CUSP
 custody manifest and only the tiles it lists as served (sha256-checked against
 their rows; it never fetches), decodes their shoreline accuracies with the
 merged importer, and writes ``water.geojson`` and its report ``water.json``.
+An owner-reviewed US-waters polygon can clip the ocean; any remainder is
+written as a no-survey feature in ``outside-us.geojson``.
 """
 
 from importlib.util import module_from_spec, spec_from_file_location
@@ -20,7 +22,7 @@ from shapely.geometry import GeometryCollection, LineString, MultiLineString, Mu
 
 from skippercast.paths import repo_root
 from skippercast.platform import shoreline
-from skippercast.relief import mosaic, receipts
+from skippercast.relief import border, mosaic, receipts
 
 _QUAD_SEGS = 8
 _FRAME_GRID = 100_000
@@ -34,7 +36,7 @@ _OUTPUT_GRID = 0.000001
 CLOSE_M = 18.0
 CONNECT_M = 250.0
 CUSP_SCRIPT = 'scripts/shoreline/import_cusp.py'
-CODE_FILES = (CUSP_SCRIPT, 'skippercast.platform.shoreline')
+CODE_FILES = (CUSP_SCRIPT, 'skippercast.platform.shoreline', 'skippercast.relief.border')
 
 
 def _project(geometry, transformer):
@@ -242,6 +244,7 @@ def add_arguments(parser):
     mosaic.add_region_config(parser)
     parser.add_argument('--shoreline-manifest', type=Path, required=True,
                         help='admitted CUSP custody manifest listing the held shoreline tiles')
+    parser.add_argument('--us-boundary', type=Path, help='owner-reviewed US-waters polygon GeoJSON')
 
 
 def plan(ctx):
@@ -263,6 +266,8 @@ def plan(ctx):
             # Unavailable rows have no bytes by design: they are not inputs.
             ctx.water_job = (receipts.sha256_bytes(data), doc, rows, served)
             inputs.extend(receipts.Input(path, 'shoreline-tile') for _, path, _ in served)
+    if ctx.args.us_boundary is not None:
+        inputs.append(receipts.Input(ctx.args.us_boundary, 'us-boundary'))
     return receipts.Plan(inputs, params)
 
 
@@ -305,7 +310,22 @@ def _manifest_accuracies(cusp, held, frame_max):
     return accuracies, support
 
 
+def _reviewed_boundary(ctx):
+    # Compare the exact bytes parsed by the loader with the runner's attempt pin.
+    pending = receipts.read_receipt(ctx.region.receipt_path('water', ctx.scope))
+    assert pending is not None  # The runner records the attempt before calling build.
+    expected = next(row['sha256'] for row in pending['inputs'] if row['role'] == 'us-boundary')
+    try:
+        boundary, observed = border.load_boundary(ctx.args.us_boundary)
+    except border.BorderError as exc:
+        raise receipts.Held(str(exc)) from None
+    if observed != expected:
+        raise receipts.Held(f'SHA-256 mismatch for US-waters boundary: expected {expected}, observed {observed}')
+    return boundary
+
+
 def build(ctx, out_dir):
+    boundary = _reviewed_boundary(ctx) if ctx.args.us_boundary is not None else None
     job, region_id = ctx.water_job, ctx.region.id
     if isinstance(job, Exception):
         raise ValueError(f'unreadable shoreline manifest: {type(job).__name__}: {job}')
@@ -369,7 +389,15 @@ def build(ctx, out_dir):
     except ValueError as exc:  # For example no west-connected ocean, or an east leak after the cuts.
         raise receipts.Held(str(exc)) from None
 
-    (out_dir / 'water.geojson').write_bytes(receipts.canonical(to_geojson(water, region_id)) + b'\n')
+    if boundary is not None:
+        # The shoreline report still scores the original coast, not the jurisdiction seam.
+        water, outside = border.clip_to_us(water, boundary)
+        no_survey = border.no_survey(outside)
+        if no_survey is not None:
+            (out_dir / 'outside-us.geojson').write_bytes(receipts.canonical(no_survey) + b'\n')
+
+    geojson = {'type': 'FeatureCollection', 'features': []} if water.is_empty else to_geojson(water, region_id)
+    (out_dir / 'water.geojson').write_bytes(receipts.canonical(geojson) + b'\n')
     (out_dir / 'water.json').write_bytes(receipts.canonical({
         'region': region_id, 'region_bounds_wgs84': bounds, 'frame_wgs84': list(frame),
         'close_m': close_m, 'connect_m': CONNECT_M, 'hor_acc_values_m': sorted(accuracies),

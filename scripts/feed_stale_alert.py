@@ -30,6 +30,8 @@ import sys
 
 LABEL = "feed-stale"
 TITLE = "Published feed is stale: "
+UNKNOWN_TITLE = "Feed freshness unknown: "
+CHECK_TITLE = "Feed freshness check could not confirm results"
 STILL_HOURS = 6
 RUNBOOK = "docs/operations/runbooks/feed-stale.md"
 CHECK_FEED = "freshness-check"  # sentinel feed: the check crashed or named no feed, so per-feed freshness is unknown
@@ -41,11 +43,13 @@ def parse(stamp):
 
 
 def describe(event):
-    """The alert text for one event: feed, last successful publish, how late."""
+    """Describe measured lateness or explain why freshness is unknown."""
     feed = event["feed"]
+    if feed == CHECK_FEED:
+        return "The check did not finish or reported a stale feed without naming it. Feed freshness is unknown."
     if event.get("last_published") is None:
-        reason = f" ({event['reason']})" if event.get("reason") else ""
-        return f"STALE {feed}: no readable publish time{reason}; cannot say when it last published."
+        reason = f" Reason: {event['reason']}" if event.get("reason") else ""
+        return f"Could not read the last publish time for {feed}.{reason}"
     return (f"STALE {feed}: last published {event['last_published']} ({event['age_hours']:.1f} h ago), "
             f"{event['late_hours']:.1f} h past its {event['limit_hours']:g} h limit.")
 
@@ -65,6 +69,16 @@ def last_still_hours(issue):
     return max(sent)
 
 
+def issue_feed(title):
+    """Read the stable feed identity from either title form; legacy titles have none."""
+    if title == CHECK_TITLE:
+        return CHECK_FEED
+    for prefix in (TITLE, UNKNOWN_TITLE):
+        if title.startswith(prefix):
+            return title[len(prefix):]
+    return None
+
+
 def plan(events, issues, now, still_hours=STILL_HOURS):
     """Decide the actions for one pass. events: stale_feeds list; issues: open feed-stale issues
     [{number, title, createdAt, comments: [{body}]}]. Returns [("create"|"comment"|"close", payload...)].
@@ -72,27 +86,32 @@ def plan(events, issues, now, still_hours=STILL_HOURS):
     When the only event is the CHECK_FEED sentinel the check did not say which feeds are fresh, so freshness is
     unknown: existing per-feed issues stay open (an unknown is not a recovery)."""
     unknown = any(e["feed"] == CHECK_FEED for e in events)
-    by_title = {i["title"]: i for i in issues}
+    identified = [(issue_feed(i["title"]), i) for i in issues]
+    by_feed = {feed: i for feed, i in identified if feed is not None}
     actions, wanted = [], set()
     for event in events:
-        title = TITLE + event["feed"]
-        wanted.add(title)
-        issue = by_title.get(title)
+        feed = event["feed"]
+        wanted.add(feed)
+        issue = by_feed.get(feed)
         if issue is None:
+            if feed == CHECK_FEED:
+                title = CHECK_TITLE
+            else:
+                title = (UNKNOWN_TITLE if event.get("last_published") is None else TITLE) + feed
             actions.append(("create", title, describe(event)))
             continue
         opened = (now - parse(issue["createdAt"])).total_seconds() / 3600
         due_hours = math.floor(opened / still_hours) * still_hours
         if due_hours > last_still_hours(issue):
             actions.append(("comment", issue["number"], still_line(event, due_hours)))
-    for issue in issues:
-        if issue["title"] in wanted:
+    for feed, issue in identified:
+        if feed in wanted:
             continue
-        if not issue["title"].startswith(TITLE):
+        if feed is None:
             actions.append(("close", issue["number"], "Replaced by one issue per stale feed (SC-LAUNCH-6)."))
         elif unknown:
             continue
-        elif issue["title"] == TITLE + CHECK_FEED:
+        elif feed == CHECK_FEED:
             actions.append(("close", issue["number"], "Recovered: the freshness check ran and named every stale feed."))
         else:
             hours = (now - parse(issue["createdAt"])).total_seconds() / 3600

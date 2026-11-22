@@ -167,8 +167,10 @@ def test_c2_refusals(tmp_path, capsys, before, after, error):
 
 
 def git(repo, *args):
+    # Fixture commits must not leave asynchronous maintenance racing the read-only snapshot.
     subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
-                    '-c', 'commit.gpgsign=false', *args], cwd=repo, check=True, capture_output=True,
+                    '-c', 'commit.gpgsign=false', '-c', 'maintenance.auto=false', '-c', 'gc.auto=0',
+                    *args], cwd=repo, check=True, capture_output=True,
                    env={**os.environ, 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': os.devnull,
                         'GIT_ALLOW_PROTOCOL': ''})
 
