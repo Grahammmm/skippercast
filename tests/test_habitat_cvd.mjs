@@ -502,7 +502,7 @@ test('today_except_classes: day and night basemap, every overlay and every legen
       mpa: digest(mpaLayers(p)), seafloor: digest(seafloorLayers(p)), coastPalette: digest(coastPalette(p)),
       // MSK-2 replaced the contour paint and its legend swatch with G's nearshore kit (tests/test_depth_contours.mjs owns
       // that contract), so the contour row is left out here; every other layer's legend row is still held to its pin.
-      legend: digest(['en', 'es'].map(lang => LAYERS.filter(e => e.id !== 'depth-contours').map(e => [e.id, layerCopy(e.id, lang).legend.map(r => [r.label, r.swatch ? p[r.swatch] : null])]))),
+      legend: digest(['en', 'es'].map(lang => LAYERS.filter(e => e.id !== 'depth-contours' && !e.kit).map(e => [e.id, layerCopy(e.id, lang).legend.map(r => [r.label, r.swatch ? p[r.swatch] : null])]))),
     };
     for (const [name, hash] of Object.entries(PRE_MGL15[theme])) assert.equal(got[name], hash, `${theme} ${name} moved`);
   }

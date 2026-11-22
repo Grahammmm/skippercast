@@ -356,7 +356,7 @@ test('RF2115-6 landing_layer_names_at_rest: no rule hides a layer name; the fixe
 
 test('layer dots link each rail entry into the app with that layer, keeping the ui switch', async () => {
   const {LayerDots, layerURL, DOT_CURRENT, DOT_LABELS, DEFAULT_CURRENT, RAIL_ENTRIES, render, h} = await load();
-  assert.deepEqual(DOT_LABELS, Object.fromEntries(RAIL_ENTRIES.map(e => [e.id, e.label])), 'the dots carry the rail labels');
+  assert.deepEqual(DOT_LABELS, Object.fromEntries(RAIL_ENTRIES.filter(e => RAIL_IDS.includes(e.id)).map(e => [e.id, e.label])), 'the dots carry the rail labels (not the no-data kit stubs)');
   const html = render(h(LayerDots, {href: 'https://s.test/?ui=v2&utm=x', region: 'morro-bay'}));
   assert.deepEqual([...html.matchAll(/data-layer="([a-z-]+)"/g)].map(m => m[1]), [...RAIL_IDS]);
   assert.match(html, /href="https:\/\/s\.test\/map\?region=morro-bay&amp;layers=seafloor&amp;ui=v2" data-layer="seafloor">.*?<span class="landing-dot-name">Seafloor<\/span>/s);
@@ -368,7 +368,7 @@ test('layer dots link each rail entry into the app with that layer, keeping the 
 
 test('landing_dots_es_and_en: the dots and their nav name follow the page language; links, order and preview ids stay the same', async () => {
   const {LayerDots, DOT_LABELS, dotLabels, railEntries, language, render, h} = await load();
-  for (const lang of ['en', 'es']) assert.ok(isDeepStrictEqual(dotLabels(lang), Object.fromEntries(railEntries(lang).map(e => [e.id, e.label]))), `${lang}: the dots carry the rail labels`);
+  for (const lang of ['en', 'es']) assert.ok(isDeepStrictEqual(dotLabels(lang), Object.fromEntries(railEntries(lang).filter(e => RAIL_IDS.includes(e.id)).map(e => [e.id, e.label]))), `${lang}: the dots carry the rail labels`);
   assert.ok(isDeepStrictEqual(DOT_LABELS, dotLabels('en')), 'the English compatibility map');
   const props = {href: 'https://s.test/?ui=v2&utm=x', region: 'morro-bay'}, links = s => [...s.matchAll(/<a href="([^"]+)" data-layer="([a-z-]+)">/g)].map(m => `${m[1]} ${m[2]}`);
   const names = s => [...s.matchAll(/<span class="landing-dot-name">([^<]+)<\/span>/g)].map(m => m[1]);

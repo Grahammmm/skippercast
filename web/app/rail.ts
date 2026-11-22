@@ -6,9 +6,9 @@
 import type {IconName} from '../ui/icons.tsx';
 import {t, type Language} from '../i18n.ts';
 import {RAIL_IDS, type RailId} from '../profile.ts';
-import {layerCopy} from '../map/layers.ts';
+import {LAYERS, layerCopy, type LayerControl} from '../map/layers.ts';
 
-export interface RailEntry {readonly id: RailId; readonly label: string; readonly icon: IconName; readonly basis: string}
+export interface RailEntry {readonly id: RailId | Exclude<LayerControl, 'always' | 'base'>; readonly label: string; readonly icon: IconName; readonly basis: string}
 
 /** The rail's entries in `lang`, in rail order (§ 9); the basis sentences name product, resolution and age rule. Swell + wind joins both registry bases. */
 export function railEntries(lang: Language = 'en'): readonly RailEntry[] {
@@ -24,6 +24,7 @@ export function railEntries(lang: Language = 'en'): readonly RailEntry[] {
     {id: 'stations', label: c('stations').label, icon: 'target', basis: c('stations').basis},
     {id: 'fleet', label: t('rail.fleet.label', lang), icon: 'fleet', basis: t('rail.fleet.basis', lang)},
     {id: 'clouds', label: c('clouds').label, icon: 'cloud', basis: c('clouds').basis},
+    ...LAYERS.flatMap(e => e.kit ? [{id: e.kit.id, icon: 'map' as const, ...c(e.id)}] : []),
   ];
 }
 
@@ -34,9 +35,9 @@ for (const id of RAIL_IDS) if (!RAIL_ENTRIES.some(e => e.id === id)) throw new E
 /** Whether rail entry `id` is on: Currents while a source is chosen (FE-15), any other entry while the rail list has it. */
 export const railOn = (id: string, on: readonly string[], source: string): boolean => id === 'currents' ? source !== 'off' : on.includes(id);
 
-/** The rail list with `id` switched `on` or off, in rail order. */
+/** Preserve switch-on order across storage, links, and unrelated toggles. */
 export function toggled(current: readonly string[], id: string, on: boolean): string[] {
   const set = new Set(current);
   if (on) set.add(id); else set.delete(id);
-  return RAIL_ENTRIES.map(e => e.id).filter(e => set.has(e));
+  return [...set].filter(selected => LAYERS.some(e => e.id === selected || e.control === selected));
 }

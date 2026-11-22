@@ -33,6 +33,8 @@ RENDERER_ONLY_KEYS = {
     '25-STACK-A': {'streamline_segments'},
     '26-NEAR-D': {'n_iso_labels'},
 }
+# MSKL-3: the only metric keys the stacking engine answers (--stacking-only).
+STACKING_KEYS = {'layers', 'base_desaturation', 'opacity'}
 
 
 def sha(path):
@@ -116,16 +118,21 @@ def hashes(path):
     return {p.relative_to(path).as_posix(): sha(p) for p in sorted(path.rglob('*')) if p.is_file()}
 
 
-def one_case(kit, path, target, options, env):
+def one_case(kit, path, target, options, env, case=None):
     from PIL import Image
 
-    case = path.stem
+    case = case or path.stem
     scoped, inputs, ours = (target / kind / case for kind in ('scoped', 'inputs', 'ours'))
     scope_golden(kit, case, scoped, options.only_keys)
     inputs.mkdir(parents=True)
     ours.mkdir(parents=True)
-    adapter(path)(kit.root, inputs)
     cmd = ['node', str(HERE / 'export_layer_case.mjs'), '--case', case, '--in', str(inputs), '--out', str(ours)]
+    if options.stacking_only:
+        # MSKL-3: the stacking engine reads no fixture; the case name is its whole input.
+        (inputs / 'case.json').write_bytes(json_bytes({'case': case}))
+        cmd.append('--stacking-only')
+    else:
+        adapter(path)(kit.root, inputs)
     if options.now:
         cmd += ['--now', options.now]
     if options.negative:
@@ -160,9 +167,11 @@ def main():
     parser.add_argument('--only-keys')
     parser.add_argument('--stacking-only', action='store_true')
     args = parser.parse_args()
-    if args.stacking_only:
-        parser.error('--stacking-only requires the MSKL-3 stacking engine')
+    if args.stacking_only and (not args.only_keys or args.now or args.negative):
+        parser.error('--stacking-only requires --only-keys and takes no --now or --negative')
     args.only_keys = set(args.only_keys.split(',')) if args.only_keys else set()
+    if args.stacking_only and not args.only_keys <= STACKING_KEYS:
+        parser.error('--stacking-only compares only ' + ','.join(sorted(STACKING_KEYS)))
     if args.now:
         clock = datetime.fromisoformat(args.now)
         if clock.utcoffset() != timedelta(0):
@@ -171,6 +180,9 @@ def main():
     if args.negative and (cases != ['01-sst-fill'] or args.only_keys or args.now):
         parser.error('--negative sst-ramp requires the unmodified 01-sst-fill clock and full comparison')
     adapters = {p.stem: p for p in (HERE / 'kit_cases').glob('*.py')}
+    if args.stacking_only:
+        # Every numbered kit layer/preset case; the engine needs no per-case adapter.
+        adapters = {c: None for c in cases if re.fullmatch(r'\d{2}-[A-Za-z0-9-]+', c)}
     if not set(cases) <= adapters.keys():
         parser.error('unknown cases: ' + ', '.join(set(cases) - adapters.keys()))
     if checked('git', 'status', '--porcelain=v1', '--untracked-files=all'):
@@ -196,6 +208,8 @@ def main():
     key_dir = out / key
     key_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     mode = {'now': args.now, 'negative': args.negative, 'only_keys': sorted(args.only_keys)}
+    if args.stacking_only:
+        mode['stacking_only'] = True
     variant = hashlib.sha256(json_bytes(mode)).hexdigest()[:12]
     report_dir = key_dir / 'variants' / variant if any(mode.values()) else key_dir
     env = {**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'}
@@ -213,7 +227,7 @@ def main():
                 if not any(line.startswith('SELFTEST OK') for line in output.splitlines()):
                     raise ValueError('kit oracle did not print SELFTEST OK')
                 oracle_log.write_text('SELFTEST OK\n')
-            results = {case: one_case(kit, adapters[case], target, args, env) for case in cases}
+            results = {case: one_case(kit, adapters[case], target, args, env, case) for case in cases}
             report_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
             (target / 'parity.json').write_bytes(json_bytes({
                 'key': key, 'identity': identity, 'mode': mode, 'cases': results,

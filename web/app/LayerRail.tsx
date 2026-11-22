@@ -38,7 +38,7 @@ import {chartFailed, ENC_MIN_ZOOM} from '../map/chart.ts';
 import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
-import {chartOnly, depthLinesOn, drawsIn, layerCopy, menuList, railNoteCopies, railNotes, spotsOn, withDepthLines, withSpots} from '../map/layers.ts';
+import {chartOnly, depthLinesOn, drawsIn, LAYERS, layerCopy, menuList, railNoteCopies, railNotes, spotsOn, withDepthLines, withSpots} from '../map/layers.ts';
 import {statusText} from '../map/status-copy.ts';
 import type {CoastHabitat} from '../../packages/coast/src/embed-types.ts';
 import {
@@ -335,6 +335,7 @@ export function LayerRail() {
         ...['swell', 'currents', 'water-temp', 'chlorophyll', 'stations'].map(entry),
         <li key="more" class="ui-rail-group"><h3 class="ui-eyebrow">{t('rail.moreConditions', lang)}</h3></li>,
         ...['sst-contrast', 'sst-fronts', 'clouds'].map(entry),
+        ...entries.filter(e => LAYERS.some(layer => layer.id === e.id && layer.kit)).map(e => entry(e.id)),
         <PreviewRailItems key="previews" disabledReason={failed ? failedReason : undefined} />,
       ]}
     </Rail>

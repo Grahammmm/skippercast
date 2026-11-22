@@ -22,7 +22,7 @@ import {DEPTH_BOTTOM, contoursOverlay} from '../web/map/depth-contours.ts';
 import {windOverlay} from '../web/map/wind.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {regionalContrast} from '../web/map/habitat-feed.ts';
-import {CONTRAST_SOURCE, LAYERS, layerEntry, railNotes} from '../web/map/layers.ts';
+import {CONTRAST_SOURCE, LAYERS, layerEntry, railNotes, zBefore} from '../web/map/layers.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {CONTOUR_LABELS, CONTOUR_LAYER, SST_LAYER, waterTempOverlay} from '../web/map/sst.ts';
@@ -258,7 +258,7 @@ test('off by default; on, it reads the feed once an hour and draws; off again or
   await until(() => contrastState.value.drawn);
   assert.equal(s.asked.length, 3, 'the manifest and its two tiles');
   assert.equal(railNotes.value['sst-contrast'], 'analysis Oct 15 · 24 h old');
-  assert.deepEqual(e.before, ['chlorophyll', SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
+  assert.deepEqual(e.before, zBefore(CONTRAST_LAYER), 'MSKL-3: the kit z_order anchors (colour-field slot, above Water temp)');
   assert.deepEqual(e.data.at(-1)[0], CONTRAST_SOURCE);
   assert.equal(e.data.at(-1)[1].features.length, 6);
   chartMark.value = c.reading({lon: lon(2), lat: lat(2)});
@@ -279,7 +279,7 @@ test('off by default; on, it reads the feed once an hour and draws; off again or
   assert.equal(railNotes.value['sst-contrast'], 'no fresh analysis · last Oct 15');
 });
 
-test('in the stack Temp contrast sits over Water temp and under chlorophyll, swell, wind and depth contours in every arrival order', async t => {
+test('in the stack Temp contrast sits over Water temp and under chlorophyll, swell, depth contours and wind in every arrival order', async t => {
   // Capture the real controller call: if it skips chlorophyll, contrast can land above it when drawn later.
   browser(`${PAGE}?region=${REGION}&layers=sst-contrast`);
   let contrast;
@@ -310,13 +310,13 @@ test('in the stack Temp contrast sits over Water temp and under chlorophyll, swe
   const wind = windOverlay(sentinel), windIds = wind.layers.map(l => l.id);
   const chlorophyll = {sources: {chlorophyll: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}}, layers: [{id: 'chlorophyll', type: 'fill', source: 'chlorophyll'}]};
   const draw = {
-    // The other overlays' production `before` lists (web/map/{sst,chlorophyll,swell,wind,depth-contours}.ts).
-    sst: eng => eng.setOverlay('water-temp', waterTempOverlay(sentinel), [CONTRAST_LAYER, 'chlorophyll', SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]),
+    // The other overlays' production `before` lists (web/map/{sst,chlorophyll,swell,wind,depth-contours}.ts all call layers.ts zBefore).
+    sst: eng => eng.setOverlay('water-temp', waterTempOverlay(sentinel), zBefore('water-temp')),
     contrast: eng => eng.setOverlay(...contrast),
-    chlorophyll: eng => eng.setOverlay('chlorophyll', chlorophyll, [SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]),
-    swell: eng => eng.setOverlay('swell', swellOverlay(sentinel), ['wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]),
-    wind: eng => eng.setOverlay('wind', wind, [DEPTH_BOTTOM, MPA_FILL]),
-    contours: eng => eng.setOverlay('depth-contours', contours, [PLACE_LABELS, MPA_FILL]),
+    chlorophyll: eng => eng.setOverlay('chlorophyll', chlorophyll, zBefore('chlorophyll')),
+    swell: eng => eng.setOverlay('swell', swellOverlay(sentinel), zBefore(SWELL_LAYER)),
+    wind: eng => eng.setOverlay('wind', wind, zBefore('wind-casing')),
+    contours: eng => eng.setOverlay('depth-contours', contours, zBefore(DEPTH_BOTTOM)),
   };
   const permutations = xs => xs.length < 2 ? [xs] : xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map(rest => [x, ...rest]));
   const orders = permutations(Object.keys(draw));
@@ -327,7 +327,8 @@ test('in the stack Temp contrast sits over Water temp and under chlorophyll, swe
     const map = maps.at(-1);
     map.fire('style.load');
     for (const which of order) draw[which](eng);
-    assert.deepEqual(map.layers, ['water', ...sst, CONTRAST_LAYER, 'chlorophyll', ...swell, ...windIds, ...contourIds, MPA_FILL, 'coastline'], order.join(' then '));
+    // MSKL-3: the wind arrows are the kit's arrow/barb slot (z8), above the depth contours (z4).
+    assert.deepEqual(map.layers, ['water', ...sst, CONTRAST_LAYER, 'chlorophyll', ...swell, ...contourIds, ...windIds, MPA_FILL, 'coastline'], order.join(' then '));
   }
 });
 

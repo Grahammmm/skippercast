@@ -387,15 +387,16 @@ test('MB-13 (D5): every profile opens with depth shading, depth lines and spots 
 
 test('MB-13: one field and one flow at a time; a second replaces the first; the lines and spots markers survive other toggles', async () => {
   const m = await load();
+  assert.deepEqual(m.menuList(['clouds', 'water-temp'], 'sst-contrast', true), ['clouds', 'water-temp', 'sst-contrast'], 'preserve switch-on order for the stacking resolver');
   assert.deepEqual(m.menuList(['water-temp'], 'chlorophyll', true), ['chlorophyll'], 'a second field replaces the first');
   assert.deepEqual(m.menuList(['chlorophyll'], 'water-temp', true), ['water-temp']);
-  assert.deepEqual(m.menuList(['swell', 'water-temp'], 'currents', true), ['currents', 'water-temp'], 'a flow replaces the other flow, the field stays');
+  assert.deepEqual(m.menuList(['swell', 'water-temp'], 'currents', true), ['water-temp', 'currents'], 'a flow replaces the other flow, the field stays');
   assert.deepEqual(m.menuList(['currents', 'chlorophyll'], 'swell', true), ['chlorophyll', 'swell']);
   assert.deepEqual(m.menuList(['water-temp'], 'water-temp', false), []);
   assert.deepEqual(m.menuList(['seafloor', 'fleet'], 'clouds', true), ['seafloor', 'fleet', 'clouds'], 'other entries are independent');
   const off = m.withDepthLines(['fleet'], false);
   assert.deepEqual([off, m.depthLinesOn(off), m.depthLinesOn(['seafloor'])], [['fleet', 'lines-off'], false, true], 'a list from before the menu still draws the lines');
-  assert.deepEqual(m.menuList(off, 'chlorophyll', true), ['chlorophyll', 'fleet', 'lines-off'], 'the marker is kept');
+  assert.deepEqual(m.menuList(off, 'chlorophyll', true), ['fleet', 'lines-off', 'chlorophyll'], 'the marker is kept');
   assert.deepEqual(m.withDepthLines(off, true), ['fleet']);
   const none = m.withSpots(['fleet', 'water-temp'], false);
   assert.deepEqual([none, m.spotsOn(none), m.spotsOn(['water-temp'])], [['water-temp', 'spots-off'], false, true]);

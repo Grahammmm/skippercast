@@ -30,17 +30,12 @@ import type {CoastReportContext} from '../../packages/coast/src/state/report-bin
 import {day, hour, layers} from '../state.ts';
 import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
-import {DEPTH_BOTTOM} from './depth-contours.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {regionalContrast, type ContrastSample, type RegionalContrast} from './habitat-feed.ts';
-import {CONTRAST_SOURCE, layerEntry, setRailNote} from './layers.ts';
-import {MPA_FILL} from './mpa.ts';
+import {CONTRAST_SOURCE, layerEntry, setRailNote, zBefore} from './layers.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {pair, sp, type StatusCopy} from './status-copy.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
-import {PLACE_LABELS} from './style.ts';
-import {SWELL_LAYER} from './swell.ts';
-import {CHLOROPHYLL_LAYER} from './chlorophyll.ts';
 import {paintEdits} from './theme-restyle.ts';
 import {M_PER_NMI} from '../units.ts';
 
@@ -257,7 +252,7 @@ export function createContrast(o: ContrastOptions): {reading(at: {lon: number; l
       if (k !== drawnKey) withdraw();
       drawnKey = k; drawnOn = e;
       if (!d) { e.setOverlay(REGISTRY_ID, null); return; }
-      e.setOverlay(REGISTRY_ID, contrastOverlay(palette()), [CHLOROPHYLL_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, PLACE_LABELS, MPA_FILL]);
+      e.setOverlay(REGISTRY_ID, contrastOverlay(palette()), zBefore(CONTRAST_LAYER));
       e.setData(CONTRAST_SOURCE, contrastFeatures(d));
     }),
     // Re-judge at the age limit and at the next whole hour (the dock's default hour moves on).

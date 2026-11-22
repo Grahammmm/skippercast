@@ -19,6 +19,9 @@ import type {ChartMark} from './coastline.ts';
 import type {Palette, PaletteKey} from './palette.ts';
 import type {StatusPart} from './status-copy.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
+import type {KitLayerId, Rep, StackedLayer} from './stacking.ts';
+import type {Engine, Overlay} from './engine.ts';
+import {KIT_LAYER_MODULES} from './kit-layers/index.ts';
 import {t, type Language, type StringId} from '../i18n.ts';
 
 /** Where a layer draws: the MapLibre Chart, the packages/coast terrain (2D and 3D), or both. */
@@ -26,7 +29,7 @@ export type LayerPresentation = 'chart' | 'terrain';
 /** `static` never changes with the clock; `hour` follows the dock's forecast hour; `observed` shows real frames only. */
 export type TimeBehaviour = 'static' | 'hour' | 'observed';
 /** A rail entry, a base (one at a time, under the fields), or always drawn where its gate allows. */
-export type LayerControl = RailId | 'base' | 'always';
+export type LayerControl = RailId | KitLayerId | 'base' | 'always';
 export interface LegendRow {readonly label: string; readonly swatch?: PaletteKey}
 /** Palette keys the terrain's overlays accept (packages/coast COAST_OVERLAY_COLORS). */
 export type OverlayRole = CoastOverlayColor & PaletteKey;
@@ -61,6 +64,7 @@ export interface LayerEntry {
   readonly gate?: string;
   /** The dev-plan task that draws it. */
   readonly task: string;
+  readonly kit?: (typeof KIT_LAYER_MODULES)[string];
   /** Its drape on the terrain, for an entry whose presentations include `terrain` and that the registry drapes (FE-82). */
   readonly terrain?: TerrainDrape;
 }
@@ -87,6 +91,76 @@ export const NEARSHORE_DRAW_ORDER: readonly (readonly string[])[] = Object.freez
   [NEARSHORE_HARD_EDGE], [NEARSHORE_PILE_OUTLINE], ['depth-contours-label'], [NEARSHORE_PILE_LABEL],
   [NEARSHORE_PIER, NEARSHORE_CAST_ARCS], ['labels-places'],
 ]);
+
+/**
+ * MSKL-3: the layer kit's draw order (`stacking.z_order`, base relief z0 … labels z11) as MapLibre `before` anchors. Each slot
+ * lists the run-time layers drawn in it, bottom-up: the web's own layers in their kit slot (an overlay names its lowest layer),
+ * then the generated fragment's `skl-*` layers (stacking.ts SKL_SLOT_LAYERS). `zBefore(id)` is every layer above `id`, nearest
+ * first, so the engine inserts an overlay under the nearest one already drawn and the order never depends on arrival.
+ * SST contrast cells are the break glow's colour-field role (the fragment puts `skl-sst-breaks-glow` there); fronts are
+ * isolines and the wind arrows are the arrow/barb slot, so both draw above the depth contours as the kit orders them.
+ * The static Chart style (chart.ts chartStyle) still adds protected areas, habitat, marks and the coastline above the
+ * basemap's labels; `mpa-fill` is therefore the last anchor, for a map without basemap labels.
+ * IDs are literal here (no import of each layer module, which imports this registry, nor of the generated layer tokens, which
+ * would add the whole token table to the first load); tests/test_stacking.mjs pins the slots to `stacking.z_order`, the
+ * `skl-*` IDs to the generated fragment and the web IDs to the modules' constants.
+ */
+/** `stacking.z_order` slot ids, bottom-up. */
+export const Z_SLOTS = Object.freeze(['base-relief', 'color-field', 'veils', 'radar', 'depth-contours', 'polygons', 'isolines', 'particles',
+  'arrows-barbs', 'routes', 'points', 'labels'] as const);
+export type ZSlot = typeof Z_SLOTS[number];
+const WEB_SLOT_LAYERS: Readonly<Partial<Record<ZSlot, readonly string[]>>> = Object.freeze({
+  'base-relief': [BOTTOM_RELIEF],
+  'color-field': ['water-temp', 'sst-contrast', 'chlorophyll', 'swell'],
+  'depth-contours': ['depth-contours-unresolved-fill'],
+  isolines: ['sst-fronts-band'],
+  'arrows-barbs': ['wind-casing'],
+  labels: ['labels-places'],
+});
+/** style/generated/maplibre-layers-v1.0.0.json's `skl-*` layers by `skippercast:z`, in fragment order. */
+export const SKL_SLOT_LAYERS: Readonly<Record<ZSlot, readonly string[]>> = Object.freeze({
+  'base-relief': [],
+  'color-field': ['skl-sst-fill-fill', 'skl-chlorophyll-fill', 'skl-kd490-fill', 'skl-currents-fill', 'skl-subsurface-temp-fill', 'skl-salinity-fill',
+    'skl-wind-fill', 'skl-waves-swell-fill', 'skl-visibility-fog-fill', 'skl-sst-breaks-glow'],
+  veils: ['skl-clouds-veil', 'skl-sea-ice-veil'],
+  radar: ['skl-radar'],
+  'depth-contours': [],
+  polygons: ['skl-hazard-fill', 'skl-zone-line', 'skl-mpa-fill', 'skl-mpa-line', 'skl-kelp', 'skl-shore-halo', 'skl-shore', 'skl-ais-fill', 'skl-ais-line',
+    'skl-upwelling-ribbon'],
+  isolines: ['skl-sst-band-edge', 'skl-sea-ice-edge', 'skl-sst-iso-minor', 'skl-sst-iso-index', 'skl-ssh-positive', 'skl-ssh-negative', 'skl-ssh-zero',
+    'skl-isobar-minor', 'skl-isobar-bold'],
+  particles: ['skl-currents-streamlines', 'skl-wind-particles'],
+  'arrows-barbs': ['skl-wind-barbs', 'skl-wave-arrows'],
+  routes: ['skl-track', 'skl-route-halo', 'skl-route'],
+  points: ['skl-waypoint', 'skl-pier-halo', 'skl-pier', 'skl-ramp', 'skl-tide-pin', 'skl-station-pin', 'skl-spot-others', 'skl-spot-badge'],
+  labels: ['skl-sst-iso-label', 'skl-isobar-label', 'skl-pressure-centers', 'skl-zone-label', 'skl-mpa-label', 'skl-ais-label', 'skl-waypoint-num',
+    'skl-leg-label', 'skl-station-chip', 'skl-spot-rank'],
+});
+const STATIC_TOP = 'mpa-fill';
+/**
+ * `skl-*` layers a web overlay already draws inside its own group (an overlay is inserted whole under one anchor): the SST
+ * band edges are part of the water-temp overlay (sst-bands.ts SST_BAND_EDGE), so they move with it and are no anchor.
+ */
+const IN_WEB_GROUP: readonly string[] = ['skl-sst-band-edge'];
+/** Every z_order slot's anchors, bottom-up. */
+export const Z_ORDER_ANCHORS: readonly {readonly slot: ZSlot; readonly layers: readonly string[]}[] = Object.freeze(
+  Z_SLOTS.map(slot => Object.freeze({slot, layers: Object.freeze([...WEB_SLOT_LAYERS[slot] ?? [], ...SKL_SLOT_LAYERS[slot].filter(id => !IN_WEB_GROUP.includes(id))])})));
+/** The MapLibre layers an overlay whose lowest layer is `layer` (or which draws in slot `layer`) goes under, nearest first. */
+export function zBefore(layer: string): string[] {
+  const at = Z_ORDER_ANCHORS.findIndex(s => s.slot === layer || s.layers.includes(layer));
+  if (at < 0) throw new Error(t('dev.unknownLayer', 'en', {id: layer}));
+  const own = Z_ORDER_ANCHORS[at]!, rest = own.slot === layer ? [] : own.layers.slice(own.layers.indexOf(layer) + 1);
+  return [...rest, ...Z_ORDER_ANCHORS.slice(at + 1).flatMap(s => s.layers), STATIC_TOP];
+}
+
+/**
+ * MSKL-3: one registry row per kit layer (style/layers-v1.0.0.json, 01 sst-fill … 24 ais-fleet). `appIds` are the
+ * registry entries that draw it today (the token's `app_layer_ids` that exist here). `noData` layers have no authorized
+ * live source (LAYERS-KIT-PLAN § 2): their module (web/map/kit-layers/<id>.ts) draws nothing, never switches itself on,
+ * and their legend row says "no data yet". Copy: `layer.skl.<id>.label`.
+ */
+export interface KitLayerRow {readonly id: KitLayerId; readonly appIds: readonly string[]; readonly noData: boolean; readonly labelId: StringId}
+export const NO_DATA_YET: readonly KitLayerId[] = Object.freeze(Object.values(KIT_LAYER_MODULES).map(m => m.id));
 /**
  * DATA-LIVE-9 (E2E-16): who may ask for the relief overlay. Everyone, signed out included, on the Chart in the coast view
  * while the base map works; there is deliberately no admin or preview input. The pointer then decides: no `ready`
@@ -232,6 +306,11 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
     attribution: t('layer.attr.stations', 'en'), basis: copy('stations', 'basis', lang), task: 'CI6-18'}),
   entry({id: 'coastline', label: copy('coastline', 'label', lang), control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
     basis: copy('coastline', 'basis', lang), task: 'FE-11'}),
+  ...Object.values(KIT_LAYER_MODULES).map(kit => {
+    const label = copy(`skl.${kit.id}`, 'label', lang);
+    return entry({id: kit.id, control: kit.id, kit, label, presentations: ['chart'],
+      basis: t('legend.skl.noData', lang, {layer: label}), task: 'MSKL-3'});
+  }),
 ]);
 
 /** A registry sentence or label from the catalogue (layer.<id>.label | basis | legend<N>). */
@@ -241,6 +320,66 @@ const copy = (id: string, part: string, lang: Language): string => t(`layer.${id
 const REGISTRY: Readonly<Record<Language, readonly LayerEntry[]>> = Object.freeze({en: build('en'), es: build('es')});
 /** The English registry: the ids, order, sources, gates and English copy every reader and test relies on. */
 export const LAYERS: readonly LayerEntry[] = REGISTRY.en;
+
+/**
+ * MSKL-3: the 24 kit layers, in kit order, each with the registry entries that draw it today (the token's `app_layer_ids`
+ * that exist in this registry; tests/test_stacking.mjs pins both lists to style/layers-v1.0.0.json).
+ */
+const KIT_APP_IDS: Readonly<Record<KitLayerId, readonly string[]>> = {
+  'sst-fill': ['water-temp'], 'sst-breaks': ['water-temp-contours', 'sst-contrast', 'sst-fronts'], chlorophyll: ['chlorophyll'], kd490: [],
+  ssh: [], upwelling: [], currents: ['currents'], 'subsurface-temp': [], salinity: [], 'sea-ice': [], wind: ['wind'], pressure: [],
+  'waves-swell': ['swell'], tides: [], 'precip-radar': [], clouds: ['clouds'], 'visibility-fog': [], stations: ['stations'],
+  'marine-zones-mpas': ['mpas'], 'kelp-habitat': ['habitat', 'shore-runs'], places: [], 'spots-marks': ['marks', 'trip-ranked'],
+  'routes-tracks': ['planning-route'], 'ais-fleet': ['commercial-ais'],
+};
+export const KIT_LAYERS: readonly KitLayerRow[] = Object.freeze((Object.keys(KIT_APP_IDS) as KitLayerId[]).map(id => Object.freeze({
+  id, appIds: KIT_APP_IDS[id], noData: NO_DATA_YET.includes(id), labelId: `layer.skl.${id}.label` as StringId,
+})));
+/** The kit row for `id`, or null when `id` is not a kit layer. */
+export const kitLayer = (id: string): KitLayerRow | null => KIT_LAYERS.find(k => k.id === id) ?? null;
+
+/** Switched-on order, independent of the order in which controllers finish loading. */
+export function selectedKitLayers(on: readonly string[], currentsOn: boolean): KitLayerId[] {
+  const controls = currentsOn ? on.includes('currents') ? on : [...on, 'currents'] : on.filter(id => id !== 'currents');
+  return [...new Set(controls.flatMap(control => KIT_LAYERS.filter(k => k.id === control && k.noData
+    || k.appIds.some(id => railLayers(control as LayerControl).some(e => e.id === id))).map(k => k.id)))];
+}
+
+export const chartStack = signal<readonly StackedLayer[]>([]);
+export const chartBaseDesaturation = signal<number | null>(null);
+export const overlayKitId = (id: string) => kitLayer(id)?.noData ? kitLayer(id)?.id : KIT_LAYERS.find(k => k.appIds.includes(id))?.id;
+
+/** The parts actually implemented by the live Chart, not the kit's future wind fill or particles. */
+export function chartRep(owner: string, id: string): Rep | 'band-edge' | undefined {
+  switch (owner) {
+    case 'water-temp': return id === 'water-temp' ? 'fill' : id === 'skl-sst-band-edge' ? 'band-edge' : 'auto isotherms';
+    case 'swell': return id === 'swell' || id.startsWith('swell-period') ? 'fill' : id.startsWith('swell-direction') ? 'arrows' : undefined;
+    case 'wind': return 'barbs';
+    case 'sst-contrast': return 'fill';  // a polygon colour field (contrast.ts), so it competes for the one field slot (P1)
+    case 'sst-fronts': return 'isolines';
+    case 'chlorophyll': return 'fill';
+    case 'clouds': return 'veil';
+    case 'stations': return 'chips';
+    case 'commercial-ais': return 'hatch';
+    default: return undefined;
+  }
+}
+
+export function applyChartStack(engine: Engine, overlays: ReadonlyMap<string, Overlay>, rows: readonly StackedLayer[]): void {
+  for (const [owner, overlay] of overlays) {
+    const id = overlayKitId(owner), row = rows.find(r => r.id === id);
+    for (const layer of overlay.layers) {
+      const rep = chartRep(owner, layer.id);
+      if (!rep && !kitLayer(owner)?.noData) continue;
+      const visible = !!row && row.status === 'drawn' && (rep === 'band-edge' ? row.bandEdges
+        : rep === undefined || row.reps.includes(rep));
+      engine.setVisible(layer.id, !!visible && layer.layout?.visibility !== 'none');
+      if (visible && rep === 'fill' && row.opacity.fill !== undefined && (layer.type === 'raster' || layer.type === 'fill')) {
+        engine.setPaint(layer.id, `${layer.type}-opacity`, row.opacity.fill);
+      }
+    }
+  }
+}
 
 /** The registry entry for `id`; throws on an unknown id so a typo cannot hide a layer. */
 export function layerEntry(id: string): LayerEntry {
@@ -288,11 +427,8 @@ export const SPOTS_OFF = 'spots-off';
 /** One field and one flow at a time (§ 2.5): a second of a kind replaces the first. */
 export const FIELD_IDS: readonly string[] = ['water-temp', 'chlorophyll'];
 export const FLOW_IDS: readonly string[] = ['swell', 'currents'];
-const LIST_ORDER: readonly string[] = ['seafloor', 'currents', 'water-temp', 'sst-contrast', 'sst-fronts', 'chlorophyll', 'swell', 'stations', 'fleet', 'clouds', LINES_OFF, SPOTS_OFF];
-const inListOrder = (ids: readonly string[]): string[] => {
-  const rank = (id: string) => { const i = LIST_ORDER.indexOf(id); return i < 0 ? LIST_ORDER.length : i; };
-  return [...new Set(ids)].sort((a, b) => rank(a) - rank(b));
-};
+// The stacking resolver consumes selection order, including across marker changes.
+const inListOrder = (ids: readonly string[]): string[] => [...new Set(ids)];
 /** The rail list with menu row `id` switched on or off; turning on a field or a flow turns its sibling off. */
 export function menuList(list: readonly string[], id: string, on: boolean): string[] {
   const rest = list.filter(x => x !== id);

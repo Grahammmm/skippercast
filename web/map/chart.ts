@@ -23,17 +23,17 @@
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type
 // stripping and passes a fake library, so no GPU or MapLibre is needed.
 import {mapMayLoad, markChartMounted, markMapIdle} from '../map-ready.ts';
-import {effect, signal, type ReadonlySignal} from '@preact/signals';
+import {effect, signal, untracked, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
-import {appView, base, habitat, region, selection, setParams, view} from '../state.ts';
+import {appView, base, current, habitat, layers as selectedLayers, region, selection, setParams, view} from '../state.ts';
 import {harborOrigin} from '../ranking.ts';
 import {placeWaypoint, waypointPlacement} from '../waypoint-placement.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
 import {chartFileListed, chartFilesPending} from '../chart-files.ts';
 import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineFetchPath, coastlineLayers, coastlineMark, coastlineSource, shorelineOverviewURL, shorelinePublished, shorelineURL, type ChartMark} from './coastline.ts';
-import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
-import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
+import {createCurrents, currentsState, type Currents, type CurrentsOptions} from './currents.ts';
+import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule, type Overlay} from './engine.ts';
 import {openBandPadding, toEdge, type Box} from './open-band.ts';
 import {browserGate, flyoverLegs, markFlyoverSeen, mayFly, type FlyoverGate} from './flyover.ts';
 import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SAVED_SPOTS_SOURCE, SEAFLOOR_SOURCE, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
@@ -46,6 +46,10 @@ import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './s
 import {BASEMAP_MANIFEST, BASEMAP_SOURCE, basemapArchive, basemapStyle} from './style.ts';
 import {camera, cameraParam, parseCamera, shownPresentation, terrainPick, type Camera} from './stage.ts';
 import {basemapThemePaint, paintEdits} from './theme-restyle.ts';
+import {applyChartStack, chartBaseDesaturation, chartRep, chartStack, LAYERS, overlayKitId, selectedKitLayers, zBefore} from './layers.ts';
+// Types only: the stacking engine and the generated token table it reads load with the Chart's MapLibre (mount), not first paint.
+import type {Rep, resolveStack} from './stacking.ts';
+import {dataState} from './kit-layers/no-data.ts';
 
 /** FE-10's manifest reader moved to style.ts with the basemap (FE-25 reads it on the landing without the Chart). */
 export {BASEMAP_MANIFEST, basemapArchive};
@@ -158,6 +162,37 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   // The marks, the protected areas and the masthead read the same region files: one request each (the startup budget).
   const fetchFn = shareStatic(options.fetchFn ?? sharedFetch);
   const engine = signal<Engine | null>(null);
+  const overlays = new Map<string, Overlay>();
+  const cloudAlphas = new Map<string, number>();
+  let resolve: typeof resolveStack | null = null;  // set by mount; without it (chunk failed) every layer draws as before
+  const updateStack = (e: Engine) => {
+    const zoom = camera.value?.zoom;
+    if (zoom === undefined || !resolve) return;
+    const on = selectedKitLayers(selectedLayers.value, current.value !== 'off');
+    const reps = new Map<string, Set<Rep>>();
+    for (const [owner, overlay] of overlays) {
+      const id = overlayKitId(owner);
+      if (!id || unavailable.value.includes(owner)) continue;
+      const available = reps.get(id) ?? new Set<Rep>();
+      for (const layer of overlay.layers) {
+        const rep = chartRep(owner, layer.id);
+        if (rep && rep !== 'band-edge' && rep !== 'auto isotherms') available.add(rep);
+      }
+      if (available.size) reps.set(id, available);
+    }
+    if (currentsState.value.drawn) reps.set('currents', new Set(['streamlines']));
+    const stack = resolve(on.map(id => {
+      const module = LAYERS.find(entry => entry.id === id)?.kit;
+      const available = reps.get(id);
+      return {id, state: module ? dataState(module.state) : available ? 'ready' : 'no-data',
+        ...(available ? {available: [...available]} : {})};
+    }), zoom);
+    applyChartStack(e, overlays, stack.layers);
+    const veil = stack.layers.find(row => row.id === 'clouds')?.opacity.veil ?? 0;
+    for (const [id, alpha] of cloudAlphas) e.setPaint(id, 'raster-opacity', Math.min(alpha, veil));
+    chartStack.value = stack.layers;
+    chartBaseDesaturation.value = stack.baseDesaturation;
+  };
   const mpas = signal<MpaResult['data'] | null>(null);
   let mpaTicket = 0;
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
@@ -206,8 +241,9 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     mounting = true;
     askPoster(id);
     try {
-      const [library, archive] = await Promise.all([load(), basemapArchive(fetchFn, page())]);
+      const [library, archive, stacking] = await Promise.all([load(), basemapArchive(fetchFn, page()), import('./stacking.ts').catch(() => null)]);
       if (!alive) return;
+      resolve = stacking?.resolveStack ?? null;
       if (!archive) markUnavailable('basemap', new Error(`No basemap archive at ${BASEMAP_MANIFEST}`));
       const start = camera.peek() ?? at;
       const e: Engine = createEngine(library, {
@@ -258,6 +294,20 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       });
       // The style owns these layers and their order; the overlay only registers their paint provider.
       e.setOverlay('chart-style-theme', {sources: {}, layers: [], themePaint: chartThemePaint});
+      const {setOverlay, setRasterOpacity} = e;
+      e.setOverlay = (owner, overlay, before) => {
+        const kitId = overlayKitId(owner);
+        if (owner === 'clouds') cloudAlphas.clear();
+        if (kitId && overlay) overlays.set(owner, overlay); else overlays.delete(owner);
+        setOverlay(owner, overlay, owner === 'clouds' ? zBefore('veils') : before);
+        if (kitId) untracked(() => updateStack(e));
+      };
+      e.setRasterOpacity = (id, alpha) => {
+        if (!resolve || !overlays.get('clouds')?.layers.some(layer => layer.id === id)) { setRasterOpacity(id, alpha); return; }
+        cloudAlphas.set(id, alpha);
+        const veil = chartStack.peek().find(row => row.id === 'clouds')?.opacity.veil ?? 0;
+        e.setPaint(id, 'raster-opacity', Math.min(alpha, veil));
+      };
       // Before `engine` is set: its effect would otherwise send the style's own shoreline again (a second 0.6 MB request).
       drawnRegion = id;
       engine.value = e;
@@ -289,6 +339,16 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   }
 
   const disposers = [
+    effect(() => { const e = engine.value; if (e) updateStack(e); }),
+    effect(() => {
+      const e = engine.value, on = selectedLayers.value;
+      if (!e) return;
+      for (const {kit} of LAYERS) if (kit) {
+        const state = dataState(kit.state);
+        const overlay = on.includes(kit.id) && state !== 'no-data' && state !== 'withheld' ? kit.overlay() : null;
+        if (overlay || overlays.has(kit.id)) e.setOverlay(kit.id, overlay);
+      }
+    }),
     // A fresh token also rejects an old request after switching away and back.
     effect(() => { region.value; sourceContext = {}; }),
     effect(() => { region.value; shownPresentation.value; appView.value; waypointPlacement.value; pickContext = {}; }),
@@ -395,6 +455,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       for (const layer of drawn) layer.destroy();
       engine.peek()?.destroy();
       engine.value = null;
+      chartStack.value = [];
+      chartBaseDesaturation.value = null;
       chartMark.value = null;
       unavailable.value = [];
       mpaState.value = IDLE;
