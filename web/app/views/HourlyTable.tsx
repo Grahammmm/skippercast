@@ -7,7 +7,7 @@ import {useEffect, useRef} from 'preact/hooks';
 import {activeBoatFactors} from '../../../dist/boat-handling.js';
 import type {Series} from '../../../packages/coast/src/charts/series.ts';
 import type {ConditionsForecast} from '../../conditions.ts';
-import {hourlyCells, hourlyTable, NO_FORECAST, overLimits} from '../../hourly-table.ts';
+import {hourlyCells, hourlyTable, limitText, NO_FORECAST, overLimits} from '../../hourly-table.ts';
 import {language, localeOf, t, type Language, type StringId} from '../../i18n.ts';
 import {hasOwnLimits, limitsFor} from '../../limits.ts';
 import {profile} from '../../state.ts';
@@ -55,7 +55,7 @@ export function HourlyTable({forecast, tide, at, tz, now}: {forecast: Conditions
                     const f = (['wind', 'gust', 'seas'] as const)[i];
                     const print = feet?.[i];
                     const reading = print && print !== c ? <><span class="app-screen-height">{cellText(c, lang)}</span><span class="app-print-height">{cellText(print, lang)}</span></> : cellText(c, lang);
-                    return <td key={i} class="ui-mono">{reading}{f && limits && marked[ri]![f] ? <span class="app-hourly-over" role="img" aria-label={t(`hourly.over.${f}`, lang, {limit: String(limits[f])})}> ▲</span> : null}</td>;
+                    return <td key={i} class="ui-mono">{reading}{f && limits && marked[ri]![f] ? <span class="app-hourly-over" role="img" aria-label={t(`hourly.over.${f}`, lang, {limit: limitText(f, limits[f], lang, wind, height)})}> ▲</span> : null}</td>;
                   })}
                 </tr>
               );

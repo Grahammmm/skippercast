@@ -41,6 +41,8 @@ import {sourceGapText} from './tile-copy.ts';
 import {TideStationControl} from './TideStationControl.tsx';
 import {tideSelection} from '../tide-selection.ts';
 import {withTideSelection} from '../tide-stations.ts';
+import {isBarReason, windowCopy} from './verdict-copy.ts';
+import {units} from '../unit-choice.ts';
 import {briefVerdict, clockText, feedReader, type BriefVerdict} from './verdict.ts';
 import {loadSkill, skillFile, skillLine, skillSummary} from './skill.ts';
 import {activeBoatFactors, savedBoat} from '../../dist/boat-handling.js';
@@ -859,11 +861,19 @@ export function LowerExposure({brief}: {brief: BriefModel | null}) {
   const shown = shownRegion(), tz = shown?.timezone ?? DEFAULT_ZONE, w = brief.windows[0], lang = language.value;
   const id = region.value, p = brief.profile;
   // The safety caveat stays visible; a window the user's looser limits decided adds that note after it.
+  // SC2022-04: the label and the known reasons read in the page's language and the limits in the chosen units (display only).
   const own = w?.reasons.find(reason => reason.startsWith('Using your limits')), caveat = w?.reasons.find(reason => reason !== own);
+  const bar = lang === 'es' ? w?.reasons.find(reason => reason !== own && reason !== caveat && isBarReason(reason)) : undefined;
+  const say = (raw: string | undefined): ComponentChildren => {
+    if (raw === undefined) return null;
+    const {text, known} = windowCopy(raw, lang, {wind: units.value.wind, height: units.value.height});
+    return known || lang === 'en' ? text : <span lang="en">{text}</span>;
+  };
+  const notes = [caveat, bar, own].filter(Boolean).map(say);
   return (
     <><p class="app-window">
       <span class="ui-eyebrow">{t('brief.lower', lang)}</span>{' '}
-      {w ? <><span class="ui-mono">{clock(w.start, tz, lang)}–{clock(w.end, tz, lang)}</span> · {w.label}. {[caveat, own].filter(Boolean).join('. ')}</> : t(brief.limits?.custom ? 'brief.lower.custom' : 'brief.lower.none', lang)}
+      {w ? <><span class="ui-mono">{clock(w.start, tz, lang)}–{clock(w.end, tz, lang)}</span> · {say(w.label)}. {notes.flatMap((note, i) => i ? ['. ', note] : [note])}</> : t(brief.limits?.custom ? 'brief.lower.custom' : 'brief.lower.none', lang)}
     </p>
     {w && id && (!shown || shown.id === id) && p === profile.value && session.value.state === 'signed-in'
       ? <Button class="app-window-alert app-print-button" type="button" size="sm" variant="quiet" onClick={event => {

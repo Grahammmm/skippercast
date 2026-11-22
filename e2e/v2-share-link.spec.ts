@@ -176,7 +176,7 @@ for (const lang of ['en', 'es'] as const) for (const narrow of [false, true]) {
     });
     await page.route('**/api/coast/report*', r => r.fulfill({status: 503, json: {}}));
     await v2.open('app', {region: 'morro-bay', port: 'morro-bay', lang});
-    await expect(page.locator('.app-brief-links')).toContainText('5 boats reported');
+    await expect(page.locator('.app-brief-links')).toContainText(lang === 'es' ? '5 barcos informaron' : '5 boats reported');
     if (narrow) {
       await page.route('**/share-text-fixture.css', r => r.fulfill({contentType: 'text/css', body: '.app-share { font-size: 200%; } .app-share-status, .app-share-popover input { font-size: inherit; }'}));
       await page.addStyleTag({url: '/share-text-fixture.css'});

@@ -20,6 +20,7 @@ import type {Palette, PaletteKey} from './palette.ts';
 import type {StatusPart} from './status-copy.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
 import {t, type Language, type StringId} from '../i18n.ts';
+import {spanishReady} from '../i18n-catalogue.ts';
 
 /** Where a layer draws: the MapLibre Chart, the packages/coast terrain (2D and 3D), or both. */
 export type LayerPresentation = 'chart' | 'terrain';
@@ -237,10 +238,19 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
 /** A registry sentence or label from the catalogue (layer.<id>.label | basis | legend<N>). */
 const copy = (id: string, part: string, lang: Language): string => t(`layer.${id}.${part}` as StringId, lang);
 
-/** The registry by language, built once from the catalogue; no language is read here. English is the compatibility export. */
-const REGISTRY: Readonly<Record<Language, readonly LayerEntry[]>> = Object.freeze({en: build('en'), es: build('es')});
+/** The English registry, built once from the catalogue; no language is read here. English is the compatibility export. */
+const ENGLISH: readonly LayerEntry[] = Object.freeze(build('en'));
+/** The Spanish registry, kept only once built from the installed Spanish table (SC2052-01): a build before it is installed is English fallback and never cached. */
+let spanishRegistry: readonly LayerEntry[] | null = null;
+const registryFor = (lang: Language): readonly LayerEntry[] => {
+  if (lang !== 'es') return ENGLISH;
+  if (spanishRegistry) return spanishRegistry;
+  const built = Object.freeze(build('es'));
+  if (spanishReady()) spanishRegistry = built;
+  return built;
+};
 /** The English registry: the ids, order, sources, gates and English copy every reader and test relies on. */
-export const LAYERS: readonly LayerEntry[] = REGISTRY.en;
+export const LAYERS: readonly LayerEntry[] = ENGLISH;
 
 /** The registry entry for `id`; throws on an unknown id so a typo cannot hide a layer. */
 export function layerEntry(id: string): LayerEntry {
@@ -252,7 +262,7 @@ export function layerEntry(id: string): LayerEntry {
 /** A layer's label, basis sentence and prose legend rows in `lang`; the swatches and numeric rows are the registry's own. Throws on an unknown id. */
 export function layerCopy(id: string, lang: Language = 'en'): Pick<LayerEntry, 'label' | 'basis' | 'legend'> {
   layerEntry(id);
-  const found = REGISTRY[lang === 'es' ? 'es' : 'en'].find(e => e.id === id)!;
+  const found = registryFor(lang === 'es' ? 'es' : 'en').find(e => e.id === id)!;
   return {label: found.label, basis: found.basis, legend: found.legend};
 }
 
