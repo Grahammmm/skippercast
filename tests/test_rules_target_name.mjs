@@ -80,6 +80,10 @@ const aria = html => [...html.matchAll(/aria-label="([^"]*)"/g)].map(m => m[1]);
 const hrefs = html => [...html.matchAll(/href="([^"]*)"/g)].map(m => m[1]);
 const headings = html => [...html.matchAll(/<strong>([^<]*)<\/strong>/g)].map(m => m[1]);
 const leadText = html => /<span [^>]*>([^<]*)<\/span> ([^<]*?\.) /.exec(html)?.slice(1).join(' ');
+// Spoken copy = text nodes + aria-label values (other attributes are selectors/links). The display name is
+// blanked first so 'surfperch' inside 'Barred surfperch' is not a leak; an extra standalone id still is.
+const spokenCopy = html => [...html.replace(/<[^>]*>/g, '\n').split('\n'), ...aria(html)].map(s => s.trim()).filter(Boolean);
+const rawIdLeaks = (html, target, label) => spokenCopy(html).filter(s => new RegExp(`(?<![\\w-])${target}(?![\\w-])`).test(s.split(label).join(' ')));
 const words = {
   en: {lead: name => `Check rules ${name} tomorrow.`, glance: name => `Rules at a glance: ${name}`,
     link: (name, label = 'Official CDFW rules') => `${label} for ${name} (official page, opens in a new tab)`,
@@ -107,6 +111,8 @@ for (const lang of languages) {
       assert.deepEqual({lead: [leadText(lead), aria(lead)], card: aria(card), plan: [headings(plan), aria(plan)]}, {
         lead: [copy.lead(label), [link]], card: [copy.glance(label), link], plan: [[label], [copy.plan, link]],
       });
+      // No raw id anywhere in the spoken copy: every text node and aria-label, not just the slots above.
+      for (const html of [lead, card, plan]) assert.deepEqual(rawIdLeaks(html, target, label), [], 'raw target id leaked');
     });
   }
 
