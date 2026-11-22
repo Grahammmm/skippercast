@@ -206,7 +206,7 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
   const timing = d.timing ?? DEFAULT_TIMING;
   const typeTiming = (leave: string, fish: string) => { const ok = parseTiming(leave, fish); if (ok) { m.editTiming(ok); setTyped(null); } else setTyped({leave, fish}); };
   const zone = m.region.timezone;
-  const routeShown = m.routeStatus.value, routeText = routeStatusText(routeShown, lang, zone);
+  const routeShown = m.routeView.value, routeText = routeStatusText(routeShown, lang, zone);
   const routeLine = routeText ?? (typeof routeShown === 'object' && routeShown.kind === 'error' ? <EnglishDetail lang={lang} prefix={false}>{routeShown.message}</EnglishDetail> : '');
   const times = typed || !stops.length ? null : tripTimes({date: d.date, zone, timing, port: port ? {lat: port.match[0], lon: port.match[1]} : null,
     stops: stops.map(s => ({id: s.id, fishing: !s.id.startsWith('user:launch-')})), route});

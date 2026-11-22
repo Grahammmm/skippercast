@@ -16,7 +16,6 @@ import {landWater, landWaterModel} from '../web/land-water.ts';
 import {configureStore, region as activeRegion, syncFromURL, presentation} from '../web/state.ts';
 import {language, prepareCatalogue, t} from '../web/i18n.ts';
 import {createPlanner} from '../web/planner.ts';
-import {routeStatusText} from '../web/planner-copy.ts';
 import {ROUTE_WARNING} from '../web/protected-route.ts';
 import {createPlanningRouteLayer, planningRoute, planningRouteFeatures} from '../web/map/planning-route.ts';
 import {LAYERS, sourceLayer, PLANNING_ROUTE_SOURCE} from '../web/map/layers.ts';
@@ -76,8 +75,6 @@ function harness({polygons = [polygon(13, 8, 19, 24)], routeContext, landWaterFn
 const seeded = () => { landWater.value = {region: 'fixture', state: 'ready', model, lines: null, linesLoading: false}; activeRegion.value = 'fixture'; };
 const unseed = () => { planningRoute.value = null; activeRegion.value = null; };
 async function shown(h) { seeded(); const ok = await h.planner.showRouteOnChart(); assert.equal(ok, true, h.planner.routeStatus.value); assert.ok(planningRoute.value, 'a line is held'); return planningRoute.value; }
-/** The status line the page shows in English: the localized text, or the refusal's own message. */
-const statusLine = h => { const s = h.planner.routeStatus.value; return routeStatusText(s, 'en', REGION.timezone) ?? s.message; };
 const gone = (h, why) => { assert.equal(planningRoute.value, null, `${why}: the line is removed`); assert.equal(planningRouteFeatures(planningRoute.value, 'fixture').features.length, 0, `${why}: nothing to draw`); };
 
 test('preview_uses_real_detour_and_same_ordered_inputs: one dashed line of the builder\'s own points, status with length and NOT FOR NAVIGATION, no download', async () => {
@@ -89,8 +86,7 @@ test('preview_uses_real_detour_and_same_ordered_inputs: one dashed line of the b
     const fc = planningRouteFeatures(route, 'fixture');
     assert.equal(fc.features.length, 1); assert.equal(fc.features[0].geometry.type, 'LineString');
     assert.ok(isDeepStrictEqual(fc.features[0].geometry.coordinates, route.points.map(p => [p.longitude, p.latitude])), 'exactly the returned points, in order');
-    assert.ok(isDeepStrictEqual(h.planner.routeStatus.value, {kind: 'checked', checkedAt: CHECKED, nm: route.nm}), 'the status carries the check instant and the length');
-    assert.match(statusLine(h), new RegExp(`Boundary check: Nov 7, 2026, 9:00\\sAM PST · ${route.nm.toFixed(1)} nm planning route\\. NOT FOR NAVIGATION`));
+    assert.match(h.planner.routeStatus.value, new RegExp(`Boundary check: ${CHECKED} · ${route.nm.toFixed(1)} nm planning route\\. NOT FOR NAVIGATION`));
     assert.equal(h.nav.shown, 1, 'the dialog closes onto the Chart'); assert.equal(h.nav.fitted.length, 1); assert.equal(h.nav.fitted[0].length, route.points.length, 'the camera fits every route point');
     assert.equal(h.stored.filter(([, v]) => /planning|checkedAt|rtept/.test(v)).length, 0, 'nothing of the line is saved');
     assert.equal(planningRouteFeatures(route, 'other-region').features.length, 0, 'another region draws nothing');
@@ -211,8 +207,8 @@ test('preview_refusal_always_clears_previous_line: a refused route draws nothing
       const ok = await h.planner.showRouteOnChart();
       assert.equal(ok, false, what);
       gone(h, what);
-      assert.match(statusLine(h), /unavailable|Choose 2|outside the current|boundar|Protected-area/i, `${what}: shows the refusal`);
-      assert.doesNotMatch(statusLine(h), /planning route\. NOT FOR NAVIGATION/, `${what}: not the success line`);
+      assert.match(h.planner.routeStatus.value, /unavailable|Choose 2|outside the current|boundar|Protected-area/i, `${what}: shows the refusal`);
+      assert.doesNotMatch(h.planner.routeStatus.value, /planning route\. NOT FOR NAVIGATION/, `${what}: not the success line`);
       assert.equal(h.nav.shown, 1, `${what}: no navigation to an empty line`);
     } finally { h.planner.dispose(); unseed(); }
   }

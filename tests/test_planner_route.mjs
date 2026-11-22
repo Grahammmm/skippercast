@@ -342,7 +342,7 @@ test('planner_route_success_is_localized: the Chart and the download show the sa
     assert.match(spanish, new RegExp(`^Comprobación de límites: 7 nov 2026, 19:30 PST · ruta de planificación de ${es1} mn\\. NO USAR PARA NAVEGAR\\.`), 'Spanish: 24-hour local time, the page\'s decimal, the Spanish warning');
     assert.ok(!/2026-11-08|03:30|Boundary|NOT FOR/.test(spanish));
     // The download writes the same status and keeps the stored instant in the GPX bytes.
-    m.planningRoute.value = null; rig.planner.routeStatus.value = '';
+    m.planningRoute.value = null; rig.planner.routeView.value = '';
     const gpx = await (await rig.planner.exportRouteFile()).text();
     assert.ok(gpx.includes(`Boundary check: ${RCHECKED}.`) && gpx.includes('NOT FOR NAVIGATION. Planning only'), 'the export keeps its stored time and warning');
     assert.equal(await rig.line('es'), spanish, 'the download reports the same line as the Chart');
