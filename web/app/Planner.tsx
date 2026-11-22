@@ -26,7 +26,7 @@ import {protectedScreen} from '../trip.ts';
 import {cruiseSpeed, hasOwnLimits, limitsFor} from '../limits.ts';
 import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
-import {categoryText, countText, evidenceLabel, fitText, hitReading, nmText, plannerText, plannerVerdict} from '../planner-copy.ts';
+import {categoryText, countText, evidenceLabel, fitText, hitReading, nmText, plannerText, plannerVerdict, reefTerrainText} from '../planner-copy.ts';
 import {PlanRules} from './PlanRules.tsx';
 import {waterRoute, type Route, type RoutePoint} from '../route.ts';
 // Leg routes over the land/water product and lines the Boat brief reads (FSC-05), kept until either changes so a re-render does not search again.
@@ -70,7 +70,7 @@ function SpotRow({t: spot, checked, hit, showConfidence = true, onToggle}: {t: T
         <small>{formatCoordinates(spot.latitude, spot.longitude, coordinates.value)}</small>
         <small>{spot.trip_rank ? spot.name : spot.id} · {t('planner.spot.grade', lang, {grade: spot.habitat_grade ?? ''})} · {depth} ft</small>
         {spot.trip_rank && spot.distance_basis && typeof spot.distance_nm === 'number' && Number.isFinite(spot.distance_nm) ? <small>{nmText(spot.distance_nm, lang)} nm {t(spot.distance_basis === 'water' ? 'planner.dist.water' : 'planner.dist.straight', lang)}</small> : null}
-        {spot.trip_rank ? <small>{spot.terrain_interpretation}</small> : null}
+        {spot.trip_rank ? <small>{reefTerrainText(spot, lang)}</small> : null}
         {hit ? <small>{hitReading(hit, lang)} {t('planner.boundary.context', lang)} {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{t('planner.boundary.link', lang, {agency: m.agency})}</a> </span>)}</small> : null}
       </span>
     </label>

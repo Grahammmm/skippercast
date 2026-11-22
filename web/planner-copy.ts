@@ -89,3 +89,11 @@ export const categoryText = (category: string, lang: Language = 'en'): string =>
 export const nmText = (n: number, lang: Language = 'en'): string => lang === 'es' ? num(n, lang, 1) : n.toFixed(1);
 /** A count with thousands separators, as the page's locale writes it. */
 export const countText = (n: number, lang: Language = 'en'): string => lang === 'es' ? n.toLocaleString(localeOf(lang)) : n.toLocaleString();
+
+/** SC2052-08: a ranked reef's terrain line. Spanish is built from the numbers behind it (metres, hectares, one decimal as the page writes them; a missing one reads "Sin dato" / "sin dato"); English and a target with no numbers keep the published line as it is. */
+export function reefTerrainText(target: {terrain_interpretation?: string; terrain_display?: {reliefM: number | null; areaHa: number | null}}, lang: Language = 'en'): string | undefined {
+  const d = target.terrain_display;
+  if (lang !== 'es' || !d) return target.terrain_interpretation;
+  const one = (n: number | null, unknown: StringId): string => n === null ? t(unknown, lang) : new Intl.NumberFormat(localeOf(lang), {minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false}).format(n);
+  return t('planner.reef.terrain', lang, {relief: one(d.reliefM, 'planner.reef.reliefUnknown'), area: one(d.areaHa, 'planner.reef.areaUnknown')});
+}

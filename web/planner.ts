@@ -59,6 +59,8 @@ export type Target = {
   id: string; label: string; name?: string; latitude: number; longitude: number; habitat_grade?: string; canonical_habitat?: boolean;
   trip_rank?: number; trip_fit?: number; trip_species?: string; evidence_confidence?: {percent: number};
   neighborhood_depth_ft?: number[]; center_depth_ft?: number | null; terrain_interpretation?: string; species_fit?: Record<string, number>;
+  /** SC2052-08: the numbers behind a loaded reef's terrain line (metres, hectares; null when absent), for a display in the page's language. */
+  terrain_display?: {reliefM: number | null; areaHa: number | null};
   /** SC2207-04: set on a ranked spot by Best available (in the page only, never saved): the one-way distance from the chosen port and what it is measured on. */
   distance_nm?: number | null; distance_basis?: 'water' | 'straight'; distance_why?: RouteFailure;
   /** BF-closures-everywhere: set on every ranked place `selectBest` returns. */

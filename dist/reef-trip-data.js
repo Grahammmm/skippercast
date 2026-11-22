@@ -14,6 +14,8 @@ async function boundedBytes(stream,limit,expected){
   const bytes=new Uint8Array(length);let offset=0;
   for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
 }
+// SC2052-08: the numbers the terrain line is built from, for a display in the page's language; missing or non-numeric is null, zero is kept.
+const finiteOrNull=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
 // SC-PERF-PROTCHECK-1: the publisher's protected-area verdict for a reef (geo-screen.js `screenPlace`'s answer, computed once at publish time).
 // Anything of another shape is dropped, so the browser runs the screen itself.
 const validVerdict=v=>!!v&&typeof v.inside==='boolean'&&typeof v.screened==='boolean'&&(v.name===null||typeof v.name==='string')&&(v.distanceM===null||Number.isFinite(v.distanceM));
@@ -64,7 +66,7 @@ export async function loadReefTrip(region,{fetchImpl=globalThis.fetch,now=Date.n
       center_depth_ft:null,neighborhood_depth_ft:[p.depth_min_ft,p.depth_max_ft],vertical_datum:p.vertical_datum,
       habitat_grade:p.terrain?.grade,habitat_score:p.terrain?.score,metrics:p.terrain,
       species_fit:p.fit,resolution_m:p.resolution_m,evidence_confidence:c,
-      area_ids:[p.id],drift_id:null,source_url:p.source_urls?.[0]||'',survey_year:p.source_year,
+      area_ids:[p.id],terrain_display:{reliefM:finiteOrNull(p.terrain?.relief_210m_m),areaHa:finiteOrNull(p.area_ha)},drift_id:null,source_url:p.source_urls?.[0]||'',survey_year:p.source_year,
       terrain_interpretation:`${p.terrain?.relief_210m_m?.toFixed(1)??'Unknown'} m local relief; ${p.area_ha?.toFixed(1)??'unknown'} ha reef footprint.`,
       special_note:'Interior reef reference point, not a sampled point depth. Search the reef on your sounder and test your drift.'+(sourceNote?' '+sourceNote:''),
       source_rights:rights,
