@@ -58,8 +58,10 @@ export interface CurrentsStatus {
 
 /** The rail's source choices, with v1's labels (dist/coastal-current-control.js). */
 export const CURRENT_SOURCES = [
-  {value: 'off', label: 'Off'}, {value: 'wcofs', label: 'NOAA WCOFS forecast'},
-  {value: 'hfr-1', label: 'Observed HF radar · 1 km'}, {value: 'hfr-6', label: 'Observed HF radar · 6 km'},
+  {value: 'off', label: 'Off', labelId: 'rail.currentSource.off'},
+  {value: 'wcofs', label: 'NOAA WCOFS forecast', labelId: 'rail.currentSource.wcofs'},
+  {value: 'hfr-1', label: 'Observed HF radar · 1 km', labelId: 'rail.currentSource.hfr1'},
+  {value: 'hfr-6', label: 'Observed HF radar · 6 km', labelId: 'rail.currentSource.hfr6'},
 ] as const;
 const MOTION = 'arrows follow the toward-bearing and their motion is illustrative';
 export const CURRENTS_BASIS = layerEntry('currents').basis;
