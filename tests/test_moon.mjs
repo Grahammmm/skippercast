@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {elongation, localNoon, moonLine, moonPhase} from '../web/moon.ts';
+import {prepareCatalogue} from '../web/i18n.ts';
 
 // Instants typed from the U.S. Naval Observatory "Phases of the Moon" table for 2026 (aa.usno.navy.mil/data/MoonPhases), UT.
 const NEW = ['2026-01-18T19:52Z', '2026-02-17T12:01Z', '2026-03-19T01:23Z', '2026-04-17T11:52Z', '2026-05-16T20:01Z', '2026-06-15T02:54Z', '2026-07-14T09:44Z', '2026-08-12T17:37Z'];
@@ -97,5 +98,34 @@ test('the Conditions view shows the line under Tide events for the dock day and 
   const src = readFileSync(new URL('../web/app/views/Conditions.tsx', import.meta.url), 'utf8');
   assert.equal(src.split('moonLine(').length - 1, 1);
   assert.ok(src.indexOf("'conditions.tides'") < src.indexOf('moonLine(') && src.indexOf('moonLine(') < src.indexOf("'conditions.before'"));
-  assert.match(src, /moonLine\(state\.day, tz\)/);
+  assert.match(src, /moonLine\(state\.day, tz, lang\)/);
+});
+
+// Contract: SC2137-03, a Spanish page shows the moon line from the catalogue, one id per phase name, with the page's number format.
+// Believable bug: the line stays an English template (the live 'Moon: waxing gibbous, 82% lit' on ?lang=es) or a phase name falls back to English.
+const LA = 'America/Los_Angeles';
+const PHASE_DAYS = [
+  ['2026-02-16', 'new', 'nueva', 0], ['2026-02-18', 'waxing crescent', 'creciente', 2], ['2026-02-23', 'first quarter', 'cuarto creciente', 42],
+  ['2026-02-25', 'waxing gibbous', 'gibosa creciente', 65], ['2026-02-01', 'full', 'llena', 100], ['2026-02-03', 'waning gibbous', 'gibosa menguante', 96],
+  ['2026-02-08', 'last quarter', 'cuarto menguante', 57], ['2026-02-10', 'waning crescent', 'menguante', 38],
+];
+
+test('Spanish line: every phase name from its catalogue id, percentage as formatted by the page locale', async () => {
+  await prepareCatalogue('es');
+  for (const [day, en, es, pct] of PHASE_DAYS) {
+    assert.equal(moonPhase(localNoon(day, LA)).name, en, `${day} is ${en}`);
+    assert.equal(moonLine(day, LA, 'es'), `Luna: ${es}, ${pct}% iluminada`, day);
+    assert.equal(moonLine(day, LA, 'en'), `Moon: ${en}, ${pct}% lit`, day);
+  }
+  assert.ok(!/Moon|lit\b/.test(moonLine('2026-02-25', LA, 'es')), 'no English template word left on a Spanish page');
+});
+
+test('English line is byte-identical with the language omitted, explicit en, or an unsupported tag', () => {
+  for (const [day, en, , pct] of PHASE_DAYS) {
+    const line = `Moon: ${en}, ${pct}% lit`;
+    assert.equal(moonLine(day, LA), line, day);
+    assert.equal(moonLine(day, LA, 'en'), line, day);
+    assert.equal(moonLine(day, LA, 'fr'), line, day);
+  }
+  assert.equal(moonLine('2026-01-17', 'UTC'), 'Moon: waning crescent, 2% lit');
 });

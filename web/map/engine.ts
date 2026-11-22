@@ -11,6 +11,7 @@
 // drives it with a fake map. Erasable syntax only.
 import type * as MapLibre from 'maplibre-gl';
 import {FRAME_PROTOCOL, frameProtocol} from './frames.ts';
+import {t, type Language} from '../i18n.ts';
 import {sourceLayer} from './layers.ts';
 import type {FieldTexture} from './field.ts';
 import type {ArchiveReader} from './seafloor.ts';
@@ -59,6 +60,8 @@ export interface EngineOptions {
   onIdle?(): void;
   /** A still backdrop (the landing's night map, FE-25): no gesture, key, control or label fade; no corner link either: the page carries the footer's Sources link. */
   still?: boolean;
+  /** SC2052-04: the page's ready language for the map's own words (Sources link, zoom buttons, canvas name); read once at creation, English when absent. */
+  language?: Language | string;
 }
 
 /** One leg of the flyover (#646, web/map/flyover.ts): the tilt and turn to reach, in degrees, over `duration` milliseconds. */
@@ -154,18 +157,21 @@ export const SOURCES_HREF = '/sources#data-sources';
  */
 export class SourcesLinkControl {
   private container: HTMLElement | null = null;
+  /** `lang` is the page's ready language (SC2052-04): the label is the footer's own `brief.sources`; the destination and the page stay as they are. */
+  private readonly lang: Language | string;
+  constructor(lang: Language | string = 'en') { this.lang = lang; }
   onAdd(): HTMLElement {
     const div = document.createElement('div'), link = document.createElement('a');
     div.className = 'maplibregl-ctrl map-sources-link';
-    link.href = SOURCES_HREF; link.textContent = 'Sources'; link.setAttribute('data-sources-link', '');
+    link.href = SOURCES_HREF; link.textContent = t('brief.sources', this.lang); link.setAttribute('data-sources-link', '');
     div.append(link);
     return this.container = div;
   }
   onRemove(): void { this.container?.remove(); this.container = null; }
 }
 
-/** The Map constructor's options: north up, no pitch, `?view=` zoom range, the stage's own accessible name; a still map takes no input. */
-export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification, camera: EngineCamera, still = false): MapLibre.MapOptions {
+/** The Map constructor's options: north up, no pitch, `?view=` zoom range, the stage's own accessible name; a still map takes no input. `lang` (SC2052-04) words the canvas name and the zoom buttons' title and aria-label, which MapLibre's NavigationControl reads from this locale. */
+export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification, camera: EngineCamera, still = false, lang: Language | string = 'en'): MapLibre.MapOptions {
   return {
     ...still ? {interactive: false, fadeDuration: 0} : {},
     container: host, style,
@@ -174,20 +180,21 @@ export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification
     dragRotate: false, pitchWithRotate: false, touchPitch: false, rollEnabled: false, maxPitch: 0,
     // The host follows its own size (a ResizeObserver), including when the stage shows it again.
     trackResize: false, attributionControl: false, renderWorldCopies: false,
-    locale: {'Map.Title': 'Chart'},
+    locale: {'Map.Title': t('stage.chart', lang), 'NavigationControl.ZoomIn': t('stage.zoomIn', lang), 'NavigationControl.ZoomOut': t('stage.zoomOut', lang)},
   };
 }
 
 export function createEngine(module: MapLibraryModule, options: EngineOptions): Engine {
   prepareLibrary(module);
   const {lib} = module, {host} = options;
-  const map = new lib.Map(mapOptions(host, options.style, options.camera, options.still));
+  const lang = options.language ?? 'en';
+  const map = new lib.Map(mapOptions(host, options.style, options.camera, options.still, lang));
   map.keyboard.disableRotation();
   map.touchZoomRotate.disableRotation();
   if (!options.still) {
     map.addControl(new lib.NavigationControl({showCompass: false}), 'bottom-right');
     map.addControl(new lib.ScaleControl({unit: 'nautical', maxWidth: 120}), 'bottom-right');
-    map.addControl(new SourcesLinkControl(), 'bottom-right');
+    map.addControl(new SourcesLinkControl(lang), 'bottom-right');
   }
 
   // The overlays drawn now, by registry layer (FE-22), so their source errors route to that layer.

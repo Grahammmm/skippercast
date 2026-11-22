@@ -18,6 +18,7 @@ import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastli
 import {VIEW_ZOOM, ZOOM_OFFSET, SOURCES_HREF, SourcesLinkControl, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
+import {language, prepareCatalogue} from '../web/i18n.ts';
 import {MPA_FILL, mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
 import {createDepthContours, DEPTH_BOTTOM, DEPTH_HIT, DEPTH_LABEL, DEPTH_LINE, DEPTH_LINE_INDEX} from '../web/map/depth-contours.ts';
 import {createWaterTemp, waterTempOverlay} from '../web/map/sst.ts';
@@ -287,7 +288,7 @@ test('MapLibre init: north up, nautical scale, worker and protocol once, and err
   assert.deepEqual(map.controls.map(([c, at]) => [c instanceof SourcesLinkControl ? 'sources' : c.kind, at]), [['navigation', 'bottom-right'], ['scale', 'bottom-right'], ['sources', 'bottom-right']]);
   assert.equal(map.controls[0][0].options.showCompass, false, 'no compass: the chart never rotates');
   assert.equal(map.controls[1][0].options.unit, 'nautical');
-  assert.deepEqual(mapOptions(host, options.style, options.camera).locale, {'Map.Title': 'Chart'});
+  assert.deepEqual(mapOptions(host, options.style, options.camera).locale, ENGLISH_LOCALE);
 
   map.fire('error', {sourceId: COASTLINE_SOURCE, error: new Error('404')});
   map.fire('error', {sourceId: 'mystery', error: new Error('glyphs')});
@@ -331,6 +332,54 @@ test('MAP-SOURCES-PAGE-1: the Chart has no attribution control; its only source 
     control.onRemove();
     assert.equal(box.removed, true);
   } finally { globalThis.document = saved; }
+});
+
+// SC2052-04. Contract: the Chart's own words (Sources link, zoom buttons' title and aria-label, canvas name) follow the page language
+// through the catalogue, English stays byte-identical, and the link still goes to /sources#data-sources. MapLibre's NavigationControl
+// reads its two zoom labels and the canvas name from the Map's `locale` option, so that option is where they are checked.
+// Believable bugs: a literal 'Sources'/'Chart' left in engine.ts, or chart.ts not passing the page language (English words on a Spanish page).
+const ENGLISH_LOCALE = {'Map.Title': 'Chart', 'NavigationControl.ZoomIn': 'Zoom in', 'NavigationControl.ZoomOut': 'Zoom out'};
+const SPANISH_LOCALE = {'Map.Title': 'Carta', 'NavigationControl.ZoomIn': 'Acercar', 'NavigationControl.ZoomOut': 'Alejar'};
+/** The Sources link a control draws, as [label, href], over a minimal document. */
+function drawnSourcesLink(control) {
+  const saved = globalThis.document;
+  globalThis.document = {createElement: tag => ({tag, className: '', textContent: '', attrs: {}, kids: [], setAttribute() {}, append(...k) { this.kids.push(...k); }, remove() {}})};
+  try { const link = control.onAdd().kids[0]; return [link.textContent, link.href]; } finally { globalThis.document = saved; }
+}
+
+test('SC2052-04: on a Spanish page the Chart\'s Sources link, zoom buttons and canvas name are Spanish, and the link still goes to /sources#data-sources', async () => {
+  await prepareCatalogue('es');
+  const fake = library(), style = {version: 8, sources: {}, layers: []}, camera = {latitude: 35.37, longitude: -120.86, zoom: 12};
+  createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}, language: 'es'});
+  const [map] = fake.maps;
+  assert.ok(util.isDeepStrictEqual(map.options.locale, SPANISH_LOCALE), 'canvas name and both zoom labels are Spanish');
+  const sources = map.controls.find(([c]) => c instanceof SourcesLinkControl)[0];
+  assert.deepEqual(drawnSourcesLink(sources), ['Fuentes', '/sources#data-sources']);
+  assert.ok(util.isDeepStrictEqual(mapOptions({}, style, camera, false, 'es').locale, SPANISH_LOCALE), 'mapOptions takes the language');
+});
+
+test('SC2052-04: English bytes are unchanged when the language is English or absent', () => {
+  const fake = library(), style = {version: 8, sources: {}, layers: []}, camera = {latitude: 35.37, longitude: -120.86, zoom: 12};
+  createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}});
+  createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}, language: 'en'});
+  for (const map of fake.maps) {
+    assert.ok(util.isDeepStrictEqual(map.options.locale, ENGLISH_LOCALE), 'Chart, Zoom in, Zoom out');
+    assert.deepEqual(drawnSourcesLink(map.controls[2][0]), ['Sources', SOURCES_HREF]);
+  }
+  assert.deepEqual(drawnSourcesLink(new SourcesLinkControl()), ['Sources', SOURCES_HREF], 'the control defaults to English');
+});
+
+test('SC2052-04: the Chart hands the page language to its engine when it mounts', async t => {
+  t.mock.method(console, 'warn', () => {});
+  await prepareCatalogue('es');
+  language.value = 'es';
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  const {fake, stage} = chartStage();
+  try {
+    await tick(); await tick();
+    assert.ok(util.isDeepStrictEqual(fake.maps[0].options.locale, SPANISH_LOCALE));
+    assert.deepEqual(drawnSourcesLink(fake.maps[0].controls[2][0])[0], 'Fuentes');
+  } finally { language.value = 'en'; stage.destroy(); }
 });
 
 test('the engine\'s style gate: calls before style.load wait, then apply once with the latest value per layer and source', () => {
