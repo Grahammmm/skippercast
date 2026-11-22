@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "required_evidence_per_release": {
+    "reviewed_release": "required",
+    "independently_verified_live_check": "required",
+    "depth": {
+      "target_ft": 300,
+      "allowed_findings": ["reaches_target", "bounded_shortfall", "explicit_unknown"]
+    }
+  },
+  "release_rows": [
+    {"release_id": "big-sur-coast"},
+    {"release_id": "bodega-point-reyes"},
+    {"release_id": "cambria-san-simeon"},
+    {"release_id": "crescent-city"},
+    {"release_id": "fort-bragg-point-arena"},
+    {"release_id": "humboldt-bay-cape-mendocino"},
+    {"release_id": "monterey-point-sur"},
+    {"release_id": "morro-bay"},
+    {"release_id": "point-arena-bodega"},
+    {"release_id": "point-arguello-conception"},
+    {"release_id": "point-reyes-pigeon"},
+    {"release_id": "santa-cruz-monterey-bay"},
+    {"release_id": "shelter-cove-north-mendocino"},
+    {"release_id": "south-big-sur-san-simeon"},
+    {
+      "release_id": "southern-california",
+      "child_geographies": ["channel-islands-north", "outer-islands-borderland"]
+    },
+    {"release_id": "trinidad-klamath"}
+  ]
+}
