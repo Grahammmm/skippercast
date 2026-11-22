@@ -74,7 +74,7 @@ test('planner exports the real avoid-polygon route after the normal waypoint gat
   try {
     const file=await p.exportRouteFile();
     assert.equal(file.type,'application/gpx+xml');assert.match(file.name,/-planning-route.gpx$/);
-    assert.match(await file.text(),/<rte>/);assert.match(p.routeStatus.value,/Boundary check: 2026-11-07/);
+    assert.match(await file.text(),/<rte>/);assert.equal(p.routeStatus.value.kind,'checked');assert.equal(p.routeStatus.value.checkedAt,checked);
     const {launchPoints} = await import('../web/launches.ts');
     try {
       launchPoints.value = {region: 'fixture', points: [{id: 'ramp', name: 'Ramp', ...point(5,5)}]};
