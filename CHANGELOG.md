@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SC2052-05: the landing and the map show a Spanish browser-tab title when the page is Spanish. The English titles, search description and link previews are unchanged.
 - SC2052-09: a "Shorter run order" button beside "Your stops in order" puts the chosen stops in a shorter run on straight-line distance, only when you tap it. It keeps the same stops and your launch ramp, says when the order is already the shortest it finds, and counts as your own stop order.
 - SC2022-02: the brief's fleet and local-report lines read Spanish when the page does; port names stay as published and English is unchanged.
 - SC2022-08: the harbor entrance block shows the bar swell in the height unit you chose (metres or feet). The bar judgement and the WCOFS current speed (knots) are unchanged.
