@@ -285,6 +285,7 @@
 "verdict.reason.seas":"mar {band}{detail}",
 "verdict.reason.surge":"vaivén del agua {band}{basis}",
 "verdict.reason.chop":"oleaje corto {band}",
+"verdict.reason.chopChoppy":"oleaje corto picado",
 "verdict.reason.clarity":"estimación de claridad {band}",
 "verdict.reason.detail":" ({height} {heightUnit}{period}{basis})",
 "verdict.reason.period":" a {period} s",
