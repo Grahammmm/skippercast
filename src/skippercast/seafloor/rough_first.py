@@ -36,6 +36,7 @@ from pathlib import Path
 import re
 import struct
 import sys
+import zlib
 
 from skippercast.platform.contracts import REPO, atomic_json, read_json
 
@@ -122,6 +123,32 @@ def _zxy(tile_id):
     return z, x, y
 
 
+READ_ERRORS = (ValueError, struct.error, OSError, EOFError, IndexError, zlib.error)
+SUPPORTED_TILE_TYPE = 1  # Mapbox Vector Tile, what tippecanoe writes and the client map reads
+SUPPORTED_TILE_COMPRESSION = (1, 2)  # none, gzip
+
+
+def _reject_json_constant(value):
+    raise ValueError(f'{value} is not a JSON number')
+
+
+def _check_metadata(data, offset, length):
+    if offset + length > len(data):
+        raise ValueError('declared metadata extends beyond archive')
+    if not length:
+        if offset:
+            raise ValueError('declared metadata has zero length')
+        return
+    try:
+        # The caller has checked internal_compression (shared by metadata and directories).
+        document = json.loads(gzip.decompress(data[offset:offset + length]).decode('utf-8'),
+                              parse_constant=_reject_json_constant)
+    except (*READ_ERRORS, RecursionError) as exc:
+        raise ValueError('metadata is not readable gzip JSON') from exc
+    if not isinstance(document, dict):
+        raise ValueError('metadata must be a JSON object')
+
+
 def read_tiles(data):
     """{(z, x, y): stored tile bytes} for a PMTiles v3 archive with gzip directories."""
     if data[:8] != b'PMTiles\x03' or len(data) < 127:
@@ -129,8 +156,13 @@ def read_tiles(data):
     h = struct.unpack_from('<11Q', data, 8)
     if data[97] != 2:
         raise ValueError('expected gzip internal compression')
+    if data[98] not in SUPPORTED_TILE_COMPRESSION:  # header byte 98: 1 none, 2 gzip (3 brotli / 4 zstd unsupported)
+        raise ValueError('unsupported tile compression')
+    if data[99] != SUPPORTED_TILE_TYPE:  # header byte 99: 1 = Mapbox Vector Tile
+        raise ValueError('unsupported tile type')
     if h[6] + h[7] > len(data):
         raise ValueError('declared tile data extends beyond archive')
+    _check_metadata(data, h[2], h[3])
     tiles = {}
 
     def walk(offset, length, depth=0):
@@ -185,7 +217,8 @@ def identity(reference, candidate, zooms):
             'first_different': ['/'.join(map(str, k)) for k in sorted(differ + sorted(keys_a ^ keys_b))[:20]]}
 
 
-def _fields(data):
+def _wire_fields(data):
+    """[(field number, wire type, value)]: an int for a varint, bytes for fixed-width and length-delimited fields."""
     pos, out = 0, []
     while pos < len(data):
         key, pos = _varint(data, pos)
@@ -204,14 +237,18 @@ def _fields(data):
             value, pos = data[pos:pos + size], pos + size
         else:
             raise ValueError('unsupported protobuf wire type')
-        out.append((num, value))
+        out.append((num, wire, value))
     return out
 
 
-def habitat_ids(raw):
-    """(feature occurrences, set of ids) in one gzip MVT tile's habitat layer."""
+def _fields(data):
+    return [(num, value) for num, _, value in _wire_fields(data)]
+
+
+def habitat_ids(raw, *, gzipped=True):
+    """(feature occurrences, set of ids) in one MVT tile's habitat layer."""
     features, ids = 0, set()
-    for num, layer in _fields(gzip.decompress(raw)):
+    for num, layer in _fields(gzip.decompress(raw) if gzipped else raw):
         if num != 3:
             continue
         rows = _fields(layer)
@@ -240,17 +277,120 @@ def habitat_ids(raw):
     return features, ids
 
 
-def content(tiles, zooms):
+def content(tiles, zooms, *, gzipped=True):
     out = {}
     for z in zooms:
         occurrences, ids = 0, set()
         for key, raw in tiles.items():
             if key[0] == z:
-                n, found = habitat_ids(raw)
+                n, found = habitat_ids(raw, gzipped=gzipped)
                 occurrences += n
                 ids |= found
         out[z] = (occurrences, ids)
     return out
+
+
+def _packed(raw):
+    out, pos = [], 0
+    while pos < len(raw):
+        value, pos = _varint(raw, pos)
+        out.append(value)
+    return out
+
+
+def _expect(rows, spec, what):
+    """Each known field must arrive with its declared wire type (0 varint, 2 length-delimited, 1/5 fixed)."""
+    for num, wire, value in rows:
+        if num in spec and wire not in spec[num]:
+            raise ValueError(f'{what} field {num} has the wrong wire type')
+        if num in spec and wire in (1, 5) and len(value) != (8 if wire == 1 else 4):
+            raise ValueError(f'{what} field {num} has the wrong width')
+
+
+def _mvt_value(raw):
+    rows = _wire_fields(raw)
+    _expect(rows, {1: (2,), 2: (5,), 3: (1,), 4: (0,), 5: (0,), 6: (0,), 7: (0,)}, 'value')
+    if len(rows) != 1 or rows[0][0] > 7 or rows[0][0] < 1:
+        raise ValueError('a vector tile value holds exactly one of fields 1-7')
+    if rows[0][0] == 1:
+        rows[0][2].decode()
+
+
+def _mvt_geometry(commands, kind):
+    """Command integers of one feature: MoveTo(1)/LineTo(2) take 2 parameters per repeat, ClosePath(7) none."""
+    pattern = {1: (1,), 2: (1, 2), 3: (1, 2, 7)}.get(kind, ())
+    pos = steps = 0
+    while pos < len(commands):
+        command, count = commands[pos] & 7, commands[pos] >> 3
+        pos += 1
+        if not steps and command != 1:
+            raise ValueError('geometry must start with MoveTo')
+        if pattern and (command != pattern[steps % len(pattern)] or (kind == 1 and steps)):
+            raise ValueError('invalid geometry command sequence')
+        if count == 0:
+            raise ValueError('geometry command with no repeats')
+        if command in (1, 2):
+            if kind in (2, 3) and command == 1 and count != 1:
+                raise ValueError('line or polygon MoveTo repeats exactly once')
+            if kind == 3 and command == 2 and count < 2:
+                raise ValueError('polygon LineTo needs at least two repeats')
+            pos += 2 * count
+            if pos > len(commands):
+                raise ValueError('geometry parameters run past the command list')
+        elif command == 7:
+            if count != 1:
+                raise ValueError('ClosePath repeats exactly once')
+        else:
+            raise ValueError('unknown geometry command')
+        steps += 1
+    if pattern and (not steps or steps % len(pattern)):
+        raise ValueError('incomplete geometry command sequence')
+
+
+def _mvt_feature(raw, keys, values):
+    rows = _wire_fields(raw)
+    _expect(rows, {1: (0,), 2: (2,), 3: (0,), 4: (2,)}, 'feature')
+    kind = next((v for n, _, v in rows if n == 3), 0)
+    if kind > 3:
+        raise ValueError('unknown geometry type')
+    commands = []
+    for num, _, value in rows:
+        if num == 2:
+            tags = _packed(value)
+            if len(tags) % 2 or any(k >= keys for k in tags[::2]) or any(v >= values for v in tags[1::2]):
+                raise ValueError('feature tags do not index the layer keys and values')
+        elif num == 4:
+            commands.extend(_packed(value))
+    _mvt_geometry(commands, kind)
+
+
+def _mvt_layer(raw):
+    rows = _wire_fields(raw)
+    _expect(rows, {1: (2,), 2: (2,), 3: (2,), 4: (2,), 5: (0,), 15: (0,)}, 'layer')
+    if sum(n == 1 for n, _, _ in rows) != 1 or not next(v for n, _, v in rows if n == 1):
+        raise ValueError('a vector tile layer needs exactly one name')
+    if next((v for n, _, v in rows if n == 15), None) not in (1, 2):
+        raise ValueError('unsupported or missing vector tile version')
+    for n, _, value in rows:
+        if n in (1, 3):
+            value.decode()
+    keys, values = sum(n == 3 for n, _, _ in rows), [v for n, _, v in rows if n == 4]
+    for value in values:
+        _mvt_value(value)
+    for n, _, value in rows:
+        if n == 2:
+            _mvt_feature(value, keys, len(values))
+
+
+def decode_tiles(data, tiles):
+    """Raise unless every stored tile decodes as a vector tile: gunzip when the header says so, then parse each
+    layer, feature, tag and geometry list of the protobuf, not only the outer fields."""
+    gzipped = data[98:99] != b'\x01'  # read_tiles admits only none (1) and gzip (2)
+    for raw in tiles.values():
+        for num, wire, layer in _wire_fields(gzip.decompress(raw) if gzipped else raw):
+            if num != 3 or wire != 2:  # a Mapbox Vector Tile holds layers (field 3) only
+                raise ValueError('tile is not a vector tile')
+            _mvt_layer(layer)
 
 
 # ---- Receipts ------------------------------------------------------------------------------
@@ -266,15 +406,23 @@ def _archive(data, tiles):
 
 
 def control_receipt(region, data):
-    """Sizes of the control archive a region not listed for rough-first publishes; no gate applies."""
+    """Sizes of the control archive a region not listed for rough-first publishes.
+
+    No size gate applies, but the archive must be structurally readable: ``pass`` is False (and the build
+    refuses before upload) when it is not, e.g. the PMTiles magic bytes with an invalid header."""
     try:
-        tiles, error = read_tiles(data), None
-    except (ValueError, struct.error, OSError, EOFError, IndexError) as exc:
+        tiles = read_tiles(data)
+        decode_tiles(data, tiles)
+        error = reason = None
+    except READ_ERRORS as exc:
         tiles, error = None, type(exc).__name__
+        reason = str(exc)
     receipt = {'receipt': 'seafloor archive size receipt', 'region': region, 'mode': 'control', **_run(),
-               'archive': _archive(data, tiles), 'gate': None, 'pass': True}
+               'archive': _archive(data, tiles), 'gate': None, 'failed': [], 'pass': error is None}
     if error:
         receipt['archive']['unreadable'] = error
+        receipt['archive']['reason'] = reason
+        receipt['failed'] = ['unreadable archive']
     return receipt
 
 
@@ -285,9 +433,11 @@ def evaluate(region, control_data, candidate_data, reference, *, reference_sha25
                'reference_file': REFERENCE_FILE, 'reference_sha256': reference_sha256}
     try:
         rk_tiles, rc_tiles = read_tiles(control_data), read_tiles(candidate_data)
-    except (ValueError, struct.error, OSError, EOFError, IndexError) as exc:
+        decode_tiles(control_data, rk_tiles)  # every zoom of both archives must decode, whatever the gate items cover
+        decode_tiles(candidate_data, rc_tiles)
+    except READ_ERRORS as exc:
         receipt.update(control=_archive(control_data, None), archive=_archive(candidate_data, None),
-                       error=f'unreadable archive: {type(exc).__name__}', gate={}, failed=['unreadable archive'],
+                       error=f'unreadable archive: {type(exc).__name__}: {exc}', gate={}, failed=['unreadable archive'],
                        **{'pass': False})
         return receipt
     rk, rc = per_zoom(rk_tiles), per_zoom(rc_tiles)
@@ -309,7 +459,9 @@ def evaluate(region, control_data, candidate_data, reference, *, reference_sha25
     total_rk, total_rc = sum(map(len, rk_tiles.values())), sum(map(len, rc_tiles.values()))
     detail = identity(rk_tiles, rc_tiles, set(DETAIL_ZOOMS))
     try:
-        rk_content, rc_content = content(rk_tiles, REPORTED_ZOOMS), content(rc_tiles, REPORTED_ZOOMS)
+        # read_tiles has already rejected unsupported compression for both archives.
+        rk_content = content(rk_tiles, REPORTED_ZOOMS, gzipped=control_data[98:99] != b'\x01')
+        rc_content = content(rc_tiles, REPORTED_ZOOMS, gzipped=candidate_data[98:99] != b'\x01')
         content_error = None
     except (ValueError, OSError, EOFError, IndexError, UnicodeDecodeError) as exc:
         rk_content, rc_content = {}, {}
@@ -380,6 +532,9 @@ def summary(receipt):
             lines.append(f"z12-15 identical to the control build: {detail['identical']} of "
                          f"{detail['addressed_reference']} tiles.")
     else:
+        if not receipt.get('pass'):
+            lines += ['', 'Archive check: FAIL, nothing published (' + ', '.join(
+                receipt.get('failed') or ['unreadable archive']) + ').']
         lines += ['', '| Zoom | Tiles | Payload B |', '| ---: | ---: | ---: |']
         for z, row in sorted((archive.get('per_zoom') or {}).items(), key=lambda item: int(item[0])):
             lines.append(f"| {z} | {row['tiles']} | {row['bytes']} |")

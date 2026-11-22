@@ -16,6 +16,7 @@ from skippercast.seafloor import publish, rough_first, state_cache, jobs
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.verify import verify_public
 from tests import http_fixture
+from tests.unit.test_f11_05_audit import valid_archive as valid_pmtiles
 from tests._support import NOW, ROOT
 
 
@@ -86,7 +87,7 @@ class PublicationTests(unittest.TestCase):
             atomic_json(root/'catalog/surveys.json', {'surveys':[{'id':'native','url':'https://example.test/original'}]})
             def archive(tool, layers, path, **kwargs):
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(b'PMTiles\x03fixture')
+                path.write_bytes(valid_pmtiles())
             with patch.object(publish,'region_layers',return_value=(layers,{},NOW+timedelta(days=1))), \
                  patch('scripts.build_map_tiles.build_vector_archive',side_effect=archive):
                 folder, manifest = publish.build('morro-bay', root=root, tool='fixture', now=NOW)
@@ -125,7 +126,7 @@ class PublicationTests(unittest.TestCase):
             seen = {}
             def archive(tool, layers, path, **kwargs):
                 seen.update(kwargs); path.parent.mkdir(parents=True,exist_ok=True)
-                path.write_bytes(b'PMTiles\x03fixture')
+                path.write_bytes(valid_pmtiles())
             with patch.object(publish,'region_layers',return_value=(layers,{},NOW+timedelta(days=1))), \
                  patch('scripts.build_map_tiles.build_vector_archive',side_effect=archive):
                 folder, manifest = publish.build('morro-bay',root=root,tool='fixture',now=NOW)
@@ -423,8 +424,9 @@ def mvt(ids, pad=0, layer='habitat'):
     values = [*ids, ''.join(hashlib.sha256(b'%d-%d' % (pad, i)).hexdigest() for i in range(pad // 64 + 1))]
     body = _pb(1, 2, layer.encode()) + _pb(15, 0, 2) + _pb(3, 2, b'id') + _pb(3, 2, b'pad')
     body += b''.join(_pb(4, 2, _pb(1, 2, v.encode())) for v in values)
+    ring = _pb(4, 2, b'\x09\x02\x02\x12\x02\x00\x00\x02\x0f')  # MoveTo, LineTo twice, ClosePath
     for i, _ in enumerate(ids):
-        body += _pb(2, 2, _pb(2, 2, bytes([0, i, 1, len(ids)])) + _pb(3, 0, 3))
+        body += _pb(2, 2, _pb(2, 2, bytes([0, i, 1, len(ids)])) + _pb(3, 0, 3) + ring)
     return gzip.compress(_pb(3, 2, body), mtime=9)
 
 
@@ -448,6 +450,9 @@ def pmtiles(path, tiles):
     from scripts.build_bathy_tiles import write_pmtiles
     write_pmtiles(path, tiles, metadata={}, bounds=(-121.2, 35.1, -120.7, 35.6), minzoom=8, maxzoom=15,
                   center=(10, -120.95, 35.35))
+    data = bytearray(Path(path).read_bytes())
+    data[98:100] = b'\x02\x01'  # the writer labels tiles PNG; these fixtures hold gzip MVT tiles, which the gate now requires
+    Path(path).write_bytes(data)
 
 
 class RoughFirstGateTests(unittest.TestCase):
@@ -504,7 +509,7 @@ class RoughFirstGateTests(unittest.TestCase):
     def test_any_failed_item_fails_closed_before_upload(self):
         detail = DETAIL_ADDRESSES[1]
         cases = {
-            'one byte different at z13': ({**rough_tiles(), detail: rough_tiles()[detail][:-1]+bytes([rough_tiles()[detail][-1] ^ 1])},
+            'one byte different at z13': ({**rough_tiles(), detail: rough_tiles()[detail][:4]+bytes([rough_tiles()[detail][4] ^ 1])+rough_tiles()[detail][5:]},
                                           'item3_detail_identical_z12_15'),
             'a z12-15 tile missing': ({k: v for k, v in rough_tiles().items() if k != DETAIL_ADDRESSES[0]},
                                       'item3_detail_identical_z12_15'),
