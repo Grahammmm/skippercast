@@ -20,6 +20,8 @@ async function load() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {PrintBrief, BriefFooter, printedText, printedAt, beforePrint, afterPrint} from './web/brief/Brief.tsx';
       export {regionInfo} from './web/app/region-info.ts';
+      export {language, setLanguage} from './web/i18n.ts';
+      export {profile} from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
@@ -103,4 +105,22 @@ test('the desktop first-answer panel prints black on white with its screen-only 
   assert.ok(hidden.includes('.app-first-answer-more'), 'first-answer button hidden in print');
   assert.match(print, /\.app-first-answer, \.app-sheet, [^{]*\{[^}]*background: Canvas !important; color: CanvasText !important/, 'panel reset to Canvas/CanvasText');
   assert.match(print, /\.app-first-answer \*[^{]*\{[^}]*color: CanvasText !important; background: transparent !important/, 'children forced black on transparent');
+});
+
+test('print place line: English keeps the profile label, Spanish uses where.profile.<id>', async () => {
+  const {PrintBrief, render, h, regionInfo, language, setLanguage, profile} = await load();
+  regionInfo.value = {id: 'morro-bay', name: 'Morro Bay', timezone: 'America/Los_Angeles'};
+  const place = lang => { setLanguage(lang, {storage: {getItem: () => null, setItem() {}}, doc: null}); return /app-print-place[^>]*>([^<]*)</.exec(render(h(PrintBrief, {now: NOW})))?.[1]; };
+  try {
+    const was = profile.value, seen = {};
+    for (const [id, en, es] of [['boat', 'Boat', 'Barco'], ['shore', 'Shore', 'Orilla'], ['spear', 'Spear', 'Pesca submarina'], ['kayak', 'Kayak', 'Kayak']]) {
+      profile.value = id;
+      seen[id] = [place('en'), place('es'), place('en')];
+      assert.equal(seen[id][0], `Morro Bay · ${en}`);
+      assert.equal(seen[id][1], `Morro Bay · ${es}`);
+      assert.equal(seen[id][2], seen[id][0], 'back to English restores the bytes');
+    }
+    profile.value = was;
+  } finally { setLanguage('en', {storage: {getItem: () => null, setItem() {}}, doc: null}); regionInfo.value = null; }
+  assert.equal(language.value, 'en');
 });

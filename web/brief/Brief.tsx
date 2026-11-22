@@ -953,7 +953,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 export function PrintBrief({now}: {now: Date}) {
   const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, lang = language.value;
   const at = leadHour(hour.value, day.value, now, tz), date = leadDate(now), when = at ? new Date(at) : now;
-  const place = [shownRegion()?.name, port.value ? port.value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null, PROFILE_TABLE[profile.value].label].filter(Boolean).join(' · ');
+  const place = [shownRegion()?.name, port.value ? port.value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null, lang === 'en' ? PROFILE_TABLE[profile.value].label : t(`where.profile.${profile.value}`, lang)].filter(Boolean).join(' · ');
   return (
     <>
       <Button class="app-print-button" onClick={() => window.print()}>{t('brief.print', lang)}</Button>
