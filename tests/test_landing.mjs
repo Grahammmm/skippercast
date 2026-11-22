@@ -158,6 +158,7 @@ async function load() {
       export {Readout} from './web/landing/Readout.tsx';
       export {LayerDots, layerURL, DOT_CURRENT, DOT_LABELS, dotLabels} from './web/landing/LayerDots.tsx';
       export {language} from './web/landing/i18n.ts';
+      export {applyLandingCopy} from './web/landing/copy.ts';
       export {RAIL_ENTRIES, railEntries} from './web/app/rail.ts';
       export {DEFAULT_CURRENT, STORAGE_KEYS} from './web/state.ts';
       export {render} from 'preact-render-to-string';
@@ -167,6 +168,30 @@ async function load() {
   components = await import(pathToFileURL(out).href);
   return components;
 }
+
+// SC2052-05. Contract: a Spanish landing's tab title is the catalogue's Spanish line; the served English <title>, the meta description and the social
+// tags are the authored static bytes and English never writes the title. Bug caught: the title staying English on ?lang=es, a rewrite of the English
+// title (or a write that does not happen after the table is ready), or the static head being edited so search and link previews change.
+test('landing_tab_title: Spanish sets the catalogue title once, English and a failed Spanish write nothing, the static head is unchanged', async () => {
+  const {applyLandingCopy} = await load();
+  const page = readFileSync(join(ROOT, 'dist/landing.html'), 'utf8');
+  const EN = 'SkipperCast · Central Coast fishing weather, tides and seafloor map';
+  const ES = 'SkipperCast · Tiempo para la pesca, mareas y mapa del fondo marino de la Costa Central';
+  assert.ok(page.includes(`<title>${EN}</title>`), 'the served English title is the literal, byte for byte');
+  assert.equal((page.match(/<title>/g) || []).length, 1);
+  assert.ok(!page.includes(ES), 'the static page never carries the Spanish title');
+  assert.ok(page.includes(`<meta property="og:title" content="${EN}" />`) && page.includes(`<meta name="twitter:title" content="${EN}" />`), 'the social tags keep the English title');
+  assert.match(page, /<meta name="description" content="Central California fishing conditions: [^"]*" \/>/, 'the meta description stays the static English');
+  const doc = () => { const writes = []; let title = EN;
+    return {writes, querySelectorAll: () => [], get title() { return title; }, set title(v) { writes.push(v); title = v; }}; };
+  const en = doc(), failed = doc(), es = doc();
+  applyLandingCopy(en, 'en');
+  applyLandingCopy(failed, 'en');   // web/landing/main.tsx passes the language in effect: a failed Spanish load resolves English
+  assert.deepEqual([en.writes, en.title], [[], EN], 'English writes no title');
+  assert.deepEqual([failed.writes, failed.title], [[], EN], 'a failed Spanish table keeps the English title');
+  applyLandingCopy(es, 'es');
+  assert.deepEqual([es.writes, es.title], [[ES], ES], 'Spanish writes the catalogue title exactly once');
+});
 
 test('the landing page holds the hero and footer statically; its parts render the nav, port question and readout; no map engine', async () => {
   const {LandingHead, LandingApp, Shoreline, SHORELINE, NAV, render, h} = await load();
