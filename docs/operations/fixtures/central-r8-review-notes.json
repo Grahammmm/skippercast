@@ -1,0 +1,19 @@
+{
+  "purpose": "Synthetic R8 evidence navigation only. Resolved describes an observation, not approval or release readiness.",
+  "region": "big-sur-coast",
+  "envelope_sha256": "a3c1600a18162315b216ef0a949b89ee986d6d278fec68727f4267fb5a7d52f8",
+  "observations": {
+    "screenshot": {
+      "state": "resolved",
+      "note": "Use the dark desktop z8 view to locate the inset edge; the scale label is visible in this example."
+    },
+    "depth": {
+      "state": "unresolved",
+      "note": "Check the standalone 66–300 ft coverage row against the packaged mosaic lineage before interpreting it."
+    },
+    "qa": {
+      "state": "resolved",
+      "note": "Use the envelope-bound qa.json to find the land-leak metric, not the screenshot or depth supplement."
+    }
+  }
+}
