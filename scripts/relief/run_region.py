@@ -6,6 +6,7 @@
                   [--census FILE --census-sha256 HEX]
                   [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
                   [--basemap PMTILES] [--qa-support TIF] [--qa-fine-proof ZOOM TIF ...]
+    run_region.py <region> --out <OUT> --through <stage> --inputs FILE
     run_region.py <region> [--out <OUT>] --dry-run  # preview the full chain without stage inputs
 
 Runs ``region.py <stage> --region <region> --out <OUT>`` through the requested stage::
@@ -22,6 +23,11 @@ capture. The runner checks ``region.py status --json`` after package and shots: 
 the exact package release hash and the shots stage's own generation, while the envelope
 uses the package generation. No caller-supplied manifest, evidence path for shots, or
 release identity can replace these handoffs.
+
+--inputs loads a sc-run-inputs/1 JSON record for the positional region. Listed files are
+SHA-256 checked as a group before any stage, even if the chain stops early. Paths use the
+same working-directory and ~ rules as flags. Use flags only for values not set by the record
+(null metadata does not set an option). Dry runs report the record digest and each file verdict.
 
 Each stage is a subprocess under ``nice -n 19 ionice -c3``. The run stops at the first stage
 that exits non-zero, names that stage and its code, and exits with the same code (a code
@@ -57,8 +63,8 @@ only the lock file inside ``OUT/<region>/`` and the two slot files. The stages t
 their own receipts.
 
 Exit codes: 0 chain complete (or dry run), 2 usage error or stage not available, 3 a guard
-refused, 5 region already running or two runs already on the box (3 when that cannot be established), anything else is the code of
-the stage that failed.
+or input check refused, 5 region already running or two runs already on the box (3 when
+that cannot be established), anything else is the code of the stage that failed.
 """
 import argparse
 from dataclasses import dataclass, field
@@ -83,8 +89,10 @@ ZONE_STAGE_INPUTS = {'--coarse': 'coarse', '--water': 'water', '--coarse-source'
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 HEX64 = re.compile(r'[0-9a-f]{64}')
 LOCK_NAME = '.run_region.lock'
-# file-valued options: fixed once by parse() so the guard and the stage see the same spelling
+# file-valued options: the guard and the stage see the same spelling
 PATH_OPTIONS = ('region_config', 'coarse', 'water', 'basemap', 'qa_support', 'census')
+RECORD_FILES = frozenset(PATH_OPTIONS) - {'region_config'}
+RECORD_METADATA = ('coarse_source', 'coarse_date', 'norm')
 GB = 10 ** 9
 STOP_FILE_NAMES = ('LOCAL-STOP', 'UNITFEED-STOP')
 
@@ -175,6 +183,80 @@ def under(path, root):
             if candidate == base or base in candidate.parents:
                 return True
     return False
+
+
+def basemap_allowed(cfg, path):
+    roots = [real(p) for p in cfg.basemap_roots]
+    paths = (Path(os.path.abspath(path)), real(path))
+    return all(any(p.is_relative_to(root) for root in roots) for p in paths)
+
+
+def unique_object(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError(f'duplicate key {key!r}')
+        obj[key] = value
+    return obj
+
+
+def load_inputs(args, parser):
+    """Validate the closed record and CLI conflicts before inspecting any listed input."""
+    try:
+        path = Path(spelled(args.inputs))
+        if not path.is_file():
+            raise ValueError('not a regular file')
+        raw = path.read_bytes()
+        doc = json.loads(raw, object_pairs_hook=unique_object)
+        if (not isinstance(doc, dict) or doc.keys() != {'schema', 'region', 'inputs', *RECORD_METADATA}
+                or doc['schema'] != 'sc-run-inputs/1' or not isinstance(doc['inputs'], dict)):
+            raise ValueError('expected a sc-run-inputs/1 object with schema, region, inputs, coarse_source, coarse_date and norm')
+        if doc['region'] != args.region:
+            raise ValueError(f'region {doc["region"]!r} does not match {args.region!r}')
+        pins, options = {}, {}
+        for name, entry in doc['inputs'].items():
+            if name not in RECORD_FILES:
+                raise ValueError(f'unknown input {name!r}')
+            if not isinstance(entry, dict) or entry.keys() != {'path', 'sha256'} or not isinstance(entry['path'], str):
+                raise ValueError(f'{name}: expected path and sha256')
+            digest = entry['sha256']
+            if not isinstance(digest, str) or not HEX64.fullmatch(digest.lower()):
+                raise ValueError(f'{name}: sha256 must be 64 hexadecimal digits')
+            pins[name] = digest.lower()
+            options[name] = entry['path']
+        if 'census' in pins:
+            options['census_sha256'] = pins['census']
+        for name in RECORD_METADATA:
+            value = doc[name]
+            if value is not None:
+                if not isinstance(value, str):
+                    raise ValueError(f'{name} must be a string or null')
+                options[name] = value
+        for name in options:
+            if getattr(args, name) is not None:
+                raise ValueError(f'also supplied --{name.replace("_", "-")} on the command line')
+    except (OSError, ValueError, RecursionError) as exc:
+        parser.error(f'--inputs {args.inputs}: {exc}')
+        raise  # argparse.error exits
+    for name, value in options.items():
+        setattr(args, name, value)
+    return hashlib.sha256(raw).hexdigest(), pins
+
+
+def input_problem(cfg, name, path, digest):
+    # Hashing opens the file earlier than a stage would; honor the same read boundaries first.
+    if under(path, cfg.forbidden_root):
+        return f'{path} is under {cfg.forbidden_root}'
+    if name == 'basemap' and not basemap_allowed(cfg, path):
+        return f'{path} must be in an allowed read root'
+    try:
+        if not os.path.isfile(path):
+            return f'{path} is missing or not a regular file'
+        with open(path, 'rb') as handle:
+            actual = hashlib.file_digest(handle, 'sha256').hexdigest()
+    except OSError as exc:
+        return f'cannot read {path}: {exc.strerror}'
+    return None if actual == digest else f'{path} expected sha256 {digest}, got {actual}'
 
 
 def chain_through(through):
@@ -355,9 +437,7 @@ def check_guards(cfg, out, norm, inputs=(), *, basemap=None):
         checks.append(('input-path', not bad, f'{path} is {"" if bad else "not "}under {cfg.forbidden_root}'))
     if basemap is not None and not under(basemap, cfg.forbidden_root):
         # Both the lexical/comparable path and its actual target must be inside admitted read roots.
-        roots = [real(p) for p in cfg.basemap_roots]
-        paths = (Path(os.path.abspath(basemap)), real(basemap))
-        allowed = all(any(path.is_relative_to(root) for root in roots) for path in paths)
+        allowed = basemap_allowed(cfg, basemap)
         try:
             ok = allowed and Path(basemap).is_file()
         except OSError:
@@ -718,18 +798,25 @@ def parse(argv):
     parser.add_argument('--water', help='zone input: WGS84 ocean-water GeoJSON (defaults to done water output)')
     parser.add_argument('--coarse-source', help='zone source ID (required with --coarse; otherwise defaults to the coarse family)')
     parser.add_argument('--coarse-date', help='zone input: optional date of --coarse')
+    parser.add_argument('--inputs', metavar='FILE', help='region input record (sc-run-inputs/1), with SHA-256 pinned files')
     parser.add_argument('--dry-run', action='store_true', help='print the chain and the guard state; run nothing')
     args = parser.parse_args(argv)
+    if args.inputs is None:
+        resolve_options(args, parser)
+    return parser, args
+
+
+def resolve_options(args, parser, pins=()):
     if bool(args.census) != bool(args.census_sha256):
         parser.error('--census and --census-sha256 must be given together')
     args.norm = effective_norm(args.norm)  # resolved once: guarded and forwarded as the very same path
     # every file input is likewise fixed once here: the spelling the guard resolves is the spelling forwarded
     for name in PATH_OPTIONS:
-        if getattr(args, name):
+        if name in pins or getattr(args, name):
             setattr(args, name, spelled(getattr(args, name)))
     if args.qa_fine_proof:
         args.qa_fine_proof = [(fine_zoom(parser, zoom), spelled(path)) for zoom, path in args.qa_fine_proof]
-    return parser, args
+
 
 
 def main(argv=None, cfg=None):
@@ -752,6 +839,23 @@ def main(argv=None, cfg=None):
     out = Path(os.path.abspath(os.path.expanduser(args.out))) if args.out is not None else Path('<OUT>')
     if args.out is not None and not out.is_dir():
         parser.error(f'--out {out} is not an existing directory')
+    if args.inputs is not None:
+        if under(args.inputs, cfg.forbidden_root):
+            say(f'run_region: refused --inputs: {args.inputs} is under {cfg.forbidden_root}')
+            return EXIT_REFUSED
+        record_digest, pins = load_inputs(args, parser)
+        resolve_options(args, parser, pins)
+        checks = {name: input_problem(cfg, name, getattr(args, name), pin) for name, pin in pins.items()}
+        if args.dry_run:
+            say(f'inputs from {args.inputs} (sha256 {record_digest})')
+            for name, problem in checks.items():
+                say(f'  {name}: MISMATCH ({problem})' if problem else f'  {name}: ok')
+        else:
+            for name, problem in checks.items():
+                if problem:
+                    say(f'run_region: refused input {name}: {problem}')
+        if any(checks.values()):
+            return EXIT_REFUSED
     norm = args.norm
     missing = missing_inputs(args, args.through)
     if missing and not full_preview:
@@ -759,7 +863,7 @@ def main(argv=None, cfg=None):
     if args.out is None:
         missing = [('pipeline', ('--out',)), *missing]
     extra = stage_extras(args, out)
-    # the very spellings stage_extras forwards (parse fixed them), so guard and child see one path
+    # the very spellings stage_extras forwards, so guard and child see one path
     inputs = [Path(p) for p in (*(getattr(args, name) for name in PATH_OPTIONS),
                                 *(path for _, path in args.qa_fine_proof or ())) if p]
     if args.dry_run:
