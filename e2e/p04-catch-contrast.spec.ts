@@ -329,7 +329,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MAIN-RED-5: Chart loading-status hit-testing only; Reports paint/backing and thresholds unchanged.
   // MAIN-RED-7: app.css adds one landscape-phone sheet-footer link spacing rule (the Reports catch sheet mounts no sheet footer); no colour, backing or catch paint changed. Rebound from the final bytes.
   // MB-11: adds only .legend-* / chip rules for the Chart legend; no Reports catch class, colour or backdrop changes. Rebind only app.css.
-  "web/app/app.css": "6cfd414b3a2e127db5e2545a424428bd9ee67b79e14553462f2e9f47bf43235f",
+  // SC2052-02: only the mobile profile chip width rules; no Reports catch paint, backing or threshold changes (layout only). Rebound from the final bytes.
+  "web/app/app.css": "a5dd5fb176c9f03c1bddc9f2608d9404093f6b9673262c1b635118bc98dbabc9",
   // SCA-479: app.css deletes only the earlier of two byte-identical phone account-trigger blocks (the .app-account[data-top] rules); the surviving copy is unchanged, the Reports catch sheet mounts no account menu, and no catch paint or backing changes. Rebound from the final bytes.
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
@@ -438,7 +439,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MSK-1: only tokensCss source digest/comment changed in the checker; no contrast logic changed.
   // MSK-2: only the legendTsx surface hash and its comment changed; contrast() untouched. Rebound from the final bytes.
   // MSKL-1: only the tokensCss surface hash and applicability comment changed; contrast() and all gates are unchanged.
-  "scripts/check_contrast.mjs": "70b848ad2b0bc66cbee97525ad67c3f81673cc100cb89c9c2d097fd22019323a",
+  // SC2052-02: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "8d397435c9c08408db8f4c3241efa164c881862cadc24fc6897141a6df6238e1",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // SCA-479: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
