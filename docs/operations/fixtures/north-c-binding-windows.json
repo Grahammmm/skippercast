@@ -1,0 +1,19 @@
+{
+  "purpose": "Offline input-review geometry only; not fishing clearance, source custody or release evidence.",
+  "crs": "WGS84",
+  "coordinate_order": ["west", "south", "east", "north"],
+  "windows": {
+    "trinidad-klamath": {
+      "name": "Trinidad to Klamath River",
+      "fishing_bounds": [-124.55, 40.95, -124.05, 41.55]
+    },
+    "crescent-city": {
+      "name": "Crescent City & Del Norte",
+      "fishing_bounds": [-124.6, 41.6, -124.1, 41.99],
+      "oregon_endpoint": {
+        "context_name": "Point St. George to Oregon line",
+        "regional_north_latitude": 42.0
+      }
+    }
+  }
+}

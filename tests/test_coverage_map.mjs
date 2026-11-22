@@ -9,7 +9,7 @@ const region = (id, bounds, extra = {}) => ({id, name: id, status: 'preview', fi
 const hrefs = html => [...html.matchAll(/<a href="([^"]+)">/g)].map(m => m[1]);
 const bounds = [-123, 35, -122, 36];
 const tick = () => new Promise(resolve => setImmediate(resolve));
-const json = body => new Response(JSON.stringify(body));
+const json = (body, init) => new Response(JSON.stringify(body), init);
 const pointer = id => ({
   region: id, status: 'reviewed', private: false, bounds, minzoom: 13, maxzoom: 13,
   sha256: 'a'.repeat(64), bytes: 4096, digest_root_sha256: 'b'.repeat(64),
@@ -170,14 +170,16 @@ test('page uses the public index and handles network and HTTP failures in the co
   }
 });
 
-// A forgotten catalogue projection or fall-through to English breaks the translated row states.
-test('C1: Spanish Coverage localizes the Sources link and keeps region names', async ({mock}) => {
+// A fallback to English or treating a wrong-region pointer as missing loses the distinction in Spanish.
+test('C1: Spanish Coverage distinguishes 404 from unreadable evidence and localizes the Sources link', async ({mock}) => {
   const page = readFileSync(new URL('../dist/coverage.html', import.meta.url), 'utf8');
   const heading = {textContent: 'Coverage', getAttribute: () => page.match(/<h1 data-i18n="([^"]+)"/)?.[1]};
   const {doc, svg, list} = await loadPage(mock, 'spanish', async url => {
-    if (url === '/regions/index.json') return json({regions: [region('point-reyes', bounds, {name: 'Point Reyes'}), region('other', bounds), null]});
+    if (url === '/regions/index.json') return json({regions: [
+      region('point-reyes', bounds, {name: 'Point Reyes'}), region('missing', bounds), region('wrong', bounds), null]});
     if (url === '/catalog/relief/point-reyes.json') return json(pointer('point-reyes'));
-    return new Response(null, {status: 404});
+    if (url === '/catalog/relief/missing.json') return new Response(null, {status: 404});
+    if (url === '/catalog/relief/wrong.json') return json(pointer('point-reyes'));
   }, {lang: 'es', heading});
   assert.equal(doc.documentElement.lang, 'es');
   assert.equal(heading.textContent, 'Cobertura');
@@ -186,16 +188,22 @@ test('C1: Spanish Coverage localizes the Sources link and keeps region names', a
   assert.match(list.innerHTML, /Point Reyes — Vista previa \(revisión incompleta; consulta el aviso\)/);
   assert.match(list.innerHTML, /Regiones que no se pudieron dibujar: 1/);
   assert.match(renderList(coverageModel(null), 'es'), /No se pudo leer la lista de regiones/);
-  assert.deepEqual(list.states(), [['point-reyes', 'Mapa de profundidad: disponible — Fuentes'], ['other', 'Mapa de profundidad: aún no disponible']]);
-  assert.deepEqual(hrefs(list.innerHTML), ['/map?region=point-reyes', '/sources#region-point-reyes', '/map?region=other']);
+  assert.deepEqual(list.states(), [
+    ['point-reyes', 'Mapa de profundidad: disponible — Fuentes'],
+    ['missing', 'Mapa de profundidad: aún no disponible'],
+    ['wrong', 'No se puede leer'],
+  ]);
+  assert.deepEqual(hrefs(list.innerHTML), [
+    '/map?region=point-reyes', '/sources#region-point-reyes', '/map?region=missing', '/map?region=wrong',
+  ]);
 });
 
-// A 200 response alone is not readiness; transport and JSON exceptions also need a final state.
-test('C1: English Coverage links only decoder-ready pointers to their credits', async ({mock}) => {
+// Neither HTTP success alone nor a decodable body on HTTP failure proves readiness; only 404 means missing.
+test('C1: English Coverage reserves not yet for 404 and links only decoder-ready pointers', async ({mock}) => {
   const cases = {
     ready: () => json(pointer('ready')),
     missing: () => new Response(null, {status: 404}),
-    failed: () => new Response(null, {status: 503}),
+    failed: () => json(pointer('failed'), {status: 503}),
     offline: () => { throw new TypeError('offline'); },
     malformed: () => new Response('{bad json'),
     null: () => json(null),
@@ -211,7 +219,8 @@ test('C1: English Coverage links only decoder-ready pointers to their credits', 
     if (url === '/regions/index.json') return json({regions: ids.map(id => region(id, bounds))});
     return cases[url.match(/^\/catalog\/relief\/([a-z]+)\.json$/)?.[1]]();
   });
-  assert.deepEqual(list.states(), [['ready', 'Depth map: live — Sources'], ...ids.slice(1).map(id => [id, 'Depth map: not yet'])]);
+  assert.deepEqual(list.states(), [['ready', 'Depth map: live — Sources'], ['missing', 'Depth map: not yet'],
+    ...ids.slice(2).map(id => [id, 'Cannot be read'])]);
   assert.deepEqual(hrefs(list.innerHTML), ['/map?region=ready', '/sources#region-ready', ...ids.slice(1).map(id => `/map?region=${id}`)]);
 });
 
@@ -232,12 +241,12 @@ test('C2: render before parallel GETs and make no additional requests for credit
     ['/catalog/relief/south.json', 'GET', 'error', links],
   ];
   assert.deepEqual(requests, expected);
-  assert.deepEqual(list.states(), [['north', 'Depth map: checking…'], ['south', 'Depth map: not yet'], ['north', 'Depth map: checking…']]);
+  assert.deepEqual(list.states(), [['north', 'Depth map: checking…'], ['south', 'Cannot be read'], ['north', 'Depth map: checking…']]);
   assert.deepEqual(hrefs(svg), []);
   first.resolve(json(pointer('north')));
   await tick();
   assert.deepEqual(requests, expected);
-  assert.deepEqual(list.states(), [['north', 'Depth map: live — Sources'], ['south', 'Depth map: not yet'], ['north', 'Depth map: live — Sources']]);
+  assert.deepEqual(list.states(), [['north', 'Depth map: live — Sources'], ['south', 'Cannot be read'], ['north', 'Depth map: live — Sources']]);
   assert.deepEqual(hrefs(list.innerHTML), ['/map?region=north', '/sources#region-north', '/map?region=south', '/map?region=north', '/sources#region-north']);
 });
 

@@ -1,0 +1,31 @@
+{
+  "purpose": "Offline window reference for run-input review only; not a source binding, run record, or readiness claim.",
+  "crs": "WGS84",
+  "bounds_order": ["west", "south", "east", "north"],
+  "windows": {
+    "big-sur-coast": {
+      "region_config": "regions/big-sur-coast/region.json",
+      "fishing_bounds": [-122.19, 35.901, -121.46, 36.299]
+    },
+    "cambria-san-simeon": {
+      "region_config": "regions/cambria-san-simeon/region.json",
+      "fishing_bounds": [-121.32, 35.53, -121.06, 35.66]
+    },
+    "south-big-sur-san-simeon": {
+      "region_config": "regions/south-big-sur-san-simeon/region.json",
+      "fishing_bounds": [-121.99, 35.661, -121.21, 35.899]
+    },
+    "monterey-point-sur": {
+      "region_config": "regions/monterey-point-sur/region.json",
+      "fishing_bounds": [-122.34, 36.301, -121.66, 36.624]
+    },
+    "point-arguello-conception": {
+      "region_config": "regions/point-arguello-conception/region.json",
+      "fishing_bounds": [-121.15, 34.45, -120.38, 35.03]
+    },
+    "santa-cruz-monterey-bay": {
+      "region_config": "regions/santa-cruz-monterey-bay/region.json",
+      "fishing_bounds": [-122.68, 36.601, -121.72, 37.182]
+    }
+  }
+}
