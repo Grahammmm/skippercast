@@ -9,6 +9,8 @@
 // Erasable syntax only: Node tests import this file by type stripping.
 import {localeOf, num, t, type Language, type StringId} from '../i18n.ts';
 import type {ComfortRating, FeedHour} from '../score.ts';
+import {M_PER_FT, WIND_SPEED} from '../units.ts';
+import {units, type Units} from '../unit-choice.ts';
 
 export const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const r0 = (n: number) => String(Math.round(n));
@@ -57,31 +59,42 @@ const BANDS: Readonly<Record<string, string>> = {
 const SIDES: Readonly<Record<string, string>> = {onshore: 'reason.onshore', offshore: 'reason.offshore', 'cross-shore': 'reason.crossShore'};
 
 /** The verdict's sentences and fragments in `lang` (English by default: the old literals). */
-export function verdictCopy(lang: Language = 'en') {
-  const say = (suffix: string, vars: Readonly<Record<string, string | number>> = {}) => t(id(suffix), lang, vars);
+export function verdictCopy(lang: Language = 'en', u: Units = units.value) {
+  // SC1222-05: wind and heights print in the chosen units with the tiles' conversion; the numbers given in are always kt and ft.
+  const wu = WIND_SPEED[u.wind], metres = u.height === 'm';
+  const say = (suffix: string, vars: Readonly<Record<string, string | number>> = {}) => t(id(suffix), lang, {windUnit: wu.label, heightUnit: u.height, ...vars});
   // Numbers arrive already rounded as strings (r0, r1, up1); Spanish only swaps the decimal mark.
   const n = (value: string | number): string => lang === 'es' ? num(Number(value), lang, 3) : String(value);
   const clock = (ms: number, tz: string): string => lang === 'es' ? localClock(ms, tz, lang) : englishClock(ms, tz);
+  const wind = (kt: number): string => n(r0(kt * wu.factor));
+  const ft1 = (ft: number): string => n(r1(metres ? ft * M_PER_FT : ft));
+  /** A seas maximum: rounded UP in the shown unit, so a converted maximum is never below the value the window rule used. */
+  const seasMax = (ft: number): string => n(metres ? String(Math.ceil(ft * M_PER_FT * 10 - 1e-9) / 10) : up1(ft));
 
   /** One charge of the worst hour: "22 kt wind gusting 30", "2.5 ft seas at 11 s", wind chop or a crossing swell. */
   const phrase = (kind: Charge, r: ComfortRating, h: FeedHour): string => {
-    if (kind === 'wind') return say('wind', {wind: n(r0(r.wind))}) + (r.gust !== null && r.gust >= r.wind + 3 ? say('gust', {gust: n(r0(r.gust))}) : '');
+    if (kind === 'wind') return say('wind', {wind: wind(r.wind)}) + (r.gust !== null && r.gust >= r.wind + 3 ? say('gust', {gust: wind(r.gust)}) : '');
     // The period is GFS-Wave's; name it only when its height is the one shown (WAM's period is not in the feed).
-    if (kind === 'seas') return say('seas', {sea: n(up1(r.sea))}) + (finite(h.sea_period) && finite(h.sea) && h.sea >= r.sea ? say('period', {period: n(r0(h.sea_period))}) : '');
-    if (kind === 'chop') return say(r.costs.short > 0 ? 'steepChop' : 'chop', {chop: n(r1(r.chop ?? 0))});
+    if (kind === 'seas') return say('seas', {sea: seasMax(r.sea)}) + (finite(h.sea_period) && finite(h.sea) && h.sea >= r.sea ? say('period', {period: n(r0(h.sea_period))}) : '');
+    if (kind === 'chop') return say(r.costs.short > 0 ? 'steepChop' : 'chop', {chop: ft1(r.chop ?? 0)});
     const from = compass(h.secondary_from);
-    return say('cross', {swell: n(r1(h.secondary ?? 0))}) + (from ? say('from', {direction: from}) : '');
+    return say('cross', {swell: ft1(h.secondary ?? 0)}) + (from ? say('from', {direction: from}) : '');
   };
 
-  /** A recognised profile reason in `lang`; English is returned as the grader wrote it. */
+  /** A recognised profile reason in `lang`; English is returned as the grader wrote it (its kt and ft numbers converted when other units are chosen). */
   const profileReason = (raw: string): string => {
-    if (lang === 'en') return raw;
+    // Display only: the grader's English decided the reason and its cost; a recognised reason keeps its words and swaps its numbers.
+    if (lang === 'en') return !/^\w+ (?:surf|wind|seas)\b/.test(raw) ? raw : raw
+      .replace(/\((\d+(?:\.\d+)?) kt(, gust )?(\d+(?:\.\d+)?)?/, (all, w, g, gu) => u.wind === 'kt' ? all : `(${wind(Number(w))} ${wu.label}${g ?? ''}${gu === undefined ? '' : wind(Number(gu))}`)
+      .replace(/\((\d+(?:\.\d+)?) ft/, (all, h) => metres ? `(${ft1(Number(h))} m` : all);
+    // The same numbers for Spanish: unchanged in kt and ft (byte for byte), converted otherwise.
+    const windOf = (s: string): string => u.wind === 'kt' ? n(s) : wind(Number(s)), heightOf = (s: string): string => metres ? ft1(Number(s)) : n(s);
     const miss = () => say('reason.fallback', {reason: raw});
     const band = (word: string | undefined): string | null => {
       const key = (word ?? '').toLowerCase();
       return key === 'unknown' ? say('band.unknown') : Object.hasOwn(BANDS, key) ? say(BANDS[key]!) : null;
     };
-    const height = (h: string | undefined, p: string | undefined, basis: string): string => h === undefined ? '' : say('reason.detail', {height: n(h), period: p === undefined ? '' : say('reason.period', {period: n(p)}), basis});
+    const height = (h: string | undefined, p: string | undefined, basis: string): string => h === undefined ? '' : say('reason.detail', {height: heightOf(h), period: p === undefined ? '' : say('reason.period', {period: n(p)}), basis});
     for (const [pattern, key] of FIXED) if (pattern.test(raw)) return say(key);
     let m: RegExpExecArray | null;
     if ((m = /^(\w+) surf(?: \((\d+(?:\.\d+)?) ft(?: at (\d+(?:\.\d+)?) s)?(, offshore estimate)?\))?$/.exec(raw))) {
@@ -91,7 +104,7 @@ export function verdictCopy(lang: Language = 'en') {
     if ((m = /^(\w+) wind(?: \((\d+(?:\.\d+)?) kt(?:, gust (\d+(?:\.\d+)?))?\))?(?: (onshore|offshore|cross-shore))?$/.exec(raw))) {
       const b = band(m[1]);
       if (b === null) return miss();
-      const detail = m[2] === undefined ? '' : say('reason.windDetail', {wind: n(m[2]), gust: m[3] === undefined ? '' : say('reason.gust', {gust: n(m[3])})});
+      const detail = m[2] === undefined ? '' : say('reason.windDetail', {wind: windOf(m[2]), gust: m[3] === undefined ? '' : say('reason.gust', {gust: windOf(m[3])})});
       return say('reason.wind', {band: b, detail, side: m[4] === undefined ? '' : say(SIDES[m[4]]!)});
     }
     if ((m = /^(\w+) seas(?: \((\d+(?:\.\d+)?) ft(?: at (\d+(?:\.\d+)?) s)?\))?$/.exec(raw))) {
@@ -116,7 +129,7 @@ export function verdictCopy(lang: Language = 'en') {
     /** A grade as a lower-case word ("rough"), for a profile day with no reason to name. */
     gradeWord: (grade: string): string => t(`brief.verdict.${grade}` as StringId, lang).toLowerCase(),
     /** The calm sentence: the window's top wind and seas, through `until`. */
-    calm: (wind: string, sea: string, until: string): string => say('calm', {wind: n(wind), sea: n(sea), until}),
+    calm: (windKt: string | number, seaFt: string | number, until: string): string => say('calm', {wind: wind(Number(windKt)), sea: seasMax(Number(seaFt)), until}),
     /** The limiting charge at its hour, with the second charge when it costs a point. */
     limit: (first: string, at: string, second: string | null): string => say('charged', {first: cap(first), at, second: second === null ? '' : say('with', {phrase: second})}),
     /** The event name is the alert's own words, shown verbatim. */
@@ -128,7 +141,7 @@ export function verdictCopy(lang: Language = 'en') {
     stale: (hours: number): string => say('stale', {hours}),
     alertMissing: (): string => say('alertMissing'),
     bar: (at: string): string => say('bar', {at}),
-    longPeriod: (height: number, period: number, at: string): string => say('longPeriod', {height: n(r1(height)), period: n(r0(period)), at}),
+    longPeriod: (height: number, period: number, at: string): string => say('longPeriod', {height: ft1(height), period: n(r0(period)), at}),
     /** A profile's limit sentence: its reasons joined, then "through" the window's end or "at" the worst hour. */
     profileLimit: (reason: string, kind: 'through' | 'at', when: string): string => say(kind === 'through' ? 'profileThrough' : 'profileAt', {reason, [kind === 'through' ? 'until' : 'at']: when}),
   };

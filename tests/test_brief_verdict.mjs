@@ -242,3 +242,41 @@ test('the real kayak grader in the afternoon: the hour straddling sunset is left
   const rough = profileVerdict(brief({profile: 'kayak', kayak: {hours: hours.map(h => ({...h, verdict: 'Rough'}))}, missing: [ALERT_CHECK_MISSING]}), new Date('2026-10-13T20:30:00Z'), TZ);
   assert.ok(rough.limit.endsWith(NO_ALERT_CHECK));
 });
+
+// SC1222-05: the sentence uses the chosen wind and height units; every decision stays on kt and ft.
+const U = (wind, height) => ({temp: 'F', wind, height});
+const calmSeas = ft => ({wave_height: ft, wam: ft, swell_wave_height: ft / 2});
+test('SC1222-05 km/h and mph wind: the tiles\' rounding; the default stays in kt', () => {
+  const f = forecast({at: t => t === hourAt(10) ? {wind_speed_10m: 22, ecmwf_wind: 22, wind_gusts_10m: 30, ecmwf_gust: 30} : {}});
+  const say = u => boatVerdict(brief(), f, NOW, TZ, undefined, 'en', u).limit;
+  assert.equal(say(undefined), '22 kt wind gusting 30 at 10 am.');
+  assert.equal(say(U('kt', 'ft')), '22 kt wind gusting 30 at 10 am.');
+  assert.equal(say(U('kmh', 'ft')), '41 km/h wind gusting 56 at 10 am.');
+  assert.equal(say(U('mph', 'm')), '25 mph wind gusting 35 at 10 am.');
+});
+test('SC1222-05 metres round up: a printed seas maximum is never below the rule\'s value', () => {
+  const calm = (ft, u = U('kt', 'm')) => boatVerdict(brief(), forecast({over: calmSeas(ft)}), NOW, TZ, undefined, 'en', u).limit;
+  assert.equal(calm(2), 'Wind to 6 kt and seas to 0.7 m through noon.', '2.0 ft = 0.6096 m: nearest would print 0.6');
+  assert.equal(calm(3), 'Wind to 6 kt and seas to 1 m through noon.');
+  assert.equal(calm(2, U('kmh', 'ft')), 'Wind to 11 km/h and seas to 2 ft through noon.');
+  assert.equal(calm(2.5, U('kt', 'ft')), 'Wind to 6 kt and seas to 2.5 ft through noon.');
+  // a charged seas hour: 7.31 ft = 2.228 m prints 2.3, not 2.2
+  const seas = boatVerdict(brief(), forecast({over: {wave_height: 7.31, wam: 7, wave_period: 8, swell_wave_height: 6.5}}), NOW, TZ, undefined, 'en', U('kt', 'm'));
+  assert.equal(seas.limit, '2.3 m seas at 8 s at 8 am.');
+});
+test('SC1222-05 chop in metres, and the decisions are the same for every unit choice', () => {
+  const f = forecast({over: {wind_wave_height: 2.2, wind_wave_period: 3, ...{wind_speed_10m: 12, ecmwf_wind: 12, wind_gusts_10m: 15, ecmwf_gust: 15}}});
+  assert.equal(boatVerdict(brief(), f, NOW, TZ, undefined, 'en', U('mph', 'm')).limit, '14 mph wind gusting 17 at 8 am, with 0.7 m of short, steep wind chop.');
+  const key = u => { const v = boatVerdict(brief(), f, NOW, TZ, undefined, 'en', u); return JSON.stringify([v.verdict, v.score, v.window, v.held, v.limit.split(/ at /)[1] ? 1 : 0, v.limit.match(/wind|chop/g)]); };
+  for (const w of ['kt', 'mph', 'kmh']) for (const h of ['ft', 'm']) assert.equal(key(U(w, h)), key(U('kt', 'ft')), `${w}/${h}`);
+});
+test('SC1222-05 profile reason numbers convert, wording and decisions kept; unknown reasons stay as given', () => {
+  const at = h => `2026-10-13T${String(h + 7).padStart(2, '0')}:00:00Z`;
+  const day = reasons => brief({profile: 'kayak', kayak: {hours: [8, 9, 10, 11].map(h => ({at: at(h), verdict: 'Rough', reasons}))}});
+  const b = day(['strong wind (25 kt, gust 31) onshore', 'heavy seas (9 ft at 8 s)']);
+  assert.equal(profileVerdict(b, NOW, TZ).limit, 'Strong wind (25 kt, gust 31) onshore, heavy seas (9 ft at 8 s) at 8 am.');
+  assert.equal(profileVerdict(b, NOW, TZ, 'en', U('kmh', 'm')).limit, 'Strong wind (46 km/h, gust 57) onshore, heavy seas (2.7 m at 8 s) at 8 am.');
+  assert.equal(profileVerdict(b, NOW, TZ, 'en', U('mph', 'ft')).limit, 'Strong wind (29 mph, gust 36) onshore, heavy seas (9 ft at 8 s) at 8 am.');
+  assert.equal(profileVerdict(day(['sea state uncertain (5 kt, 9 ft)']), NOW, TZ, 'en', U('kmh', 'm')).limit, 'Sea state uncertain (5 kt, 9 ft) at 8 am.');
+  assert.equal(profileVerdict(b, NOW, TZ, 'en', U('kmh', 'm')).verdict, profileVerdict(b, NOW, TZ).verdict);
+});
