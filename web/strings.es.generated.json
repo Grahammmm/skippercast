@@ -519,7 +519,7 @@
 "markForecast.gridAbout":"aproximadamente {km} km",
 "markForecast.unstated":"no indicada",
 "markForecast.from":" desde {compass} {degrees}°",
-"markForecast.gusts":" · ráfagas de {gust} kt",
+"markForecast.gusts":" · ráfagas de {gust} {unit}",
 "markForecast.towardTrue":"{speed} kt hacia {degrees}° verdadero",
 "tile.clock.ended":"la cobertura terminó hace {age}",
 "tile.clock.runs":"la cobertura continúa durante {age} más",

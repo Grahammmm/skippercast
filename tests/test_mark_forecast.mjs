@@ -11,6 +11,7 @@ import {mkdtemp} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
+import {isDeepStrictEqual} from 'node:util';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
@@ -378,4 +379,24 @@ test('SC1137-04 es: the block, its basis and the mark card read Spanish, and Eng
     assert.ok(draw() === before, 'English after Spanish is the same markup');
     assert.match(before, /nor at a model cell|not values at this mark or at a model cell/);
   } finally { language.value = 'en'; regionalForecast.value = null; regionInfo.value = null; }
+});
+
+test('SC1222-06 the block reads the chosen wind and height units; defaults, sampled values and the current line do not move', () => {
+  const at = (u, lang = 'en') => markForecast(parsed(morroFeed()), 'morro-bay', MARK, AT, NOW, TZ, lang, u);
+  const D = {temp: 'F', wind: 'kt', height: 'ft'}, kmh = at({...D, wind: 'kmh'}), mph = at({...D, wind: 'mph'}), m = at({...D, height: 'm'});
+  assert.equal(kmh.families[0].rows[0].value, '20 km/h from WNW 301° · gusts 31 km/h');
+  assert.equal(mph.families[0].rows[0].value, '13 mph from WNW 301° · gusts 20 mph');
+  assert.equal(m.families[0].rows[1].value, '0.6 m · 11 s from WNW 290°');
+  assert.equal(m.families[1].rows[1].value, '1.6 m · 11 s from WNW 290°');
+  assert.equal(at({...D, wind: 'kmh', height: 'm'}, 'es').families[1].rows[1].value, '1,6 m · 11 s desde WNW 290°');
+  assert.equal(at({...D, wind: 'kmh'}, 'es').families[0].rows[0].value, '20 km/h desde WNW 301° · ráfagas de 31 km/h');
+  assert.equal(at(D).families[0].rows[0].value, '11 kt from WNW 301° · gusts 17 kt');
+  assert.equal(at(D, 'es').families[0].rows[0].value, '11 kt desde WNW 301° · ráfagas de 17 kt');
+  assert.equal(at(D).families[0].rows[1].value, '2.1 ft · 11 s from WNW 290°');
+  assert.equal(at(D, 'es').families[0].rows[1].value, '2,1 ft · 11 s desde WNW 290°');
+  const base = at(D), all = [kmh, mph, m, at({temp: 'C', wind: 'kmh', height: 'm'})];
+  for (const f of all) {
+    assert.equal(f.current.value, base.current.value, 'the current row is the same under every unit choice');
+    assert.ok(isDeepStrictEqual(f.families.flatMap(x => x.rows.map(r => r.sampled)), base.families.flatMap(x => x.rows.map(r => r.sampled))), 'sampled stays in kn/ft');
+  }
 });
