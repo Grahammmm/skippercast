@@ -680,7 +680,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // MAIN-RED-7: one landscape-phone (max-height: 500px) sheet-footer link spacing rule (margin, side padding, min-width); no colour, opacity, backing or text role changed. Rebound from the final bytes.
   // MB-11 changes the native legend glass and keys; both native text roles below use its new backing.
   // SC2052-02: app.css changes only the mobile profile chip width rules (.app-profile .ui-chip sizing, landscape switch basis); no colour, opacity, backing or text role changed. Rebound from the final bytes.
-  "appCss": "a5dd5fb176c9f03c1bddc9f2608d9404093f6b9673262c1b635118bc98dbabc9",
+  "appCss": "889eb4831ee826339f925f3505694b690d5666d8ded07559ec72fc8e20abf186",
   // SCA-479: app.css drops only the earlier of two byte-identical phone account-trigger blocks (five lines, after the skip-link rules); the cited legend lines and every contrast role are unchanged. Rebound from the final bytes.
   // SC1407-15: one decorative dashed route swatch; existing text roles/backing unchanged. Later citations shift by one.
   // UXFIX-10 only appends a scoped .app-account[data-top] block at the end of app.css (the phone top-card account button: icon size, hidden label, open-state text/panel colour, z-index);
