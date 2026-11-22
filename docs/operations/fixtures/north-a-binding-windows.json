@@ -1,0 +1,16 @@
+{
+  "purpose": "binding-review-only",
+  "crs": "EPSG:4326",
+  "coordinate_order": ["west", "south", "east", "north"],
+  "regions": {
+    "point-arena-bodega": {
+      "fishing_bounds": [-124.1, 38.45, -122.95, 38.958333333333336]
+    },
+    "bodega-point-reyes": {
+      "fishing_bounds": [-123.55, 37.95, -122.85, 38.45]
+    },
+    "point-reyes-pigeon": {
+      "fishing_bounds": [-123.22, 37.18333333333333, -122.36, 37.95]
+    }
+  }
+}
