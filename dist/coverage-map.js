@@ -56,9 +56,10 @@ async function depthState(region) {
   try {
     // Same deployed pointer and selection as the Chart, without opening the archive.
     const response = await fetch(`/catalog/relief/${encodeURIComponent(region)}.json`, {redirect: 'error'});
-    if (response.ok && resolveRelief(region, await response.json()).status === 'ready') return 'depthLive';
+    if (response.status === 404) return 'coverage.depthNotYet';
+    if (response.ok && resolveRelief(region, await response.json()).status === 'ready') return 'coverage.depthLive';
   } catch { /* a failed pointer read does not affect the region list */ }
-  return 'depthNotYet';
+  return 'status.state.unavailable';
 }
 
 async function main() {
@@ -77,11 +78,12 @@ async function main() {
   for (const label of list.querySelectorAll('[data-depth-region]')) {
     const region = label.dataset.depthRegion;
     if (!checks.has(region)) checks.set(region, depthState(region));
-    checks.get(region).then(state => {
-      if (state === 'depthLive') {
-        label.innerHTML = `${text(t(state, lang))} — <a href="/sources#region-${text(region)}">${text(publicPageText('status.nav.sources', lang))}</a>`;
+    checks.get(region).then(key => {
+      const message = publicPageText(key, lang);
+      if (key === 'coverage.depthLive') {
+        label.innerHTML = `${text(message)} — <a href="/sources#region-${text(region)}">${text(publicPageText('status.nav.sources', lang))}</a>`;
       } else {
-        label.textContent = t(state, lang);
+        label.textContent = message;
       }
     });
   }
