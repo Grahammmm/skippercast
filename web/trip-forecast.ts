@@ -15,6 +15,8 @@ import {hourText, markForecast, runText, type MarkReading} from './brief/mark-fo
 import type {ComfortLimits} from '../packages/coast/src/limits.ts';
 import {num, t, type Language} from './i18n.ts';
 import {fixed} from './view-copy.ts';
+import {units as chosenUnits, type Units} from './unit-choice.ts';
+import {M_PER_FT, WIND_SPEED} from './units.ts';
 import type {TripTimes} from './trip-times.ts';
 
 /** One model row at the arrival hour: a value (with the hour and run it was read from), no forecast for the hour, or another gap with its reason. */
@@ -31,6 +33,8 @@ export interface TripForecastInput {
   now: number; zone: string; language: Language;
   /** The active profile's own saved limits; null when the person has none (defaults get no marker). */
   ownLimits: ComfortLimits | null;
+  /** The display units (default: the device's choice); only the printed numbers change, never a comparison or an export. */
+  units?: Units;
 }
 
 const round = Math.round;
@@ -40,27 +44,30 @@ function cell(r: MarkReading): ArrivalCell {
 }
 
 /** A value over the person's own limit, in the brief's words (packages/coast/src/daily.ts overLimit); strictly over, on the unrounded numbers. */
-function overWords(f: {wind: ArrivalCell; seas: ArrivalCell}, limits: ComfortLimits | null, lang: Language): string[] {
+function overWords(f: {wind: ArrivalCell; seas: ArrivalCell}, limits: ComfortLimits | null, lang: Language, u: Units): string[] {
   if (!limits) return [];
   const w = f.wind.state === 'value' ? f.wind.sampled : null, s = f.seas.state === 'value' ? f.seas.sampled : null, out: string[] = [];
   // Only the placeholder is localized (Spanish decimal comma, no grouping); the comparisons below stay on the raw numbers and English keeps its number as is.
   const shown = (n: number): string | number => lang === 'en' ? n : num(n, lang, 1);
-  if (w && w.windKn !== null && w.windKn > limits.wind) out.push(t('planner.forecast.overWind', lang, {n: shown(limits.wind)}));
-  if (w && w.gustKn !== null && w.gustKn > limits.gust) out.push(t('planner.forecast.overGust', lang, {n: shown(limits.gust)}));
-  if (s && s.seasFt !== null && s.seasFt > limits.seas) out.push(t('planner.forecast.overSeas', lang, {n: shown(limits.seas)}));
+  const speed = (kn: number): number => u.wind === 'kt' ? kn : round(kn * WIND_SPEED[u.wind].factor);   // the brief tiles' rounding
+  const height = (ft: number): number => u.height === 'm' ? Number((ft * M_PER_FT).toFixed(1)) : ft;
+  const unit = WIND_SPEED[u.wind].label;
+  if (w && w.windKn !== null && w.windKn > limits.wind) out.push(t('planner.forecast.overWind', lang, {n: shown(speed(limits.wind)), unit}));
+  if (w && w.gustKn !== null && w.gustKn > limits.gust) out.push(t('planner.forecast.overGust', lang, {n: shown(speed(limits.gust)), unit}));
+  if (s && s.seasFt !== null && s.seasFt > limits.seas) out.push(t('planner.forecast.overSeas', lang, {n: shown(height(limits.seas)), unit: u.height}));
   return out;
 }
 
 const source = (c: Extract<ArrivalCell, {state: 'value'}>, at: number, zone: string, lang: Language): string =>
   [c.validAt !== at ? t('markForecast.valid', lang, {hour: hourText(c.validAt, zone, lang)}) : '', c.issuedAt !== null ? t('markForecast.src.run', lang, {run: runText(c.issuedAt, zone, lang)}) : ''].filter(Boolean).join(' · ');
 
-function cellText(c: ArrivalCell, kind: 'wind' | 'seas', at: number, zone: string, lang: Language): string {
+function cellText(c: ArrivalCell, kind: 'wind' | 'seas', at: number, zone: string, lang: Language, u: Units): string {
   if (c.state === 'no-hour') return `${t(kind === 'wind' ? 'planner.forecast.windWord' : 'planner.forecast.seasWord', lang)}: ${t('planner.forecast.noHour', lang)}`;
   if (c.state === 'gap') return t('planner.forecast.gap', lang, {what: t(kind === 'wind' ? 'planner.forecast.windWord' : 'planner.forecast.seasWord', lang), reason: c.reason});
-  const v = c.sampled, src = source(c, at, zone, lang);
+  const v = c.sampled, src = source(c, at, zone, lang), fw = WIND_SPEED[u.wind].factor, unit = WIND_SPEED[u.wind].label;
   const body = kind === 'wind'
-    ? t('planner.forecast.wind', lang, {speed: round(v.windKn!)}) + (v.gustKn !== null ? t('planner.forecast.gusts', lang, {gust: round(v.gustKn)}) : '')
-    : t('planner.forecast.seas', lang, {height: fixed(lang === 'en' ? v.seasFt! : Number(v.seasFt!.toFixed(1)), 1, lang), period: round(v.periodS!)});
+    ? t('planner.forecast.wind', lang, {speed: round(v.windKn! * fw), unit}) + (v.gustKn !== null ? t('planner.forecast.gusts', lang, {gust: round(v.gustKn * fw), unit}) : '')
+    : t('planner.forecast.seas', lang, {height: fixed(u.height === 'm' ? v.seasFt! * M_PER_FT : lang === 'en' ? v.seasFt! : Number(v.seasFt!.toFixed(1)), 1, lang), unit: u.height, period: round(v.periodS!)});
   return src ? `${body} (${src})` : body;
 }
 
@@ -69,7 +76,7 @@ function cellText(c: ArrivalCell, kind: 'wind' | 'seas', at: number, zone: strin
  * regional point is not there). Stops join their arrival by id, never by position or name.
  */
 export function tripStopForecast(input: TripForecastInput): TripArrivalForecast | null {
-  const {forecast, region, stops, times, now, zone, language: lang, ownLimits} = input;
+  const {forecast, region, stops, times, now, zone, language: lang, ownLimits} = input, u = input.units ?? chosenUnits.value;
   if (times.state !== 'ready') return null;
   const arrivals = new Map(times.stops.map(s => [s.id, s.arriveAt]));
   let point: string | null = null;
@@ -82,10 +89,10 @@ export function tripStopForecast(input: TripForecastInput): TripArrivalForecast 
     point = f.point;
     const families = f.families.map(fam => {
       const wind = cell(fam.rows[0]!), seas = cell(fam.rows[1]!);
-      return {family: fam.family, label: fam.label, wind, seas, over: overWords({wind, seas}, ownLimits, lang)};
+      return {family: fam.family, label: fam.label, wind, seas, over: overWords({wind, seas}, ownLimits, lang, u)};
     });
     const text = families.map(fam => {
-      const parts = `${cellText(fam.wind, 'wind', at, zone, lang)}; ${cellText(fam.seas, 'seas', at, zone, lang)}`;
+      const parts = `${cellText(fam.wind, 'wind', at, zone, lang, u)}; ${cellText(fam.seas, 'seas', at, zone, lang, u)}`;
       return `${fam.label}: ${parts}${fam.over.length ? ` · ${fam.over.join(', ')} ${t('planner.forecast.yourLimits', lang)}` : ''}`;
     }).join(' | ');
     out.set(stop.id, {id: stop.id, arriveAt: at, families, line: t('planner.forecast.line', lang, {values: text})});
