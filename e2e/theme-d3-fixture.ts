@@ -83,8 +83,9 @@ function forecast(region: string | null) {
   }};
 }
 const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+const bounds = [-121, 35.2, -120.7, 35.6];
 const genericRegion = (id: string) => ({schema_version: 1, id, name: `Synthetic ${id}`, status: 'active', timezone: 'America/Los_Angeles', jurisdiction_id: 'california-fixture',
-  bounds: [-121, 35.2, -120.7, 35.6], map: {center: [at[1], at[0]], zoom: 12},
+  bounds, map: {center: [at[1], at[0]], zoom: 12, local_areas: id === FIRST ? [{id: 'estero-bay', bounds}] : []},
   stations: {tide: '9412110'},
   chart_files: ['shoreline.geojson', 'depth-contours.geojson', 'depth-contours-overview.geojson'],
   basemap: {default: 'night'}});
@@ -97,8 +98,8 @@ export async function bindThemeFixture(context: BrowserContext, origin: string, 
   const ledger = JSON.stringify({region: FIRST, reaches: [
     {id: `${FIRST}-fx1`, region: FIRST, status: 'habitat-screened'}, {id: `${FIRST}-fx2`, region: FIRST, status: 'habitat-held-for-screen'},
   ]});
-  let release!: () => void;
-  const regionHold = new Promise<void>(resolve => { release = resolve; });
+  let regionHold: Promise<void> | undefined, release: (() => void) | undefined;
+  let nearshore = false;
   await context.addInitScript(() => {
     // Do not let a delayed, unrelated page telemetry flush pollute the
     // all-request oracle; map-data requests remain fully observed.
@@ -161,9 +162,20 @@ export async function bindThemeFixture(context: BrowserContext, origin: string, 
     const region = /^\/regions\/([^/]+)\/region\.json$/.exec(path)?.[1];
     if (region) {
       if (region === NEXT) await regionHold;
-      return route.fulfill({json: genericRegion(region)});
+      const data = genericRegion(region);
+      if (!nearshore) data.map.local_areas = [];
+      return route.fulfill({json: data});
     }
     if (path.endsWith('/shoreline.geojson') || path.endsWith('/shoreline-overview.geojson')) return route.fulfill({json: line});
+    if (path === `/regions/${FIRST}/shore-habitat.geojson`) {
+      const id = 'synthetic-shore-run', url = `${origin}/synthetic-shore-evidence`;
+      return route.fulfill({json: {type: 'FeatureCollection', regionId: FIRST, features: [{type: 'Feature', id,
+        geometry: {type: 'MultiLineString', coordinates: [line.features[0]!.geometry.coordinates]},
+        properties: {id, region: FIRST, areaId: 'fixture', name: 'Synthetic shore run', shoreClass: 'Sandy', substrate: 'sand',
+          sourceYear: 2029, sourceUrl: url, attribution: 'Synthetic fixture', accessUrl: url,
+          reviewedAt: OBSERVED, reviewExpiresAt: '2030-06-01T00:00:00Z',
+          access: [{id: 'synthetic-access', name: 'Synthetic access', coordinates: at, sourceUrl: url, checkedAt: OBSERVED}]}}]}});
+    }
     const contourRegion = /^\/regions\/([^/]+)\/depth-contours(?:-overview)?\.geojson$/.exec(path)?.[1];
     if (contourRegion) {
       const source = {source_id: 'synthetic', name: 'Synthetic contour fixture', survey_date: '2030-01-01', vertical_datum: 'synthetic'};
@@ -171,6 +183,17 @@ export async function bindThemeFixture(context: BrowserContext, origin: string, 
         features: [{...line.features[0], properties: {...source, kind: 'contour', depth_ft: 150}}, {...line.features[0], properties: {...source, kind: 'survey-edge'}}]}});
     }
     if (path === '/api/forecast') return route.fulfill({json: forecast(url.searchParams.get('region'))});
+    if (path === '/api/coast/report') {
+      const id = 'synthetic-nearshore', sourceUrl = `${origin}/synthetic-nearshore-evidence`;
+      return route.fulfill({json: {schemaVersion: 1, countyId: 'slo', generatedAt: OBSERVED,
+        forecasts: [], observations: [], tides: [], tideEvents: [], alerts: [], catches: [],
+        visibility: {status: 'unknown', feet: null, observedAt: null, sourceUrl: null},
+        sources: [{id, label: 'Synthetic nearshore model', url: sourceUrl, kind: 'forecast', outcome: 'ok', fetchedAt: OBSERVED}],
+        nearshore: [{id, name: 'Synthetic model site', areaId: 'central', lon: at[0], lat: at[1], sourceId: id,
+          issuedAt: OBSERVED, fetchedAt: OBSERVED, url: sourceUrl, kind: 'forecast', availability: 'available', freshness: 'current',
+          temporalResolutionMinutes: 60, hours: [-1, 0, 1].map(offset => ({at: new Date((Math.floor(NOW / HOUR) + offset) * HOUR).toISOString(),
+            waveFt: 4, periodS: 12, directionDeg: 280, qualityFlag: 0, secondaryFlag: 0}))}]}});
+    }
     if (path === '/api/session') return route.fulfill({json: {enabled: true, signedIn: true, is_admin: true}});
     if (path === '/api/fleet/map/filters') return route.fulfill({json: {region: 'CA'}});
     const activity = /^\/api\/fleet\/map\/(events|tracks|heat)$/.exec(path)?.[1];
@@ -196,7 +219,9 @@ export async function bindThemeFixture(context: BrowserContext, origin: string, 
     if (path === '/map' || /^\/(assets|fonts|glyphs)\//.test(path)) return route.continue();
     return route.fulfill({status: 404, json: {error: 'No synthetic fixture'}});
   });
-  return {requests, seen, release};
+  return {requests, seen, nearshore: (enabled: boolean) => { nearshore = enabled; },
+    hold: () => { regionHold = new Promise<void>(resolve => { release = resolve; }); },
+    release: () => { release?.(); regionHold = undefined; }};
 }
 
 export function snapshot(page: Page) {

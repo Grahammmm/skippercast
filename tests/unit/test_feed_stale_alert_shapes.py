@@ -49,7 +49,7 @@ class ShapeTests(unittest.TestCase):
                 actions = alert.plan(self.load(report, "true"), [ISSUE], NOW)
                 self.assertFalse([a for a in actions if a[0] == "close"])
                 self.assertEqual(alert.plan(self.load(report, "true"), [], NOW)[0][:2],
-                                 ("create", alert.TITLE + alert.CHECK_FEED))
+                                 ("create", "Feed freshness check could not confirm results"))
 
     def test_main_never_closes_on_invalid_envelope(self):
         path = Path(self.tmp.name) / "r.json"
