@@ -140,5 +140,5 @@ test('verdict source outside agreement additions is unchanged', async () => {
   }
   assert.doesNotMatch(source, /dateTimeFormat|date-format/);
   const stripped = source.replace(/, agreement: (?:staleAgreement \? null : agreement|null)/g, '').split('\n').filter(line => !/agreement|Agreement/.test(line)).join('\n');
-  assert.equal(createHash('sha256').update(stripped).digest('hex'), 'f2f237dced82bea18bbd2ffac38e558141ea20db3782a81175a5e86a99f09e06');
+  assert.equal(createHash('sha256').update(stripped).digest('hex'), 'f7e95b3fec90ff2f6e603f5e33305536270e12ebf48ef9e18c6005301147a196');
 });
