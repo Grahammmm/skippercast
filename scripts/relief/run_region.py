@@ -517,12 +517,17 @@ def show_rebuild_plan(cfg, out, region):
     else:
         import rebuild_plan as report
 
-    if under(out, cfg.forbidden_root) or under(out / region / 'stages', cfg.forbidden_root):
+    stages = out / region / 'stages'
+    if under(out, cfg.forbidden_root) or under(stages, cfg.forbidden_root):
         say('rebuild plan unavailable: receipt directory is under the forbidden root')
         return
     try:
+        # The planner reads every *.json receipt, including scoped and symlinked files.
+        if any(under(path, cfg.forbidden_root) for path in stages.glob('*.json')):
+            say('rebuild plan unavailable: receipt is under the forbidden root')
+            return
         rows = report._region_plan(out, region, report._stage_digests())
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
         say(f'rebuild plan unavailable: {exc}')
         return
     say('rebuild plan (from receipts):')

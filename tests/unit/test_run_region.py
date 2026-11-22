@@ -844,6 +844,42 @@ def test_c2_dry_run_with_unavailable_plan_still_shows_guards(box, capsys, forbid
     assert (box.out_tree(), receipt.read_text(), box.calls(), box.slots.exists(), err) == (before, '[]', [], False, '')
 
 
+def test_dry_run_null_upstream_preserves_guards(box, capsys):
+    box.local_stop.touch()
+    receipt = receipts.Region(box.out, 'test-bay').receipt_path('select')
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text('{"upstream": null}')
+    assert box.run('--dry-run', region='test-bay', through='select') == 0
+    out = capsys.readouterr().out
+    assert 'rebuild plan unavailable:' in out
+    assert f'REFUSE stop-file: {box.local_stop} present' in out
+    assert out.splitlines()[-1] == 'dry run: a real run would be refused now; nothing was run and nothing was written'
+
+
+def test_dry_run_does_not_read_forbidden_receipt_symlink(box, capsys, monkeypatch):
+    box.local_stop.touch()
+    vault = box.root / 'vault'
+    vault.mkdir()
+    box.cfg.forbidden_root = str(vault)
+    protected = vault / 'protected.json'
+    protected.write_text('{"upstream": []}')
+    receipt = receipts.Region(box.out, 'test-bay').receipt_path('select')
+    receipt.parent.mkdir(parents=True)
+    receipt.symlink_to(protected)
+    original = receipts.read_receipt
+
+    def refuse_protected_read(path):
+        assert path.resolve() != protected, 'protected receipt was read'
+        return original(path)
+
+    monkeypatch.setattr(receipts, 'read_receipt', refuse_protected_read)
+    assert box.run('--dry-run', region='test-bay', through='select') == 0
+    out = capsys.readouterr().out
+    assert 'rebuild plan unavailable:' in out
+    assert f'REFUSE stop-file: {box.local_stop} present' in out
+    assert out.splitlines()[-1] == 'dry run: a real run would be refused now; nothing was run and nothing was written'
+
+
 @pytest.mark.parametrize('partial, census, input_lines', [
     ([], False, ['inputs for zone: --coarse (stage coarse), --water (stage water), --coarse-source (stage coarse)']),
     (ZONE_ARGS[:2], False, ['inputs for zone: --coarse (option), --water (stage water), --coarse-source (missing option)']),
