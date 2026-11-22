@@ -15,8 +15,8 @@ import {useScrollCue} from '../ui/scroll-cue.ts';
 import {PositionCheck} from './PositionCheck.tsx';
 import {region} from '../state.ts';
 import {
-  KEEP_WORDS, canSaveCoastal, closeTrip, deleteCoastal, estimateWords, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, savePackKept, storageLine, tripError, tripOpen, tripReady,
-  type PackMeta, type Progress,
+  canSaveCoastal, closeTrip, deleteCoastal, estimateWords, keepWords, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, savePackKept, storageLine, tripError, tripOpen, tripReady,
+  type Keep, type PackMeta, type Progress,
 } from '../trip.ts';
 import {oceanLines} from '../trip-ocean-lines.ts';
 import {tidePackMessage} from '../brief/remaining-copy.ts';
@@ -27,10 +27,10 @@ import {regionInfo, zone} from './App.tsx';
 const PHASES: Readonly<Record<string, StringId>> = {files: 'trip.phase.files', tiles: 'trip.phase.tiles', shell: 'trip.phase.shell', basemap: 'trip.phase.basemap'};
 const PRODUCTS: Readonly<Record<string, StringId>> = {'/api/coast/report': 'trip.product.report', '/api/coast/ocean': 'trip.product.ocean', '/api/coast/history': 'trip.product.history'};
 
-/** A status line kept as its catalogue id and variables (and an English tail the store supplies), never as translated text. */
-type Status = {id: StringId; vars?: Readonly<Record<string, string | number>>; bytes?: number; missing?: number; tail?: string} | null;
+/** A status line kept as its catalogue id and variables (and the browser's keep answer), never as translated text. */
+type Status = {id: StringId; vars?: Readonly<Record<string, string | number>>; bytes?: number; missing?: number; keep?: Keep} | null;
 // `bytes` stays a number and is written here in the language being rendered, so the GB decimal separator follows a language change.
-const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.bytes === undefined ? {} : {bytes: sizeText(s.bytes, lang)}), ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t(s.missing === 1 ? 'trip.status.missing.one' : 'trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
+const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.bytes === undefined ? {} : {bytes: sizeText(s.bytes, lang)}), ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t(s.missing === 1 ? 'trip.status.missing.one' : 'trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.keep && keepWords(s.keep, lang) ? ` ${keepWords(s.keep, lang)}` : '');
 
 /** "Oct 9, 3:42 PM PDT" in the region's zone ("9 oct, 3:42 p. m. PDT" in Spanish). */
 export const stamp = (iso: string, timeZone = zone(), lang: Language = 'en'): string =>
@@ -149,7 +149,7 @@ function ChartPack() {
     setBusy(controller); setStatus(null);
     try {
       const {meta, keep} = await savePackKept(() => savePack(id, controller.signal, setProgress));
-      setStatus({id: 'trip.status.saved', vars: {name: meta.region_name}, bytes: meta.bytes, missing: packMissing(meta), ...(KEEP_WORDS[keep] ? {tail: ` ${KEEP_WORDS[keep]}`} : {})});
+      setStatus({id: 'trip.status.saved', vars: {name: meta.region_name}, bytes: meta.bytes, missing: packMissing(meta), keep});
     } catch (e) {
       setStatus(controller.signal.aborted ? {id: 'trip.status.cancelled'} : {id: 'trip.status.failed', vars: {detail: (e as Error).message}});
     } finally { setBusy(null); setProgress(null); void refresh(); }
@@ -180,7 +180,7 @@ function ChartPack() {
           const ocean = oceanLines(meta, new Date(), zone(), lang);
           return (
           <li key={cache}>
-            <div><strong>{meta.region_name}</strong><span class="ui-mono">{t('trip.saved', lang)} <Saved iso={meta.saved_at} lang={lang} /> · {sizeText(meta.bytes, lang)}</span><span>{packTiles(meta, lang)}</span><span>{forecastEndLine(meta, new Date(), zone())}</span>
+            <div><strong>{meta.region_name}</strong><span class="ui-mono">{t('trip.saved', lang)} <Saved iso={meta.saved_at} lang={lang} /> · {sizeText(meta.bytes, lang)}</span><span>{packTiles(meta, lang)}</span><span>{forecastEndLine(meta, new Date(), zone(), lang)}</span>
               {ocean ? <><span>{t('tripOcean.water', lang, {line: ocean.water})}</span><span>{t('tripOcean.currents', lang, {line: ocean.currents})}</span></> : null}<LegalChecklist meta={meta} lang={lang} /></div>
             <Button size="sm" disabled={!!busy} onClick={() => void remove(cache)} aria-label={t('trip.deleteAria', lang, {name: meta.region_name})}>{t('trip.delete', lang)}</Button>
           </li>

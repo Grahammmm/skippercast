@@ -217,11 +217,14 @@ export async function savePackKept(save: () => Promise<PackMeta>, nav?: StorageN
   const meta = await save();
   return {meta, keep: await keepSaved(nav)};
 }
-/** The dialog's words for the browser's answer; nothing when it has none. */
+const KEEP_IDS = {agreed: 'trip.keep.agreed', already: 'trip.keep.already', refused: 'trip.keep.refused'} as const;
+/** The dialog's words for the browser's answer in `lang` (SC2052-06); nothing when it has none. */
+export const keepWords = (keep: Keep, lang: Language = 'en'): string => keep === 'unavailable' ? '' : t(KEEP_IDS[keep], lang);
+/** The same words in English, keyed as before. */
 export const KEEP_WORDS: Readonly<Record<Keep, string>> = {
-  agreed: 'This browser agreed to keep saved packs.',
-  already: 'This browser already keeps saved packs.',
-  refused: 'This browser may clear saved packs when space is low.',
+  agreed: keepWords('agreed'),
+  already: keepWords('already'),
+  refused: keepWords('refused'),
   unavailable: '',
 };
 

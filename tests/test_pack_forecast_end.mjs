@@ -6,6 +6,7 @@ import {forecastEnd, listPacks} from '../dist/offline-pack.js';
 import {MODELS} from '../dist/marine-data.js';
 import {PACK_META} from '../dist/offline-core.js';
 import {forecastEndLine} from '../web/trip-forecast-end.ts';
+import './helpers/spanish-ready.mjs';
 
 const sec = iso => Date.parse(iso) / 1000;
 const wind = MODELS.filter(m => m.kind === 'wind'), wave = MODELS.filter(m => m.kind === 'wave');
@@ -46,6 +47,22 @@ test('the line: through, ended (exactly at the end too), not recorded', () => {
   assert.equal(forecastEndLine(meta, new Date('2026-11-09T18:00:00Z'), 'America/Los_Angeles'), ended);
   assert.equal(forecastEndLine(meta, new Date('2026-11-10T00:00:00Z')), ended);
   for (const m of [{}, {forecast_end: 'garbage'}, {forecast_end: 5}]) assert.equal(forecastEndLine(m, new Date('2026-11-05T12:00:00Z')), 'Forecast end not recorded');
+});
+
+// SC2052-06 contract: a Spanish page reads the three states from the catalogue, with the day and hour in the REGION zone (not UTC or
+// the device's); a regression that kept the English literals, formatted in UTC, or changed the cutoff fails here.
+test('Spanish: future end in the region zone (UTC date differs), ended (exactly at the end too), not recorded; English unchanged', () => {
+  const la = 'America/Los_Angeles', now = new Date('2026-11-05T12:00:00Z');
+  assert.equal(forecastEndLine({forecast_end: '2026-11-09T18:00:00.000Z'}, now, la, 'es'), 'Pronóstico guardado hasta lun, 10');
+  // 07:30Z on Tue 10 is still Mon 23:30 in Los Angeles: the zone-local day and hour, not the UTC ones.
+  assert.equal(forecastEndLine({forecast_end: '2026-11-10T07:30:00.000Z'}, now, la, 'es'), 'Pronóstico guardado hasta lun, 23');
+  const ended = 'El pronóstico guardado terminó; vuelve a guardar con conexión';
+  assert.equal(forecastEndLine({forecast_end: '2026-11-09T18:00:00.000Z'}, new Date('2026-11-09T18:00:00Z'), la, 'es'), ended);
+  assert.equal(forecastEndLine({forecast_end: '2026-11-09T18:00:00.000Z'}, new Date('2026-11-09T17:59:59Z'), la, 'es'), 'Pronóstico guardado hasta lun, 10');
+  for (const m of [{}, {forecast_end: 'garbage'}, {forecast_end: 5}]) assert.equal(forecastEndLine(m, now, la, 'es'), 'No se registró el fin del pronóstico');
+  // English is byte-identical whether the language is omitted or given.
+  assert.equal(forecastEndLine({forecast_end: '2026-11-10T07:30:00.000Z'}, now, la, 'en'), 'Forecast saved through Mon 11 pm');
+  assert.equal(forecastEndLine({}, now, la, 'en'), 'Forecast end not recorded');
 });
 
 test('the DST-change day formats the local hour: 2026-11-01 is PDT before 09:00Z and PST after', () => {
