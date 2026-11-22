@@ -271,6 +271,8 @@ export function createPlanner(deps: PlannerDeps) {
   const allowResearch = signal(false), search = signal(''), loading = signal(false), portsReady = signal(false), portsFailed = signal(false);
   const filters = signal<Filters>({species: 'reef', limit: 20, depth: 300, scope: 'region', port: '', distance: deps.reachNm ?? 20});
   const ports = signal<Port[]>([]);
+  /** SC2052-09: what the last Shorter run order tap said when it moved nothing, tied to the `ids` array it was about. */
+  const shorterNote = signal<{ids: string[]; key: 'planner.order.shorterSame' | 'planner.order.shorterRefused'} | null>(null);
   const scopeStatus = signal(''), actionStatus = signal(''), storageNote = signal(storage ? STORAGE_OK : STORAGE_OFF);
   /** Bumped when the screen's age or the map may have changed (open, boundaries, each minute while open). */
   const tick = signal(0);
@@ -396,6 +398,11 @@ export function createPlanner(deps: PlannerDeps) {
    * restore or an unresolved launch refuses without touching the plan. Returns what happened.
    */
   function shortenRun(): 'moved' | 'same' | 'refused' {
+    const result = tryShortenRun(), at = draft.peek().ids;
+    shorterNote.value = result === 'moved' ? null : {ids: at, key: result === 'same' ? 'planner.order.shorterSame' : 'planner.order.shorterRefused'};
+    return result;
+  }
+  function tryShortenRun(): 'moved' | 'same' | 'refused' {
     const d = draft.value, byId = new Map(selected().map(t => [t.id, t])), stops = d.ids.map(id => byId.get(id));
     if (disposed || restorePending.value || launchUnresolved() || d.ids.length < 2 || new Set(d.ids).size !== d.ids.length
       || !stops.every(t => t && Number.isFinite(t.latitude) && Number.isFinite(t.longitude))) return 'refused';
@@ -954,7 +961,7 @@ export function createPlanner(deps: PlannerDeps) {
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
     alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
     floatPlan, floatBackAuto, floatErrors, setFloatPlanOpen, editFloatPlan, reseedFloatBackBy,
-    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, shortenRun, shorterRunOrder, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
+    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, shortenRun, shorterNote, shorterRunOrder, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     routing, routeStatus, exportRouteFile, deliverRoute, showRouteOnChart, checkRoutePreview,
     /** Stop subscriptions and invalidate in-flight ranking and restore. */
