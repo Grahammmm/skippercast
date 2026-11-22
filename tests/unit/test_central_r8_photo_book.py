@@ -10,8 +10,9 @@ import zlib
 import pytest
 
 from skippercast.relief import envelope, package, receipts
+from tests._support import ROOT
 
-CLI = Path(__file__).resolve().parents[2] / 'scripts/relief/central_r8_photo_book.py'
+CLI = ROOT / 'scripts/relief/central_r8_photo_book.py'
 REGION = 'fixture-central'
 GEN = 'a' * 64
 SOURCE = 'usgs-point-buchon'  # tracked catalog identity only; all artifact bytes are invented
