@@ -263,6 +263,21 @@ def test_c2_each_pin_is_preflighted_before_first_stage(box, capsys, no_record_gu
     assert box.calls() == [] and box.out_tree() == [] and not box.slots.exists()
 
 
+@pytest.mark.parametrize('name', ['census', 'coarse', 'water', 'basemap', 'qa_support'])
+@pytest.mark.parametrize('dry_run', [False, True])
+def test_c2_embedded_nul_input_is_refused_before_guards(box, capsys, no_record_guards, name, dry_run):
+    path = 'invalid\x00name'
+    doc = record_doc(inputs={name: {'path': path, 'sha256': GEN}})
+    assert run_record(box, doc, *(['--dry-run'] if dry_run else [])) == 3
+    output = capsys.readouterr()
+    detail = f'{RR.spelled(path)!r} is missing or not a regular file'
+    if dry_run:
+        assert f'  {name}: MISMATCH ({detail})\n' in output.out
+    else:
+        assert output.out == f'run_region: refused input {name}: {detail}\n'
+    assert output.err == '' and box.calls() == [] and box.out_tree() == [] and not box.slots.exists()
+
+
 @pytest.mark.parametrize('case', ['record', 'coarse', 'basemap', 'norm'], ids=lambda case: f'C2: guard {case}')
 def test_c2_record_cannot_expand_existing_read_boundaries(box, capsys, monkeypatch, case):
     # C2: the hash preflight must not open a vault file or an unadmitted basemap.

@@ -244,6 +244,9 @@ def load_inputs(args, parser):
 
 
 def input_problem(cfg, name, path, digest):
+    # NUL is valid JSON but cannot name a filesystem path; realpath itself raises on it.
+    if '\x00' in path:
+        return f'{path!r} is missing or not a regular file'
     # Hashing opens the file earlier than a stage would; honor the same read boundaries first.
     if under(path, cfg.forbidden_root):
         return f'{path} is under {cfg.forbidden_root}'
