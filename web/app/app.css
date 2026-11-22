@@ -342,7 +342,8 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-top-card .app-location-coords { display: none; }
 .app-top .ui-icon-button { flex: none; box-shadow: var(--elev-2); }
 .app-profile { display: flex; box-shadow: var(--elev-2); }
-.app-profile .ui-chip { flex: 1; min-width: 0; padding: var(--space-1) var(--space-2); }
+.app-profile .ui-chip { flex: 1 1 auto; min-width: min-content; padding: var(--space-1) var(--space-2); line-height: var(--leading-heading); }
+.app-profile .ui-chip svg { flex: none; }
 
 /* The sheet sits on the tab bar and stops under the top strip's first row at full; its detents are ui.css's, offset by the tabs. */
 .app-sheet {
@@ -612,7 +613,7 @@ p.app-forecast-failed-head { font-size: var(--text-15); }
   .app-mobile .app-top .app-top-card { flex-direction: row; align-items: center; gap: var(--space-3); padding-top: 0; padding-bottom: 0; }
   .app-mobile .app-top .app-top-card .app-brand { flex: none; }
   .app-mobile .app-top .app-top-card .app-location { flex: 1; min-width: 0; }
-  .app-mobile .app-top .app-profile { flex: 0 0 240px; min-width: 0; }
+  .app-mobile .app-top .app-profile { flex: 0 0 240px; min-width: min-content; }
 }
 /* end RF2135-5 */
 /* MAIN-RED-7: on a landscape phone the three footer links (Terms, Sources, Reports) must share one row, or Sign in drops a 44 px row below the tab bar. Each link keeps a 44 px target; its margin goes and its side padding narrows. */

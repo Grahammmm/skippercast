@@ -38,8 +38,9 @@ import {SPEAR} from '../../packages/coast/src/spear.ts';
 import {dateTimeFormat} from '../../packages/coast/src/date-format.ts';
 import type {Brief} from './types.ts';
 import {modelAgreement, type Agreement} from './agreement.ts';
-import {cap, englishClock, finite, r0, up1, verdictCopy, type VerdictCopy} from './verdict-copy.ts';
+import {cap, englishClock, finite, verdictCopy, type VerdictCopy} from './verdict-copy.ts';
 import type {Language} from '../i18n.ts';
+import type {Units} from '../unit-choice.ts';
 
 const HOUR = 3_600_000;
 
@@ -159,8 +160,8 @@ function barHazard(brief: Brief, hours: readonly number[], tz: string, c: Verdic
 }
 
 /** The first rated hour in the long-period swell rule (score.ts LONG_PERIOD_SWELL, which keeps it out of every window), named; the rougher model's seas count. */
-export function longPeriodHour(rows: readonly {ms: number; hour: FeedHour}[], tz: string, lang: Language = 'en'): string | null {
-  const c = verdictCopy(lang);
+export function longPeriodHour(rows: readonly {ms: number; hour: FeedHour}[], tz: string, lang: Language = 'en', u?: Units): string | null {
+  const c = verdictCopy(lang, u);
   for (const {ms, hour} of [...rows].sort((a, b) => a.ms - b.ms)) {
     const heights = [hour.sea, hour.other_sea].filter(finite), periods = [hour.sea_period, hour.swell_period].filter(finite).filter(p => p >= LONG_PERIOD_SWELL.period);
     const h = heights.length ? Math.max(...heights) : NaN;
@@ -174,8 +175,8 @@ const untilText = (label: string, bounds: readonly [number, number] | undefined,
   lang !== 'en' && bounds ? c.clock(bounds[1], tz) : label.split('–')[1]!;
 
 /** The boat verdict from the comfort score over the regional forecast, for `boat`'s factors (the reference boat by default). */
-export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT, lang: Language = 'en'): BriefVerdict {
-  const c = verdictCopy(lang);
+export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT, lang: Language = 'en', u?: Units): BriefVerdict {
+  const c = verdictCopy(lang, u);
   const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score', agreement: null});
   if (!forecast) return unknown(c.unknown('noForecast'));
   const feed = feedReader(forecast, now);
@@ -194,7 +195,7 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   let limit: string;
   if (verdict === 'comfortable' || !list.length) {
     const wind = Math.max(...rated.map(row => row.rating.wind)), sea = Math.max(...rated.map(row => row.rating.sea));
-    limit = c.calm(r0(wind), up1(sea), untilText(label!, bounds, tz, c, lang));
+    limit = c.calm(wind, sea, untilText(label!, bounds, tz, c, lang));
   } else {
     const [first, second] = list;
     limit = c.limit(c.phrase(first!.kind, worst.rating, worst.hour), at, second && second.cost >= SECOND_COST ? c.phrase(second.kind, worst.rating, worst.hour) : null);
@@ -207,7 +208,7 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   if (brief.missing.includes(ALERT_CHECK_MISSING)) reasons.push(c.alertMissing());
   const bar = barHazard(brief, hours, tz, c);
   if (bar) reasons.push(bar);
-  const swell = longPeriodHour(rated, tz, lang);
+  const swell = longPeriodHour(rated, tz, lang, u);
   if (swell) reasons.push(swell);
   const held = verdict === 'comfortable' && reasons.length ? c.held(reasons) : null;
   if (held) verdict = 'marginal';
@@ -269,8 +270,8 @@ export function limitReasons(profile: Exclude<Profile, 'boat'>, hour: {reasons: 
 }
 
 /** The Shore, Spear or Kayak verdict from the profile's own hourly grader. */
-export function profileVerdict(brief: Brief, now: Date, tz: string, lang: Language = 'en'): BriefVerdict {
-  const c = verdictCopy(lang);
+export function profileVerdict(brief: Brief, now: Date, tz: string, lang: Language = 'en', u?: Units): BriefVerdict {
+  const c = verdictCopy(lang, u);
   const p = brief.profile as Exclude<Profile, 'boat'>;
   const graded: readonly GradedHour[] = (p === 'shore' ? brief.shore?.hours : p === 'spear' ? brief.spear?.hours : brief.kayak?.hours) ?? [];
   const byMs = new Map(graded.map(h => [Date.parse(h.at), h]));
@@ -295,7 +296,7 @@ export function profileVerdict(brief: Brief, now: Date, tz: string, lang: Langua
 }
 
 /** The brief's verdict for its profile; null before there is a brief. `boat` rates the Boat profile (the reference boat by default). */
-export function briefVerdict(brief: Brief | null, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT, lang: Language = 'en'): BriefVerdict | null {
+export function briefVerdict(brief: Brief | null, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT, lang: Language = 'en', u?: Units): BriefVerdict | null {
   if (!brief) return null;
-  return brief.profile === 'boat' ? boatVerdict(brief, forecast, now, tz, boat, lang) : profileVerdict(brief, now, tz, lang);
+  return brief.profile === 'boat' ? boatVerdict(brief, forecast, now, tz, boat, lang, u) : profileVerdict(brief, now, tz, lang, u);
 }

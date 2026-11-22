@@ -269,3 +269,30 @@ test('verdict_es_catalogue: every verdict id has both languages with the same va
     assert.doesNotMatch(`${v.limit} ${v.held}`, /[{}]/, lang);
   }
 });
+
+// SC1222-05: Spanish and the catalogue, in the chosen units.
+test('SC1222-05 Spanish wind and heights in the chosen units, with the decimal comma', () => {
+  const U = (wind, height) => ({temp: 'F', wind, height});
+  const f = forecast({at: t0 => t0 === hourAt(10) ? windy(22, 30) : {}});
+  assert.equal(boatVerdict(brief(), f, NOW, TZ, undefined, 'es', U('kmh', 'm')).limit, 'Viento de 41 km/h con ráfagas de 56 a las 10.');
+  assert.equal(boatVerdict(brief(), f, NOW, TZ, undefined, 'es').limit, 'Viento de 22 kt con ráfagas de 30 a las 10.');
+  const calm = forecast({over: {wave_height: 2, wam: 2, swell_wave_height: 1}});
+  assert.equal(boatVerdict(brief(), calm, NOW, TZ, undefined, 'es', U('kmh', 'm')).limit, 'Viento de hasta 11 km/h y mar de hasta 0,7 m hasta las 12.');
+  const seas = {wave_height: 7.31, wam: 7, wave_period: 8, swell_wave_height: 6.5};
+  assert.equal(boatVerdict(brief(), forecast({over: seas}), NOW, TZ, undefined, 'es', U('mph', 'm')).limit, 'Mar de 2,3 m a 8 s a las 8.');
+  const chop = forecast({over: {wind_wave_height: 2.2, wind_wave_period: 3, ...windy(12, 15)}});
+  assert.equal(boatVerdict(brief(), chop, NOW, TZ, undefined, 'es', U('mph', 'm')).limit, 'Viento de 14 mph con ráfagas de 17 a las 8, con oleaje corto y empinado por viento de 0,7 m.');
+  const cross = verdictCopy('es', U('kt', 'm')).phrase('cross', {}, {secondary: 3, secondary_from: 200});
+  assert.equal(cross, 'mar de fondo cruzado de 0,9 m del SSW');
+  assert.equal(verdictCopy('en', U('kt', 'm')).phrase('cross', {}, {secondary: 3, secondary_from: 200}), 'a 0.9 m cross swell from the SSW');
+  assert.equal(verdictCopy('en', U('kt', 'ft')).phrase('cross', {}, {secondary: 3, secondary_from: 200}), 'a 3 ft cross swell from the SSW');
+  // profile reasons: the numbers and unit change, the Spanish wording stays
+  const reason = (s, u) => verdictCopy('es', u).profileReason(s);
+  assert.equal(reason('strong wind (25 kt, gust 31) onshore', U('kmh', 'm')), 'viento fuerte (46 km/h, ráfagas de 57) hacia tierra');
+  assert.equal(reason('heavy seas (9 ft at 8 s)', U('kt', 'm')), 'mar muy intenso (2,7 m a 8 s)');
+  assert.equal(reason('heavy seas (9 ft at 8 s)', U('kt', 'ft')), 'mar muy intenso (9 ft a 8 s)');
+  assert.equal(verdictCopy('es', U('kmh', 'm')).profileReason('Gigantic surf (30 ft)'), 'Razón del modelo no disponible en español: Gigantic surf (30 ft)');
+  // every verdict template that names a unit takes it as a variable in both languages
+  for (const id of ['wind', 'calm']) for (const lang of ['en', 'es']) assert.match(catalogue.strings[`verdict.${id}`][lang], /\{windUnit\}/);
+  for (const id of ['seas', 'chop', 'steepChop', 'cross', 'calm', 'longPeriod', 'reason.detail']) for (const lang of ['en', 'es']) assert.match(catalogue.strings[`verdict.${id}`][lang], /\{heightUnit\}/);
+});
