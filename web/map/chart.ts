@@ -26,6 +26,7 @@ import {mapMayLoad, markChartMounted, markMapIdle} from '../map-ready.ts';
 import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams, view} from '../state.ts';
+import {language} from '../i18n.ts';
 import {harborOrigin} from '../ranking.ts';
 import {placeWaypoint, waypointPlacement} from '../waypoint-placement.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
@@ -212,6 +213,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       const start = camera.peek() ?? at;
       const e: Engine = createEngine(library, {
         host, camera: start, onMove,
+        // SC2052-04: the page's ready language, read here at creation (no remount to follow a later change).
+        language: language.peek(),
         sourceContext: () => sourceContext,
         pickContext: () => alive && shownPresentation.peek() === 'chart' && appView.peek() === 'coast' ? pickContext : null,
         onSourceTileLoaded: sourceId => {
