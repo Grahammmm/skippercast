@@ -15,7 +15,7 @@ import {useScrollCue} from '../ui/scroll-cue.ts';
 import {PositionCheck} from './PositionCheck.tsx';
 import {region} from '../state.ts';
 import {
-  canSaveCoastal, closeTrip, deleteCoastal, estimateWords, keepWords, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, savePackKept, storageLine, tripError, tripOpen, tripReady,
+  KEEP_WORDS, canSaveCoastal, closeTrip, deleteCoastal, estimateWords, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, savePackKept, storageLine, tripError, tripOpen, tripReady,
   type Keep, type PackMeta, type Progress,
 } from '../trip.ts';
 import {oceanLines} from '../trip-ocean-lines.ts';
@@ -27,10 +27,13 @@ import {regionInfo, zone} from './App.tsx';
 const PHASES: Readonly<Record<string, StringId>> = {files: 'trip.phase.files', tiles: 'trip.phase.tiles', shell: 'trip.phase.shell', basemap: 'trip.phase.basemap'};
 const PRODUCTS: Readonly<Record<string, StringId>> = {'/api/coast/report': 'trip.product.report', '/api/coast/ocean': 'trip.product.ocean', '/api/coast/history': 'trip.product.history'};
 
+// SC2052-06: the browser's keep answer is shown from its catalogue id; KEEP_WORDS (English, web/trip.ts) only says whether the answer has words.
+const KEEP_IDS: Readonly<Record<Exclude<Keep, 'unavailable'>, StringId>> = {agreed: 'trip.keep.agreed', already: 'trip.keep.already', refused: 'trip.keep.refused'};
+
 /** A status line kept as its catalogue id and variables (and the browser's keep answer), never as translated text. */
 type Status = {id: StringId; vars?: Readonly<Record<string, string | number>>; bytes?: number; missing?: number; keep?: Keep} | null;
 // `bytes` stays a number and is written here in the language being rendered, so the GB decimal separator follows a language change.
-const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.bytes === undefined ? {} : {bytes: sizeText(s.bytes, lang)}), ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t(s.missing === 1 ? 'trip.status.missing.one' : 'trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.keep && keepWords(s.keep, lang) ? ` ${keepWords(s.keep, lang)}` : '');
+const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.bytes === undefined ? {} : {bytes: sizeText(s.bytes, lang)}), ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t(s.missing === 1 ? 'trip.status.missing.one' : 'trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.keep && KEEP_WORDS[s.keep] ? ` ${t(KEEP_IDS[s.keep as Exclude<Keep, 'unavailable'>], lang)}` : '');
 
 /** "Oct 9, 3:42 PM PDT" in the region's zone ("9 oct, 3:42 p. m. PDT" in Spanish). */
 export const stamp = (iso: string, timeZone = zone(), lang: Language = 'en'): string =>
