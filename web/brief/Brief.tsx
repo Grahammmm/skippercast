@@ -230,6 +230,38 @@ export const FEED_GAP = {both: t('brief.gap.both'), daily: t('brief.gap.daily').
 const GAP_IDS: readonly StringId[] = ['brief.gap.both', 'brief.gap.daily', 'brief.gap.daily.tide', 'brief.gap.daily.alerts', 'brief.gap.daily.both', 'brief.gap.conditions'];
 const gapText = (text: string, lang: Language): string => { const id = GAP_IDS.find(i => t(i) === text); return id ? t(id, lang) : text; };
 
+/** SC2022-03: the fixed sentences packages/coast/src/daily.ts writes into `missing`, each a catalogue entry whose English is the producer's exact text. */
+const MISSING_IDS: readonly StringId[] = ['brief.missing.forecast', 'brief.missing.noHours', 'brief.missing.alertCheck', 'brief.missing.tideCurve', 'brief.missing.tidePart', 'brief.missing.tideEvents',
+  'brief.missing.seaTempObs', 'brief.missing.seaTempForecast', 'brief.missing.boatCheck', 'brief.missing.shoreCheck', 'brief.missing.kayakCheck', 'brief.missing.kayakBearing',
+  'brief.missing.kayakNoDirection', 'brief.missing.kayakLaunch', 'brief.missing.fog', 'brief.missing.daylight', 'brief.missing.shoreSurf', 'brief.missing.shoreSide',
+  'brief.missing.shoreNoDirection', 'brief.missing.shoreTide', 'brief.missing.barSwell', 'brief.missing.barTide', 'brief.missing.spearVisibility', 'brief.missing.spearSurge'];
+/** The closed forecast-field labels (the first word(s) of '<field> missing for some forecast hours') and the closed clarity inputs ('Clarity estimate needs <a> and <b>'). */
+const FIELD_IDS: readonly StringId[] = ['brief.missing.field.wind', 'brief.missing.field.gusts', 'brief.missing.field.seas', 'brief.missing.field.period', 'brief.missing.field.air', 'brief.missing.field.rain'];
+const CLARITY_IDS: readonly StringId[] = ['brief.missing.clarity.chlorophyll', 'brief.missing.clarity.chlorophyllRecent', 'brief.missing.clarity.swell', 'brief.missing.clarity.daylightHours', 'brief.missing.clarity.hours'];
+const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** One `{name}` of template `id` read out of `text` (null when the whole line is not that template). */
+const templatePart = (id: StringId, name: string, text: string): string | null => {
+  const [head = '', tail = ''] = t(id).split(`{${name}}`);
+  const hit = new RegExp(`^${escapeRe(head)}([\\s\\S]+?)${escapeRe(tail)}$`).exec(text);
+  return hit ? hit[1]! : null;
+};
+/** A producer sentence of the unchecked list in `lang`; null when any part of it is not a known one, so the caller keeps the whole line in English. */
+const missingKnown = (text: string, lang: Language): string | null => {
+  const fixed = MISSING_IDS.find(i => t(i) === text);
+  if (fixed) return t(fixed, lang);
+  const label = templatePart('brief.missing.field', 'field', text), field = FIELD_IDS.find(i => t(i) === label);
+  if (field) return t('brief.missing.field', lang, {field: t(field, lang)});
+  const needs = templatePart('brief.missing.clarity', 'inputs', text);
+  if (needs === null) return null;
+  const parts = needs.split(` ${t('brief.missing.and')} `).map(part => CLARITY_IDS.find(i => t(i) === part));
+  return parts.every(Boolean) ? t('brief.missing.clarity', lang, {inputs: parts.map(i => t(i!, lang)).join(` ${t('brief.missing.and', lang)} `)}) : null;
+};
+/** The unchecked line for display: English as written; on a Spanish page its translation, or the producer's own text marked lang="en" when no sentence matches. */
+const missingText = (text: string, lang: Language): ComponentChildren => {
+  if (lang === 'en') return text;
+  return missingKnown(text, lang) ?? <span lang="en">{text}</span>;
+};
+
 /** SC1722-03: a feed read that was admitted, with the saved offline pack's save time (epoch ms) when the answer carried X-SC-Offline, else null (network). */
 interface FeedRead {feed: RegionalDailyFeed; savedAt: number | null}
 
@@ -907,7 +939,7 @@ export function BriefGaps({brief}: {brief: BriefModel | null}) {
       {unchecked.length ? (
         <details class="app-gaps-more">
           <summary>{t('brief.gaps.unchecked', lang, {n: unchecked.length})}</summary>
-          <ul>{unchecked.map(text => <li key={text}>{text}</li>)}</ul>
+          <ul>{unchecked.map(text => <li key={text}>{missingText(text, lang)}</li>)}</ul>
         </details>
       ) : null}
     </div>
@@ -963,7 +995,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 export function PrintBrief({now}: {now: Date}) {
   const tz = shownRegion()?.timezone ?? DEFAULT_ZONE, lang = language.value;
   const at = leadHour(hour.value, day.value, now, tz), date = leadDate(now), when = at ? new Date(at) : now;
-  const place = [shownRegion()?.name, port.value ? port.value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null, PROFILE_TABLE[profile.value].label].filter(Boolean).join(' · ');
+  const place = [shownRegion()?.name, port.value ? port.value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null, lang === 'en' ? PROFILE_TABLE[profile.value].label : t(`where.profile.${profile.value}`, lang)].filter(Boolean).join(' · ');
   return (
     <>
       <Button class="app-print-button" onClick={() => window.print()}>{t('brief.print', lang)}</Button>

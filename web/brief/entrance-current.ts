@@ -11,6 +11,7 @@ import type {EntranceReading, OffshoreFlow, OffshoreSample} from '../../packages
 import type {ConditionsForecast} from '../conditions.ts';
 import {forecastTime} from '../map/frames.ts';
 import {localeOf, num, t} from '../i18n.ts';
+import {M_PER_FT} from '../units.ts';
 import type {Language} from '../i18n.ts';
 import type {Brief} from './types.ts';
 import {readWcofs} from './mark-forecast.ts';
@@ -64,13 +65,13 @@ export interface EntranceCurrentView {
   readonly reading: EntranceReading;
 }
 
-export interface ViewInput {brief: Brief; forecast: ConditionsForecast | null; region: string | null; tz: string; now: Date; lang?: Language | string}
+export interface ViewInput {brief: Brief; forecast: ConditionsForecast | null; region: string | null; tz: string; now: Date; lang?: Language | string; /** Display only: the chosen height unit (feet when absent). The reading stays on stored feet. */ heightUnit?: 'ft' | 'm'}
 
 /**
  * The line for a Boat brief at a regulated bar, at `now` when it falls inside the brief's bar hours and otherwise at the first hour
  * (named, so a future day never reads as now); null when the brief has no bar.
  */
-export function entranceCurrentView({brief, forecast, region, tz, now, lang = 'en'}: ViewInput): EntranceCurrentView | null {
+export function entranceCurrentView({brief, forecast, region, tz, now, lang = 'en', heightUnit = 'ft'}: ViewInput): EntranceCurrentView | null {
   const bar = brief.bar;
   if (!bar) return null;
   const times = bar.hours.map(h => Date.parse(h.at)).filter(finite);
@@ -98,8 +99,9 @@ export function entranceCurrentView({brief, forecast, region, tz, now, lang = 'e
   const list = tideFresh ? entranceTurns(brief.tideEvents, start, end).map(e => t(e.type === 'H' ? 'entrance.turn.H' : 'entrance.turn.L', lang, {time: clock(e.at)})) : [];
   const turns = list.length ? t('entrance.turns', lang, {list: list.join('; ')}) : '';
 
-  const swellText = reading.swellFt === null ? '' : reading.periodS === null ? t('entrance.swell', lang, {height: num(reading.swellFt, lang, 1)})
-    : t('entrance.swell.period', lang, {height: num(reading.swellFt, lang, 1), period: num(reading.periodS, lang, 0)});
+  const swellHeight = reading.swellFt === null ? '' : heightUnit === 'm' ? (reading.swellFt * M_PER_FT).toFixed(1).replace('.', lang === 'es' ? ',' : '.') : num(reading.swellFt, lang, 1);
+  const swellText = reading.swellFt === null ? '' : reading.periodS === null ? t('entrance.swell', lang, {height: swellHeight, unit: heightUnit === 'm' ? 'm' : 'ft'})
+    : t('entrance.swell.period', lang, {height: swellHeight, unit: heightUnit === 'm' ? 'm' : 'ft', period: num(reading.periodS, lang, 0)});
   const band = t(BAND_ID[reading.band], lang);
   // A retained Hazardous reading stays in words beside the stale warning (stale data never reads calmer than the worst source).
   const flowText = t(reading.flow === 'ebb' ? 'entrance.caution.ebb' : reading.flow === 'flood' ? 'entrance.caution.flood' : tm.state === 'ok' ? 'entrance.caution.slack' : 'entrance.caution.unknown', lang, {swell: swellText, band});

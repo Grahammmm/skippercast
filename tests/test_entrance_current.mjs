@@ -4,6 +4,7 @@
 import './helpers/spanish-ready.mjs';   // SC1407-09: the Spanish table, before the Spanish renders
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {isDeepStrictEqual} from 'node:util';
 import {existsSync} from 'node:fs';
 import {mkdtemp, readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -389,3 +390,15 @@ for (const [width, lang] of [[390, 'en'], [390, 'es'], [320, 'en']]) {
     assert.equal(r.detail, true);
   });
 }
+
+test('SC2022-08: the bar swell reads in the chosen height unit; the reading, band and knots do not change', () => {
+  const f = forecast({toward: 80}), b = brief({wave: 6.5});
+  const ft = view(b, f), m = view(b, f, {heightUnit: 'm'}), es = view(b, f, {heightUnit: 'm', lang: 'es'});
+  assert.match(ft.caution, /^Flood with 6\.5 ft at 10 s swell: /);
+  assert.match(m.caution, /^Flood with 2\.0 m at 10 s swell: /);
+  assert.match(es.caution, /^Creciente con oleaje de 2,0 m a 10 s: /);
+  assert.equal(view(b, f, {heightUnit: 'ft'}).caution, ft.caution);
+  assert.ok(isDeepStrictEqual(m.reading, ft.reading), 'same reading in feet and metres');
+  assert.deepEqual([m.band, m.timing, m.why, m.wcofs], [ft.band, ft.timing, ft.why, ft.wcofs]);
+  assert.match(m.wcofs, /1\.2 kn/);
+});

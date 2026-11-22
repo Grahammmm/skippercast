@@ -3,6 +3,7 @@
 // Synthetic state only: nothing here touches the network.
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import util from 'node:util';
 import {mkdtemp, readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -23,6 +24,7 @@ async function load() {
     export {Masthead, ViewNav, Location, FreshnessDot, ChatEntry, VIEW_LABELS, viewLabel, TAB_VIEWS, MASTHEAD_VIEWS} from './web/app/Masthead.tsx';
     export {CommandBar, PortControl, ShareControl, ProfileSwitch, shellTargetText, shellGroupLabel} from './web/app/CommandBar.tsx';
     export {AccountMenu} from './web/app/AccountMenu.tsx';
+    export {briefHeading} from './web/app/Desktop.tsx';
     export {Mobile, LayersPanel, ReportsLink} from './web/app/Mobile.tsx';
     export {regionInfo, regionLoad, freshness} from './web/app/App.tsx';
     export {session, boat, accountLabel} from './web/account.ts';
@@ -219,4 +221,18 @@ test('compact_account_css_is_masthead_band_only: the narrow-desktop rule is medi
   assert.ok(block.includes('calc(var(--touch-min) + 0.5px)') && block.includes('clip-path: inset(50%)'));
   assert.ok(!/display:\s*none|visibility:\s*hidden/.test(block), 'the label is visually hidden, never removed from the accessible name');
   assert.ok(!css.slice(0, at).includes('.app-account-label'), 'no rule outside the band touches the label');
+});
+
+test('desktop_brief_day: Spanish heads the brief with its own date (today, tomorrow, later); English keeps the label and the fallback', async () => {
+  const label = {today: 'Today', tomorrow: 'Tomorrow', later: 'Thursday'}, date = {today: '2026-10-05', tomorrow: '2026-10-06', later: '2026-10-08'};
+  const heads = lang => inLanguage(lang, m => {
+    m.regionInfo.value = {id: 'morro-bay', name: 'Morro Bay', timezone: 'America/Los_Angeles'};
+    return {...Object.fromEntries(Object.keys(date).map(k => [k, m.briefHeading({label: label[k], date: date[k]}, NOW, lang)])), none: m.briefHeading(null, NOW, lang)};
+  });
+  const en = await heads('en'), es = await heads('es');
+  assert.ok(util.isDeepStrictEqual(en, {today: 'Today', tomorrow: 'Tomorrow', later: 'Thursday', none: "Today's brief"}), 'English is the brief label, byte for byte');
+  assert.equal(es.today, 'Hoy');
+  assert.equal(es.tomorrow, 'Mañana');
+  assert.match(es.later, /^El \S+ 8 oct$/, 'a later day reads the locale date, capitalised');
+  assert.notEqual(es.none, 'Today', 'the null-brief fallback is the Spanish catalogue line');
 });
