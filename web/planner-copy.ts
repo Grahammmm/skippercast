@@ -7,6 +7,8 @@
 import {placeRefused, PLANNING_MARGIN_M, type PlaceVerdict} from '../dist/geo-screen.js';
 import {exportEvidenceLabel, protectedHitReading} from '../dist/trip-export.js';
 import {localeOf, num, STRINGS, t, type Language, type StringId} from './i18n.ts';
+import type {RouteRefusal} from './protected-route.ts';
+import {fixed, localTime} from './view-copy.ts';
 import {verdictLine} from './waypoint-placement.ts';
 
 type Rule = {id: StringId; re: RegExp; names: string[]; weight: number};
@@ -96,4 +98,26 @@ export function reefTerrainText(target: {terrain_interpretation?: string; terrai
   if (lang !== 'es' || !d) return target.terrain_interpretation;
   const one = (n: number | null, unknown: StringId): string => n === null ? t(unknown, lang) : new Intl.NumberFormat(localeOf(lang), {minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false}).format(n);
   return t('planner.reef.terrain', lang, {relief: one(d.reliefM, 'planner.reef.reliefUnknown'), area: one(d.areaHa, 'planner.reef.areaUnknown')});
+}
+
+/** The planning-route status line as data (web/planner.ts): '' blank, a ready sentence (the removal notice), the check and its length, or a refusal with its message as written. */
+export type RouteStatus = string | {kind: 'checked'; checkedAt: string; nm: number} | {kind: 'error'; message: string; refusal?: RouteRefusal};
+const ROUTE_REASONS: Record<string, StringId> = {
+  'no-product': 'planner.route.reason.noProduct', 'lines-needed': 'planner.route.reason.linesNeeded', 'start-not-water': 'planner.route.reason.startNotWater',
+  'end-not-water': 'planner.route.reason.endNotWater', 'no-route': 'planner.route.reason.noRoute', 'too-far': 'planner.route.reason.tooFar'};
+/** A stored check instant as a local date and time in the region's zone (en 12-hour, es 24-hour); unreadable input prints as given. */
+function checkedTime(iso: string, lang: Language, timeZone: string): string {
+  const at = new Date(iso);
+  if (!Number.isFinite(at.getTime())) return iso;
+  try { return localTime(at, timeZone, lang, {year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hourCycle: lang === 'es' ? 'h23' : 'h12', timeZoneName: 'short'}); } catch { return iso; }
+}
+/** The status line in `lang`, or null for a refusal the page has no id for: the caller shows its message as written inside lang="en". */
+export function routeStatusText(s: RouteStatus, lang: Language, timeZone: string): string | null {
+  if (typeof s === 'string') return s;
+  if (s.kind === 'checked') return t('planner.route.status.checked', lang, {checkedAt: checkedTime(s.checkedAt, lang, timeZone), nm: fixed(s.nm, 1, lang), warning: t('planner.route.warning', lang)});
+  const r = s.refusal;
+  if (r?.code === 'planChanged') return t('planner.route.error.planChanged', lang);
+  if (r?.code === 'fullCheck') return t('planner.route.error.fullCheck', lang);
+  if (r?.code === 'leg') return t('planner.route.error.leg', lang, {leg: r.leg, reason: Object.hasOwn(ROUTE_REASONS, r.reason) ? t(ROUTE_REASONS[r.reason]!, lang) : r.reason});
+  return null;
 }

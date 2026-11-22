@@ -14,6 +14,7 @@ import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, 
 import {ALERT_STORAGE_NOTE, PORTS_FAILED_NOTE, sharedConfidence, type AlertLegsFn} from '../planner.ts';
 import {AREA_NOTE} from '../planner-alerts.ts';
 import {readableDate, readableDates} from '../dates.ts';
+import {EnglishDetail} from './EnglishDetail.tsx';
 import {tripLegs} from '../trip-legs.ts';
 import {clockText, DEFAULT_TIMING, MAX_FISH_MIN, parseTiming, tripTimes} from '../trip-times.ts';
 import {tripStopForecast} from '../trip-forecast.ts';
@@ -26,7 +27,7 @@ import {protectedScreen} from '../trip.ts';
 import {cruiseSpeed, hasOwnLimits, limitsFor} from '../limits.ts';
 import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
-import {categoryText, countText, evidenceLabel, fitText, hitReading, nmText, plannerText, plannerVerdict, reefTerrainText} from '../planner-copy.ts';
+import {categoryText, countText, evidenceLabel, fitText, hitReading, nmText, plannerText, plannerVerdict, reefTerrainText, routeStatusText} from '../planner-copy.ts';
 import {PlanRules} from './PlanRules.tsx';
 import {waterRoute, type Route, type RoutePoint} from '../route.ts';
 // Leg routes over the land/water product and lines the Boat brief reads (FSC-05), kept until either changes so a re-render does not search again.
@@ -205,6 +206,8 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
   const timing = d.timing ?? DEFAULT_TIMING;
   const typeTiming = (leave: string, fish: string) => { const ok = parseTiming(leave, fish); if (ok) { m.editTiming(ok); setTyped(null); } else setTyped({leave, fish}); };
   const zone = m.region.timezone;
+  const routeShown = m.routeView.value, routeText = routeStatusText(routeShown, lang, zone);
+  const routeLine = routeText ?? (typeof routeShown === 'object' && routeShown.kind === 'error' ? <EnglishDetail lang={lang} prefix={false}>{routeShown.message}</EnglishDetail> : '');
   const times = typed || !stops.length ? null : tripTimes({date: d.date, zone, timing, port: port ? {lat: port.match[0], lon: port.match[1]} : null,
     stops: stops.map(s => ({id: s.id, fishing: !s.id.startsWith('user:launch-')})), route});
   const clock = (at: number, after: boolean) => `${clockText(at, zone, d.date, lang, t('planner.times.nextDay', lang))}${after ? t('planner.times.afterSunset', lang) : ''}`;
@@ -370,7 +373,7 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
           <p><a href="https://wildlife.ca.gov/Conservation/Marine/MPAs" target="_blank" rel="noopener">CDFW MPA</a> · <a href="https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas" target="_blank" rel="noopener">NOAA</a></p>
           <button id="export-route" disabled={!s.ok || m.routing.value} onClick={() => void m.deliverRoute()}>{t(m.routing.value ? 'planner.route.busy' : 'planner.route.download', lang)}</button>
           <button id="show-planning-route" disabled={!s.ok || m.routing.value} onClick={() => void m.showRouteOnChart()}>{t(m.routing.value ? 'planner.route.busy' : 'planner.route.show', lang)}</button>
-          <p role="status">{m.routeStatus.value}</p>
+          <p role="status">{routeLine}</p>
         </section>
         {!s.ok && m.notesReady.value ? <p>{t('planner.withheld', lang)}</p> : null}
         <details class="export-help">
