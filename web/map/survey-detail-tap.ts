@@ -18,22 +18,33 @@ export interface SurveyDetailReadout {
   sourcesHref: string;
 }
 
-/** Equal tiers keep the first hit. As elsewhere in the app, pass the ready language. */
+/** Keep the first hit at the finest tier, unless a duplicate has stronger metadata.
+ * As elsewhere in the app, pass the ready language. */
 export function confidenceAt(features: readonly SurveyDetailHit[], lang: Language): SurveyDetailReadout | null {
   let best: SurveyDetailHit | undefined;
   let rank: number = TIERS.length;
+  let metadataRank = 0;
+  let gridM: number | null = null;
+  let date: string | null = null;
   for (const feature of features) {
-    const next = TIERS.findIndex(tier => tier === feature.properties.tier);
-    if (next < 0 || next >= rank) continue;
+    const {tier: rawTier, grid_m, date: rawDate} = feature.properties;
+    const next = TIERS.findIndex(tier => tier === rawTier);
+    if (next < 0 || next > rank || (next === rank && feature.region !== best?.region)) continue;
+
+    const nextGrid = rawTier !== 'none' && typeof grid_m === 'number' && Number.isFinite(grid_m) && grid_m > 0 ? grid_m : null;
+    const nextDate = rawTier !== 'none' && typeof rawDate === 'string' && rawDate.trim() ? rawDate : null;
+    const nextMetadata = nextGrid !== null ? 2 : nextDate !== null ? 1 : 0;
+    if (next === rank && nextMetadata <= metadataRank) continue;
+
     best = feature;
     rank = next;
+    metadataRank = nextMetadata;
+    gridM = nextGrid;
+    date = nextDate;
   }
   const tier = TIERS[rank];
   if (!best || !tier) return null;
 
-  const {grid_m, date: rawDate} = best.properties;
-  const gridM = tier !== 'none' && typeof grid_m === 'number' && Number.isFinite(grid_m) && grid_m > 0 ? grid_m : null;
-  const date = tier !== 'none' && typeof rawDate === 'string' && rawDate.trim() ? rawDate : null;
   // Never display feature label or provenance: the catalogue owns all readout copy.
   const text = tier === 'estimated' && gridM !== null
     ? t('legend.surveyDetail.estimateGrid', lang, {grid: gridM})
