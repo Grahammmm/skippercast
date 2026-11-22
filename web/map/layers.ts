@@ -417,6 +417,33 @@ export function setRailNote(rail: RailId, note: string, copy?: readonly StatusPa
   });
 }
 
+/**
+ * MB-13 (MAP-DESIGN-LOCK § 2, D5): Depth lines and the survey-derived spots draw unless the rail list carries these
+ * markers, so a saved or linked list from before the menu keeps drawing both. A fresh profile's list is just the default
+ * (`fleet`, the charter areas); nothing else is on at open.
+ */
+export const LINES_OFF = 'lines-off';
+export const SPOTS_OFF = 'spots-off';
+/** One field and one flow at a time (§ 2.5): a second of a kind replaces the first. */
+export const FIELD_IDS: readonly string[] = ['water-temp', 'chlorophyll'];
+export const FLOW_IDS: readonly string[] = ['swell', 'currents'];
+// The stacking resolver consumes selection order, including across marker changes.
+const inListOrder = (ids: readonly string[]): string[] => [...new Set(ids)];
+/** The rail list with menu row `id` switched on or off; turning on a field or a flow turns its sibling off. */
+export function menuList(list: readonly string[], id: string, on: boolean): string[] {
+  const rest = list.filter(x => x !== id);
+  if (!on) return inListOrder(rest);
+  const group = FIELD_IDS.includes(id) ? FIELD_IDS : FLOW_IDS.includes(id) ? FLOW_IDS : [];
+  return inListOrder([...rest.filter(x => !group.includes(x)), id]);
+}
+export const depthLinesOn = (list: readonly string[]): boolean => !list.includes(LINES_OFF);
+export const spotsOn = (list: readonly string[]): boolean => !list.includes(SPOTS_OFF);
+/** Depth lines on or off: only the marker changes. */
+export const withDepthLines = (list: readonly string[], on: boolean): string[] => inListOrder(on ? list.filter(x => x !== LINES_OFF) : [...list, LINES_OFF]);
+/** Spots & charter activity on or off together: the survey-derived spots (the marker) and the published charter areas (`fleet`). */
+export const withSpots = (list: readonly string[], on: boolean): string[] =>
+  inListOrder(on ? [...list.filter(x => x !== SPOTS_OFF), 'fleet'] : [...list.filter(x => x !== 'fleet'), SPOTS_OFF]);
+
 /** The entries a rail entry (or the base choice) turns on and off, in draw order. */
 export const railLayers = (rail: LayerControl): LayerEntry[] => LAYERS.filter(e => e.control === rail);
 

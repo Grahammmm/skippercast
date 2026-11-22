@@ -24,7 +24,9 @@ export const marksManifest = {
     [`dist${region}`]: ['7aa807d9f5b9d13bf4f3ceb8b82acdae9f223ac1', '6bcac86a827ca62a805c1c61bda1f6f1973a1551d5ede42f522c232b978ea466'],
     [`dist${startup}`]: ['ded9d01953b483b50b1c4330660169efb1864fd0', '6677776dec9044c55ae3bed983e4d66a246a5af362963083751d9a86cd8a9e2a'],
     [`dist${full}`]: ['11d0b970c67f374c0d31ee58a7628b38b0195989', '57e35ad2430f6ca48a9d79e4da4fa2db8ce88ab93758e8565d3d2565ec7529dd'],
-    'web/map/marks.ts': ['5ed2e11a447917e487abbbaed2549b99c31ab179', '128a9884ab7a14c0e6b285d44d6a4a4d8851a966abfe9ea18106ce2f6c49be70'],
+    // MB-13 re-pin: marks.ts adds only the menu's Spots gate (spotsOn over the rail list) on the marks and density sources.
+    // The probe opens with no layers parameter, so spots stay on; admission, targets, drape and the registry are unchanged.
+    'web/map/marks.ts': ['fef2ef87dc29c2f8da802384cc781c751878e5c5', '34e899c4f4c7947585e71a3612e2191af065f40668ff587f34cbec8054a53afc'],
   },
 } as const;
 

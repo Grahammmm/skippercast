@@ -547,7 +547,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /<section class="app-stage" tabindex="-1" aria-label="Map" id="app-map-content">/);
   assert.match(html, /<section class="app-legend" aria-label="Legend">/);
   assert.match(html, /role="group" aria-label="Layers"/);
-  assert.equal(count(html, /class="ui-rail-item"/g), 19);
+  assert.equal(count(html, /class="ui-rail-item"/g), 22);
   assert.match(html, /role="group" aria-label="Time"/);
   assert.match(html, /<input type="range" class="ui-range ui-dock-range" aria-label="Hour"/);
   assert.doesNotMatch(html, /app-mark/, 'no mark card without a selection');
@@ -601,9 +601,9 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   // Target and area menus show the link's values.
   assert.match(html, /<label>Target<select><optgroup label="Shore targets"><option value="surfperch">Barred surfperch<\/option><option selected value="halibut">California halibut<\/option><\/optgroup><\/select>/, 'the coast targets\' names (FE-30)');
   assert.match(html, /<label>Area<select><option value>Whole region<\/option><option selected value="estero">Estero<\/option><\/select>/);
-  // Rail and legend: swell and water temp on, the rest off; protected areas stay listed while their geometry loads (FE-19).
+  // Rail and legend (MB-13, D5): depth shading, depth lines and spots & charter activity on, the rest off; protected areas stay listed while their geometry loads (FE-19).
   const rail = Object.fromEntries([...coastView.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
-  assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', 'Temp contrast': 'false', 'Temp fronts': 'false', Chlorophyll: 'false', 'Swell + wind': 'true', Stations: 'false', 'Charter fleet': 'false', Clouds: 'false', 'Water clarity': 'false', 'Sea surface height': 'false', Upwelling: 'false', 'Temperature below the surface': 'false', Salinity: 'false', 'Sea ice': 'false', Pressure: 'false', 'Rain radar': 'false', 'Visibility and fog': 'false'});
+  assert.deepEqual(rail, {'Depth shading': 'true', 'Depth lines': 'true', 'Seafloor type': 'false', '3D view': 'false', 'Spots &amp; charter activity': 'true', Currents: 'false', 'Water temp': 'true', 'Temp contrast': 'false', 'Temp fronts': 'false', Chlorophyll: 'false', 'Swell + wind': 'true', Stations: 'false', Clouds: 'false', 'Water clarity': 'false', 'Sea surface height': 'false', Upwelling: 'false', 'Temperature below the surface': 'false', Salinity: 'false', 'Sea ice': 'false', Pressure: 'false', 'Rain radar': 'false', 'Visibility and fog': 'false'});
   assert.match(coastView, /class="app-legend-water-temp"/);
   assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
@@ -732,7 +732,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   state.syncFromURL(`${ORIGIN}?region=morro-bay&layers=clouds`);
   const panel = render(h(LayersPanel, {onClose: () => {}}));
   assert.match(panel, /^<div class="app-sheet-layers"><div class="app-sheet-head"><span class="ui-eyebrow">Layers<\/span><button[^>]*>.*?Done<\/button><\/div><div class="ui-rail app-rail" role="group" aria-label="Layers">/s);
-  assert.equal(count(panel, /class="ui-rail-item"/g), 19);
+  assert.equal(count(panel, /class="ui-rail-item"/g), 22);
   assert.match(panel, /<li class="app-legend-clouds"><span class="app-legend-text">Clouds</);
   assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no cloud key until a frame shows (FE-20)');
   // Panel and detent rules: layers opens at half from peek, closes when the sheet drops to peek.

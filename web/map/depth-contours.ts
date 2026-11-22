@@ -20,11 +20,11 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {StringId} from '../i18n.ts';
 import {cp, type CopyVar, type MarkCopyPart} from '../mark-copy.ts';
-import {region} from '../state.ts';
+import {layers, region} from '../state.ts';
 import {chartFileListed, chartFilesPending} from '../chart-files.ts';
 import type {ChartMark} from './coastline.ts';
 import {ZOOM_OFFSET, type Engine, type Overlay} from './engine.ts';
-import {DEPTH_CONTOURS_SOURCE, layerEntry, zBefore} from './layers.ts';
+import {DEPTH_CONTOURS_SOURCE, depthLinesOn, layerEntry, zBefore} from './layers.ts';
 import {kitZoom, type NearshoreStyle} from './nearshore-paint.ts';
 import {CONTOUR_TIERS, NEARSHORE_STYLE} from './nearshore-style.gen.ts';
 import {reliefLook} from './relief-data.ts';
@@ -443,6 +443,8 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
     effect(() => {
       const l = loaded.value, id = region.value;
       if (!l || l.region !== id) return;
+      // MB-13: with Depth lines off the legend row goes too (no key for lines that are not drawn).
+      if (!depthLinesOn(layers.value)) { contourState.value = IDLE; return; }
       const r = l.result;
       contourState.value = r === 'none' ? {status: 'none', note: NOTES.none, sources: [], omitted: []}
         : {status: r.status, note: r.status === 'drawn' ? omittedNote(r.omitted) : NOTES[r.status], sources: r.sources, omitted: r.omitted,
@@ -451,7 +453,7 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
     effect(() => {
       const e = engine.value, l = loaded.value, id = region.value;
       if (!e) return;
-      const data = l && l.region === id && l.result !== 'none' && l.result.status === 'drawn' ? l.result.data : null;
+      const data = l && l.region === id && l.result !== 'none' && l.result.status === 'drawn' && depthLinesOn(layers.value) ? l.result.data : null;
       if (!data) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
       // No pier vector layer is delivered in this batch, so no pier window qualifies.
       const visible = data.set ? contoursAt(data, tier.value) : data;
