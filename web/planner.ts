@@ -21,7 +21,7 @@
 import {batch, computed, effect, signal, untracked} from '@preact/signals';
 import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, protectedPlanHits, protectedPlanNotes, readDraft, userWaypoints, userWaypointTarget} from '../dist/trip-export.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
-import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
+import {bestSpots, distanceNm, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
 import {browserStorage} from '../dist/browser-storage.js';
 import {track} from './telemetry.ts';
@@ -200,6 +200,40 @@ export function planFit(t: Target, species: TripSpecies): number | undefined {
   return species === 'lingcod' ? fit.lingcod : species === 'rockfish' ? fit['rockfish-reef'] : Math.min(fit.lingcod ?? NaN, fit['rockfish-reef'] ?? NaN);
 }
 
+type RunPoint = {latitude: number; longitude: number};
+/**
+ * SC2052-09: a shorter order for the chosen stops, by straight-line `distanceNm` (the planner's own leg measure). `start` and `end` are fixed
+ * anchors the legs run from and to (the home port, the launch ramp); with no `start` the first stop is pinned, or, with only an `end`, the path
+ * is solved from that end and read backwards (leg lengths are symmetric). Nearest neighbour (ties: lower original position) improved by 2-opt on
+ * the free stops; the result replaces the incumbent only when strictly shorter, so a tie or an already-shortest order is returned unchanged.
+ * Straight line, not `waterRoute`: that is asynchronous, needs the shoreline lines and a request budget, and is for the legs, not for ordering.
+ */
+export function shorterRunOrder<S extends RunPoint & {id: string}>(stops: readonly S[], ends: {start?: RunPoint | null; end?: RunPoint | null} = {}): {ids: string[]; changed: boolean; beforeNm: number; afterNm: number} {
+  const {start = null, end = null} = ends, total = (order: readonly RunPoint[]): number => [start, ...order, end].filter((p): p is RunPoint => !!p).reduce((sum, p, i, all) => i ? sum + distanceNm(all[i - 1]!, p) : 0, 0);
+  const beforeNm = total(stops), ids = stops.map(s => s.id), same = {ids, changed: false, beforeNm, afterNm: beforeNm};
+  if (stops.length < 2) return same;
+  const backwards = !start && !!end, head = backwards ? end : start, tail = backwards ? null : end;
+  const pool = stops.map((s, at) => ({p: s as RunPoint, at}));
+  const seq: {p: RunPoint; at: number}[] = head ? [{p: head, at: -1}] : [pool.shift()!];
+  while (pool.length) {
+    let best = 0, bestNm = Infinity;
+    pool.forEach((c, i) => { const nm = distanceNm(seq.at(-1)!.p, c.p); if (nm < bestNm || (nm === bestNm && c.at < pool[best]!.at)) { best = i; bestNm = nm; } });
+    seq.push(...pool.splice(best, 1));
+  }
+  if (tail) seq.push({p: tail, at: -1});
+  const last = seq.length - 1 - (tail ? 1 : 0), d = (i: number, j: number): number => i < 0 || j >= seq.length ? 0 : distanceNm(seq[i]!.p, seq[j]!.p);
+  for (let pass = 0, again = true; again && pass < 100; pass++) {
+    again = false;
+    for (let i = 1; i < last; i++) for (let j = i + 1; j <= last; j++) {
+      if (d(i - 1, j) + d(i, j + 1) - d(i - 1, i) - d(j, j + 1) < -1e-9) { seq.splice(i, j - i + 1, ...seq.slice(i, j + 1).reverse()); again = true; }
+    }
+  }
+  const order = seq.filter(s => s.at >= 0).map(s => stops[s.at]!);
+  if (backwards) order.reverse();
+  const afterNm = total(order);
+  return afterNm < beforeNm - 1e-9 ? {ids: order.map(s => s.id), changed: true, beforeNm, afterNm} : same;
+}
+
 // The shared JavaScript modules type their option bags from their defaults, too narrowly to call with real values.
 type Loose<T> = (...args: unknown[]) => T;
 const presetTargets = exportPresetTargets as unknown as Loose<Target[]>;
@@ -337,11 +371,8 @@ export function createPlanner(deps: PlannerDeps) {
     const {trip_rank, trip_fit, trip_species, distance_nm, distance_basis, distance_why, ...plain} = t;
     return {...plain, ...(trip_rank ? {name: t.label || t.id} : {})};
   };
-  function moveStop(id: string, direction: 'up' | 'down'): boolean {
-    const d = draft.value, at = d.ids.indexOf(id), to = at + (direction === 'up' ? -1 : 1);
-    if (disposed || restorePending.value || id.startsWith('user:launch-') || at < 0 || to < 0 || to >= d.ids.length) return false;
-    const ids = [...d.ids];
-    [ids[at], ids[to]] = [ids[to]!, ids[at]!];
+  /** The one manual-order commit (Move up/down, Shorter run order): unrank, keep the evidence, persist and mark `manualOrder`. */
+  function commitOrder(d: Draft, ids: string[]): void {
     revision++;
     batch(() => {
       unrank();
@@ -349,7 +380,29 @@ export function createPlanner(deps: PlannerDeps) {
       persist({...d, ids, rankedPlan: d.rankedPlan ? {...d.rankedPlan, manualOrder: true} : null});
       scopeStatus.value = 'Your own stop order.';
     });
+  }
+  function moveStop(id: string, direction: 'up' | 'down'): boolean {
+    const d = draft.value, at = d.ids.indexOf(id), to = at + (direction === 'up' ? -1 : 1);
+    if (disposed || restorePending.value || id.startsWith('user:launch-') || at < 0 || to < 0 || to >= d.ids.length) return false;
+    const ids = [...d.ids];
+    [ids[at], ids[to]] = [ids[to]!, ids[at]!];
+    commitOrder(d, ids);
     return true;
+  }
+  /**
+   * SC2052-09: only when tapped. The home port (when listed) is where the legs start and the launch ramp (when chosen) is where they end;
+   * with neither, the first stop stays first. Never adds, drops or re-screens a stop: an unresolved, unplaced or repeated stop, a pending
+   * restore or an unresolved launch refuses without touching the plan. Returns what happened.
+   */
+  function shortenRun(): 'moved' | 'same' | 'refused' {
+    const d = draft.value, byId = new Map(selected().map(t => [t.id, t])), stops = d.ids.map(id => byId.get(id));
+    if (disposed || restorePending.value || launchUnresolved() || d.ids.length < 2 || new Set(d.ids).size !== d.ids.length
+      || !stops.every(t => t && Number.isFinite(t.latitude) && Number.isFinite(t.longitude))) return 'refused';
+    const port = portsFailed.value ? undefined : ports.value.find(p => p.id === filters.value.port), home = port ? {latitude: port.match[0], longitude: port.match[1]} : null;
+    const ramp = d.launchId ? launch.value : undefined, run = shorterRunOrder(stops as Target[], {start: home, end: ramp ?? home});
+    if (!run.changed) return 'same';
+    commitOrder(d, run.ids);
+    return 'moved';
   }
   function setContourTracks(on: boolean): void {
     contourTracks.value = on;
@@ -900,7 +953,7 @@ export function createPlanner(deps: PlannerDeps) {
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
     alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
     floatPlan, floatBackAuto, floatErrors, setFloatPlanOpen, editFloatPlan, reseedFloatBackBy,
-    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
+    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, shortenRun, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     routing, routeStatus, exportRouteFile, deliverRoute, showRouteOnChart, checkRoutePreview,
     /** Stop subscriptions and invalidate in-flight ranking and restore. */

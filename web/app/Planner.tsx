@@ -4,7 +4,7 @@
 // and exports as before. Loaded with the planner on first open. Styles:
 // web/app/trip.css. SC0707-10: every word is a catalogue id read at render in the
 // chosen language; the model's English messages go through web/planner-copy.ts.
-import {useEffect, useLayoutEffect, useRef} from 'preact/hooks';
+import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {signal} from '@preact/signals';
 import {coordinates} from '../state.ts';
 import {session} from '../account.ts';
@@ -191,6 +191,9 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
     orderFocus.current = {id, direction};
     if (!m.moveStop(id, direction)) orderFocus.current = null;
   };
+  // SC2052-09: the note belongs to the order it was about (`ids` identity), so any later change to the stops clears it.
+  const [shorter, setShorter] = useState<{ids: string[]; key: 'planner.order.shorterSame' | 'planner.order.shorterRefused'} | null>(null);
+  const shortenRun = () => { const result = m.shortenRun(); setShorter(result === 'moved' ? null : {ids: m.draft.peek().ids, key: result === 'same' ? 'planner.order.shorterSame' : 'planner.order.shorterRefused'}); };
   // BF-closures-everywhere: the planner's shared screen for THIS region, else null (every leg then reads not checked). Its contents are mutable, so the tick (minute and boundary updates) is read here too.
   void m.tick.value;
   const shown = protectedScreen.value, screen = shown.state === 'loaded' && shown.region === m.region.id ? shown.screen : null;
@@ -240,6 +243,8 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
         <div class="export-card-body">
           {stops.length > 0 && <section aria-label={t('planner.stops.heading', lang)}>
             <h3>{t('planner.stops.heading', lang)}</h3>
+            {d.ids.length > 1 && <p><button type="button" id="export-shorter-order" disabled={m.restorePending.value} onClick={shortenRun}>{t('planner.order.shorter', lang)}</button>
+              <small class="export-note" role="status" id="export-shorter-note"> {shorter?.ids === d.ids ? t(shorter.key, lang) : ''}</small></p>}
             <ol aria-label={t('planner.stops.aria', lang)}>{stops.map(stop => {
               const index = d.ids.indexOf(stop.id), name = stop.name || stop.label;
               return <li key={stop.id} data-stop-id={stop.id}>{name}{index >= 0 && (['up', 'down'] as const).map(direction =>
