@@ -208,7 +208,7 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   if (brief.missing.includes(ALERT_CHECK_MISSING)) reasons.push(c.alertMissing());
   const bar = barHazard(brief, hours, tz, c);
   if (bar) reasons.push(bar);
-  const swell = longPeriodHour(rated, tz, lang);
+  const swell = longPeriodHour(rated, tz, lang, u);
   if (swell) reasons.push(swell);
   const held = verdict === 'comfortable' && reasons.length ? c.held(reasons) : null;
   if (held) verdict = 'marginal';

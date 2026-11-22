@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {boatVerdict, briefVerdict, profileVerdict, windowHours, feedReader, limitReasons, ALERT_CHECK_MISSING, NO_ALERT_CHECK, NO_DAYLIGHT, VERDICT_WORD} from '../web/brief/verdict.ts';
+import {verdictCopy} from '../web/brief/verdict-copy.ts';
 import {kayakHours} from '../packages/coast/src/kayak.ts';
 import {shoreVerdict} from '../packages/coast/src/shore-conditions.ts';
 import {spearVerdict} from '../packages/coast/src/spear.ts';
@@ -264,11 +265,27 @@ test('SC1222-05 metres round up: a printed seas maximum is never below the rule\
   const seas = boatVerdict(brief(), forecast({over: {wave_height: 7.31, wam: 7, wave_period: 8, swell_wave_height: 6.5}}), NOW, TZ, undefined, 'en', U('kt', 'm'));
   assert.equal(seas.limit, '2.3 m seas at 8 s at 8 am.');
 });
+test('SC1222-05 long-period held reason uses the explicit height unit', () => {
+  const f = forecast({over: {wave_height: 3, wam: 3, wave_period: 16, swell_wave_period: 16}});
+  const metres = boatVerdict(brief(), f, NOW, TZ, undefined, 'en', U('kt', 'm'));
+  assert.equal(metres.limit, 'Wind to 6 kt and seas to 1 m through noon.');
+  assert.equal(metres.held, 'Held at Marginal: long-period swell (0.9 m at 16 s) at 8 am.');
+  assert.equal(boatVerdict(brief(), f, NOW, TZ, undefined, 'en', U('kt', 'ft')).held, 'Held at Marginal: long-period swell (3 ft at 16 s) at 8 am.');
+});
 test('SC1222-05 chop in metres, and the decisions are the same for every unit choice', () => {
   const f = forecast({over: {wind_wave_height: 2.2, wind_wave_period: 3, ...{wind_speed_10m: 12, ecmwf_wind: 12, wind_gusts_10m: 15, ecmwf_gust: 15}}});
   assert.equal(boatVerdict(brief(), f, NOW, TZ, undefined, 'en', U('mph', 'm')).limit, '14 mph wind gusting 17 at 8 am, with 0.7 m of short, steep wind chop.');
   const key = u => { const v = boatVerdict(brief(), f, NOW, TZ, undefined, 'en', u); return JSON.stringify([v.verdict, v.score, v.window, v.held, v.limit.split(/ at /)[1] ? 1 : 0, v.limit.match(/wind|chop/g)]); };
   for (const w of ['kt', 'mph', 'kmh']) for (const h of ['ft', 'm']) assert.equal(key(U(w, h)), key(U('kt', 'ft')), `${w}/${h}`);
+});
+test('SC1222-05 English converts only fully recognized profile reasons', () => {
+  const copy = verdictCopy('en', U('kmh', 'm'));
+  for (const raw of ['Gigantic surf (30 ft)', 'Gigantic wind (30 kt)', 'Gigantic seas (30 ft)', 'Large surf (30 ft) unexpected', 'strong wind (25 kt) custom']) {
+    assert.equal(copy.profileReason(raw), raw);
+  }
+  assert.equal(copy.profileReason('Large surf (30 ft, offshore estimate)'), 'Large surf (9.1 m, offshore estimate)');
+  assert.equal(copy.profileReason('strong wind (25 kt, gust 31) onshore'), 'strong wind (46 km/h, gust 57) onshore');
+  assert.equal(copy.profileReason('heavy seas (9 ft at 8 s)'), 'heavy seas (2.7 m at 8 s)');
 });
 test('SC1222-05 profile reason numbers convert, wording and decisions kept; unknown reasons stay as given', () => {
   const at = h => `2026-10-13T${String(h + 7).padStart(2, '0')}:00:00Z`;

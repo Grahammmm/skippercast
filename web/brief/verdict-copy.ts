@@ -57,6 +57,9 @@ const BANDS: Readonly<Record<string, string>> = {
   breezy: 'band.breezy', strong: 'band.strong', choppy: 'band.choppy', rough: 'band.rough', 'likely good': 'band.likelyGood', fair: 'band.fair', 'likely poor': 'band.likelyPoor',
 };
 const SIDES: Readonly<Record<string, string>> = {onshore: 'reason.onshore', offshore: 'reason.offshore', 'cross-shore': 'reason.crossShore'};
+const SURF_REASON = /^(\w+) surf(?: \((\d+(?:\.\d+)?) ft(?: at (\d+(?:\.\d+)?) s)?(, offshore estimate)?\))?$/;
+const WIND_REASON = /^(\w+) wind(?: \((\d+(?:\.\d+)?) kt(?:, gust (\d+(?:\.\d+)?))?\))?(?: (onshore|offshore|cross-shore))?$/;
+const SEAS_REASON = /^(\w+) seas(?: \((\d+(?:\.\d+)?) ft(?: at (\d+(?:\.\d+)?) s)?\))?$/;
 
 /** The verdict's sentences and fragments in `lang` (English by default: the old literals). */
 export function verdictCopy(lang: Language = 'en', u: Units = units.value) {
@@ -84,9 +87,13 @@ export function verdictCopy(lang: Language = 'en', u: Units = units.value) {
   /** A recognised profile reason in `lang`; English is returned as the grader wrote it (its kt and ft numbers converted when other units are chosen). */
   const profileReason = (raw: string): string => {
     // Display only: the grader's English decided the reason and its cost; a recognised reason keeps its words and swaps its numbers.
-    if (lang === 'en') return !/^\w+ (?:surf|wind|seas)\b/.test(raw) ? raw : raw
-      .replace(/\((\d+(?:\.\d+)?) kt(, gust )?(\d+(?:\.\d+)?)?/, (all, w, g, gu) => u.wind === 'kt' ? all : `(${wind(Number(w))} ${wu.label}${g ?? ''}${gu === undefined ? '' : wind(Number(gu))}`)
-      .replace(/\((\d+(?:\.\d+)?) ft/, (all, h) => metres ? `(${ft1(Number(h))} m` : all);
+    if (lang === 'en') {
+      const match = SURF_REASON.exec(raw) ?? WIND_REASON.exec(raw) ?? SEAS_REASON.exec(raw);
+      if (!match || !Object.hasOwn(BANDS, match[1]!.toLowerCase()) && match[1]!.toLowerCase() !== 'unknown') return raw;
+      return raw
+        .replace(/\((\d+(?:\.\d+)?) kt(, gust )?(\d+(?:\.\d+)?)?/, (all, w, g, gu) => u.wind === 'kt' ? all : `(${wind(Number(w))} ${wu.label}${g ?? ''}${gu === undefined ? '' : wind(Number(gu))}`)
+        .replace(/\((\d+(?:\.\d+)?) ft/, (all, h) => metres ? `(${ft1(Number(h))} m` : all);
+    }
     // The same numbers for Spanish: unchanged in kt and ft (byte for byte), converted otherwise.
     const windOf = (s: string): string => u.wind === 'kt' ? n(s) : wind(Number(s)), heightOf = (s: string): string => metres ? ft1(Number(s)) : n(s);
     const miss = () => say('reason.fallback', {reason: raw});
@@ -97,17 +104,17 @@ export function verdictCopy(lang: Language = 'en', u: Units = units.value) {
     const height = (h: string | undefined, p: string | undefined, basis: string): string => h === undefined ? '' : say('reason.detail', {height: heightOf(h), period: p === undefined ? '' : say('reason.period', {period: n(p)}), basis});
     for (const [pattern, key] of FIXED) if (pattern.test(raw)) return say(key);
     let m: RegExpExecArray | null;
-    if ((m = /^(\w+) surf(?: \((\d+(?:\.\d+)?) ft(?: at (\d+(?:\.\d+)?) s)?(, offshore estimate)?\))?$/.exec(raw))) {
+    if ((m = SURF_REASON.exec(raw))) {
       const b = band(m[1]);
       return b === null ? miss() : say('reason.surf', {band: b, detail: height(m[2], m[3], m[4] ? say('reason.offshoreEstimate') : '')});
     }
-    if ((m = /^(\w+) wind(?: \((\d+(?:\.\d+)?) kt(?:, gust (\d+(?:\.\d+)?))?\))?(?: (onshore|offshore|cross-shore))?$/.exec(raw))) {
+    if ((m = WIND_REASON.exec(raw))) {
       const b = band(m[1]);
       if (b === null) return miss();
       const detail = m[2] === undefined ? '' : say('reason.windDetail', {wind: windOf(m[2]), gust: m[3] === undefined ? '' : say('reason.gust', {gust: windOf(m[3])})});
       return say('reason.wind', {band: b, detail, side: m[4] === undefined ? '' : say(SIDES[m[4]]!)});
     }
-    if ((m = /^(\w+) seas(?: \((\d+(?:\.\d+)?) ft(?: at (\d+(?:\.\d+)?) s)?\))?$/.exec(raw))) {
+    if ((m = SEAS_REASON.exec(raw))) {
       const b = band(m[1]);
       return b === null ? miss() : say('reason.seas', {band: b, detail: height(m[2], m[3], '')});
     }
