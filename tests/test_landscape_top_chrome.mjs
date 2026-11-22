@@ -34,7 +34,7 @@ test('no hidden controls, no !important, no font or target shrink', () => {
   const b = block();
   const bodies = [...b.matchAll(/\{([^}]*)\}/g)].map(m => m[1]).join('\n');
   assert.ok(!/display:\s*none|visibility|!important|font-size|(^|[\s;])(min-)?height:|(^|[\s;])width:/.test(bodies), 'layout-only');
-  assert.ok(b.includes('flex: 0 0 240px'), 'profile switch basis is 240px, no shrink');
+  assert.ok(b.includes('.app-profile { flex: 0 0 auto; }'), 'profile switch takes its content width (SC2052-02), no shrink');
   assert.ok(b.includes('flex-direction: row'));
 });
 
