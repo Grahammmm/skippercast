@@ -3,6 +3,7 @@
 // It explains the ranking from the records web/ranking.ts read for the place (`targetEvidence`: the atlas or published
 // mark's own survey record and the atlas's protected-area check), so no second story can disagree with the number.
 // Erasable syntax only: tests/test_area_reasons.mjs imports it.
+import {DEFAULT_ZONE} from './zone.ts';
 
 /** One dated evidence record about one area, as a feed or the atlas carries it. */
 export interface EvidenceRecord {
@@ -31,14 +32,30 @@ const https = (v: unknown): string | null => {
 };
 
 /** A usable date: a real calendar day (YYYY-MM-DD), a full ISO timestamp, or a bare year; not after `now`. Else null. */
-function dated(v: unknown, now: number): {ms: number; label: string} | null {
+function dated(v: unknown, now: number, timeZone: string): {ms: number; label: string} | null {
   const s = typeof v === 'number' && Number.isInteger(v) ? String(v) : str(v);
   const m = /^(\d{4})(?:-(\d{2})-(\d{2})(T[\d:.]+(?:Z|[+-]\d{2}:\d{2}))?)?$/.exec(s);
   if (!m || !Number.isFinite(now)) return null;
   const year = Number(m[1]), month = Number(m[2] ?? 1), day = Number(m[3] ?? 1), cal = new Date(Date.UTC(year, month - 1, day));
   if (year < 1900 || cal.getUTCFullYear() !== year || cal.getUTCMonth() !== month - 1 || cal.getUTCDate() !== day) return null;
   const ms = m[4] ? Date.parse(s) : cal.getTime();
-  return Number.isFinite(ms) && ms <= now ? {ms, label: m[2] ? s.slice(0, 10) : m[1]!} : null;
+  if (m[4]) {
+    if (!Number.isFinite(ms) || ms > now) return null;
+  } else {
+    // UTC offsets are less than a day. Only dates near the cutoff need a zone lookup;
+    // Jan 1 is the cutoff for a bare year. Keep the original UTC ms as the sort key.
+    if (now < Date.UTC(year, month - 1, day - 1)) return null;
+    if (now < Date.UTC(year, month - 1, day + 1)) {
+      const formatter = (zone: string) => new Intl.DateTimeFormat('en-US', {
+        timeZone: zone, year: 'numeric', month: 'numeric', day: 'numeric',
+      });
+      let local: Intl.DateTimeFormat;
+      try { local = formatter(timeZone); } catch { local = formatter(DEFAULT_ZONE); }
+      const parts = Object.fromEntries(local.formatToParts(Math.floor(now)).map(({type, value}) => [type, value]));
+      if (ms > Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day))) return null;
+    }
+  }
+  return {ms, label: m[2] ? s.slice(0, 10) : m[1]!};
 }
 
 /** Same words, whatever the case or punctuation of the source's name ("SoCalFishReports.com" and "socalfishreports"). */
@@ -59,12 +76,12 @@ const collate = (a: string, b: string): number => a.localeCompare(b) || (a < b ?
  * future date, no text or no source is left out (an undated reason is not shown), and so is any record of another area.
  * Ties fall to kind, link presence, source, text (each by locale order, then code-unit order), then canonical HTTPS link (code-unit order).
  */
-export function reasonsFor(area: string, evidence: readonly EvidenceRecord[] | null | undefined, now: number): Reason[] {
+export function reasonsFor(area: string, evidence: readonly EvidenceRecord[] | null | undefined, now: number, timeZone = DEFAULT_ZONE): Reason[] {
   if (!Array.isArray(evidence) || !str(area)) return [];
   const eligible: {ms: number; key: string; kind: string; reason: Reason}[] = [];
   for (const r of evidence) {
     if (!r || typeof r !== 'object' || str(r.area) !== area) continue;
-    const when = dated(r.date, now), text = str(r.text), source = str(r.source);
+    const when = dated(r.date, now, timeZone), text = str(r.text), source = str(r.source);
     if (!when || !text || !source) continue;
     const copy = (r as Tagged)[GENERATED];
     eligible.push({ms: when.ms, key: identity(r, source, when.label), kind: str(r.kind) || 'report', reason: {

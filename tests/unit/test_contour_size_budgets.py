@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from skippercast import style
 from skippercast.platform import depth_contours as dc
 from skippercast.relief import contours, receipts
 
@@ -79,3 +80,79 @@ def test_contour_writer_applies_set_budget(writer, contour_set, sizes, refusal):
         with pytest.raises(error) as exc:
             write(*pair)
         assert str(exc.value) == message.format(name=paths[index].name, size=sizes[index], budget=budget)
+
+
+@pytest.fixture
+def morro_pair(tmp_path, monkeypatch):
+    view = style.load('nearshore-v1.0.0').view('contours')
+    region = {'id': 'morro-bay', 'bounds': [0, 0, 1, 1]}
+    sources = {ident: {'needs': ['bathymetry'], 'review_status': 'approved',
+                       'rights': {'public_display': 'allowed'}} for ident in ('a', 'b')}
+    common = {'survey_date': '2020', 'vertical_datum': 'MLLW'}
+    tiers = list(dc.v3_tiers(view, 1, certified=True))
+    low, detail, pier = tiers[0], tiers[-2], tiers[-1]
+    wide = [[0.1123456789, 0.1], [0.4123456789, 0.1]]
+    narrow = [[0.1123456789, 0.7], [0.2123456789, 0.7]]
+
+    def feature(ident, source, tier_rule):
+        tier, stop = tier_rule
+        depth, index = next(iter(dc.v3_levels(tier).items()))
+        return {'type': 'Feature', 'id': ident,
+                'geometry': {'type': 'MultiLineString', 'coordinates': [narrow, wide]},
+                'properties': {**common, 'kind': 'contour', 'estimated': True, 'native_cell_m': 1,
+                               'source_id': source, 'tier': tier['name'], 'depth_ft': depth, 'index': index,
+                               'minzoom': tier['min_zoom'], **({'maxzoom': stop} if stop is not None else {})}}
+
+    features = [feature('z', 'a', low), feature('b', 'b', low), feature('a', 'a', low),
+                feature('detail', 'a', detail), feature('pier', 'a', pier)]
+    full = {'type': 'FeatureCollection', 'features': features, 'provenance': {
+        'region_id': region['id'], 'bounds': region['bounds'], 'units': 'ft', 'set': dc.FT_V3,
+        'contours': view.digest('contours'), 'shelf_limit_ft': dc.V2_SHELF_LIMIT_FT, 'features': len(features),
+        'sources': [{**common, 'source_id': ident, 'sha256': '0' * 64, 'name': 'Côte'} for ident in sources]}}
+    expected = {**full, 'features': [
+        {**f, 'geometry': {**f['geometry'], 'coordinates': [wide]}} if f['id'] != 'pier' else f
+        for f in features[1:]], 'provenance': {**full['provenance'], 'features': 4}}
+    ctx = SimpleNamespace(contour_view=view, contour_style={},
+                          contour_job=(None, region, sources, [({'source_id': ident},) for ident in sources]))
+    monkeypatch.setattr(contours, 'trace_v3', lambda *_: full)
+    return ctx, full, expected
+
+
+@pytest.mark.parametrize('mode', ['overflow', 'inclusive', 'foreign', 'missing-group', 'protected'])
+def test_morro_writer_whole_line_budget(morro_pair, mode, tmp_path, monkeypatch):
+    # At the real writer, catch re-drawn/rounded lines, lost groups or pier
+    # components, non-deterministic ties, and accidental thinning elsewhere.
+    ctx, original, compacted = morro_pair
+    result = original if mode == 'inclusive' else compacted
+    expected = tuple(map(_encoded, (result, dc.overview_contours(result))))
+    full_cap, overview_cap = map(len, expected)
+    if mode == 'foreign':
+        ctx.contour_job[1]['id'] = original['provenance']['region_id'] = 'other-bay'
+    if mode == 'missing-group':
+        overview_cap -= 1  # both low groups' shortest whole parts need the last byte (LF)
+    if mode == 'protected':
+        full_cap = len(_encoded({**compacted, 'features': [compacted['features'][-1]],
+                                'provenance': {**compacted['provenance'], 'features': 1}})) - 1
+    monkeypatch.setattr(dc, 'size_budgets', lambda _: (full_cap, overview_cap))
+    errors = {'foreign': r'contours\.geojson exceeds its byte budget',
+              'missing-group': r'contours-overview\.geojson exceeds its byte budget.*cannot retain group',
+              'protected': r'contours\.geojson exceeds its byte budget.*protected.*pier'}
+    if mode in errors:
+        with pytest.raises(receipts.ReceiptError, match=errors[mode]):
+            contours.build(ctx, tmp_path)
+        if mode != 'foreign':
+            assert not list(tmp_path.iterdir())
+        return
+
+    paths = tuple(tmp_path / name for name in ('contours.geojson', 'contours-overview.geojson'))
+    for _ in range(2):
+        metrics = contours.build(ctx, tmp_path)
+        assert tuple(path.read_bytes() for path in paths) == expected
+        assert dc.overview_contours(json.loads(paths[0].read_bytes())) == json.loads(paths[1].read_bytes())
+        assert metrics['compacted'] is (mode == 'overflow')
+        for name, lines, groups in (('full', 10, 4), ('overview', 6, 2)):
+            stats = metrics[name]
+            assert stats['original_groups'] == stats['retained_groups'] == groups
+            assert stats['original_lines'] == lines
+            assert stats['retained_lines'] == (groups + (name == 'full') if mode == 'overflow' else lines)
+            assert sum(row['dropped'] for row in stats['dropped_lines_by_group']) == lines - stats['retained_lines']
