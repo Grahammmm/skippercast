@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {isDeepStrictEqual} from 'node:util';
-import {createPlanner, shorterRunOrder} from '../web/planner.ts';
+import {createPlanner} from '../web/planner.ts';
 import {distanceNm} from '../dist/spot-ranking.js';
 import {draftKey} from '../dist/trip-export.js';
 import {tripLegs} from '../web/trip-legs.ts';
@@ -104,6 +104,8 @@ test('alert preview and explicit snapshots follow moves; no implicit send, dupli
 
 // SC2052-09. Protects: shorterRunOrder improves a zigzag rank order, keeps the anchors, never adds/drops a stop, leaves ties and optimal orders alone.
 // Fails if it reorders on a tie, returns a longer order, drops a stop, or moves the pinned first stop or an anchor.
+// The pure ordering is module-private in web/planner.ts (the closures guard lists its exports); it is reached through the planner model.
+const shorterRunOrder=(...args)=>{const h=make();try{return h.p.shorterRunOrder(...args);}finally{h.p.dispose();}};
 const S=Object.fromEntries([5,1,4,2,3,0].map((o,i)=>[`S${i+1}`,{id:`S${i+1}`,latitude:35+o/10,longitude:-121}])), rank=Object.values(S);
 const total=(order,{start,end}={})=>[start,...order,end].filter(Boolean).reduce((sum,p,i,all)=>i?sum+distanceNm(all[i-1],p):0,0);
 const idsOf=r=>r.ids.join(',');

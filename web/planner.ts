@@ -206,9 +206,10 @@ type RunPoint = {latitude: number; longitude: number};
  * anchors the legs run from and to (the home port, the launch ramp); with no `start` the first stop is pinned, or, with only an `end`, the path
  * is solved from that end and read backwards (leg lengths are symmetric). Nearest neighbour (ties: lower original position) improved by 2-opt on
  * the free stops; the result replaces the incumbent only when strictly shorter, so a tie or an already-shortest order is returned unchanged.
+ * Module-private (so the closures guard's planner.ts export list is unchanged) and offered on the planner model as `shorterRunOrder`.
  * Straight line, not `waterRoute`: that is asynchronous, needs the shoreline lines and a request budget, and is for the legs, not for ordering.
  */
-export function shorterRunOrder<S extends RunPoint & {id: string}>(stops: readonly S[], ends: {start?: RunPoint | null; end?: RunPoint | null} = {}): {ids: string[]; changed: boolean; beforeNm: number; afterNm: number} {
+function shorterRunOrder<S extends RunPoint & {id: string}>(stops: readonly S[], ends: {start?: RunPoint | null; end?: RunPoint | null} = {}): {ids: string[]; changed: boolean; beforeNm: number; afterNm: number} {
   const {start = null, end = null} = ends, total = (order: readonly RunPoint[]): number => [start, ...order, end].filter((p): p is RunPoint => !!p).reduce((sum, p, i, all) => i ? sum + distanceNm(all[i - 1]!, p) : 0, 0);
   const beforeNm = total(stops), ids = stops.map(s => s.id), same = {ids, changed: false, beforeNm, afterNm: beforeNm};
   if (stops.length < 2) return same;
@@ -953,7 +954,7 @@ export function createPlanner(deps: PlannerDeps) {
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
     alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
     floatPlan, floatBackAuto, floatErrors, setFloatPlanOpen, editFloatPlan, reseedFloatBackBy,
-    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, shortenRun, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
+    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, shortenRun, shorterRunOrder, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     routing, routeStatus, exportRouteFile, deliverRoute, showRouteOnChart, checkRoutePreview,
     /** Stop subscriptions and invalidate in-flight ranking and restore. */
