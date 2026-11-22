@@ -4,10 +4,10 @@ import json
 from scripts.relief import preview_crop_preflight
 
 REGION = 'big-sur-coast'
-HARBOR = f'{REGION}/monterey-harbor-distant-planning-origin-z13'
+HARBOR = f'{REGION}/big-sur-coast-overview-z13'  # first camera; RMSC-193 moved it in-region
 BIG_SUR = f'{REGION}/big-sur-north-z15'
-HARBOR_RING = [(-121.92, 36.58), (-121.86, 36.58), (-121.86, 36.63),
-               (-121.92, 36.63), (-121.92, 36.58)]
+HARBOR_RING = [(-121.855, 36.075), (-121.795, 36.075), (-121.795, 36.125),
+               (-121.855, 36.125), (-121.855, 36.075)]
 BIG_SUR_RING = [(-121.998, 36.263), (-121.982, 36.263), (-121.982, 36.277),
                 (-121.998, 36.277), (-121.998, 36.263)]
 
