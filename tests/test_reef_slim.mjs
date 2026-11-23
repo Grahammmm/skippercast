@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {gzipSync} from 'node:zlib';
+import {isDeepStrictEqual} from 'node:util';
 import test from 'node:test';
 import {boundaryFingerprint, closureHits, geometryCoveredByBounds, pointGeometry, pointInGeometry, screenPlace} from '../dist/geo-screen.js';
 import {loadReefTrip, loadReefTripBrief} from '../dist/reef-trip-data.js';
@@ -67,6 +68,21 @@ test('the slim load gives the full load\'s targets, no outlines, and the same fi
   assert.equal(slim.protected_fingerprint, full.protected_fingerprint);
   assert.ok(slim.targets.every(t => t.protected_place), 'every target carries its verdict');
   assert.equal(p.asked.filter(n => n === 'habitat-export.geojson.gz').length, 1, 'the brief load did not fetch the full export');
+  // SC2052-08: the numbers behind the terrain line travel with every target, from the full and the slim file alike; the published English line is unchanged.
+  // Expected values are written out, not read back from the fixture: a producer that adds equal-but-empty display objects fails here.
+  const feats = features();
+  feats[0].properties.terrain.relief_210m_m = 0;                    // present zero
+  delete feats[1].properties.area_ha;                               // absent area
+  feats[2].properties.area_ha = null;                               // null area
+  delete feats[3].properties.terrain.relief_210m_m;                 // absent relief
+  const q = await publication({feats}), fullQ = await loadReefTrip('morro-bay', q.opts), slimQ = await loadReefTripBrief('morro-bay', q.opts);
+  assert.equal(slimQ.slim, true);
+  const want = [[0, 2, '0.0 m local relief; 2.0 ha reef footprint.'], [4, null, '4.0 m local relief; unknown ha reef footprint.'], [5, null, '5.0 m local relief; unknown ha reef footprint.'],
+    [null, 2.3, 'Unknown m local relief; 2.3 ha reef footprint.'], [7, 2.4, '7.0 m local relief; 2.4 ha reef footprint.']];
+  for (const [name, loaded] of [['full', fullQ], ['slim', slimQ]]) want.forEach(([reliefM, areaHa, line], i) => {
+    assert.ok(isDeepStrictEqual(loaded.targets[i].terrain_display, {reliefM, areaHa}), `${name} target ${i}: ${JSON.stringify(loaded.targets[i].terrain_display)}`);
+    assert.equal(loaded.targets[i].terrain_interpretation, line, `${name} target ${i}: the published English line is unchanged`);
+  });
 });
 
 test('a reader asking for a dropped field fails: the loader reads only the listed properties', async () => {
