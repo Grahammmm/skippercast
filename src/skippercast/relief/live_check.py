@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from time import sleep
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -180,17 +181,40 @@ def _contours_check(site, region, expected):
                 status='PASS' if reason in ('identical', 'none-merged') else 'FAIL', reason=reason)
 
 
-def _check(site, history, merge, key, raw, pointer, contours):
+def _check_deploy(site, history, merge):
     try:
         data = site.metadata('deploy.json')
         if data is None:
-            return None, [_failure('deploy', 'missing')]
+            return None, _failure('deploy', 'missing')
         deployed = live_deploy.parse_deploy(json.loads(data))
     except FetchError as exc:
-        return None, [_failure('deploy', exc.reason)]
+        return None, _failure('deploy', exc.reason)
     except ValueError:
-        return None, [_failure('deploy', 'invalid')]
-    checks = [live_deploy.deploy_verdict(merge, deployed, lambda a, b: _is_ancestor(history, a, b))]
+        return None, _failure('deploy', 'invalid')
+    return deployed, live_deploy.deploy_verdict(merge, deployed, lambda a, b: _is_ancestor(history, a, b))
+
+
+def _wait_for_deploy(site, history, merge, polls, interval, sleeper):
+    deployed = None
+    for attempt in range(polls):
+        if attempt:
+            sleeper(interval)
+        deployed, check = _check_deploy(site, history, merge)
+        # Only a proven older deployment is pending. Other failures stay distinct.
+        if check['reason'] != 'stale':
+            return deployed, check
+    return deployed, _failure('deploy', 'not-deployed')
+
+
+def _check(site, history, merge, key, raw, pointer, contours, *, polls, interval, sleeper):
+    if polls is not None:
+        deployed, poll = _wait_for_deploy(site, history, merge, polls, interval, sleeper)
+        if poll['status'] == 'FAIL':
+            return deployed, [poll]
+    # Re-read deployment in the full proof: the site may have rolled back
+    # since a passing poll. Such a stale receipt is not a wait timeout.
+    deployed, check = _check_deploy(site, history, merge)
+    checks = [check]
     if checks[-1]['status'] == 'PASS':
         try:
             checks.append(live_deploy.pointer_verdict(raw, site.metadata(key)))
@@ -221,7 +245,7 @@ def _write(path, report):
             tmp.unlink(missing_ok=True)
 
 
-def _run(args):
+def _run(args, *, polls=None, interval=300, sleeper=sleep):
     if not receipts.REGION_ID.fullmatch(args.region):
         raise LocalError('invalid region id')
     base = args.base.rstrip('/')
@@ -234,6 +258,12 @@ def _run(args):
     repo, out = args.repo.resolve(), args.out.resolve()
     key = f'catalog/relief/{args.region}.json'
     head, raw, merge, pointer = _reviewed(repo, args.region, key)
+    # Git fetch + full proof: deploy, pointer, archive, root, one chunk per
+    # advertised zoom (tiles are checked locally), and contours, even if absent.
+    if polls is not None:
+        max_polls = _LIMIT - 6 - (pointer['maxzoom'] - pointer['minzoom'] + 1)
+        if polls > max_polls:
+            raise LocalError(f'--wait {polls} exceeds the {max_polls}-poll budget for this release')
     parent = (out / args.region / 'live' / pointer['generation']).resolve()
     if out.is_relative_to(repo) or parent.is_relative_to(repo) or not parent.is_relative_to(out):
         raise LocalError('receipt must stay under OUT and outside --repo')
@@ -243,22 +273,36 @@ def _run(args):
         contours = _project_contours(repo, head, args.region, history)
         _fetch_history(repo, history)
         site = Site(base)
-        deployed, checks = _check(site, history, merge, key, raw, pointer, contours)
+        deployed, checks = _check(site, history, merge, key, raw, pointer, contours,
+                                  polls=polls, interval=interval, sleeper=sleeper)
     passed = all(row['status'] == 'PASS' for row in checks)
     _write(parent / 'live.json', dict(region=args.region, base=base, merge=merge, deployed=deployed,
                                     checks=checks, verdict='PASS' if passed else 'FAIL', requests=site.requests))
     return 0 if passed else 1
 
 
-def main(argv=None):
+def _bounded_int(low, high):
+    def parse(value):
+        number = int(value)
+        if not low <= number <= high:
+            raise argparse.ArgumentTypeError(f'expected an integer from {low} to {high}')
+        return number
+    return parse
+
+
+def main(argv=None, *, sleeper=sleep):
     parser = argparse.ArgumentParser(prog='region.py live-check', description=__doc__)
     parser.add_argument('--region', required=True)
     parser.add_argument('--out', required=True, type=Path)
     parser.add_argument('--repo', required=True, type=Path)
     parser.add_argument('--base', default='https://skippercast.com')
+    parser.add_argument('--wait', type=_bounded_int(1, 12), metavar='N',
+                        help='poll deployment up to N times (1–12, subject to the request budget)')
+    parser.add_argument('--interval', type=_bounded_int(30, 600), default=300, metavar='S',
+                        help='seconds between polls (30–600, default: 300)')
     args = parser.parse_args(argv)
     try:
-        return _run(args)
+        return _run(args, polls=args.wait, interval=args.interval, sleeper=sleeper)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         print(f'{parser.prog}: {exc}', file=sys.stderr)
         return 2
