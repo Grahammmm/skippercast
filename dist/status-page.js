@@ -131,7 +131,8 @@ export function statusRows(feeds, now = Date.now(), lang = 'en') {
   for (const source of sources) byKind.set(groupOf(source), [...(byKind.get(groupOf(source)) || []), source]);
   for (const [kind, list] of byKind) {
     if (kind === 'page-watch' || kind === 'charter-reports') { rows.push(rollup(t('group.daily', lang), t('kind.' + kind, lang), list, now, daily.max_age_hours, lang)); continue; }
-    for (const source of list) rows.push(rollup(t('group.daily', lang), kind === 'forecast' ? FORECAST_NAMES[source.id] || 'Forecast model tiles' : String(source.name || source.id), [source], now, daily.max_age_hours, lang));
+    // These names (the feed's own, or the English forecast labels above) stay English as published.
+    for (const source of list) rows.push({...rollup(t('group.daily', lang), kind === 'forecast' ? FORECAST_NAMES[source.id] || 'Forecast model tiles' : String(source.name || source.id), [source], now, daily.max_age_hours, lang), englishName: true});
   }
   if (!sources.length && feeds.data) rows.push(unreadable(t('group.daily', lang), t('names.empty', lang), daily.max_age_hours));
   if (feeds.coast) rows.push(...coastRows(feeds.coast, now, lang));
@@ -169,7 +170,8 @@ export function coastRows(coast, now = Date.now(), lang = 'en') {
         last_success_at: s.fetchedAt, max_age_hours: limit})), now, limit, lang));
     }
   }
-  return rows;
+  // The catalogue names (dist/status-names.js) are English as published, so Spanish speech must not read them as Spanish.
+  return rows.map(r => ({...r, englishName: true}));
 }
 
 /** Sources in catalog/sources.json this page does not show a freshness for, with the reason. */
@@ -211,7 +213,7 @@ export function renderRows(rows, lang = 'en') {
   const groups = [...new Set(rows.map(r => r.group))];
   return groups.map(group => `<h2>${text(group)}</h2>
 <div class="forecast-table-wrap" role="region" tabindex="0" aria-label="${text(t('table', lang, {group}))}"><table class="evidence-table status-table"><thead><tr><th scope="col">${text(t('data', lang))}</th><th scope="col">${text(t('last', lang))}</th><th scope="col">${text(t('expected', lang))}</th><th scope="col">${text(t('status', lang))}</th></tr></thead><tbody>
-${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><th scope="row">${text(r.name)}</th><td>${r.lastSuccess ? `<time datetime="${text(r.lastSuccess)}">${text(r.lastSuccess.slice(0, 16).replace('T', ' '))}</time>${r.ageHours === null ? '' : ` (${text(t('ago', lang, {hours: hours(r.ageHours)}))})`}` : t('none', lang)}</td><td>${hours(r.expectedHours)}</td><td>${text(t('state.' + r.state, lang))}${r.note ? ` · ${text(r.note)}` : ''}</td></tr>`).join('\n')}
+${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><th scope="row"${r.englishName && lang !== 'en' ? ' lang="en"' : ''}>${text(r.name)}</th><td>${r.lastSuccess ? `<time datetime="${text(r.lastSuccess)}">${text(r.lastSuccess.slice(0, 16).replace('T', ' '))}</time>${r.ageHours === null ? '' : ` (${text(t('ago', lang, {hours: hours(r.ageHours)}))})`}` : t('none', lang)}</td><td>${hours(r.expectedHours)}</td><td>${text(t('state.' + r.state, lang))}${r.note ? ` · ${text(r.note)}` : ''}</td></tr>`).join('\n')}
 </tbody></table></div>`).join('\n');
 }
 
@@ -219,7 +221,7 @@ ${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><t
 export function renderCoverage(names = SOURCE_NAMES, lang = 'en') {
   const groups = coverageGroups(names);
   return ['scheduled-unwatched', 'browser-direct', 'fixed'].filter(k => groups[k]?.length).map(k =>
-    `<h3>${text(t('coverage.' + k, lang))}</h3>\n<ul>${groups[k].map(n => `<li>${text(n)}</li>`).join('')}</ul>`).join('\n');
+    `<h3>${text(t('coverage.' + k, lang))}</h3>\n<ul>${groups[k].map(n => `<li${lang === 'en' ? '' : ' lang="en"'}>${text(n)}</li>`).join('')}</ul>`).join('\n');
 }
 
 async function load(url) {
