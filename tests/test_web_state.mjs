@@ -104,7 +104,7 @@ test('profile switches restore each chosen Currents source with its rail list', 
     go(s.profilePatch('shore'));
     assert.equal(s.current.value, 'off', 'explicit off survives too');
     go(s.profilePatch('kayak'));
-    assert.equal(s.current.value, 'wcofs', 'an unchosen profile keeps its default');
+    assert.equal(s.current.value, 'off', 'an unchosen profile keeps its D5 default');
   } finally { s.configureStore({v2: false, storage: null}); }
 });
 

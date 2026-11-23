@@ -41,6 +41,16 @@ WEB_HALF = 20037508.342789244
 MEASURED_TIERS = {'1m-measured', '2m', '5m'}
 NOTICE_MIN = (100, 10)  # px: the smallest box that can hold the NOT FOR NAVIGATION line
 
+# Owner decision D3, ROLL-A-QA-DISPOSITION-0305.md (bins from diagnosis REPORT §3).
+SEAM_LSTAR_LIMIT = 3
+SEAM_TOTAL_FACTOR = 1.25
+SEAM_EXCESS_FLOOR = 25
+SEAM_BIN_FACTOR = 1.5
+SEAM_BIN_MIN_PAIRS = 1_000
+SEAM_DEPTH_EDGES = (-91.44, -30, -10, -3, 0)
+SEAM_STEP_EDGES = (0, .25, .5, 1, 2)
+SEAM_REVIEW_LIMIT = 50
+
 
 def _json(path):
     return package.decode_document(path.read_bytes())
@@ -177,26 +187,109 @@ def _fine_pixels(ds, grid):
     return (cls == 3) & (depth >= -20) & (depth <= 0) & (spacing > 0) & (spacing <= 1)
 
 
+def _on_tile(ds, grid, dtype, nodata):
+    import numpy as np
+    import rasterio
+    from rasterio.warp import Resampling, reproject
+
+    # Match the producer's exact nearest-neighbour lattice; an approximate
+    # transform can pick a different source cell at a land or contributor edge.
+    dest = np.full((256, 256), nodata, dtype=dtype)
+    reproject(rasterio.band(ds, 1), dest, dst_transform=grid, dst_crs='EPSG:3857',
+              dst_nodata=nodata, resampling=Resampling.nearest, tolerance=0)
+    return dest
+
+
+def _seam_bin_counts(low, high, delta_lstar):
+    import numpy as np
+
+    step = high - low
+    gated = (high < 0) & (step < SEAM_STEP_EDGES[-1])
+    n_steps = len(SEAM_STEP_EDGES) - 1
+    ids = (np.searchsorted(SEAM_DEPTH_EDGES, low[gated], side='right') * n_steps
+           + np.searchsorted(SEAM_STEP_EDGES[1:], step[gated], side='right'))
+    n_bins = len(SEAM_DEPTH_EDGES) * n_steps
+    return np.stack((np.bincount(ids, minlength=n_bins),
+                     np.bincount(ids[delta_lstar[gated] > SEAM_LSTAR_LIMIT], minlength=n_bins)), axis=1)
+
+
+def _seam_excess(seam_counts, same_counts) -> tuple[dict, bool]:
+    bins = []
+    failed_bin = False
+    bands = (None, *SEAM_DEPTH_EDGES)
+    ranges = (([d0, d1], [s0, s1]) for d0, d1 in zip(bands, bands[1:])
+              for s0, s1 in zip(SEAM_STEP_EDGES, SEAM_STEP_EDGES[1:]))
+    for (depth, step), (n, actual), (same, same_over) in zip(ranges, seam_counts, same_counts):
+        n, actual, same, same_over = map(int, (n, actual, same, same_over))
+        expected = n * same_over / same if same else 0.0
+        fails = n >= SEAM_BIN_MIN_PAIRS and actual > SEAM_BIN_FACTOR * expected + SEAM_EXCESS_FLOOR
+        failed_bin |= fails
+        bins.append(dict(depth_band_m=depth, elevation_step_m=step, seam_pairs=n, actual=actual,
+                         expected=expected, same_pairs=same, same_over_limit=same_over, failed=fails))
+    actual = sum(row['actual'] for row in bins)
+    expected = math.fsum(row['expected'] for row in bins)
+    return (dict(actual=actual, expected=expected, bins=bins),
+            failed_bin or actual > SEAM_TOTAL_FACTOR * expected + SEAM_EXCESS_FLOOR)
+
+
 def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
     import numpy as np
     from rasterio.errors import NotGeoreferencedWarning
     from rasterio.io import MemoryFile
-    from rasterio.vrt import WarpedVRT
     from rasterio.warp import transform_bounds
 
     sizes = defaultdict(list)
     painted = transparent = land = land_paint = outside = uncertified = unevidenced = seam_n = 0
     seam_max = 0.0
     edges = {}
+    seam_counts = np.zeros((len(SEAM_DEPTH_EDGES) * (len(SEAM_STEP_EDGES) - 1), 2), dtype='int64')
+    same_counts = np.zeros_like(seam_counts)
+    ungated = {name: [] for name in ('straddles_zero', 'land_colour', 'steep_step')}
+    top_ungated = []
 
-    def step(a, b):
+    def step(a, b, tile, origin, offset):
         nonlocal seam_n, seam_max
-        ac, al = a
-        bc, bl = b
-        edge = (ac > 0) & (bc > 0) & (ac != bc) & np.isfinite(al) & np.isfinite(bl)
-        seam_n += int(np.count_nonzero(edge))
-        if edge.any():
-            seam_max = max(seam_max, float(np.max(np.abs(al[edge] - bl[edge]))))
+        ac, al, ae = a
+        bc, bl, be = b
+        valid = (ac > 0) & (bc > 0) & np.isfinite(al) & np.isfinite(bl)
+        edge, same = valid & (ac != bc), valid & (ac == bc)
+        low, high = np.minimum(ae, be), np.maximum(ae, be)
+        delta = np.abs(al - bl)
+        same_counts[:] += _seam_bin_counts(low[same], high[same], delta[same])
+        if not edge.any():
+            return
+        lo, hi, dl = low[edge], high[edge], delta[edge]
+        seam_n += dl.size
+        seam_max = max(seam_max, float(dl.max()))
+        seam_counts[:] += _seam_bin_counts(lo, hi, dl)
+
+        # Like REPORT §3, separate shoreline transitions from both-land colour.
+        # Steep steps can overlap either class; list each pair only once.
+        classes = dict(straddles_zero=(lo < 0) & (hi >= 0), land_colour=lo >= 0,
+                       steep_step=(hi - lo) >= SEAM_STEP_EDGES[-1])
+        review = np.flatnonzero(np.logical_or.reduce(list(classes.values())))
+        if not review.size:
+            return
+        for name, mask in classes.items():
+            if mask.any():
+                ungated[name].append(dl[mask])
+
+        def endpoint(row, col):
+            dy, row = divmod(row, 256)
+            dx, col = divmod(col, 256)
+            z, x, y = tile
+            return [z, x + dx, y + dy, row, col]
+
+        pixels = np.flatnonzero(edge)
+        # Endpoints are [zoom, tile_x, tile_y, pixel_row, pixel_col].
+        for i in review[np.argsort(-dl[review], kind='stable')[:SEAM_REVIEW_LIMIT]]:
+            r, c = divmod(int(pixels[i]), edge.shape[1])
+            r, c = r + origin[0], c + origin[1]
+            top_ungated.append(dict(delta_lstar=float(dl[i]),
+                                    endpoints=[endpoint(r, c), endpoint(r + offset[0], c + offset[1])],
+                                    classes=[name for name, mask in classes.items() if mask[i]]))
+        top_ungated.sort(key=lambda row: -row['delta_lstar'])
+        del top_ungated[SEAM_REVIEW_LIMIT:]
 
     archive_size = path.stat().st_size
     if archive_size > ARCHIVE_BUDGET:
@@ -232,9 +325,7 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
                         rgb = tile.read([1, 2, 3])
                         opaque = tile.read(4) != 0 if tile.count == 4 else tile.dataset_mask() != 0
                 grid = _tile_grid(z, x, y)
-                with WarpedVRT(elevation, crs='EPSG:3857', transform=grid, width=256, height=256,
-                               dtype='float32', nodata=float('nan')) as vrt:
-                    elevation_m = vrt.read(1)
+                elevation_m = _on_tile(elevation, grid, 'float32', float('nan'))
                 # Nodata and cells outside the evidence grid warp to NaN, which is neither land nor
                 # sea. Such paint has no land-mask proof and fails on its own, instead of silently
                 # counting as non-land.
@@ -254,18 +345,18 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
                     proof = _fine_pixels(fine.get(z), grid) if z in (16, 17) else False
                     uncertified += int(np.count_nonzero(opaque & ~np.asarray(proof)))
                 if z == seam_zoom:
-                    with WarpedVRT(contributor, crs='EPSG:3857', transform=grid, width=256, height=256,
-                                   nodata=0) as vrt:
-                        codes = vrt.read(1)
+                    codes = _on_tile(contributor, grid, contributor.dtypes[0], 0)
                     light = np.where(opaque, _lstar(rgb), np.nan)
-                    step((codes[:-1], light[:-1]), (codes[1:], light[1:]))
-                    step((codes[:, :-1], light[:, :-1]), (codes[:, 1:], light[:, 1:]))
+                    tile = (z, x, y)
+                    layers = (codes, light, elevation_m)
+                    step(tuple(a[:-1] for a in layers), tuple(a[1:] for a in layers), tile, (0, 0), (1, 0))
+                    step(tuple(a[:, :-1] for a in layers), tuple(a[:, 1:] for a in layers), tile, (0, 0), (0, 1))
                     if (x - 1, y) in edges:
-                        step(edges[x - 1, y][0], (codes[:, 0], light[:, 0]))
+                        step(edges[x - 1, y][0], tuple(a[:, :1] for a in layers), tile, (0, -1), (0, 1))
                     if (x, y - 1) in edges:
-                        step(edges[x, y - 1][1], (codes[0], light[0]))
-                    edges[x, y] = ((codes[:, -1].copy(), light[:, -1].copy()),
-                                   (codes[-1].copy(), light[-1].copy()))
+                        step(edges[x, y - 1][1], tuple(a[:1] for a in layers), tile, (-1, 0), (1, 0))
+                    edges[x, y] = (tuple(a[:, -1:].copy() for a in layers),
+                                   tuple(a[-1:].copy() for a in layers))
         finally:
             # Keep views from escaping and holding the mapping open even on failure.
             for blob in tiles.values():
@@ -279,12 +370,21 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
         return dict(count=len(values), p50=values[math.ceil(len(values) * .5) - 1],
                     p90=values[math.ceil(len(values) * .9) - 1])
 
+    seam_report, excess = _seam_excess(seam_counts, same_counts)
+    ungated_stats = {}
+    for name, chunks in ungated.items():
+        values = np.concatenate(chunks) if chunks else np.empty(0)
+        ungated_stats[name] = dict(count=values.size,
+                                   p99=float(np.percentile(values, 99)) if values.size else None,
+                                   max=float(values.max()) if values.size else None)
     metrics = dict(land_leak_pct=100 * land_paint / land if land else 0.0, land_pixels=land,
                    painted_land_pixels=land_paint, transparent_share=transparent / (painted + transparent),
                    painted_pixels=painted, painted_without_land_evidence=unevidenced,
                    bounds_vs_region=dict(ok=bounds_ok, archive=header_bounds, declared=declared, region=region_bounds, painted_outside=outside),
                    seam_delta_lstar={'max': round(seam_max, 6) if seam_n else None, 'edge_pairs': seam_n,
                                      'zoom': seam_zoom, 'basis': 'mosaic contributor boundaries'},
+                   seam_delta_lstar_max=round(seam_max, 6) if seam_n else None,
+                   seam_excess=dict(seam_report, ungated=ungated_stats, top_ungated=top_ungated),
                    z16plus_uncertified_pixels=uncertified, archive_bytes=archive_size, archive_budget_bytes=ARCHIVE_BUDGET,
                    tile_bytes_by_zoom={str(z): size_summary(v) for z, v in sorted(sizes.items())},
                    navigation_archive=package.DISCLAIMER in str(meta.get('description', '')),
@@ -293,7 +393,7 @@ def _raster_metrics(path, release, region_bounds, elevation, contributor, fine):
     failures = [name for name, failed in (
         ('land_leak_pct', land_paint), ('painted_without_land_evidence', unevidenced),
         ('painted_pixels', not painted), ('bounds_vs_region', not bounds_ok),
-        ('seam_delta_lstar', seam_max > 3 + 1e-5), ('z16plus_uncertified_pixels', uncertified),
+        ('seam_excess', excess), ('z16plus_uncertified_pixels', uncertified),
         ('zooms_ok', not metrics['zooms_ok'])) if failed]
     return metrics, failures
 

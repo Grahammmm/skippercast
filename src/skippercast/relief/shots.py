@@ -41,7 +41,13 @@ def camera(ctx):
 
 
 def plan(ctx):
-    return receipts.Plan([receipts.Input(release_path(ctx), 'release'), receipts.Input(ctx.args.basemap, 'basemap')],
+    release = release_path(ctx)
+    doc = package.decode_document(release.read_bytes())
+    if doc.get('region') != ctx.region.id:
+        raise receipts.ReceiptError('release.json region does not match the selected region')
+    if doc.get('generation') != ctx.upstream['package']['generation']:
+        raise receipts.ReceiptError('release.json generation does not match the package receipt')
+    return receipts.Plan([receipts.Input(release, 'release'), receipts.Input(ctx.args.basemap, 'basemap')],
                          {'camera': camera(ctx)})
 
 

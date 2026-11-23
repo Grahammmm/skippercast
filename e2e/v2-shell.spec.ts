@@ -119,7 +119,11 @@ for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and t
     if (isMobile) {
       await page.locator('.ui-sheet-handle').focus();
       await page.keyboard.press('End');
-      await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
+      const sheet = page.locator('.ui-sheet');
+      await expect(sheet).toHaveAttribute('data-detent', 'full');
+      // The attribute changes before the 220 ms transform settles. A click on
+      // the moving chips can land on the map instead on a busy runner.
+      await expect.poll(() => sheet.evaluate(el => getComputedStyle(el).transform)).toBe('matrix(1, 0, 0, 1, 0, 0)');
     }
     const tomorrow = page.locator('[aria-label="Day"] button').nth(1);
     await tomorrow.click();
@@ -215,7 +219,8 @@ test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) 
       '.ui-rail-item:last-child .ui-rail-toggle', 'input[aria-label="Hour"]', 'button[aria-label="Play"]'];
   const reached = new Set<string>();
   // #616 added the verdict basis and the Details summary to the brief column, before the rail in tab order.
-  for (let i = 0; i < 96 && reached.size < wanted.length; i++) {
+  // MB-13: the layer menu lists 13 rows (each with a basis button) and the Map theme row, so the walk allows 128 Tabs; it still must reach every wanted control.
+  for (let i = 0; i < 128 && reached.size < wanted.length; i++) {
     await page.keyboard.press('Tab');
     for (const selector of wanted) if (!reached.has(selector) && await page.locator(selector).evaluate(el => el === document.activeElement)) reached.add(selector);
   }
@@ -708,7 +713,9 @@ for (const lang of ['en', 'es']) {
     expect(reads).toBe(isMobile ? 2 : 1); // one per page, not one per Location/brief consumer
     expect(pageErrors).toEqual([]);
   });
-  for (const mode of ['active', '503', 'malformed', 'rejected']) test(`SC1922-04 ${mode} status shows no disclosure, ${lang}`, async ({page, pageErrors, v2}) => {
+  // SCB2222-14: Preview now comes from the loaded package's own status. An active package never discloses; a preview
+  // package keeps its disclosure when home-ports is down, malformed or aborted (the old port-only reader hid it).
+  for (const mode of ['active', '503', 'malformed', 'rejected']) test(`SC1922-04 ${mode === 'active' ? 'active status shows no disclosure' : `${mode} ports read still shows the package's own Preview`}, ${lang}`, async ({page, pageErrors, v2}) => {
     let reads = 0;
     await page.route('**/data/home-ports.json', async route => {
       reads++;
@@ -720,7 +727,11 @@ for (const lang of ['en', 'es']) {
     await v2.open('app', {region: mode === 'active' ? 'morro-bay' : 'monterey-point-sur', lang, profile: 'shore'});
     await expect(page.locator('.app-location')).toContainText(mode === 'active' ? 'Morro Bay' : 'Monterey');
     await expect.poll(() => reads).toBe(1);
-    await expect(page.locator('.app-region-preview-label, .app-region-preview-reason')).toHaveCount(0);
+    if (mode === 'active') await expect(page.locator('.app-region-preview-label, .app-region-preview-reason')).toHaveCount(0);
+    else {
+      await expect(page.locator('.app-location-preview .app-region-preview-label')).toHaveText(label);
+      await expect(page.locator('.app-location-preview .app-region-preview-reason')).toHaveText(reason);
+    }
     await expect(page.locator('h1')).toBeAttached();
     await page.waitForTimeout(250);
     expect(reads).toBe(1);
@@ -779,6 +790,29 @@ for (const [percent, scale] of [[125, 1.25], [150, 1.5]] as const) {
     expect(box.right).toBeLessThanOrEqual(geometry.width);
     expect(box.bottom).toBeLessThanOrEqual(geometry.height);
     expect(box.horizontal, 'the Limits dialog does not scroll sideways').toBeLessThanOrEqual(1);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
+// SCB2222-13: on a desktop, Print / Save as PDF with the Plan or Reports page open prints that page, whole, not the brief under it.
+for (const view of ['plan', 'reports'] as const) {
+  test(`desktop_overlay_print: ${view} prints its own page in normal flow and not the brief`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(isMobile, 'the desktop layout only');
+    await v2.open('app', {...AREA, view});
+    await expect(page.locator('main.app-main')).toHaveAttribute('data-overlay', view);
+    const heading = page.locator('.app-page h1, .app-page h2').first();
+    await expect(heading).toBeVisible();
+    await page.emulateMedia({media: 'print'});
+    await expect(page.locator('aside.app-brief')).toBeHidden();
+    await expect(page.locator('section.app-stage')).toBeHidden();
+    await expect(page.locator('.app-first-answer'), 'the first answer is the brief\'s lead and does not print above the page').toBeHidden();
+    await expect(heading).toBeVisible();
+    const flow = await page.locator('.app-page').evaluate(el => ({position: getComputedStyle(el).position, scrolls: el.scrollHeight > el.clientHeight + 1}));
+    expect(flow, 'the page is in normal flow with no inner scroll box').toEqual({position: 'static', scrolls: false});
+    await page.emulateMedia({media: 'screen'});
+    await expect(page.locator('aside.app-brief')).toBeVisible();
+    await expect(page.locator('.app-first-answer')).toBeVisible();
+    expect(await page.locator('.app-page').evaluate(el => getComputedStyle(el).position), 'the screen layout is unchanged').toBe('absolute');
     expect(pageErrors).toEqual([]);
   });
 }

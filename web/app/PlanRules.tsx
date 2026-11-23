@@ -5,6 +5,7 @@
 // registry's reason and its bag and size clauses stay in the registry's English, marked lang="en", and say so.
 import {useEffect} from 'preact/hooks';
 import {freshnessLabel, loadRegs, regsData, regulationState, ruleReason, ruleSummary, verifiedText, type RulesRegion} from '../regs.ts';
+import {rulesTargetName} from '../rules-target-name.ts';
 import {language, t, type Language} from '../i18n.ts';
 import {currentRegionInfo} from './region-info.ts';
 import {readableDate} from '../dates.ts';
@@ -28,7 +29,7 @@ function readLine(data: unknown, species: string, date: string, region: RulesReg
   const state = regulationState(data, species, region, now, date, null), s = ruleSummary(data, species, state, region, lang), fresh = freshnessLabel(data, species, state, region, now, lang);
   const confirmed = (fresh.state === 'checked-today' || fresh.state === 'checked-earlier') && !state.overdue;
   const kind = s.status === 'unknown' || !confirmed ? 'check' : s.status === 'closed' ? 'closed' : 'open';
-  const name = state.profile?.name ?? species, official = [...s.bag, ...s.size], why = ruleReason(state, lang);
+  const name = rulesTargetName(species, state.profile?.name, lang), official = [...s.bag, ...s.size], why = ruleReason(state, lang);
   const line: PlanRuleLine = {id: species, name, kind, status: s.status, label: kind === 'check' && s.status !== 'unknown' ? t('rules.status.unknown', lang) : s.label,
     reason: why.text, english: why.english, ...(why.note ? {note: why.note} : {}), limits: [...official, ...(s.depth ? [s.depth] : [])], verified: verifiedText(s, lang), fresh: fresh.text, link: s.link, linkLabel: s.linkLabel};
   return {line, official, depth: s.depth};

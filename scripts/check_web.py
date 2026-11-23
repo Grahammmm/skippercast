@@ -345,7 +345,14 @@ def check_legal_pages():
     assert not missing, ("sources.html", sorted(missing))
 
 
-BUNDLED_LIBRARIES = {"maplibre-gl": "MapLibre GL JS", "pmtiles": "PMTiles"}
+BUNDLED_LIBRARIES = {
+    "maplibre-gl": "MapLibre GL JS",
+    "pmtiles": "PMTiles",
+    "three": "Three.js",
+    "preact": "Preact",
+    "@preact/signals": "@preact/signals",
+    "suncalc": "SunCalc",
+}
 
 
 def check_bundled_licence_versions():

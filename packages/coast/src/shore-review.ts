@@ -40,9 +40,33 @@ export function unreviewedStatus(count: number): string {
   return count > 0 ? ` ${count} shore run${count === 1 ? '' : 's'} not yet reviewed ${count === 1 ? 'is' : 'are'} withheld.` : '';
 }
 
-/** The target-detail evidence line. Dated runs keep their exact wording; absent clocks say "not yet reviewed", never a date. */
+function shoreEvidenceDate(clock: ShoreClock): string | undefined {
+  if (typeof clock !== 'string') return undefined;
+  const day = clock.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return undefined;
+
+  // Date parsing can roll an impossible calendar day into the next month.
+  const calendar = new Date(`${day}T00:00:00Z`);
+  if (!Number.isFinite(calendar.getTime()) || calendar.toISOString().slice(0, 10) !== day) return undefined;
+  if (clock === day) {
+    const monthDay = calendar.toLocaleDateString('en-US', {timeZone: 'UTC', month: 'short', day: 'numeric'});
+    return `${monthDay}, ${day.slice(0, 4)}`;
+  }
+
+  // Only a zoned instant has a well-defined Los Angeles day.
+  if (!/^T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/.test(clock.slice(10))) return undefined;
+  const instant = new Date(clock);
+  if (!Number.isFinite(instant.getTime())) return undefined;
+  return instant.toLocaleDateString('en-US', {timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric'});
+}
+
+/** The target-detail evidence line distinguishes never-reviewed clocks from unknown dates. */
 export function shoreEvidence(p: ShoreReviewProps): string {
-  const access = p.checkedAt === null ? 'Access inventory not yet reviewed.' : 'Access inventory checked ' + new Date(p.checkedAt as string).toLocaleDateString() + '.';
-  const legal = p.legalReviewExpiresAt === null ? 'legal review: not yet reviewed.' : 'the prior legal review expired ' + new Date(p.legalReviewExpiresAt as string).toLocaleDateString() + '.';
+  const accessDate = shoreEvidenceDate(p.checkedAt);
+  const legalDate = shoreEvidenceDate(p.legalReviewExpiresAt);
+  const access = p.checkedAt === null ? 'Access inventory not yet reviewed.'
+    : accessDate === undefined ? 'Access inventory check date unknown.' : `Access inventory checked ${accessDate}.`;
+  const legal = p.legalReviewExpiresAt === null ? 'legal review: not yet reviewed.'
+    : legalDate === undefined ? 'legal review date unknown.' : `the prior legal review expired ${legalDate}.`;
   return 'Original NOAA shoreline vertices; no offshore depth or species fit inferred. Physical context only. ' + access + ' Current legal/access conditions require rechecking; ' + legal;
 }

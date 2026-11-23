@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {isDeepStrictEqual} from 'node:util';
 
-const {hourlyTable, hourlyCells, NO_FORECAST, overLimits} = await import('../web/hourly-table.ts');
+const {hourlyTable, hourlyCells, limitText, NO_FORECAST, overLimits} = await import('../web/hourly-table.ts');
 const {t} = await import('../web/i18n.ts');
 const {feedReader} = await import('../web/brief/verdict.ts');
 const {rateComfort} = await import('../web/score.ts');
@@ -280,9 +280,9 @@ test('SC2037-02: default limits (null) mark nothing; a missing value is never ma
 });
 
 test('SC2037-02: the accessible labels name the limit; the note says marks compare NOAA values and the window can differ', () => {
-  assert.equal(t('hourly.over.wind', 'en', {limit: '12'}), 'over your 12 kt wind limit');
-  assert.equal(t('hourly.over.gust', 'en', {limit: '18'}), 'over your 18 kt gust limit');
-  assert.equal(t('hourly.over.seas', 'en', {limit: '5'}), 'over your 5 ft seas limit');
+  assert.equal(t('hourly.over.wind', 'en', {limit: '12 kt'}), 'over your 12 kt wind limit');
+  assert.equal(t('hourly.over.gust', 'en', {limit: '18 kt'}), 'over your 18 kt gust limit');
+  assert.equal(t('hourly.over.seas', 'en', {limit: '5 ft'}), 'over your 5 ft seas limit');
   assert.match(t('hourly.limits', 'en'), /NOAA values/);
   assert.match(t('hourly.limits', 'en'), /window can differ/);
   assert.match(t('hourly.limits', 'es'), /NOAA/);
@@ -292,4 +292,26 @@ test('SC2037-02: marking leaves the cell text and score unchanged', () => {
   const r = hourlyTable(forecast(NORMAL), null, '2026-06-15', TZ, nowAt(NORMAL)).rows[0], before = JSON.stringify([hourlyCells(r), r.score]);
   overLimits(r, {wind: 1, gust: 1, seas: 1});
   assert.equal(JSON.stringify([hourlyCells(r), r.score]), before);
+});
+
+const label = (f, limit, lang, w, h) => t(`hourly.over.${f}`, lang, {limit: limitText(f, limit, lang, w, h)});
+
+test('SC2022-09: marker labels say the limit in the table\'s wind and height units', () => {
+  assert.equal(label('wind', 15, 'en', 'kmh', 'm'), 'over your 28 km/h wind limit');
+  assert.equal(label('gust', 20, 'en', 'mph', 'ft'), 'over your 23 mph gust limit');
+  assert.equal(label('seas', 6, 'en', 'kt', 'm'), 'over your 1.8 m seas limit');
+  assert.equal(label('seas', 6, 'es', 'kmh', 'm'), 'por encima de tu límite de oleaje de 1,8 m');
+  assert.equal(label('wind', 15, 'es', 'kmh', 'm'), 'por encima de tu límite de viento de 28 km/h');
+  assert.equal(limitText('wind', 15, 'en', 'kmh', 'm'), `${(15 * 1.852).toFixed(0)} km/h`);
+  assert.equal(limitText('seas', 6, 'en', 'kt', 'm'), `${(6 * 0.3048).toFixed(1)} m`);
+});
+
+test('SC2022-09: defaults are byte-identical, fractional limits included; marking stays on stored numbers', () => {
+  assert.equal(label('wind', 15, 'en'), 'over your 15 kt wind limit');
+  assert.equal(label('gust', 22.5, 'es'), 'por encima de tu límite de ráfagas de 22.5 kt');
+  assert.equal(label('seas', 4.5, 'en'), 'over your 4.5 ft seas limit');
+  assert.equal(label('seas', 4.5, 'es'), 'por encima de tu límite de oleaje de 4.5 ft');
+  const r = {...hourlyTable(forecast(NORMAL), null, '2026-06-15', TZ, nowAt(NORMAL)).rows[0], wind: 15.01, gust: null, seas: null};
+  assert.equal(overLimits(r, {wind: 15, gust: 20, seas: 6}).wind, true);
+  assert.equal(overLimits({...r, wind: 15}, {wind: 15, gust: 20, seas: 6}).wind, false);
 });

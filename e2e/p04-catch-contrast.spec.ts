@@ -98,6 +98,9 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // and publishes; web/app/LayerRail.tsx changes only Look for's option text and disables the region's unavailable
 // targets. Reports reads only regionInfo's id and charters (unchanged) and never imports species.ts, the target
 // menu or the rail; no CSS, class, token or catch markup is touched, and contrast() is untouched. All three rebound.
+// SAS0411-01: species.ts extracts the existing picker-label fallback unchanged for rules target naming.
+// BODY09 hashes every INPUT even when Reports does not import it, so the species.ts pin must track that edit.
+// Reports catch rendering, CSS, contrast math, thresholds and all assertions remain unchanged; rebind species.ts only.
 // CI6-02 merge-forward onto main: union of the entries above; only the species/App/LayerRail hashes rebound.
 // CI6-02 review fix: species.ts marks the region's unavailable targets on every menu option and LayerRail's Look for
 // disables by that mark. Reports never imports either; no CSS, token or catch markup changes. Both rebound.
@@ -174,7 +177,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2207-01 (#1501): species.ts changes only Plan.source_links' type member from href to url.
   // The interface is erased at runtime; Reports/CatchCards markup, styles, paint and source data
   // are unchanged. contrast(), assertions and thresholds are untouched. Rebind only species.ts.
-  "web/species.ts": "6c34e52ed3d9aa5e95a26646038bb7eb483e47da738e0d0f0c60ba23b6f83082",
+  "web/species.ts": "e215a5080a6d466ab1cfd41837510c5d992f6bc2839a943e9c486cc5abdd41b3",
   // BF-one-answer (#1456): App.tsx adds FirstAnswerLine and a desktop shell row. BODY09 mounts
   // Reports/CatchCards directly, never App or FirstAnswerLine; the new hook runs only when
   // FirstAnswerLine mounts. RegionInfo and Reports' id/charters reads are unchanged, with no
@@ -237,8 +240,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-03: the Currents note resolves the chosen frame note or reason in the page's language (same note element and text role). No CSS, token or catch markup change.
   // MAPLIVE-1: LayerRail.tsx only appends <PreviewRailItems />, which renders nothing without an owner/admin session and adds no catch markup; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched.
   // SC1922-07: LayerRail.tsx sets disabled and a catalogue note on its existing rail buttons while the Chart cannot start (a state the contrast pages never reach). No CSS, token or catch markup change. Rebind only LayerRail.tsx.
-  // MSK-7 (3D look colours): LayerRail.tsx changes only TerrainOptions' fixed-ramp checked/disabled state and the 3D terrain readout (unmatched note, token no-data swatch). BODY09 mounts Reports/CatchCards, never the terrain options; no CSS, token, class or catch markup changes, contrast() untouched. Rebind only LayerRail's hash.
-  "web/app/LayerRail.tsx": "8a6f382d21f4d49fb7de3c99aeeff906255c7dc5568b8084e4aa70037a7becd8",
+  // MB-13 regroups rail rows, adds a theme row and 24px checkbox targets; MSK-7 changes terrain fixed-ramp and readout states.
+  // BODY09 mounts Reports/CatchCards, not the rail or terrain options; catch markup, CSS, tokens and contrast thresholds are unchanged.
+  "web/app/LayerRail.tsx": "aef6ccee7caa3c62f3a440620594a70331e7317b0b965481b8327b0b80ae431c",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
@@ -325,7 +329,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MAIN-RED-5: Chart loading-status hit-testing only; Reports paint/backing and thresholds unchanged.
   // MAIN-RED-7: app.css adds one landscape-phone sheet-footer link spacing rule (the Reports catch sheet mounts no sheet footer); no colour, backing or catch paint changed. Rebound from the final bytes.
   // MB-11: adds only .legend-* / chip rules for the Chart legend; no Reports catch class, colour or backdrop changes. Rebind only app.css.
-  "web/app/app.css": "6cfd414b3a2e127db5e2545a424428bd9ee67b79e14553462f2e9f47bf43235f",
+  // SC2052-02: only the mobile profile chip width rules; no Reports catch paint, backing or threshold changes (layout only). Rebound from the final bytes.
+  "web/app/app.css": "889eb4831ee826339f925f3505694b690d5666d8ded07559ec72fc8e20abf186",
   // SCA-479: app.css deletes only the earlier of two byte-identical phone account-trigger blocks (the .app-account[data-top] rules); the surviving copy is unchanged, the Reports catch sheet mounts no account menu, and no catch paint or backing changes. Rebound from the final bytes.
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
@@ -338,7 +343,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/ui/guard.css": "8e53f065f8f7af23121f7eb346ebeefe571baa21eebf1b6179e27a8b86b74d11",
   // SC2037-04: Brief.tsx imports brief-print.css (only a hidden .app-print-only class and an @media print block; no screen paint); Reports bundles Brief.
   // SC1407-05: brief-print.css adds only .app-hour-guard/.app-hour-settled (display: contents) and .app-hour-updating (muted margin-less line) screen rules plus print-hide rules for the pending dock hour; the Reports catch sheet mounts none of those classes (they wrap the desktop/phone brief verdict), so no counted catch paint changes. Rebound from the final bytes.
-  "web/brief/brief-print.css": "859660d0a399f688ba5a61661c52c9ae3e5ce8be9c46d934dae8cde19600393f",
+  // SCB2222-13: brief-print.css appends only rules inside its existing @media print block (the desktop Plan/Reports overlay prints in normal flow, and its first answer is hidden in print); no screen paint, so no counted Reports catch paint, overlap or backing changes. Rebound from the final bytes.
+  "web/brief/brief-print.css": "a1840c3bf5e145c049a55133150c4284325ab9afb068a17d357e5bcfddffd1aa",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
   // SCB-16: scoped picker rules only; never mounted or requested by Reports.
   "web/region-picker.css": "ebc4fcaed679f3017e83921334f5c9ef5a10e70b7aed04eef6a995a0da75e6af",
@@ -434,7 +440,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MSK-1: only tokensCss source digest/comment changed in the checker; no contrast logic changed.
   // MSK-2: only the legendTsx surface hash and its comment changed; contrast() untouched. Rebound from the final bytes.
   // MSKL-1: only the tokensCss surface hash and applicability comment changed; contrast() and all gates are unchanged.
-  "scripts/check_contrast.mjs": "70b848ad2b0bc66cbee97525ad67c3f81673cc100cb89c9c2d097fd22019323a",
+  // SC2052-02: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "a082d33835d547cb3ab45323ad1edcdae28edc9aede4dae05a50ec525a1f2377",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // SCA-479: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.

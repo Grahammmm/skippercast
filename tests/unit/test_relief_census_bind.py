@@ -158,6 +158,12 @@ def test_C2_identical_destination_is_a_no_op(paths, prior_bind):
     pytest.param(b'{"summary":{"region":"test-coast"},"files":[],"extra":NaN}', None,
                  'source is not valid JSON', id='C2: non-JSON constant'),
     pytest.param(DATA.replace(b'test-coast', b'elsewhere'), None, 'census region mismatch', id='C2: wrong region'),
+    # Last-key-wins would hide the first declaration behind a matching region.
+    pytest.param(DATA.replace(b'"region":', b'"region": "elsewhere", "region":'), None,
+                 "duplicate census JSON key: 'region'", id='duplicate-region'),
+    # Checking only summary would still admit an ambiguous file row.
+    pytest.param(DATA.replace(b'"path":', b'"path": "other.tif", "path":'), None,
+                 "duplicate census JSON key: 'path'", id='duplicate-file-row-key'),
     pytest.param(b'{}', None, 'census requires summary.region', id='C2: no region identity'),
     pytest.param(b'{"summary":{"region":"test-coast"},"files":{}}', None,
                  'census requires a files list of rows with paths', id='C2: files not a list'),

@@ -7,6 +7,12 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {saveCoastalSnapshot} from '../dist/coastal-offline-core.js';
 import {tileKey, tileURL, ENC_WMS, basemapRangeKey} from '../dist/offline-core.js';
+import {regionalCurrentsStatus} from '../web/map/currents.ts';
+import {regionalCurrents, regionalSST} from '../web/map/habitat-feed.ts';
+import {TILES_NOT_SAVED} from '../web/map/offline.ts';
+import {regionalStatus} from '../web/map/sst.ts';
+import {sstFeed} from './helpers/sst-feed.mjs';
+import {wcofsFeed} from './helpers/wcofs-feed.mjs';
 
 const SOURCE = readFileSync(new URL('../dist/sw.js', import.meta.url), 'utf8');
 const ORIGIN = 'https://skippercast.test';
@@ -646,6 +652,69 @@ test('plan test 13: with no pack, offline manifests, tiles and failures are as b
   await assert.rejects(dispatch(worker, get(`${FEED}other/habitat-dynamics.json`)), /Failed to fetch/, 'nothing saved: the failure is not hidden');
   await assert.rejects(dispatch(worker, get(`${FEED}${REGION}/${tileName(SST, 'live', 9)}`)), /Failed to fetch/);
   assert.deepEqual(JSON.parse(JSON.stringify(worker.messages.at(-1))).type, 'skippercast-offline');
+});
+
+// Plan test 12, read side (docs/plans/offline-ocean-coverage-status.md R3): the worker's offline manifest answer goes through the
+// real layer readers. A committed pack saved Water temp (SST bodies present) and listed eligible WCOFS without its bodies; online,
+// a newer publication's manifest then reached sc-data with none of its tiles. Bug caught: a worker that answers the manifest
+// newest-wins hands the readers SST tile keys nobody saved, so Water temp reads as "not saved for offline" although the pack
+// holds a drawable analysis; and Currents must not draw from tiles that were never saved.
+const OCEAN_NOW = new Date('2026-10-16T12:00:00Z'), OCEAN_TZ = 'America/Los_Angeles';
+/** One publication's manifest of a drawable SST analysis and an eligible WCOFS forecast (bodies in `sst.tiles` only). */
+function ocean({sampleAt = '2026-10-15T12:00:00Z', hours = 0} = {}) {
+  const sst = sstFeed({region: REGION, sampleAt}), shift = t => new Date(Date.parse(t) + hours * 3_600_000).toISOString();
+  const currents = wcofsFeed({region: REGION, times: ['2026-10-16T09:00:00Z', '2026-10-16T12:00:00Z', '2026-10-16T15:00:00Z'].map(t => Date.parse(shift(t)) / 1000),
+    grids: [{bounds: [-121.02, 35.0, -120.86, 35.2], cells: [[35.1, -120.94]]}], flow: () => [0.3, -0.4],
+    issuedAt: shift('2026-10-16T03:00:00Z'), retrievedAt: shift('2026-10-16T11:50:00Z')});
+  return {sst, manifest: {...sst.manifest, layers: {...sst.manifest.layers, ...currents.manifest.layers}, sources: {...sst.manifest.sources, ...currents.manifest.sources}}};
+}
+const tilePaths = manifest => Object.values(manifest.layers).flatMap(l => l.tiles.map(t => t.path));
+
+/** Online, the worker sees `newer`'s manifest (only that request); then offline the real readers fetch through the worker. */
+async function readOfflineAfter(newer, pack) {
+  let online = true;
+  const worker = loadWorker({network: () => { if (!online) throw new TypeError('Failed to fetch'); return Response.json(newer.manifest); }});
+  if (pack) {
+    await commit(worker, 'sc-pack-test-coast-1');
+    await keep(worker, 'sc-pack-test-coast-1', MANIFEST, T1, pack.manifest);
+    // The exact tile bytes the manifest pins, so the readers' length and SHA-256 checks still decide.
+    for (const t of pack.sst.tiles) await keep(worker, 'sc-pack-test-coast-1', `${FEED}${REGION}/${t.record.path}`, T1, t.bytes.toString('utf8'));
+  }
+  await dispatch(worker, get(MANIFEST));
+  const recent = await worker.storage.open('sc-data');
+  assert.deepEqual(worker.calls, [ORIGIN + MANIFEST], 'online, only the newer manifest was fetched');
+  assert.deepEqual((await recent.keys()).map(r => r.url), [ORIGIN + MANIFEST], 'none of the newer tiles is in recent data');
+  const recentAt = (await recent.match(MANIFEST)).headers.get('X-SC-Saved-At');
+  assert.ok(recentAt > T1, 'the recent copy is newer than the pack');
+  online = false;
+  const stamps = new Map();
+  const fetchFn = async url => { const response = await dispatch(worker, get(url)); stamps.set(url, response.headers.get('X-SC-Offline')); return response; };
+  const options = {fetchFn, page: ORIGIN + '/map', now: OCEAN_NOW};
+  return {recentAt, stamps, sst: await regionalSST(REGION, options), currents: await regionalCurrents(REGION, options)};
+}
+
+test('plan test 12 (read side): offline after a newer incomplete manifest, the pack\'s Water temp draws and Currents shows not saved', async () => {
+  const pack = ocean(), newer = ocean({sampleAt: '2026-10-16T12:00:00Z', hours: 6});
+  assert.ok(tilePaths(newer.manifest).every(p => !tilePaths(pack.manifest).includes(p)), 'the newer publication names other tile keys');
+
+  const got = await readOfflineAfter(newer, pack);
+  assert.equal(got.sst.state, 'ready', 'Water temp reads the pack\'s saved analysis');
+  const water = regionalStatus(true, got.sst, OCEAN_NOW, OCEAN_NOW, OCEAN_TZ, true);
+  assert.ok(water.drawn, 'Water temp draws');
+  assert.equal(water.note, 'analysis Oct 15 · 24 h old');
+  assert.equal(water.drawn.sst.analysedAt, '2026-10-15T12:00:00.000Z', 'the pack\'s analysis, not the newer one');
+  assert.equal(got.stamps.get(ORIGIN + MANIFEST), T1, 'the readers got the pack\'s manifest, marked with its saved time');
+  for (const t of pack.sst.tiles) assert.equal(got.stamps.get(`${ORIGIN}${FEED}${REGION}/${t.record.path}`), T1, 'each SST tile came from the pack');
+  assert.deepEqual(got.currents, {state: 'error', network: true});
+  const currents = regionalCurrentsStatus('wcofs', got.currents, OCEAN_NOW, OCEAN_NOW, OCEAN_TZ, true);
+  assert.deepEqual([currents.note, currents.reason, currents.drawn], ['not saved for offline', TILES_NOT_SAVED, null]);
+
+  // What newest-wins would serve: the recent copy alone (no pack) gives the readers tile keys that were never saved.
+  const alone = await readOfflineAfter(newer, null);
+  assert.equal(alone.stamps.get(ORIGIN + MANIFEST), alone.recentAt);
+  assert.deepEqual(alone.sst, {state: 'error', network: true});
+  const missing = regionalStatus(true, alone.sst, OCEAN_NOW, OCEAN_NOW, OCEAN_TZ, true);
+  assert.deepEqual([missing.note, missing.drawn], ['not saved for offline', null]);
 });
 
 test('ocean tiles and every other route keep plain newest-wins, pack or not', async () => {

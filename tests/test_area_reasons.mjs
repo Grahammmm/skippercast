@@ -245,6 +245,8 @@ test('the ranked order is byte-identical, and the ranking does not read the reas
   assert.equal(JSON.stringify(ranking(inputs)), before, 'ranking again, after reasons were computed, gives the same bytes');
   assert.equal(JSON.stringify(r), before);
   assert.doesNotMatch(await readFile(join(ROOT, 'web/ranking.ts'), 'utf8'), /area-reasons/);
-  assert.doesNotMatch(await readFile(join(ROOT, 'web/area-reasons.ts'), 'utf8'), /\bfetch\b|\bimport\s/, 'pure: no source of its own');
+  // The one import allowed is the fallback zone constant, which tests/test_zone_literal.mjs keeps in web/zone.ts alone.
+  const own = (await readFile(join(ROOT, 'web/area-reasons.ts'), 'utf8')).replace("import {DEFAULT_ZONE} from './zone.ts';", '');
+  assert.doesNotMatch(own, /\bfetch\b|\bimport\s/, 'pure: no source of its own');
   markData.value = null;
 });

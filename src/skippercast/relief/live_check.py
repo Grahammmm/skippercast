@@ -9,10 +9,13 @@ from pathlib import Path
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from time import sleep
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from skippercast.platform.contracts import indexed, read_json
+from skippercast.platform.depth_contours import publish_depth_contours
 from skippercast.relief import live_archive, live_deploy, package, receipts
 from skippercast.relief.stage_transport import ARCHIVE_LIMIT
 
@@ -41,13 +44,19 @@ class Site:
     def __init__(self, base):
         self.base = base
         self.opener = build_opener(NoRedirect())
-        # The single Git fetch counts as one operation against the same budget.
+        # The first Git fetch counts as one operation against the same budget.
         self.requests = 1
+        # Operations still owed to later steps of the proof; a wait never spends them.
+        self.reserve = 0
 
-    def fetch(self, key, *, max_bytes):
-        if self.requests >= _LIMIT:
+    def charge(self, key):
+        """Count one non-site network operation (a history refetch) against the budget."""
+        if self.requests + 1 + self.reserve > _LIMIT:
             raise FetchError(key, 'budget')
         self.requests += 1
+
+    def fetch(self, key, *, max_bytes):
+        self.charge(key)
         try:
             response = self.opener.open(Request(f'{self.base}/{key}', method='GET'), timeout=15)
         except HTTPError as exc:
@@ -60,6 +69,9 @@ class Site:
         if response.status != 200:
             response.close()
             raise FetchError(key, f'http-{response.status}')
+        if max_bytes is None:  # presence check: never read an unmerged object's body
+            response.close()
+            return iter(())
 
         def blocks():
             remaining = max_bytes + 1  # one sentinel byte distinguishes an oversized object
@@ -109,7 +121,28 @@ def _reviewed(repo, region, key):
             or type(low) is not int or type(high) is not int or not 8 <= low <= high <= 17
             or type(size) is not int or not 1 <= size <= ARCHIVE_LIMIT):
         raise LocalError('invalid reviewed region pointer in HEAD')
-    return raw, merge, pointer
+    return head, raw, merge, pointer
+
+
+def _project_contours(repo, head, region, scratch):
+    key = f'catalog/depth-contours/{region}.geojson'
+    if not _git(repo, 'ls-tree', head, '--', key).stdout:
+        return None
+    # Use the same pinned tree for all projection inputs, never the working copy.
+    root = scratch / 'contours-input'
+    region_key = f'regions/{region}/region.json'
+    sources_key = 'catalog/sources.json'
+    for name in (key, region_key, sources_key):
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(_git(repo, 'show', f'{head}:{name}').stdout)
+    definition = read_json(root / region_key)
+    if definition.get('id') != region:
+        raise LocalError('region directory and id differ in HEAD')
+    sources = indexed(read_json(root / sources_key), 'sources')
+    output = scratch / 'contours-output'
+    publish_depth_contours(root, definition, output, sources)
+    return (output / 'depth-contours.geojson').read_bytes()
 
 
 def _fetch_history(repo, history):
@@ -122,6 +155,10 @@ def _fetch_history(repo, history):
     # Borrow local objects read-only, so merge-base can also classify a divergent commit.
     (history / 'objects/info/alternates').write_bytes(objects + b'\n')
     _git(history, 'remote', 'add', 'origin', '--', origin)
+    _refresh_history(history)
+
+
+def _refresh_history(history):
     _git(history, '-c', 'http.followRedirects=false', 'fetch', 'origin', 'main')
 
 
@@ -134,17 +171,82 @@ def _failure(check, reason):
     return {'check': check, 'status': 'FAIL', 'reason': reason}
 
 
-def _check(site, history, merge, key, raw, pointer):
+def _contours_check(site, region, expected):
+    key = f'regions/{region}/depth-contours.geojson'
+    # fetch reads at most max_bytes + 1. An extra byte is a mismatch;
+    # reading the next sentinel distinguishes the specified oversize threshold.
+    limit = None if expected is None else len(expected) + 1
+    body = site.fetch(key, max_bytes=limit)
+    if expected is None:
+        reason = 'none-merged' if body is None else 'unexpected'
+    elif body is None:
+        reason = 'missing'
+    else:
+        served = b''.join(body)
+        if len(served) > len(expected) + 1:
+            reason = 'oversize'
+        else:
+            reason = 'identical' if served == expected else 'differs'
+    return dict(check='contours', key=key,
+                status='PASS' if reason in ('identical', 'none-merged') else 'FAIL', reason=reason)
+
+
+def _check_deploy(site, history, merge, refresh=None):
     try:
         data = site.metadata('deploy.json')
         if data is None:
-            return None, [_failure('deploy', 'missing')]
+            return None, _failure('deploy', 'missing')
         deployed = live_deploy.parse_deploy(json.loads(data))
     except FetchError as exc:
-        return None, [_failure('deploy', exc.reason)]
+        return None, _failure('deploy', exc.reason)
     except ValueError:
-        return None, [_failure('deploy', 'invalid')]
-    checks = [live_deploy.deploy_verdict(merge, deployed, lambda a, b: _is_ancestor(history, a, b))]
+        return None, _failure('deploy', 'invalid')
+    def verdict():
+        return live_deploy.deploy_verdict(merge, deployed, lambda a, b: _is_ancestor(history, a, b))
+
+    check = verdict()
+    if check['reason'] == 'unknown-commit' and refresh is not None:
+        # While waiting, main may have advanced after the history snapshot and
+        # deployed a descendant of the merge. Refetch (a charged operation) and judge the same receipt again.
+        try:
+            refresh()
+        except FetchError as exc:
+            return deployed, _failure('deploy', exc.reason)
+        check = verdict()
+    return deployed, check
+
+
+def _wait_for_deploy(site, history, merge, polls, interval, sleeper, refresh):
+    deployed = None
+    for attempt in range(polls):
+        if attempt:
+            sleeper(interval)
+        deployed, check = _check_deploy(site, history, merge, refresh)
+        # Only a proven older deployment is pending. Other failures stay distinct.
+        if check['reason'] != 'stale':
+            return deployed, check
+    return deployed, _failure('deploy', 'not-deployed')
+
+
+def _check(site, history, merge, key, raw, pointer, contours, *, polls, interval, sleeper):
+    refresh = None
+    if polls is not None:
+        def refetch():
+            site.charge('history')  # a refetch is one operation, counted before it runs
+            _refresh_history(history)
+        refresh = refetch
+        # Pointer, archive, root, one chunk per zoom and contours stay owed after the deploy read.
+        tail = 4 + pointer['maxzoom'] - pointer['minzoom'] + 1
+        site.reserve = tail + 1  # polls and refetches must leave the full proof's deploy read and tail
+        deployed, poll = _wait_for_deploy(site, history, merge, polls, interval, sleeper, refresh)
+        if poll['status'] == 'FAIL':
+            return deployed, [poll]
+        site.reserve = tail  # the re-read may refetch only if the tail still fits
+    # Re-read deployment in the full proof: the site may have rolled back
+    # since a passing poll. Such a stale receipt is not a wait timeout.
+    deployed, check = _check_deploy(site, history, merge, refresh)
+    site.reserve = 0
+    checks = [check]
     if checks[-1]['status'] == 'PASS':
         try:
             checks.append(live_deploy.pointer_verdict(raw, site.metadata(key)))
@@ -152,7 +254,9 @@ def _check(site, history, merge, key, raw, pointer):
             checks.append(_failure('pointer', exc.reason))
     if checks[-1]['status'] == 'PASS':
         try:
-            checks.extend(live_archive.check_archive(pointer, site.fetch, budget=_LIMIT - site.requests))
+            checks.extend(live_archive.check_archive(pointer, site.fetch, budget=_LIMIT - site.requests - 1))
+            if all(row['status'] == 'PASS' for row in checks):
+                checks.append(_contours_check(site, pointer['region'], contours))
         except FetchError as exc:
             checks.append({**_failure('fetch', exc.reason), 'key': exc.key})
     return deployed, checks
@@ -173,7 +277,7 @@ def _write(path, report):
             tmp.unlink(missing_ok=True)
 
 
-def _run(args):
+def _run(args, *, polls=None, interval=300, sleeper=sleep):
     if not receipts.REGION_ID.fullmatch(args.region):
         raise LocalError('invalid region id')
     base = args.base.rstrip('/')
@@ -185,31 +289,52 @@ def _run(args):
     _ = url.port
     repo, out = args.repo.resolve(), args.out.resolve()
     key = f'catalog/relief/{args.region}.json'
-    raw, merge, pointer = _reviewed(repo, args.region, key)
+    head, raw, merge, pointer = _reviewed(repo, args.region, key)
+    # Git fetch + full proof: deploy, pointer, archive, root, one chunk per
+    # advertised zoom (tiles are checked locally), and contours, even if absent.
+    if polls is not None:
+        max_polls = _LIMIT - 6 - (pointer['maxzoom'] - pointer['minzoom'] + 1)
+        if polls > max_polls:
+            raise LocalError(f'--wait {polls} exceeds the {max_polls}-poll budget for this release')
     parent = (out / args.region / 'live' / pointer['generation']).resolve()
     if out.is_relative_to(repo) or parent.is_relative_to(repo) or not parent.is_relative_to(out):
         raise LocalError('receipt must stay under OUT and outside --repo')
     out.mkdir(parents=True, exist_ok=True)
     with TemporaryDirectory(prefix='relief-history-', dir=out) as scratch:
         history = Path(scratch)
+        contours = _project_contours(repo, head, args.region, history)
         _fetch_history(repo, history)
         site = Site(base)
-        deployed, checks = _check(site, history, merge, key, raw, pointer)
+        deployed, checks = _check(site, history, merge, key, raw, pointer, contours,
+                                  polls=polls, interval=interval, sleeper=sleeper)
     passed = all(row['status'] == 'PASS' for row in checks)
     _write(parent / 'live.json', dict(region=args.region, base=base, merge=merge, deployed=deployed,
                                     checks=checks, verdict='PASS' if passed else 'FAIL', requests=site.requests))
     return 0 if passed else 1
 
 
-def main(argv=None):
+def _bounded_int(low, high):
+    def parse(value):
+        number = int(value)
+        if not low <= number <= high:
+            raise argparse.ArgumentTypeError(f'expected an integer from {low} to {high}')
+        return number
+    return parse
+
+
+def main(argv=None, *, sleeper=sleep):
     parser = argparse.ArgumentParser(prog='region.py live-check', description=__doc__)
     parser.add_argument('--region', required=True)
     parser.add_argument('--out', required=True, type=Path)
     parser.add_argument('--repo', required=True, type=Path)
     parser.add_argument('--base', default='https://skippercast.com')
+    parser.add_argument('--wait', type=_bounded_int(1, 12), metavar='N',
+                        help='poll deployment up to N times (1–12, subject to the request budget)')
+    parser.add_argument('--interval', type=_bounded_int(30, 600), default=300, metavar='S',
+                        help='seconds between polls (30–600, default: 300)')
     args = parser.parse_args(argv)
     try:
-        return _run(args)
+        return _run(args, polls=args.wait, interval=args.interval, sleeper=sleeper)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         print(f'{parser.prog}: {exc}', file=sys.stderr)
         return 2

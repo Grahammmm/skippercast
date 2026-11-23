@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- SCB2222-13: with the Plan or Reports page open on a desktop, Print or Save as PDF prints that page through its last row instead of the brief under it. The ordinary brief print, the phone layout and the screen are unchanged.
+- SCB2222-04: the readable report labels its time line "Selected hour" (the local time and the UTC code are unchanged), and says "issue time not published by the source" or "sample date not published" where a source has none, instead of "Issued Unknown time" or "sample Unknown time". Every clock value is unchanged.
+- SCB2222-01: the Boat brief's entrance current line judges flood or ebb in the evening and early morning too, using the reference tide station's high or low from the neighbouring day, instead of "not judged" after the day's last turn. The turns list, tide tile and a tide station you pick are unchanged; the entrance still keeps the reference station.
+- SCB2222-10: a seafloor manifest check that stalls now ends after 15 seconds as "unavailable" instead of staying on "checking"; the not-published, held and expired answers and the screening and rights handling are unchanged.
+- SC2052-08: the trip planner's ranked-reef cards read the relief and reef area in Spanish, with the page's number format, when the page does; English and the exported notes are unchanged.
+- SC2052-06: the Trip dialog's saved-pack forecast end and browser-storage answer read Spanish when the page does, with the day and hour in the region's time zone; English is unchanged.
+- SC2052-05: the landing and the map show a Spanish browser-tab title when the page is Spanish. The English titles, search description and link previews are unchanged.
+- SC2052-09: a "Shorter run order" button beside "Your stops in order" puts the chosen stops in a shorter run on straight-line distance, only when you tap it. It keeps the same stops and your launch ramp, says when the order is already the shortest it finds, and counts as your own stop order.
+- SC2022-02: the brief's fleet and local-report lines read Spanish when the page does; port names stay as published and English is unchanged.
+- SC2022-08: the harbor entrance block shows the bar swell in the height unit you chose (metres or feet). The bar judgement and the WCOFS current speed (knots) are unchanged.
+- SC2052-02: on phones the Boat / Shore / Spear / Kayak chips fit their icons and labels in English and Spanish, in portrait and landscape; "Pesca submarina" wraps instead of running over its neighbour.
+- SCB-06: the coastal report and nearshore swell tile name Scripps/CDIP. After the operator switches the three report feeds on, the report uses SkipperCast's own fresh data and keeps Fish as the fallback for missing or stale feeds.
 - The 3D seabed defaults to the same fixed depth colours as the region’s 2D relief when the region publishes a recognised look. The view-adaptive option is still available, and the default height stays at 2×.
 
 - SC2252-11: open an editable trip alert from the brief's lower-exposure window. Nothing is saved until you press Save.

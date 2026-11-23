@@ -20,6 +20,7 @@ import type {Palette, PaletteKey} from './palette.ts';
 import type {StatusPart} from './status-copy.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
 import {t, type Language, type StringId} from '../i18n.ts';
+import {spanishReady} from '../i18n-catalogue.ts';
 
 /** Where a layer draws: the MapLibre Chart, the packages/coast terrain (2D and 3D), or both. */
 export type LayerPresentation = 'chart' | 'terrain';
@@ -237,10 +238,19 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
 /** A registry sentence or label from the catalogue (layer.<id>.label | basis | legend<N>). */
 const copy = (id: string, part: string, lang: Language): string => t(`layer.${id}.${part}` as StringId, lang);
 
-/** The registry by language, built once from the catalogue; no language is read here. English is the compatibility export. */
-const REGISTRY: Readonly<Record<Language, readonly LayerEntry[]>> = Object.freeze({en: build('en'), es: build('es')});
+/** The English registry, built once from the catalogue; no language is read here. English is the compatibility export. */
+const ENGLISH: readonly LayerEntry[] = Object.freeze(build('en'));
+/** The Spanish registry, kept only once built from the installed Spanish table (SC2052-01): a build before it is installed is English fallback and never cached. */
+let spanishRegistry: readonly LayerEntry[] | null = null;
+const registryFor = (lang: Language): readonly LayerEntry[] => {
+  if (lang !== 'es') return ENGLISH;
+  if (spanishRegistry) return spanishRegistry;
+  const built = Object.freeze(build('es'));
+  if (spanishReady()) spanishRegistry = built;
+  return built;
+};
 /** The English registry: the ids, order, sources, gates and English copy every reader and test relies on. */
-export const LAYERS: readonly LayerEntry[] = REGISTRY.en;
+export const LAYERS: readonly LayerEntry[] = ENGLISH;
 
 /** The registry entry for `id`; throws on an unknown id so a typo cannot hide a layer. */
 export function layerEntry(id: string): LayerEntry {
@@ -252,7 +262,7 @@ export function layerEntry(id: string): LayerEntry {
 /** A layer's label, basis sentence and prose legend rows in `lang`; the swatches and numeric rows are the registry's own. Throws on an unknown id. */
 export function layerCopy(id: string, lang: Language = 'en'): Pick<LayerEntry, 'label' | 'basis' | 'legend'> {
   layerEntry(id);
-  const found = REGISTRY[lang === 'es' ? 'es' : 'en'].find(e => e.id === id)!;
+  const found = registryFor(lang === 'es' ? 'es' : 'en').find(e => e.id === id)!;
   return {label: found.label, basis: found.basis, legend: found.legend};
 }
 
@@ -277,6 +287,36 @@ export function setRailNote(rail: RailId, note: string, copy?: readonly StatusPa
     if (noteChanged) railNotes.value = {...railNotes.peek(), [rail]: note};
   });
 }
+
+/**
+ * MB-13 (MAP-DESIGN-LOCK § 2, D5): Depth lines and the survey-derived spots draw unless the rail list carries these
+ * markers, so a saved or linked list from before the menu keeps drawing both. A fresh profile's list is just the default
+ * (`fleet`, the charter areas); nothing else is on at open.
+ */
+export const LINES_OFF = 'lines-off';
+export const SPOTS_OFF = 'spots-off';
+/** One field and one flow at a time (§ 2.5): a second of a kind replaces the first. */
+export const FIELD_IDS: readonly string[] = ['water-temp', 'chlorophyll'];
+export const FLOW_IDS: readonly string[] = ['swell', 'currents'];
+const LIST_ORDER: readonly string[] = ['seafloor', 'currents', 'water-temp', 'sst-contrast', 'sst-fronts', 'chlorophyll', 'swell', 'stations', 'fleet', 'clouds', LINES_OFF, SPOTS_OFF];
+const inListOrder = (ids: readonly string[]): string[] => {
+  const rank = (id: string) => { const i = LIST_ORDER.indexOf(id); return i < 0 ? LIST_ORDER.length : i; };
+  return [...new Set(ids)].sort((a, b) => rank(a) - rank(b));
+};
+/** The rail list with menu row `id` switched on or off; turning on a field or a flow turns its sibling off. */
+export function menuList(list: readonly string[], id: string, on: boolean): string[] {
+  const rest = list.filter(x => x !== id);
+  if (!on) return inListOrder(rest);
+  const group = FIELD_IDS.includes(id) ? FIELD_IDS : FLOW_IDS.includes(id) ? FLOW_IDS : [];
+  return inListOrder([...rest.filter(x => !group.includes(x)), id]);
+}
+export const depthLinesOn = (list: readonly string[]): boolean => !list.includes(LINES_OFF);
+export const spotsOn = (list: readonly string[]): boolean => !list.includes(SPOTS_OFF);
+/** Depth lines on or off: only the marker changes. */
+export const withDepthLines = (list: readonly string[], on: boolean): string[] => inListOrder(on ? list.filter(x => x !== LINES_OFF) : [...list, LINES_OFF]);
+/** Spots & charter activity on or off together: the survey-derived spots (the marker) and the published charter areas (`fleet`). */
+export const withSpots = (list: readonly string[], on: boolean): string[] =>
+  inListOrder(on ? [...list.filter(x => x !== SPOTS_OFF), 'fleet'] : [...list.filter(x => x !== 'fleet'), SPOTS_OFF]);
 
 /** The entries a rail entry (or the base choice) turns on and off, in draw order. */
 export const railLayers = (rail: LayerControl): LayerEntry[] => LAYERS.filter(e => e.control === rail);

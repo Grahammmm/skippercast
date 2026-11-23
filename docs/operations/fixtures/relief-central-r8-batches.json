@@ -1,0 +1,31 @@
+{
+  "purpose": "Planning fixture only; not run evidence or release authorization. Each packet_argv has an unfilled OUT slot (null).",
+  "batches": [
+    {
+      "id": "central-r8-1",
+      "regions": ["big-sur-coast", "cambria-san-simeon", "south-big-sur-san-simeon"],
+      "packet_argv": [
+        "python", "scripts/relief/r8_packet.py", "--out", null,
+        "big-sur-coast", "cambria-san-simeon", "south-big-sur-san-simeon"
+      ],
+      "evidence_slots": [
+        {"region": "big-sur-coast", "evidence": null},
+        {"region": "cambria-san-simeon", "evidence": null},
+        {"region": "south-big-sur-san-simeon", "evidence": null}
+      ]
+    },
+    {
+      "id": "central-r8-2",
+      "regions": ["monterey-point-sur", "point-arguello-conception", "santa-cruz-monterey-bay"],
+      "packet_argv": [
+        "python", "scripts/relief/r8_packet.py", "--out", null,
+        "monterey-point-sur", "point-arguello-conception", "santa-cruz-monterey-bay"
+      ],
+      "evidence_slots": [
+        {"region": "monterey-point-sur", "evidence": null},
+        {"region": "point-arguello-conception", "evidence": null},
+        {"region": "santa-cruz-monterey-bay", "evidence": null}
+      ]
+    }
+  ]
+}

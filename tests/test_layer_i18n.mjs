@@ -5,12 +5,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp} from 'node:fs/promises';
-import {readFileSync} from 'node:fs';
+import {readdirSync, readFileSync} from 'node:fs';
+import {isDeepStrictEqual} from 'node:util';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
+import {parseAst} from 'vite';
+import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const ORIGIN = 'https://s.test/map';
@@ -123,8 +125,9 @@ test('rail_es_chart_terrain_and_language_switch', async t => {
   const enRail = rail(m, 'en'), enLegend = legend(m, 'en');
   const esRail = rail(m, 'es'), esLegend = legend(m, 'es');
   assert.match(esRail, /aria-label="Capas"/);
-  for (const label of ['Fondo marino', 'Corrientes', 'Temperatura del agua', 'Flota chárter', 'Nubes']) assert.match(esRail, new RegExp(`ui-rail-label">${label}<`), label);
-  assert.match(esRail, /aria-label="Fondo marino: fundamento"|Fondo marino: fundamento/);
+  for (const label of ['Tipo de fondo marino', 'Corrientes', 'Temperatura del agua', 'Puntos y actividad chárter', 'Nubes']) assert.match(esRail, new RegExp(`ui-rail-label">${label}<`), label);
+  assert.match(esRail, /Tipo de fondo marino: fundamento/);
+  assert.match(esRail, /Capas del mapa/);
   assert.match(esRail, /Fuente/);
   assert.match(esRail, /Base/);
   assert.match(esRail, /Nocturno/);
@@ -278,4 +281,94 @@ test('dynamic_details_never_silently_dropped', async t => {
   // Empty producer text adds no empty disclosure.
   m.waterTempState.value = {...prior, basis: '', reason: ''};
   assert.doesNotMatch(legend(m, 'es'), /Detalles de la fuente \(en inglés\): <span lang="en"><\/span>/);
+});
+
+// SC2052-01: the Spanish registry is built from the installed Spanish table, never frozen from the English fallback.
+let coldBundle;
+async function loadCold() {
+  if (coldBundle) return coldBundle;
+  const out = join(await mkdtemp(join(tmpdir(), 'layer-cold-')), 'cold.mjs');
+  await build({
+    stdin: {resolveDir: ROOT, loader: 'ts', contents: `
+      export {LAYERS, layerCopy} from './web/map/layers.ts';
+      export {prepareCatalogue, spanishReady} from './web/i18n-catalogue.ts';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', plugins: rendererPlugins,
+  });
+  coldBundle = await import(pathToFileURL(out).href);
+  return coldBundle;
+}
+
+test('layer_registry_late_spanish', async () => {
+  const m = await loadCold();
+  assert.equal(m.spanishReady(), false, 'fresh module graph: the Spanish table is not installed yet');
+  const english = JSON.stringify(m.LAYERS);
+  assert.equal(m.layerCopy('seafloor', 'es').label, m.layerCopy('seafloor').label, 'before install the fallback is English');
+  await m.prepareCatalogue('es');
+  assert.equal(m.layerCopy('seafloor', 'es').label, CATALOGUE['layer.seafloor.label'].es, 'after a late install the Spanish label shows');
+  assert.equal(m.layerCopy('seafloor', 'es').label, 'Fondo marino');
+  for (const id of ['currents', 'mpas', 'saved-spots', 'stations']) {
+    const es = m.layerCopy(id, 'es');
+    assert.equal(es.label, CATALOGUE[`layer.${id}.label`].es, `${id}: label`);
+    assert.equal(es.basis, CATALOGUE[`layer.${id}.basis`].es, `${id}: basis`);
+    es.legend.forEach((row, i) => assert.equal(row.label, CATALOGUE[`layer.${id}.legend${i}`].es, `${id}: legend ${i}`));
+  }
+  assert.ok(isDeepStrictEqual(JSON.stringify(m.LAYERS), english), 'the English registry is unchanged by the install');
+  assert.equal(m.layerCopy('seafloor').label, 'Seafloor');
+});
+
+// The guard: no module-scope evaluation of the catalogue reader in Spanish. A bounded AST walk over web/ that follows
+// module initialisation (not function bodies, so definitions and deferred callbacks pass) and one level of local helpers.
+const FUNCTIONS = new Set(['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression']);
+function walk(node, visit, intoFunctions) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) { for (const n of node) walk(n, visit, intoFunctions); return; }
+  if (typeof node.type !== 'string') return;
+  if (!intoFunctions && FUNCTIONS.has(node.type)) return;
+  visit(node);
+  for (const [key, value] of Object.entries(node)) if (key !== 'type' && value && typeof value === 'object') walk(value, visit, intoFunctions);
+}
+export function eagerSpanish(source, lang = 'ts') {
+  const ast = parseAst(source, {lang});
+  const readers = new Set();
+  for (const n of ast.body) if (n.type === 'ImportDeclaration' && /i18n(?:\.ts)?$/.test(n.source.value)) {
+    for (const s of n.specifiers) if (s.type === 'ImportSpecifier' && s.imported.name === 't') readers.add(s.local.name);
+  }
+  if (!readers.size) return [];
+  const helpers = new Map();
+  const note = (name, fn) => { if (name && fn && FUNCTIONS.has(fn.type)) helpers.set(name, fn); };
+  for (const n of ast.body) {
+    const d = n.type === 'ExportNamedDeclaration' ? n.declaration : n;
+    if (d?.type === 'FunctionDeclaration') note(d.id?.name, d);
+    if (d?.type === 'VariableDeclaration') for (const v of d.declarations) note(v.id?.name, v.init);
+  }
+  const reads = fn => { let found = false; walk(fn.body, c => { if (c.type === 'CallExpression' && c.callee.type === 'Identifier' && readers.has(c.callee.name)) found = true; }, true); return found; };
+  const names = new Set(readers);
+  for (const [name, fn] of helpers) if (reads(fn)) names.add(name);
+  const hits = [];
+  walk(ast.body, c => {
+    if (c.type === 'CallExpression' && c.callee.type === 'Identifier' && names.has(c.callee.name)
+      && c.arguments.some(a => a.type === 'Literal' && a.value === 'es')) hits.push(`${c.callee.name}(…, 'es') at offset ${c.start}`);
+  }, false);
+  return hits;
+}
+
+test('no_eager_spanish_translation', () => {
+  const head = `import {t} from './i18n.ts';\n`;
+  assert.equal(eagerSpanish(`${head}const A = t('layer.x.label', 'es');`).length, 1, 'a direct module-scope Spanish read');
+  assert.equal(eagerSpanish(`${head}const build = (lang) => ({label: t('layer.x.label', lang)});\nconst R = Object.freeze({es: build('es')});`).length, 1, 'a helper called with a fixed es at module scope');
+  assert.deepEqual(eagerSpanish(`${head}const build = (lang) => t('a', lang);\nconst f = () => build('es');\nfunction g() { return t('b', 'es'); }\nexport const en = build('en');`), [], 'definitions, deferred callbacks and English pass');
+});
+
+test('no_module_scope_spanish_in_web', () => {
+  const found = [];
+  const dirs = [join(ROOT, 'web')];
+  while (dirs.length) {
+    const dir = dirs.pop();
+    for (const e of readdirSync(dir, {withFileTypes: true})) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) dirs.push(p);
+      else if (/\.tsx?$/.test(e.name) && !/\.d\.ts$/.test(e.name)) for (const h of eagerSpanish(readFileSync(p, 'utf8'), e.name.endsWith('x') ? 'tsx' : 'ts')) found.push(`${p.slice(ROOT.length)}: ${h}`);
+    }
+  }
+  assert.deepEqual(found, [], 'module-scope t(…, "es") freezes English fallbacks (SC2052-01); evaluate Spanish per call');
 });

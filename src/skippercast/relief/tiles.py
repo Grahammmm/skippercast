@@ -130,12 +130,21 @@ def _aligned_depth(ds, transform, crs, shape, builder, *, native):
     return dest
 
 
-def assemble_windows(ds, lower, baked, builder, *, native=False, detail=None, chunk=None):
+def assemble_windows(ds, lower, baked, builder, *, native=False, detail=None, chunk=None, shade_water=True):
     """Yield buffered engine windows and the original support mask of each output core."""
     import numpy as np
     from rasterio.transform import array_bounds
     from rasterio.windows import Window
     from skippercast.relief.nearshore import Nearshore
+
+    engine = Nearshore
+    if not shade_water:
+        class UnshadedWater(Nearshore):
+            def shade(self):
+                # The inherited finish still shades land and handles nodata.
+                return np.ones_like(self.filled)
+
+        engine = UnshadedWater
 
     chunk = CHUNK if chunk is None else chunk
     cell = ds.res[0]
@@ -177,18 +186,18 @@ def assemble_windows(ds, lower, baked, builder, *, native=False, detail=None, ch
                     sky_view_join = (Nearshore(np.where(beneath != builder.NODATA, beneath, np.nan),
                                               cell, bounds, baked), weight)
                 z = np.where(elev != builder.NODATA, elev, np.nan)
-            image = Nearshore(z, cell, bounds, baked, sky_view_join=sky_view_join)
+            image = engine(z, cell, bounds, baked, sky_view_join=sky_view_join)
             yield x, y, w, h, core, valid, image
 
 
-def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chunk=None):
+def _bake(ds, lower, baked, outputs, builder, *, native=False, detail=None, chunk=None, shade_water=True):
     """Bake at source spacing on a fixed grid. Halo elevations cannot add output support."""
     import numpy as np
     from rasterio.windows import Window
     from skippercast.relief.nearshore import to_bytes
 
     for x, y, w, h, core, valid, image in assemble_windows(
-            ds, lower, baked, builder, native=native, detail=detail, chunk=chunk):
+            ds, lower, baked, builder, native=native, detail=detail, chunk=chunk, shade_water=shade_water):
         for variant, output in outputs.items():
             rgba = np.zeros((4, h, w), dtype='uint8')
             rgba[:3, valid] = to_bytes(image.base(variant)[core])[valid].T
@@ -222,6 +231,19 @@ def _tile(ds, z, x, y, builder):
     out[valid, :3] = np.clip(np.rint(dest[:3, valid].T * (255 / dest[3, valid, None])), 0, 255).astype('uint8')
     out[valid, 3] = 255
     return out
+
+
+def _mosaic_evidence(bg, background, z, x, y, builder):
+    """Sample the masked mosaic at exact tile pixel centers, without blending."""
+    import numpy as np
+    from rasterio.warp import Resampling, reproject
+
+    transform, _ = builder.tile_grid(z, x, y, pad=0)
+    evidence = np.full((builder.TILE, builder.TILE), builder.NODATA, dtype=bg.dtype)
+    reproject(bg, evidence, src_transform=background.transform, src_crs=background.crs,
+              src_nodata=builder.NODATA, dst_transform=transform, dst_crs='EPSG:3857',
+              dst_nodata=builder.NODATA, resampling=Resampling.nearest, tolerance=0)
+    return evidence != builder.NODATA
 
 
 def _render(source, manifest, rows, bounds, out, label, baked):
@@ -271,7 +293,9 @@ def _render(source, manifest, rows, bounds, out, label, baked):
             paths = {v: scratch / f'{i}-{v}.tif' for v in variants}
             with ExitStack() as writers:
                 outputs = {v: writers.enter_context(rasterio.open(path, 'w', **profile)) for v, path in paths.items()}
-                _bake(ds, lower if row is not None else (), baked, outputs, builder, native=row is not None)
+                # Only Morro Bay's mosaic overview loses the water texture.
+                _bake(ds, lower if row is not None else (), baked, outputs, builder, native=row is not None,
+                      shade_water=row is not None or label != 'morro-bay')
             if row is not None and cap > 15 and builder.has_support(row):
                 # Certified zooms cannot use the feather's estimated elevations. This is the
                 # same closeup style on a masked, unblended grid, not a third look.
@@ -303,6 +327,7 @@ def _render(source, manifest, rows, bounds, out, label, baked):
                 measured = np.zeros(rgba.shape[:2], dtype=bool)
                 native_core = np.zeros_like(measured)
                 used = []
+                has_evidence = _mosaic_evidence(bg, background, z, x, y, builder) if z > 13 else None
                 if z > 15:
                     background_core, _ = builder.warp_window(bg, background.transform, background.crs, z, x, y, pad=0)
                 for row, image in eligible:
@@ -315,6 +340,9 @@ def _render(source, manifest, rows, bounds, out, label, baked):
                         native_core |= valid
                         measured[valid] = (cert[valid] == 1) & pixels[valid]
                         pixels &= valid
+                    if has_evidence is not None:
+                        # Clip paint without changing the certification test above.
+                        pixels &= has_evidence
                     if tile is not None and pixels.any():
                         rgba[pixels] = tile[pixels]
                         if row is not None:

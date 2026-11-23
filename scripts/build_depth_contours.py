@@ -421,6 +421,7 @@ def geometry_points(geometry):
     return [pt for ring in rings for pt in ring]
 
 
+UNKNOWN_SUPPORT = 2
 MEASURED_SUPPORT = 3  # support raster class for a measured (not interpolated/unknown) native cell
 
 
@@ -476,12 +477,114 @@ def line_parts(geometry):
             yield from line_parts(part)
 
 
-def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=False, provenance=None,
-            positive_down=False):
-    """Trace on one native lattice, with no mosaic/resampling fallback."""
+def _v3_shoal_safe(original, short, unknown, depth, level, tf, lonlat):
+    """Keep a shortcut only if it cannot move a raw unknown-support shoal across the line."""
+    from shapely import intersects_xy, transform
+    from shapely.ops import polygonize
+
+    x0, y0, x1, y1 = original.bounds
+    sx0, sy0, sx1, sy1 = short.bounds
+    # Restrict centre indices to the joint projected bounds plus one cell.
+    centres = tf @ Affine.translation(0.5, 0.5)
+    to_index = ~centres
+    cell = tf.a
+    left, top = to_index @ (min(x0, sx0) - cell, max(y1, sy1) + cell)
+    right, bottom = to_index @ (max(x1, sx1) + cell, min(y0, sy0) - cell)
+    col0, row0 = max(0, int(np.ceil(left))), max(0, int(np.ceil(top)))
+    cols = slice(col0, int(np.floor(right)) + 1)
+    rows = slice(row0, int(np.floor(bottom)) + 1)
+    rr, cc = np.nonzero(unknown[rows, cols] & (depth[rows, cols] < level))
+    orig_ll = transform(original, lonlat.transform, interleaved=False)
+    short_ll = transform(short, lonlat.transform, interleaved=False)
+    # The caller pairs parts before simplifying, including parts cut at a
+    # block seam. They must keep their endpoints (including a ring's start).
+    if (short_ll.geom_type != 'LineString' or short_ll.is_empty
+            or (orig_ll.coords[0], orig_ll.coords[-1]) != (short_ll.coords[0], short_ll.coords[-1])):
+        return original
+    if not rr.size:
+        return short
+
+    x, y = lonlat.transform(*(centres @ (cc + col0, rr + row0)))
+    # Compare before the lon/lat clip: clipping can open the faces between
+    # the two lines and make a shoal on the inside of the clip undetectable.
+    if intersects_xy(short_ll, x, y).any() or any(
+            intersects_xy(face, x, y).any() for face in polygonize(unary_union([orig_ll, short_ll]))):
+        return original
+    return short
+
+
+def _v3_block_lines(grid, window, levels_by_tier, pier_index, cell, *, support, provenance, positive_down,
+                    core, lonlat):
+    """Trace a bounded read, returning projected lines owned by its core."""
     from scipy.ndimage import gaussian_filter, minimum_filter
-    from shapely import transform as transform_geometry
     from shapely.geometry import box
+
+    tf = grid.window_transform(window)
+    values = grid.read(1, window=window, masked=True).astype('float64').filled(np.nan)
+    if positive_down:
+        values = -values
+    water = np.isfinite(values) & (values < 0) & (values >= -3000)
+    if provenance is not None:
+        water &= provenance.read(1, window=window, masked=True).filled(PAD) == ec.CODES['measured']
+    measured = usable = water
+    unknown = None
+    if support is not None:
+        classes = support.read(1, window=window, masked=True).filled(0)
+        measured = water & (classes == MEASURED_SUPPORT)
+        unknown = water & (classes == UNKNOWN_SUPPORT)
+        if unknown.any():
+            usable = measured | unknown
+        else:
+            usable, unknown = measured, None
+    depth = -values * dc.FEET_PER_M
+    footprints = {}
+    clip = None
+    if core is not None:
+        left, bottom, right, top = rasterio.windows.bounds(core, grid.transform)
+        # GEOS boxes are closed. Remove line overlaps on the right and bottom
+        # edges, but keep crossing endpoints to join to the adjacent core.
+        clip = box(left, bottom, right, top), LineString([(left, bottom), (right, bottom), (right, top)])
+    for i, (sigma, radius, levels) in enumerate(levels_by_tier):
+        pier = i == pier_index
+        valid = measured if pier else usable
+        key = pier and unknown is not None  # Both tiers share a footprint if there are no unknown cells.
+        if key not in footprints:
+            squares = valid[:-1, :-1] & valid[:-1, 1:] & valid[1:, :-1] & valid[1:, 1:]
+            footprints[key] = polygons(squares, tf @ Affine.translation(0.5, 0.5)) if squares.any() else None
+        footprint = footprints[key]
+        if footprint is None:
+            continue
+        interior = minimum_filter(valid, size=2 * radius + 1, mode='constant', cval=False)
+        smooth = gaussian_filter(np.where(valid, depth, 0), sigma, radius=radius)
+        if not pier and unknown is not None:
+            np.minimum(smooth, depth, out=smooth, where=unknown)
+        rows = np.where(valid, np.where(interior, smooth, depth), None).tolist()
+        for level, lines in dc.trace(rows, levels).items():
+            pieces = []
+            for line in lines:
+                if clip is None:
+                    raw = LineString([tf @ (c + 0.5, r + 0.5) for c, r in line])
+                else:
+                    # Map on the same native lattice in every block, so the
+                    # common segments intersect the seam at the same points.
+                    raw = LineString([grid.transform @ (window.col_off + c + 0.5, window.row_off + r + 0.5)
+                                      for c, r in line])
+                    raw = raw.intersection(clip[0]).difference(clip[1])
+                for original in line_parts(raw):
+                    short = original.simplify(min(cell, CONTOUR_TOLERANCE_M))
+                    safe = short if footprint.covers(short) else original
+                    if not pier and unknown is not None and safe is not original:
+                        safe = _v3_shoal_safe(original, safe, unknown, depth, level, tf, lonlat)
+                    pieces.append(safe)
+            if pieces:
+                yield (i, level), pieces
+
+
+def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=False, provenance=None,
+            positive_down=False, block_max_pixels=None):
+    """Trace on one native lattice, with no mosaic/resampling fallback."""
+    from shapely import transform as transform_geometry
+    from shapely.geometry import MultiLineString, box
 
     crs = horizontal_crs(grid)
     cell = grid.res[0]
@@ -501,52 +604,76 @@ def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=
     h = min(grid.height, int(np.ceil(clip.row_off + clip.height))) - y
     if w < 2 or h < 2:
         return
-    if w * h > preflight.MAX_PIXELS:
-        raise ValueError(f'ft-v3 native window exceeds {preflight.MAX_PIXELS} pixels; use a smaller region window')
-    window = Window(x, y, w, h)
-    tf = grid.window_transform(window)
-    values = grid.read(1, window=window, masked=True).astype('float64').filled(np.nan)
-    if positive_down:
-        values = -values
-    valid = np.isfinite(values) & (values < 0) & (values >= -3000)
-    if provenance is not None:
-        valid &= provenance.read(1, window=window, masked=True).filled(PAD) == ec.CODES['measured']
+    cap = preflight.MAX_PIXELS if block_max_pixels is None else min(preflight.MAX_PIXELS, block_max_pixels)
+    refusal = f'ft-v3 native window exceeds {cap} pixels; use a smaller region window'
+    levels_by_tier = []
+    for tier, _ in tiers:
+        sigma = tier['sigma_m'] / cell
+        levels_by_tier.append((sigma, round(4 * sigma), dc.v3_levels(tier)))
+    halo = max(radius for _, radius, _ in levels_by_tier) + 2
+    whole = Window(x, y, w, h)
+    blocked = w * h > cap
+    # Even a one-cell core at maximum overlap must fit. Refuse before any
+    # read, rather than discovering that an interior block cannot be traced.
+    if blocked and min(w, 2 * halo + 1) * min(h, 2 * halo + 1) > cap:
+        raise ValueError(refusal)
     if support is not None:
         if (support.count != 1 or support.dtypes[0] != 'uint8' or support.shape != grid.shape
                 or support.crs != grid.crs or support.transform != grid.transform):
             raise ValueError('support raster must be single-band uint8 aligned with the native grid')
-        valid &= support.read(1, window=window, masked=True).filled(0) == MEASURED_SUPPORT
-    depth = -values * dc.FEET_PER_M
-    squares = valid[:-1, :-1] & valid[1:, :-1] & valid[:-1, 1:] & valid[1:, 1:]
-    if not squares.any():
-        return
-    footprint = polygons(squares, tf @ Affine.translation(0.5, 0.5))
+
+    def windows(col, row, end_col, end_row):
+        # Bisect the longer core dimension until its clipped halo fits. This
+        # also handles narrow windows whose useful blocks are strips.
+        left, top = max(x, col - halo), max(y, row - halo)
+        right, bottom = min(x + w, end_col + halo), min(y + h, end_row + halo)
+        if (right - left) * (bottom - top) <= cap:
+            yield Window(left, top, right - left, bottom - top), Window(col, row, end_col - col, end_row - row)
+        elif end_col - col >= end_row - row:
+            mid = (col + end_col) // 2
+            yield from windows(col, row, mid, end_row)
+            yield from windows(mid, row, end_col, end_row)
+        else:
+            mid = (row + end_row) // 2
+            yield from windows(col, row, end_col, mid)
+            yield from windows(col, mid, end_col, end_row)
+
     lonlat = Transformer.from_crs(crs, 'EPSG:4326', always_xy=True)
+    pier_index = next((i for i, (tier, _) in enumerate(tiers) if tier['name'] == view['pier_view']['contours_tier']), None)
+
+    def trace(window, core):
+        if window.width * window.height > cap:
+            raise ValueError(refusal)
+        return _v3_block_lines(grid, window, levels_by_tier, pier_index, cell, support=support, provenance=provenance,
+                               positive_down=positive_down, core=core, lonlat=lonlat)
+
+    if blocked:
+        runs = {}
+        for window, core in windows(x, y, x + w, y + h):
+            for key, pieces in trace(window, core):
+                runs.setdefault(key, []).extend(pieces)
+        groups = ((key, runs.pop(key)) for key in sorted(runs))
+    else:
+        groups = trace(whole, None)
+
     clip_ll = box(*region['bounds'])
-    for tier, stop in tiers:
-        sigma = tier['sigma_m'] / cell
-        radius = round(4 * sigma)
-        interior = minimum_filter(valid, size=2 * radius + 1, mode='constant', cval=False)
-        smooth = gaussian_filter(np.where(valid, depth, 0), sigma, radius=radius)
-        rows = np.where(valid, np.where(interior, smooth, depth), None).tolist()
-        levels = dc.v3_levels(tier)
-        for level, lines in dc.trace(rows, levels).items():
-            coords = []
-            for line in lines:
-                original = LineString([tf @ (c + 0.5, r + 0.5) for c, r in line])
-                short = original.simplify(min(cell, CONTOUR_TOLERANCE_M))
-                safe = short if footprint.covers(short) else original
-                ll = transform_geometry(safe, lonlat.transform, interleaved=False)
-                for piece in line_parts(ll.intersection(clip_ll)):
-                    points = dedupe([list(pt) for pt in piece.coords])
-                    if len(points) >= 2:
-                        coords.append(points)
-            if coords:
-                yield {'type': 'Feature', 'id': f"{common['source_id']}-{level}ft-{tier['name']}",
-                       'geometry': {'type': 'MultiLineString', 'coordinates': coords},
-                       'properties': {**common, 'kind': 'contour', 'estimated': True, 'native_cell_m': cell,
-                                      'depth_ft': level, 'tier': tier['name'], 'index': levels[level],
-                                      'minzoom': tier['min_zoom'], **({'maxzoom': stop} if stop is not None else {})}}
+    for (i, level), lines in groups:
+        tier, stop = tiers[i]
+        if blocked:
+            lines = line_parts(line_merge(MultiLineString(lines)))
+        coords = []
+        for safe in lines:
+            ll = transform_geometry(safe, lonlat.transform, interleaved=False)
+            for piece in line_parts(ll.intersection(clip_ll)):
+                points = dedupe([list(pt) for pt in piece.coords])
+                if len(points) >= 2:
+                    coords.append(points)
+        if coords:
+            yield {'type': 'Feature', 'id': f"{common['source_id']}-{level}ft-{tier['name']}",
+                   'geometry': {'type': 'MultiLineString', 'coordinates': coords},
+                   'properties': {**common, 'kind': 'contour', 'estimated': True, 'native_cell_m': cell,
+                                  'depth_ft': level, 'tier': tier['name'], 'index': levels_by_tier[i][2][level],
+                                  'minzoom': tier['min_zoom'], **({'maxzoom': stop} if stop is not None else {})}}
 
 
 def v3_collection(region, view, features, sources, omitted):
@@ -554,7 +681,8 @@ def v3_collection(region, view, features, sources, omitted):
             'provenance': {'region_id': region['id'], 'bounds': region['bounds'], 'units': 'ft', 'set': dc.FT_V3,
                            'contours': view.digest('contours'), 'shelf_limit_ft': dc.V2_SHELF_LIMIT_FT,
                            'features': len(features), 'sources': sources, 'sources_omitted': omitted,
-                           'method': 'Marching squares on Gaussian-smoothed native water cells; no resampling.',
+                           'method': ('Marching squares on Gaussian-smoothed native water cells (measured or unknown '
+                                      'support; unknown-support cells never drawn deeper than their own value); no resampling.'),
                            'limitations': 'Estimated display contours. Not for navigation. No datum conversion.'}}
 
 

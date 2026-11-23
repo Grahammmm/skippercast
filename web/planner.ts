@@ -21,17 +21,18 @@
 import {batch, computed, effect, signal, untracked} from '@preact/signals';
 import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, protectedPlanHits, protectedPlanNotes, readDraft, userWaypoints, userWaypointTarget} from '../dist/trip-export.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
-import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
+import {bestSpots, distanceNm, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
 import {browserStorage} from '../dist/browser-storage.js';
 import {track} from './telemetry.ts';
 import {ensureLandWater, landWater as landWaterState, loadLandWaterLines, withheldNote, type LandWaterLines, type LandWaterModel, type Place} from './land-water.ts';
 import {ROUTE_BUDGET, type RouteFn} from './ranking.ts';
 import {waterRoute, type RouteFailure} from './route.ts';
-import {buildProtectedRoute, ROUTE_WARNING, type RouteScreen} from './protected-route.ts';
+import {buildProtectedRoute, ROUTE_WARNING, RouteError, type RouteScreen} from './protected-route.ts';
 import {clearPlanningRoute, publishPlanningRoute} from './map/planning-route.ts';
 import {choosePresentation} from './map/stage.ts';
 import {language, t} from './i18n.ts';
+import type {RouteStatus} from './planner-copy.ts';
 import {coordinates, region as activeRegion} from './state.ts';
 import {checkGpx} from './gpx-check.ts';
 import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
@@ -59,6 +60,8 @@ export type Target = {
   id: string; label: string; name?: string; latitude: number; longitude: number; habitat_grade?: string; canonical_habitat?: boolean;
   trip_rank?: number; trip_fit?: number; trip_species?: string; evidence_confidence?: {percent: number};
   neighborhood_depth_ft?: number[]; center_depth_ft?: number | null; terrain_interpretation?: string; species_fit?: Record<string, number>;
+  /** SC2052-08: the numbers behind a loaded reef's terrain line (metres, hectares; null when absent), for a display in the page's language. */
+  terrain_display?: {reliefM: number | null; areaHa: number | null};
   /** SC2207-04: set on a ranked spot by Best available (in the page only, never saved): the one-way distance from the chosen port and what it is measured on. */
   distance_nm?: number | null; distance_basis?: 'water' | 'straight'; distance_why?: RouteFailure;
   /** BF-closures-everywhere: set on every ranked place `selectBest` returns. */
@@ -169,6 +172,8 @@ const FLOAT_INVALID = 'The float plan has a problem. Fix it or clear it before d
 const ROUTE_CHANGED = 'Plan or boundary check changed while routing. Try again.';
 const ROUTE_HOUR = 36 * 3600_000;
 const FLOAT_CHANGED = 'The float plan changed while the notes were being prepared. Download the notes again.';
+/** dist/trip-export.js's own refusal for contour tracks past their source review (`today > review_expires`, UTC day). */
+const CONTOURS_LAPSED = 'Depth contours cannot be exported: source review expired or undated. Turn off depth contour tracks or reload the region.';
 const STORAGE_OFF = 'Browser storage is unavailable. Keep this page open until you download your plan.';
 const RANKED_LAYERS: Layers = {waypoints: true, outlines: true, alignments: false, exclusions: false};
 const SPOT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -196,6 +201,41 @@ export function sharedConfidence(spots: readonly Target[]): number | null {
 export function planFit(t: Target, species: TripSpecies): number | undefined {
   const fit = t.species_fit ?? {};
   return species === 'lingcod' ? fit.lingcod : species === 'rockfish' ? fit['rockfish-reef'] : Math.min(fit.lingcod ?? NaN, fit['rockfish-reef'] ?? NaN);
+}
+
+type RunPoint = {latitude: number; longitude: number};
+/**
+ * SC2052-09: a shorter order for the chosen stops, by straight-line `distanceNm` (the planner's own leg measure). `start` and `end` are fixed
+ * anchors the legs run from and to (the home port, the launch ramp); with no `start` the first stop is pinned, or, with only an `end`, the path
+ * is solved from that end and read backwards (leg lengths are symmetric). Nearest neighbour (ties: lower original position) improved by 2-opt on
+ * the free stops; the result replaces the incumbent only when strictly shorter, so a tie or an already-shortest order is returned unchanged.
+ * Module-private (so the closures guard's planner.ts export list is unchanged) and offered on the planner model as `shorterRunOrder`.
+ * Straight line, not `waterRoute`: that is asynchronous, needs the shoreline lines and a request budget, and is for the legs, not for ordering.
+ */
+function shorterRunOrder<S extends RunPoint & {id: string}>(stops: readonly S[], ends: {start?: RunPoint | null; end?: RunPoint | null} = {}): {ids: string[]; changed: boolean; beforeNm: number; afterNm: number} {
+  const {start = null, end = null} = ends, total = (order: readonly RunPoint[]): number => [start, ...order, end].filter((p): p is RunPoint => !!p).reduce((sum, p, i, all) => i ? sum + distanceNm(all[i - 1]!, p) : 0, 0);
+  const beforeNm = total(stops), ids = stops.map(s => s.id), same = {ids, changed: false, beforeNm, afterNm: beforeNm};
+  if (stops.length < 2) return same;
+  const backwards = !start && !!end, head = backwards ? end : start, tail = backwards ? null : end;
+  const pool = stops.map((s, at) => ({p: s as RunPoint, at}));
+  const seq: {p: RunPoint; at: number}[] = head ? [{p: head, at: -1}] : [pool.shift()!];
+  while (pool.length) {
+    let best = 0, bestNm = Infinity;
+    pool.forEach((c, i) => { const nm = distanceNm(seq.at(-1)!.p, c.p); if (nm < bestNm || (nm === bestNm && c.at < pool[best]!.at)) { best = i; bestNm = nm; } });
+    seq.push(...pool.splice(best, 1));
+  }
+  if (tail) seq.push({p: tail, at: -1});
+  const last = seq.length - 1 - (tail ? 1 : 0), d = (i: number, j: number): number => i < 0 || j >= seq.length ? 0 : distanceNm(seq[i]!.p, seq[j]!.p);
+  for (let pass = 0, again = true; again && pass < 100; pass++) {
+    again = false;
+    for (let i = 1; i < last; i++) for (let j = i + 1; j <= last; j++) {
+      if (d(i - 1, j) + d(i, j + 1) - d(i - 1, i) - d(j, j + 1) < -1e-9) { seq.splice(i, j - i + 1, ...seq.slice(i, j + 1).reverse()); again = true; }
+    }
+  }
+  const order = seq.filter(s => s.at >= 0).map(s => stops[s.at]!);
+  if (backwards) order.reverse();
+  const afterNm = total(order);
+  return afterNm < beforeNm - 1e-9 ? {ids: order.map(s => s.id), changed: true, beforeNm, afterNm} : same;
 }
 
 // The shared JavaScript modules type their option bags from their defaults, too narrowly to call with real values.
@@ -234,6 +274,8 @@ export function createPlanner(deps: PlannerDeps) {
   const allowResearch = signal(false), search = signal(''), loading = signal(false), portsReady = signal(false), portsFailed = signal(false);
   const filters = signal<Filters>({species: 'reef', limit: 20, depth: 300, scope: 'region', port: '', distance: deps.reachNm ?? 20});
   const ports = signal<Port[]>([]);
+  /** SC2052-09: what the last Shorter run order tap said when it moved nothing, tied to the `ids` array it was about. */
+  const shorterNote = signal<{ids: string[]; key: 'planner.order.shorterSame' | 'planner.order.shorterRefused'} | null>(null);
   const scopeStatus = signal(''), actionStatus = signal(''), storageNote = signal(storage ? STORAGE_OK : STORAGE_OFF);
   /** Bumped when the screen's age or the map may have changed (open, boundaries, each minute while open). */
   const tick = signal(0);
@@ -335,11 +377,8 @@ export function createPlanner(deps: PlannerDeps) {
     const {trip_rank, trip_fit, trip_species, distance_nm, distance_basis, distance_why, ...plain} = t;
     return {...plain, ...(trip_rank ? {name: t.label || t.id} : {})};
   };
-  function moveStop(id: string, direction: 'up' | 'down'): boolean {
-    const d = draft.value, at = d.ids.indexOf(id), to = at + (direction === 'up' ? -1 : 1);
-    if (disposed || restorePending.value || id.startsWith('user:launch-') || at < 0 || to < 0 || to >= d.ids.length) return false;
-    const ids = [...d.ids];
-    [ids[at], ids[to]] = [ids[to]!, ids[at]!];
+  /** The one manual-order commit (Move up/down, Shorter run order): unrank, keep the evidence, persist and mark `manualOrder`. */
+  function commitOrder(d: Draft, ids: string[]): void {
     revision++;
     batch(() => {
       unrank();
@@ -347,7 +386,34 @@ export function createPlanner(deps: PlannerDeps) {
       persist({...d, ids, rankedPlan: d.rankedPlan ? {...d.rankedPlan, manualOrder: true} : null});
       scopeStatus.value = 'Your own stop order.';
     });
+  }
+  function moveStop(id: string, direction: 'up' | 'down'): boolean {
+    const d = draft.value, at = d.ids.indexOf(id), to = at + (direction === 'up' ? -1 : 1);
+    if (disposed || restorePending.value || id.startsWith('user:launch-') || at < 0 || to < 0 || to >= d.ids.length) return false;
+    const ids = [...d.ids];
+    [ids[at], ids[to]] = [ids[to]!, ids[at]!];
+    commitOrder(d, ids);
     return true;
+  }
+  /**
+   * SC2052-09: only when tapped. The home port (when listed) is where the legs start and the launch ramp (when chosen) is where they end;
+   * with neither, the first stop stays first. Never adds, drops or re-screens a stop: an unresolved, unplaced or repeated stop, a pending
+   * restore or an unresolved launch refuses without touching the plan. Returns what happened.
+   */
+  function shortenRun(): 'moved' | 'same' | 'refused' {
+    const result = tryShortenRun(), at = draft.peek().ids;
+    shorterNote.value = result === 'moved' ? null : {ids: at, key: result === 'same' ? 'planner.order.shorterSame' : 'planner.order.shorterRefused'};
+    return result;
+  }
+  function tryShortenRun(): 'moved' | 'same' | 'refused' {
+    const d = draft.value, byId = new Map(selected().map(t => [t.id, t])), stops = d.ids.map(id => byId.get(id));
+    if (disposed || restorePending.value || launchUnresolved() || d.ids.length < 2 || new Set(d.ids).size !== d.ids.length
+      || !stops.every(t => t && Number.isFinite(t.latitude) && Number.isFinite(t.longitude))) return 'refused';
+    const port = portsFailed.value ? undefined : ports.value.find(p => p.id === filters.value.port), home = port ? {latitude: port.match[0], longitude: port.match[1]} : null;
+    const ramp = d.launchId ? launch.value : undefined, run = shorterRunOrder(stops as Target[], {start: home, end: ramp ?? home});
+    if (!run.changed) return 'same';
+    commitOrder(d, run.ids);
+    return 'moved';
   }
   function setContourTracks(on: boolean): void {
     contourTracks.value = on;
@@ -582,7 +648,15 @@ export function createPlanner(deps: PlannerDeps) {
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
-  const routing = signal(false), routeStatus = signal('');
+  const routing = signal(false), routeView = signal<RouteStatus>('');
+  /** The status line as English text, exactly as it was written before the page worded it itself (check time as stored, refusal message as thrown); the page reads `routeView`. */
+  const routeStatus = computed(() => {
+    const s = routeView.value;
+    if (typeof s === 'string') return s;
+    return s.kind === 'checked' ? `Boundary check: ${s.checkedAt} · ${s.nm.toFixed(1)} nm planning route. ${ROUTE_WARNING}` : s.message;
+  });
+  /** A refusal as data: a known one keeps its code and variables, any other keeps its message as written. */
+  const refusedStatus = (error: unknown): RouteStatus => ({kind: 'error', message: (error as Error).message, ...(error instanceof RouteError ? {refusal: error.refusal} : {})});
   /** The one route calculation: the download and Show route on Chart each call it for themselves, with every export gate. */
   async function buildPlanningRoute() {
     const key = fileKey();
@@ -590,7 +664,7 @@ export function createPlanner(deps: PlannerDeps) {
     await exportFile('gpx');
     await landWater(region.id, selected());
     const context = await routeContext(region.id);
-    if (disposed || key !== fileKey()) throw Error('Plan changed while routing. Try again.');
+    if (disposed || key !== fileKey()) throw new RouteError('Plan changed while routing. Try again.', {code: 'planChanged'});
     buildExport(request());
     const stops = selected();
     // The optional launch is stored last by the legacy waypoint export, but is
@@ -603,14 +677,14 @@ export function createPlanner(deps: PlannerDeps) {
   }
   async function exportRouteFile(): Promise<File> {
     const {r} = await buildPlanningRoute();
-    routeStatus.value = `Boundary check: ${r.checkedAt} · ${r.nm.toFixed(1)} nm planning route. NOT FOR NAVIGATION.`;
+    routeView.value = {kind: 'checked', checkedAt: r.checkedAt, nm: r.nm};
     return new File([r.gpx], `SkipperCast-${region.id}-${draft.value.date || today}-planning-route.gpx`, {type:'application/gpx+xml'});
   }
   async function deliverRoute(): Promise<void> {
     if (disposed || routing.value) return;
-    routing.value = true; routeStatus.value = '';
+    routing.value = true; routeView.value = '';
     try { const file = await exportRouteFile(); if (!disposed) save(file); }
-    catch (error) { if (!disposed) routeStatus.value = (error as Error).message; }
+    catch (error) { if (!disposed) routeView.value = refusedStatus(error); }
     finally { routing.value = false; }
   }
   // SC1407-15: Show route on Chart. The route is drawn from its own calculation (buildPlanningRoute) and lives in memory only, owned here.
@@ -641,7 +715,7 @@ export function createPlanner(deps: PlannerDeps) {
   /** Remove the line and everything that watches it. `say`: tell the person it went. */
   function dropRoute(say = true): void {
     routeGen++;
-    if (routeLive && say && !disposed) routeStatus.value = t('planner.route.removed', language.peek());
+    if (routeLive && say && !disposed) routeView.value = t('planner.route.removed', language.peek());
     routeLive = null; stopRouteWatch(); clearPlanningRoute(routeToken);
   }
   /** Minute health check, resume from background and the first millisecond past checked_at + 36 h: no request, no new route search. */
@@ -670,7 +744,7 @@ export function createPlanner(deps: PlannerDeps) {
     if (disposed || routing.value) return false;
     dropRoute(false);
     const attempt = ++routeAttempt, mine = routeGen, key = routeKey();
-    routing.value = true; routeStatus.value = '';
+    routing.value = true; routeView.value = '';
     try {
       const {r, context, screenKey} = await buildPlanningRoute();
       const water = landWaterState.peek();
@@ -683,24 +757,29 @@ export function createPlanner(deps: PlannerDeps) {
       routeHealth = setInterval(checkRoutePreview, 60_000); (routeHealth as {unref?: () => void}).unref?.();
       const events = pageEvents();
       if (events) { events.addEventListener('visibilitychange', checkRoutePreview); routeWatching = true; }
-      routeStatus.value = `Boundary check: ${r.checkedAt} · ${r.nm.toFixed(1)} nm planning route. ${ROUTE_WARNING}`;
+      routeView.value = {kind: 'checked', checkedAt: r.checkedAt, nm: r.nm};
       deps.nav.showMap(); choosePresentation('chart'); deps.nav.fit?.(r.points);
       return true;
     } catch (error) {
       dropRoute(false);
-      if (!disposed && attempt === routeAttempt) routeStatus.value = (error as Error).message;
+      if (!disposed && attempt === routeAttempt) routeView.value = refusedStatus(error);
       return false;
     } finally { if (attempt === routeAttempt) routing.value = false; }
   }
   const preparing = signal(false);
-  let prepared: {file: File; key: string; at: number; hash?: string} | null = null, pending: Promise<void> | null = null, disposed = false, attempted = '';
+  // `contours`: the review_expires day of the contour file the bytes were built with ('' when undated); absent without contour tracks.
+  let prepared: {file: File; key: string; at: number; hash?: string; contours?: string} | null = null, pending: Promise<void> | null = null, disposed = false, attempted = '';
   const fileKey = (): string => JSON.stringify([draft.value, tick.value, allowResearch.value, contourTracks.value, contourFile.value, filtersDirty.value, restorePending.value, launch.value, activeRegion.value]);
+  const contourReview = (): {contours?: string} => {
+    const file = contourFile.peek(), expires = contourTracks.peek() && file && 'collection' in file && file.collection ? (file.collection as {provenance?: {review_expires?: unknown}}).provenance?.review_expires ?? '' : null;
+    return expires === null ? {} : {contours: typeof expires === 'string' ? expires : ''};
+  };
   function prepare(): Promise<void> {
     if (pending) return pending;
-    const key = fileKey(); attempted = key; preparing.value = true; prepared = null;
+    const key = fileKey(), review = contourReview(); attempted = key; preparing.value = true; prepared = null;
     // A result for a key that has since changed is dropped and its key forgotten, so a plan that returns to it is prepared again.
     const stale = (): boolean => { if (disposed || key === fileKey()) return disposed; if (attempted === key) attempted = ''; return true; };
-    pending = exportFile('gpx').then(file => { if (!stale()) prepared = {file, key, at: now().getTime(), hash: canonical?.publication.export_sha256}; })
+    pending = exportFile('gpx').then(file => { if (!stale()) prepared = {file, key, at: now().getTime(), hash: canonical?.publication.export_sha256, ...review}; })
       .catch(error => { if (!stale()) actionStatus.value = (error as Error).message; })
       .finally(() => { pending = null; preparing.value = false; });
     return pending;
@@ -725,9 +804,14 @@ export function createPlanner(deps: PlannerDeps) {
       prepared = null;
       return prepare().then(() => { if (prepared) actionStatus.value = 'File ready — tap Share again'; });
     }
-    const file = prepared.file;
+    // The plan key does not change at UTC midnight: contour tracks prepared before their review lapsed are discarded, not handed over after it.
+    const c = prepared.contours, file = prepared.file;
+    const contoursLapsed = (): boolean => c !== undefined && !(/^\d{4}-\d{2}-\d{2}$/.test(c) && now().toISOString().slice(0, 10) <= c);
+    const refuseLapsed = (): void => { if (prepared?.file === file) prepared = null; actionStatus.value = CONTOURS_LAPSED; };
+    if (contoursLapsed()) { refuseLapsed(); return Promise.resolve(); }
     const fallback = (error: unknown): void => {
       if ((error as Error).name === 'AbortError') { actionStatus.value = 'Share cancelled. Your plan is retained.'; return; }
+      if (contoursLapsed()) { refuseLapsed(); return; }
       save(file); actionStatus.value = `This browser could not open the share sheet, so the file was downloaded: ${file.name}.`;
     };
     try {
@@ -888,9 +972,9 @@ export function createPlanner(deps: PlannerDeps) {
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
     alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
     floatPlan, floatBackAuto, floatErrors, setFloatPlanOpen, editFloatPlan, reseedFloatBackBy,
-    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
+    setFilter, edit, editTiming, setLayer, contourTracks, setContourTracks, toggleSpot, moveStop, shortenRun, shorterNote, shorterRunOrder, orderedStops, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
-    routing, routeStatus, exportRouteFile, deliverRoute, showRouteOnChart, checkRoutePreview,
+    routing, routeStatus, routeView, exportRouteFile, deliverRoute, showRouteOnChart, checkRoutePreview,
     /** Stop subscriptions and invalidate in-flight ranking and restore. */
     dispose: () => { disposed = true; revision++; dropRoute(false); stopRouteKey(); stopRouteWater(); pageEvents()?.removeEventListener('skippercast:boundaries', onBoundaries); floatGen++; floatPlan.value = emptyFloatPlan(); floatOpen.value = false; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
   };
