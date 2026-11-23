@@ -68,6 +68,20 @@ test('shared target/time remain exact while later-day, stale and missing forecas
   if(query.includes('unlisted')){assert.match(html,/target unlisted/);assert.match(html,/2026-10-11T12:00:00.000Z/);}
  }
 });
+test('the readable report labels the selected hour and says plainly when a source publishes no issue time or sample date',async()=>{
+ const beach=sampledAt=>({areaId:'central',name:'Beach',status:'Rain Advisory',...(sampledAt?{sampledAt}:{}),fetchedAt:'2026-10-07T11:50:00Z',url:'https://example.com/'});
+ const text=async data=>await(await serveCoastPage(request('/report'),options(data))).text();
+ const missing=await text({...report,sources:[{...report.sources[0],issuedAt:undefined}],waterQuality:[beach()]});
+ assert.match(missing,/<p>Selected hour: <time datetime="2026-10-07T12:00:00.000Z">Oct 7, 2026, 5:00 AM PDT<\/time> \(<code>2026-10-07T12:00:00.000Z<\/code>\)\.<\/p>/);
+ assert.doesNotMatch(missing,/Selected UTC hour/);
+ assert.match(missing,/forecast · ok\. Issue time not published by the source; retrieved <time datetime="2026-10-07T11:50:00Z">/);
+ assert.match(missing,/Rain Advisory · sample date not published · retrieved <time datetime="2026-10-07T11:50:00Z">/);
+ assert.doesNotMatch(missing,/Issued Unknown time|sample Unknown time/);
+ const present=await text({...report,waterQuality:[beach('2026-10-07T09:00:00Z')]});
+ assert.match(present,/forecast · ok\. Issued <time datetime="2026-10-07T10:00:00Z">Oct 7, 2026, 3:00 AM PDT<\/time>; retrieved <time datetime="2026-10-07T11:50:00Z">Oct 7, 2026, 4:50 AM PDT<\/time>\./);
+ assert.match(present,/Rain Advisory · sample <time datetime="2026-10-07T09:00:00Z">Oct 7, 2026, 2:00 AM PDT<\/time> · retrieved <time datetime="2026-10-07T11:50:00Z">/);
+ assert.doesNotMatch(present,/not published/);
+});
 test('nearshore original sampling remains visible only within supported first/last range',async()=>{
  for(const [hour,present] of [['11',false],['13',true],['16',false]]){
   const html=await(await serveCoastPage(request('/report?hour=2026-10-07T'+hour+':00Z'),options())).text();
