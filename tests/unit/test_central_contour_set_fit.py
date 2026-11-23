@@ -121,8 +121,44 @@ def test_one_more_byte_refuses_only_that_role(tmp_path, inputs, over):
     row = report['candidates'][0]
     assert not row['fits'] and set(row['errors']) == {over}
     for role, cap in [('full', FULL_CAP), ('overview', OVERVIEW_CAP)]:
-        assert row['files'][role]['bytes'] == cap + (role == over)
-        assert row['files'][role]['within_cap'] is (role != over)
+        if role == over:
+            assert role not in row['files']  # Never claim a binding for bytes we did not hash.
+            assert row['errors'][role] == f'{cap + 1} bytes exceeds {cap}-byte cap'
+        else:
+            assert row['files'][role]['bytes'] == cap
+            # The exact cap is known only after validating the full file.
+            if over == 'overview':
+                assert row['files'][role]['within_cap'] is True
+
+
+@pytest.mark.parametrize('role,cap', [('full', FULL_CAP), ('overview', OVERVIEW_CAP)])
+def test_sparse_oversize_is_not_read_and_later_pick_survives(tmp_path, inputs, monkeypatch, capsys, role, cap):
+    # A late cap check can read/hash/decode a huge malformed file before ever
+    # reaching the requested pair. Refuse by size without opening its contents.
+    region, _, _, argv = inputs
+    oversize = _candidate(tmp_path, 'oversize', _pair(region, dc.FT_V2))
+    path = tmp_path.resolve() / oversize[role]['path']
+    with path.open('wb') as stream:
+        stream.truncate(cap + 1)
+    passing = _candidate(tmp_path, 'passing', _pair(region, dc.FT_V3))
+    _write(tmp_path, 'manifest.json', {'candidates': [oversize, passing]})
+
+    real_open = Path.open
+
+    def guarded_open(self, *args, **kwargs):
+        assert self != path, 'oversized candidate reached a content open'
+        return real_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'open', guarded_open)
+    assert fit.main([*argv, '--pick', 'passing']) == 0
+    report = json.loads(capsys.readouterr().out)
+    refused, accepted = report['candidates']
+    assert not refused['fits'] and set(refused['errors']) == {role}
+    assert refused['errors'][role] == f'{cap + 1} bytes exceeds {cap}-byte cap'
+    assert accepted['fits']
+    assert report['pickup'] == {
+        'candidate': 'passing', 'sha256': _hashes(passing), 'binding': 'external-pin-not-R8-proven',
+    }
 
 
 def test_valid_alternate_overview_cannot_replace_accepted_bytes(tmp_path, inputs):
