@@ -84,19 +84,22 @@ function marineAlertsMarkup(report:Report,areaId:string,at:Date,now:Date):string
  const source=report.sources.find(item=>item.id==='nws-alerts'),age=now.getTime()-fieldClock(source?.fetchedAt);
  // Match the daily brief's alert retrieval window, measured against now, not the selected hour.
  if(source?.outcome!=='ok'||!Number.isFinite(age)||age<-HOUR||age>2*HOUR)return unavailable;
- // /alerts/active is a snapshot, not an archive of alerts that expired before retrieval.
- if(at.getTime()<fieldClock(source.fetchedAt))return heading+'<p class="gap">Marine alert source unavailable for this past hour. The active-alert snapshot cannot establish historical coverage. Check the official forecast before planning.</p>';
+ // /alerts/active is a snapshot, not an archive: it never establishes coverage of any instant before fetchedAt.
+ const fetched=fieldClock(source.fetchedAt),hourStart=at.getTime();
+ if(hourStart+HOUR<=fetched)return heading+'<p class="gap">Marine alert source unavailable for this past hour. The active-alert snapshot cannot establish historical coverage. Check the official forecast before planning.</p>';
  if(report.alerts.some(alert=>!alert||typeof alert.event!=='string'||!alert.event.trim()||
   (alert.areaIds!=null&&(!Array.isArray(alert.areaIds)||alert.areaIds.some(id=>typeof id!=='string')))))return unavailable;
- const selected=at.getTime(),alerts=report.alerts.filter(alert=>{
+ // Hour in progress at retrieval: only alerts valid at fetchedAt are known; the hour start is not covered.
+ const inProgress=hourStart<fetched,instant=inProgress?fetched:hourStart,alerts=report.alerts.filter(alert=>{
   if(alert.areaIds&&!alert.areaIds.includes(areaId))return false;
   const effective=fieldClock(alert.effective),expires=fieldClock(alert.expires);
   // Unknown validity bounds do not silently exclude a warning.
-  return (Number.isNaN(effective)||effective<=selected)&&(Number.isNaN(expires)||expires>selected);
+  return (Number.isNaN(effective)||effective<=instant)&&(Number.isNaN(expires)||expires>instant);
  });
  const check=`<p class="small">${sourceLink(source.url,source.label)} checked ${stamp(source.fetchedAt)}.</p>`;
- return heading+(alerts.length?alerts.map(alert=>`<article><h3>${esc(alert.event)}</h3><p>Source: ${sourceLink(alert.url,source.label)}. Effective ${stamp(alert.effective)}; expires ${stamp(alert.expires)}.</p></article>`).join(''):
-  '<p>No active marine alerts were reported for this area and selected hour.</p>')+check;
+ const list=alerts.map(alert=>`<article><h3>${esc(alert.event)}</h3><p>Source: ${sourceLink(alert.url,source.label)}. Effective ${stamp(alert.effective)}; expires ${stamp(alert.expires)}.</p></article>`).join('');
+ if(inProgress)return `<h2>Marine alerts active at retrieval, ${stamp(source.fetchedAt)}</h2>`+(alerts.length?list:`<p>No marine alerts were active when the source was retrieved at ${stamp(source.fetchedAt)}.</p>`)+`<p class="gap">Alerts that ended or were cancelled between ${stamp(at.toISOString())} and this retrieval are not shown; the active-alert snapshot cannot establish coverage of the start of the selected hour.</p>`+check;
+ return heading+(alerts.length?list:'<p>No active marine alerts were reported for this area and selected hour.</p>')+check;
 }
 function reportMarkup(report:Report,selection:ReadableSelection,now:Date):string{
  const context=selection.context,binding=context&&resolveReportBinding(context);if(!context||!binding)return gapMarkup(selection);
