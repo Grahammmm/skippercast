@@ -75,7 +75,7 @@ def _window(grid, bounds):
 def _open_grid(stack, path):
     if not path.is_file():
         raise ValueError(f"Expected a local raster file: {path.name}")
-    grid = stack.enter_context(rasterio.open(path, driver="GTiff"))
+    grid = stack.enter_context(rasterio.open(path, driver="GTiff", GEOREF_SOURCES="INTERNAL"))
     t = grid.transform
     if grid.crs != CRS or grid.count != 1 or t.b != 0 or t.d != 0 or t.a <= 0 or t.e >= 0:
         raise ValueError(f"{path.name} must be a north-up, single-band {CRS} raster")
@@ -182,7 +182,9 @@ def build(region_path, coarse_path, water_path, mosaic, selection_path, output, 
     if manifest["segment"] != region["id"] or selection["region"] != region["id"]:
         raise ValueError("Region, mosaic and selection must identify the same region")
     water = _water(water_path).intersection(bounds.buffer(BUFFER_M))
-    with ExitStack() as stack:
+    # Only the TIFFs are attested. Keep sidecar lookup disabled until all
+    # datasets are closed; GDAL can look up external masks during pixel reads.
+    with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", GDAL_PAM_ENABLED="NO"), ExitStack() as stack:
         coarse = _open_grid(stack, coarse_path)
         elevation = _open_grid(stack, mosaic / "elevation.tif")
         contributor = _open_grid(stack, mosaic / "contributor.tif")
