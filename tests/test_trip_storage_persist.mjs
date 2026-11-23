@@ -4,7 +4,7 @@ import './helpers/spanish-ready.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-const {keepSaved, storageLine, savePackKept, KEEP_WORDS, estimateWords} = await import('../web/trip.ts');
+const {keepSaved, storageLine, savePackKept, KEEP_WORDS, keepWords, estimateWords} = await import('../web/trip.ts');
 
 function stub({persisted = false, grant = true, missing = [], throws = false} = {}) {
   const calls = {persist: 0, persisted: 0, estimate: 0};
@@ -57,6 +57,22 @@ test('API missing or throwing: unavailable, no words, no estimate line', async (
   assert.equal(await storageLine(stub({throws: true}).nav), null);
   const bad = {storage: {persist: async () => { throw new Error('x'); }, persisted: async () => false}};
   assert.equal(await keepSaved(bad), 'unavailable');
+});
+
+// SC2052-06 contract: each browser answer has its own Spanish words (looked up by the Keep key at render time, not a translated English
+// tail), "unavailable" has none, and English stays the exact original bytes; a swapped or shared id fails the distinctness check.
+test('keep words: three distinct Spanish answers, none for unavailable, English bytes unchanged', () => {
+  const es = ['agreed', 'already', 'refused'].map(k => keepWords(k, 'es'));
+  assert.deepEqual(es, [
+    'Este navegador aceptó conservar los paquetes guardados.',
+    'Este navegador ya conserva los paquetes guardados.',
+    'Este navegador puede borrar los paquetes guardados cuando falte espacio.',
+  ]);
+  assert.equal(keepWords('unavailable', 'es'), '');
+  assert.equal(keepWords('unavailable', 'en'), '');
+  assert.deepEqual(Object.keys(KEEP_WORDS), ['agreed', 'already', 'refused', 'unavailable']);
+  assert.equal(KEEP_WORDS.already, 'This browser already keeps saved packs.');
+  for (const k of Object.keys(KEEP_WORDS)) assert.equal(keepWords(k), KEEP_WORDS[k]);
 });
 
 test('the refused words and the estimate line', async () => {

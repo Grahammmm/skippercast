@@ -19,9 +19,20 @@ def _not_json(value):
     raise ValueError(f'{value} is not JSON')
 
 
+def _unique_census_object(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise BindError(f'duplicate census JSON key: {key!r}')
+        obj[key] = value
+    return obj
+
+
 def _validate_census(data, region):
     try:
-        doc = json.loads(data, parse_constant=_not_json)
+        doc = json.loads(data, parse_constant=_not_json, object_pairs_hook=_unique_census_object)
+    except BindError:
+        raise
     except (ValueError, RecursionError) as exc:
         raise BindError('source is not valid JSON') from exc
     summary = doc.get('summary') if isinstance(doc, dict) else None
