@@ -8,12 +8,13 @@
 import {useEffect, useId, useState} from 'preact/hooks';
 import type {Series} from '../../../packages/coast/src/charts/series.ts';
 import type {Alert} from '../../../packages/coast/src/types.ts';
+import {hazardEnd, hazardStart} from '../../../packages/coast/src/alert-window.ts';
 import {alertTimeSpan} from '../../alert-time.ts';
 import {daylightText} from '../../conditions-daylight.ts';
 import {Segmented} from '../../ui/Chip.tsx';
-import {currentBrief, ensureRegionalForecast, regionalForecast} from '../../brief/Brief.tsx';
+import {currentBrief, ensureRegionalForecast, ForecastFailure, regionalForecast, regionalForecastState, verdictEpoch} from '../../brief/Brief.tsx';
 import {coastBinding, coastData, coastReport} from '../../coast-data.ts';
-import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastRows, readingsAt, sourceClocks, type Family} from '../../conditions.ts';
+import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastRows, readingsAt, sourceClocks, type Family, type ForecastFailureReason} from '../../conditions.ts';
 import {CDFW_REGULATIONS} from '../../map/habitat.ts';
 import {disagreements, sentence} from '../../model-disagreement.ts';
 import disagreeStyles from './model-disagreement.css?url';
@@ -39,6 +40,19 @@ import {conditionsCopy, fixed, localTime} from '../../view-copy.ts';
 function useForecast(): void {
   const id = region.value, near = regionInfo.value?.id === id ? regionInfo.value.center : null;
   useEffect(() => { if (id) void ensureRegionalForecast(id, near); }, [id, near?.[0], near?.[1]]);
+}
+
+/**
+ * SCB2222-09: the failure code of the selected region's forecast read at its current point, or null. Only a settled failure of that exact
+ * request, or that request still pending after the verdict epoch gave up on it (a timeout), counts: loading, loaded (even with no model
+ * rows), absent and another region's or point's state are not failures. The key is the one ensureRegionalForecast builds.
+ */
+function forecastFailure(): {reason?: ForecastFailureReason; status?: number} | null {
+  const id = region.value, near = regionInfo.value?.id === id ? regionInfo.value.center : null, s = regionalForecastState.value;
+  if (!id || s.region !== id || s.key !== `${id}|${near?.join(',') ?? ''}`) return null;
+  if (s.state === 'failed') return {reason: s.reason, ...s.status === undefined ? {} : {status: s.status}};
+  const epoch = verdictEpoch.value;
+  return s.state === 'loading' && epoch?.region === id && epoch.parts.forecast === s.key && epoch.inputs.forecast.state === 'timedout' ? {reason: 'timeout'} : null;
 }
 
 /** Ask for the local coast report while the view is shown; a report left in error is asked again on return. */
@@ -99,7 +113,7 @@ function tideHeight(heightFt: number, datum: string | null, height: Units['heigh
 
 /** SC2252-07: one marine alert, its published event linked to the source, its span in the region zone and its headline as the description. */
 function AlertLine({alert, tz, lang}: {alert: Alert; tz: string; lang: Language}) {
-  const id = useId(), span = alertTimeSpan(alert.effective, alert.expires, tz, lang), described = alert.headline.trim() ? id : undefined;
+  const id = useId(), span = alertTimeSpan(hazardStart(alert), hazardEnd(alert), tz, lang), described = alert.headline.trim() ? id : undefined;
   return <li aria-describedby={described}><a href={alert.url} target="_blank" rel="noopener" aria-describedby={described}>{alert.event}</a>
     {span ? ` · ${span}` : null}{described ? <span id={id} class="app-visually-hidden">{alert.headline}</span> : null}</li>;
 }
@@ -118,7 +132,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
   const span = conditionsSpan(now);
   const local = report && binding ? coastRows(report, binding.areaId, now) : {rows: [], site: null};
   const rows = displayRows(copy.rows(conditionsRows(forecastRows(forecast, family, span.start), local.rows)), choice);
-  const brief = currentBrief(now);
+  const brief = currentBrief(now), failure = forecastFailure();
   const clocks = sourceClocks(forecast, family, report && binding ? report : null, local.site);
   const notes = PROFILE_TABLE[profile.value], disagree = forecast ? disagreements(forecast, now, tz) : [];
   return (
@@ -129,6 +143,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
       </header>
       {disagree.length ? <><link rel="stylesheet" href={disagreeStyles} />
         <ul class="app-conditions-disagree" aria-label={t('conditions.disagree.aria', lang)}>{disagree.map(d => <li key={d.date}>{sentence(d, now, tz, lang)}</li>)}</ul></> : null}
+      {failure ? <ForecastFailure as="p" failure={failure} /> : null}
       <PortAlert now={now} tz={tz} />
       <dl class="app-conditions-now" aria-label={t('conditions.now.aria', lang, {time: timeText(selected, tz, true, lang)})}>
         {readingsAt(rows, selected).map(r => <div key={r.label}><dt class="ui-eyebrow">{r.label}</dt><dd class="ui-mono">{value(r.value, r.unit, lang)}</dd></div>)}
@@ -150,7 +165,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
         </ul>
       ) : <p class="app-empty">{t('conditions.tide.none', lang, {day: dayName(state.at, tz, lang) || t('conditions.tide.day', lang)})}</p>}
       <p class="app-conditions-daylight">{daylightText(brief?.date === state.day ? brief : currentBrief(now, selected), state.day, tz, lang)}</p>
-      <p class="app-conditions-moon">{moonLine(state.day, tz)}</p>
+      <p class="app-conditions-moon">{moonLine(state.day, tz, lang)}</p>
       <h3 class="ui-eyebrow">{t('conditions.before', lang)}</h3>
       <ul class="app-conditions-notes">
         <li>{lang === 'en' ? notes.caveat : copy.caveat(profile.value)}</li>

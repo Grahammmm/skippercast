@@ -324,6 +324,40 @@ class UnnamedAlerts(TestCase):  # SC2007-03: no readable event name is kept unde
         self.assertEqual({s["id"]: s["outcome"] for s in built["sources"]}["nws-alerts"], "ok")
 
 
+class HazardTimes(TestCase):  # SCB2222-02: onset/ends (the hazard) travel beside effective/expires (the message)
+    # Contract: a reader that wants the hazard window finds it in the report. Bug caught: the producer keeping only the
+    # message's issue and expiry, so a High Surf Advisory that ends days after its message expires reads as over.
+    MORRO_BAY = {"event": "High Surf Advisory", "effective": "2026-11-21T19:06:00-08:00", "onset": "2026-11-22T06:00:00-08:00",
+                 "expires": "2026-11-22T09:30:00-08:00", "ends": "2026-11-26T15:00:00-08:00"}
+    ZONES, feature, run_alerts = UnnamedAlerts.ZONES, UnnamedAlerts.feature, UnnamedAlerts.run_alerts
+
+    def row(self, **over):
+        (row,) = self.run_alerts(self.feature(**{**self.MORRO_BAY, **over}))
+        return row
+
+    def test_all_four_times_are_carried_as_normalised_instants(self):
+        row = self.row()
+        self.assertEqual((row["effective"], row["onset"], row["expires"], row["ends"]), (
+            "2026-11-22T03:06:00.000Z", "2026-11-22T14:00:00.000Z", "2026-11-22T17:30:00.000Z", "2026-11-26T23:00:00.000Z"))
+        self.assertNotIn("unreadableHazardTime", row)
+
+    def test_absent_or_null_hazard_times_are_null_so_readers_fall_back_to_the_message(self):
+        absent = {k: v for k, v in self.MORRO_BAY.items() if k not in ("onset", "ends")}
+        (row,) = self.run_alerts(self.feature(**absent))
+        self.assertEqual((row["onset"], row["ends"]), (None, None))
+        self.assertEqual((row["effective"], row["expires"]), ("2026-11-22T03:06:00.000Z", "2026-11-22T17:30:00.000Z"))
+        row = self.row(onset=None, ends="")
+        self.assertEqual((row["onset"], row["ends"]), (None, None))
+        self.assertNotIn("unreadableHazardTime", row)
+
+    def test_a_present_but_unreadable_hazard_time_is_marked_not_mistaken_for_absent(self):
+        row = self.row(onset="soon", ends=5)
+        self.assertEqual((row["onset"], row["ends"], row["unreadableHazardTime"]), (None, None, ["onset", "ends"]))
+        self.assertEqual(self.row(ends="never")["unreadableHazardTime"], ["ends"])
+        self.assertNotIn("soon", repr(self.row(onset="soon")))  # the raw bad value is not carried
+        self.assertEqual(self.row(onset="soon")["effective"], "2026-11-22T03:06:00.000Z")  # message times stay as read
+
+
 class Catches(TestCase):
     def test_trips_are_checked_against_their_day_receipt_and_window(self):
         now = cr._ms("2026-10-08T21:00:00Z")
