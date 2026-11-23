@@ -149,6 +149,10 @@ def _fetch_history(repo, history):
     # Borrow local objects read-only, so merge-base can also classify a divergent commit.
     (history / 'objects/info/alternates').write_bytes(objects + b'\n')
     _git(history, 'remote', 'add', 'origin', '--', origin)
+    _refresh_history(history)
+
+
+def _refresh_history(history):
     _git(history, '-c', 'http.followRedirects=false', 'fetch', 'origin', 'main')
 
 
@@ -181,7 +185,7 @@ def _contours_check(site, region, expected):
                 status='PASS' if reason in ('identical', 'none-merged') else 'FAIL', reason=reason)
 
 
-def _check_deploy(site, history, merge):
+def _check_deploy(site, history, merge, refresh=None):
     try:
         data = site.metadata('deploy.json')
         if data is None:
@@ -191,15 +195,24 @@ def _check_deploy(site, history, merge):
         return None, _failure('deploy', exc.reason)
     except ValueError:
         return None, _failure('deploy', 'invalid')
-    return deployed, live_deploy.deploy_verdict(merge, deployed, lambda a, b: _is_ancestor(history, a, b))
+    def verdict():
+        return live_deploy.deploy_verdict(merge, deployed, lambda a, b: _is_ancestor(history, a, b))
+
+    check = verdict()
+    if check['reason'] == 'unknown-commit' and refresh is not None:
+        # While waiting, main may have advanced after the history snapshot and
+        # deployed a descendant of the merge. Refetch once and judge the same receipt again.
+        refresh()
+        check = verdict()
+    return deployed, check
 
 
-def _wait_for_deploy(site, history, merge, polls, interval, sleeper):
+def _wait_for_deploy(site, history, merge, polls, interval, sleeper, refresh):
     deployed = None
     for attempt in range(polls):
         if attempt:
             sleeper(interval)
-        deployed, check = _check_deploy(site, history, merge)
+        deployed, check = _check_deploy(site, history, merge, refresh)
         # Only a proven older deployment is pending. Other failures stay distinct.
         if check['reason'] != 'stale':
             return deployed, check
@@ -207,13 +220,14 @@ def _wait_for_deploy(site, history, merge, polls, interval, sleeper):
 
 
 def _check(site, history, merge, key, raw, pointer, contours, *, polls, interval, sleeper):
+    refresh = None if polls is None else (lambda: _refresh_history(history))
     if polls is not None:
-        deployed, poll = _wait_for_deploy(site, history, merge, polls, interval, sleeper)
+        deployed, poll = _wait_for_deploy(site, history, merge, polls, interval, sleeper, refresh)
         if poll['status'] == 'FAIL':
             return deployed, [poll]
     # Re-read deployment in the full proof: the site may have rolled back
     # since a passing poll. Such a stale receipt is not a wait timeout.
-    deployed, check = _check_deploy(site, history, merge)
+    deployed, check = _check_deploy(site, history, merge, refresh)
     checks = [check]
     if checks[-1]['status'] == 'PASS':
         try:

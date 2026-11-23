@@ -43,6 +43,23 @@ def test_C1_only_deploy_until_ready(checkout, release, site, polls, interval, se
         'PASS', total)
 
 
+def test_C1_wait_refetches_history_for_descendant_that_appears_mid_wait(checkout, release, site):
+    """C1: A snapshot taken before the wait would call a later descendant unknown-commit, not the reviewed merge."""
+    serve_commit(site, checkout.stale)
+    descendants = []
+
+    def advance(delay):
+        (checkout.origin / 'notes').write_text('landed during the wait')
+        descendants.append(commit(checkout.origin, 'Descendant deployed during the wait'))
+        serve_commit(site, descendants[0])
+
+    assert live_check.main([*argv(checkout, site), '--wait', '2'], sleeper=advance) == 0
+    assert len(descendants) == 1 and descendants[0] not in (checkout.deployed, checkout.merge)
+    assert json.loads(checkout.report.read_bytes()) == report(
+        checkout, site, descendants[0], verified(release, 'ancestor') + [row('contours', 'none-merged', key=CONTOURS)],
+        'PASS', 10)
+
+
 def test_C1_cli_dispatch_waits_once_when_already_deployed(checkout, release, site):
     """C1: The region command must accept the minimum poll count and proceed on the first hit."""
     result = subprocess.run([sys.executable, str(ROOT / 'scripts/relief/region.py'), 'live-check',
