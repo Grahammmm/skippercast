@@ -33,10 +33,19 @@ test('withholds a ring whose edges are exactly retraced', () => {
   }
 });
 
-test('retains a nonzero ring even at subnormal scale', () => {
-  const step = Number.MIN_VALUE;
-  const ring = [[0, 0], [step, 0], [0, step], [0, 0]];
-  assert.deepEqual(decode(feature('Polygon', [ring])).features[0].geometry.coordinates, [ring]);
+test('retains nonzero area across the binary64 scale range', () => {
+  const tiny = [[0, 0], [Number.MIN_VALUE, 0], [0, Number.MIN_VALUE], [0, 0]];
+  const rings = [tiny];
+  // Rounding off-grid coordinates, or summing floating-point cross-products,
+  // can collapse these mixed-scale triangles. Closure accepts either sign of 0.
+  for (const step of [2 ** -52, 2 ** -53, Number.MIN_VALUE]) {
+    rings.push([[-180, -0], [-179, 90], [-180, step], [-180, 0]]);
+  }
+  for (const ring of rings) {
+    for (const winding of [ring, ring.toReversed()]) {
+      assert.deepEqual(decode(feature('Polygon', [winding]))?.features[0].geometry.coordinates, [winding]);
+    }
+  }
 });
 
 // A sign restriction, rewinding, or an area cutoff could discard or change a real hole.

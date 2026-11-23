@@ -116,7 +116,28 @@ def check_archive(pointer, fetch, *, budget=20, _verify_archive_hash: bool = Tru
             return rows
         record('root', root_key)
 
-        for z in range(pointer['minzoom'], pointer['maxzoom'] + 1):
+        low, high = pointer['minzoom'], pointer['maxzoom']
+        support = pointer.get('native_support_by_zoom')
+        empty_zooms = set()
+        if isinstance(support, dict):
+            for z in range(low + 1, high):
+                tier = support.get(str(z))
+                if (isinstance(tier, dict) and type(tier.get('tiles')) is int
+                        and tier['tiles'] == 0 and tier.get('sources') == []):
+                    empty_zooms.add(z)
+
+        local_zooms = set()
+        if empty_zooms:
+            # The fresh local root lists every block found in the verified archive.
+            local_root = package.decode_document((Path(temp) / 'root.json').read_bytes())
+            local_zooms = {int(name.split('/', 1)[0]) for name in local_root['chunks']}
+
+        for z in range(low, high + 1):
+            if z in empty_zooms:
+                if z in samples or z in local_zooms:
+                    record('chunk', f'{digest_prefix}{z}/', 'invalid')
+                # No object to fetch or report if both inventories corroborate the gap.
+                continue
             if z not in samples:
                 record('chunk', f'{digest_prefix}{z}/', 'missing')
                 continue
