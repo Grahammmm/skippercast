@@ -78,7 +78,8 @@ export function entranceCurrentView({brief, forecast, region, tz, now, lang = 'e
   const title = t('entrance.title', lang, {name: bar.entrance.name}), foot = t('entrance.foot', lang);
   const tideTile = brief.tiles.find(x => x.id === 'tide'), swellTile = brief.tiles.find(x => x.id === 'swell');
   // The timing reads the reviewed reference station (brief.entranceTide), never the station a visitor picked for the tide tile.
-  const ref = brief.entranceTide;
+  // A brief built without it (older test fixtures) falls back to the day's events and the tide tile, as before.
+  const ref = brief.entranceTide ?? {events: brief.tideEvents, fresh: tideTile?.state === 'fresh', source: tideTile?.source ?? 'No source'};
   const station = ref.source && ref.source !== 'No source' ? ref.source : t('entrance.station', lang);
   const basis = t('entrance.basis', lang, {station, min: CURRENT.slackMin});
   const start = times.length ? Math.min(...times) : NaN, end = times.length ? Math.max(...times) + HOUR : NaN;

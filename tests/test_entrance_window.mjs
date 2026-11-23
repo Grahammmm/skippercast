@@ -91,7 +91,7 @@ test('boat entrance line renders timing, no-window and not-judged distinctly', a
       export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
       bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
     const m = await import(pathToFileURL(out).href);
-    const brief = hs => ({profile: 'boat', bar: {entrance, hours: hs}, sunrise: null, sunset: null, windows: [], alerts: [], tiles: [], missing: [], entranceTide: {events: [], fresh: false, source: 'No source'}});
+    const brief = hs => ({profile: 'boat', bar: {entrance, hours: hs}, sunrise: null, sunset: null, windows: [], alerts: [], tiles: [], missing: []});
     const line = hs => m.render(m.h(m.EntranceLine, {brief: brief(hs), tz: 'America/Los_Angeles'}));
     assert.match(line(hours([clear, clear])), /Morro Bay entrance: Leave by 7 am · be back by 9 am/);
     const caution = line(hours([clear, 'Caution', clear]));

@@ -125,7 +125,7 @@ test('run_all_clock_surfaces_share_context: daylight, entrance, fishing hours an
   const HOUR = 3600000, t0 = Date.parse('2026-10-12T14:00:00Z');
   const hours = [0, 1, 2].map(i => ({at: new Date(t0 + i * HOUR).toISOString(), band: 'No bar flag', tide: {stage: 'flood', midEbb: false, fraction: 0.5},
     swell: {heightFt: 1, periodS: 10, basis: 'offshore', longPeriodS: null}, windAgainst: false, reasons: []}));
-  const props = {brief: {windows: [late], sunrise: '2026-10-12T06:52:00-07:00', sunset: '2026-10-12T17:21:00-07:00', bar: {entrance: entranceFor('morro-bay', 'morro-bay'), hours}, entranceTide: {events: [], fresh: false, source: 'No source'}}};
+  const props = {brief: {windows: [late], sunrise: '2026-10-12T06:52:00-07:00', sunset: '2026-10-12T17:21:00-07:00', bar: {entrance: entranceFor('morro-bay', 'morro-bay'), hours}}};
   m.species.value = 'lingcod'; m.wantedHours.value = 2; m.regsData.value = {region: rules.id, data: d};
   try {
     const withRules = meta => ({...meta, rules}), at = now => new Date(now);

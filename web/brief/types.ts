@@ -115,8 +115,9 @@ export interface Brief {
    * What the Boat entrance timing reads (web/brief/entrance-current.ts): the reviewed reference station's full list of highs and lows (not
    * limited to the day, so the hours before the first and after the last turn have a neighbour), its tide tile's freshness and its source,
    * all taken before a visitor's tide-station choice replaces `tideEvents` and the tide tile (web/tide-stations.ts). Never shown as a list.
+   * Always set by briefFromDaily; optional so hand-built briefs fall back to the day's events and the tide tile.
    */
-  readonly entranceTide: {readonly events: readonly TideEvent[]; readonly fresh: boolean; readonly source: string};
+  readonly entranceTide?: {readonly events: readonly TideEvent[]; readonly fresh: boolean; readonly source: string};
   /** The tide heights' reference level, or null if unverified. Event times can still be known. */
   readonly tideDatum: string | null;
   readonly sunrise: string | null;
