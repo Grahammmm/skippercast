@@ -136,12 +136,68 @@ test('active alert snapshot cannot establish past-hour coverage',async()=>{
  }
 });
 
+// Contract: /alerts/active is a snapshot. A selected hour that straddles retrieval is labelled as retrieval-time;
+// an hour that ended by retrieval stays refused; selected-hour wording only when the hour starts at/after retrieval.
+// Bug guarded: treating the in-progress hour as past (no alerts shown) or as covered (false "no alerts for the hour").
+const hourQuery=selected=>`?region=morro-bay&hour=${encodeURIComponent(selected)}`;
+const PAST=/Marine alert source unavailable for this past hour/,SELECTED_EMPTY=/No active marine alerts were reported for this area and selected hour/;
+const CAVEAT=/Alerts that ended or were cancelled between <time datetime="[^"]+">[^<]+<\/time> and this retrieval are not shown; the active-alert snapshot cannot establish coverage of the start of the selected hour\./;
+
+test('hour in progress at retrieval lists alerts valid at retrieval with the snapshot heading and caveat',async()=>{
+ const start=iso(-H),fetchedAt=iso(-H+17*60000);
+ const live=alert('live','High Surf Advisory',{effective:iso(-H+10*60000),expires:iso(2*H)});
+ const endsAtReceipt=alert('endsnow','Gale Warning',{effective:iso(-2*H),expires:fetchedAt});
+ const startedBefore=alert('early','Hazardous Seas Warning',{effective:iso(-H-60000),expires:iso(-H+5*60000)});
+ const otherArea=alert('away2','Dense Fog Advisory',{areaIds:['north']});
+ const noArea=alert('noarea2','Storm Warning',{areaIds:undefined,effective:'invalid',expires:null});
+ const {status,html}=await render(withAlerts([live,endsAtReceipt,startedBefore,otherArea,noArea],{fetchedAt}),hourQuery(start));
+ assert.equal(status,200);
+ assert.match(html,/<h2>Marine alerts active at retrieval, <time datetime="[^"]+">[^<]+<\/time><\/h2>/);
+ assert.ok(html.includes(`<h2>Marine alerts active at retrieval, <time datetime="${fetchedAt}">`));
+ assert.ok(html.includes(live.url));assert.ok(html.includes(noArea.url));
+ for(const gone of [endsAtReceipt,startedBefore,otherArea])assert.ok(!html.includes(gone.url),gone.id);
+ assert.match(html,CAVEAT);assert.ok(html.includes(`between <time datetime="${start}">`));
+ assert.doesNotMatch(html,/Marine alerts for the selected hour|No active marine alerts/);
+});
+
+test('empty snapshot mid-hour does not clear the hour start',async()=>{
+ const start=iso(-H),fetchedAt=iso(-H+17*60000);
+ const expired=alert('gone','Small Craft Advisory',{effective:iso(-2*H),expires:iso(-H+5*60000)});
+ for(const report of [withAlerts([],{fetchedAt}),withAlerts([expired],{fetchedAt})]){
+  const {html}=await render(report,hourQuery(start));
+  assert.match(html,/<h2>Marine alerts active at retrieval, /);
+  assert.match(html,new RegExp(`No marine alerts were active when the source was retrieved at <time datetime="${fetchedAt}">[^<]+</time>\\.`));
+  assert.match(html,CAVEAT);
+  assert.doesNotMatch(html,SELECTED_EMPTY);assert.ok(!html.includes(expired.url));
+ }
+});
+
+test('in-hour retrieval keeps the stale-source and malformed-alert guards',async()=>{
+ const start=iso(-3*H),fetchedAt=iso(-3*H+17*60000),query=hourQuery(start);
+ const stale=await render(withAlerts([A_OVERLAP],{fetchedAt}),query);
+ assert.match(stale.html,/Marine alert source unavailable for this report/);
+ assert.doesNotMatch(stale.html,/active at retrieval|No marine alerts were active/);assert.ok(!stale.html.includes(A_OVERLAP.url));
+ const malformed=await render(withAlerts([{...A_OVERLAP,areaIds:'central'}],{fetchedAt:iso(-H+17*60000)}),hourQuery(iso(-H)));
+ assert.match(malformed.html,/Marine alert source unavailable for this report/);
+ assert.doesNotMatch(malformed.html,/No marine alerts were active|No active marine alerts/);
+});
+
 test('historical cutoff uses the snapshot retrieval instant',async()=>{
- const selected=iso(-H),query=`?region=morro-bay&hour=${encodeURIComponent(selected)}`;
- const earlier=await render(withAlerts([],{fetchedAt:iso(-H+1)}),query);
+ const selected=iso(-H),query=hourQuery(selected);
+ // Hour start == retrieval: nothing before retrieval is claimed, so the selected-hour wording stays.
  const equal=await render(withAlerts([],{fetchedAt:selected}),query);
- assert.match(earlier.html,/Marine alert source unavailable for this past hour/);
- assert.match(equal.html,/No active marine alerts were reported/);
+ assert.match(equal.html,SELECTED_EMPTY);assert.doesNotMatch(equal.html,/active at retrieval/);
+ // Hour start +1 ms before retrieval is in progress at retrieval.
+ const inside=await render(withAlerts([],{fetchedAt:iso(-H+1)}),query);
+ assert.match(inside.html,/Marine alerts active at retrieval/);assert.doesNotMatch(inside.html,SELECTED_EMPTY);
+ // Hour end == retrieval and an hour that ended earlier keep the past-hour message, even with an applicable row.
+ const live=alert('pastlive','Storm Warning',{effective:iso(-3*H),expires:iso(3*H)});
+ for(const fetchedAt of [iso(0),iso(-H/2+H)]){
+  const past=await render(withAlerts([live],{fetchedAt}),query);
+  assert.match(past.html,PAST);assert.doesNotMatch(past.html,SELECTED_EMPTY);assert.doesNotMatch(past.html,/active at retrieval/);assert.ok(!past.html.includes(live.url));
+ }
+ const ended=await render(withAlerts([],{fetchedAt:iso(-H/2)}),hourQuery(iso(-2*H)));
+ assert.match(ended.html,PAST);
 });
 
 test('explicit reviewed area and selected hour, not the reference area or wall clock, drive alerts',async()=>{

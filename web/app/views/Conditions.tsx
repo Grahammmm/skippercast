@@ -11,9 +11,9 @@ import type {Alert} from '../../../packages/coast/src/types.ts';
 import {alertTimeSpan} from '../../alert-time.ts';
 import {daylightText} from '../../conditions-daylight.ts';
 import {Segmented} from '../../ui/Chip.tsx';
-import {currentBrief, ensureRegionalForecast, regionalForecast} from '../../brief/Brief.tsx';
+import {currentBrief, ensureRegionalForecast, ForecastFailure, regionalForecast, regionalForecastState, verdictEpoch} from '../../brief/Brief.tsx';
 import {coastBinding, coastData, coastReport} from '../../coast-data.ts';
-import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastPointName, forecastRows, readingsAt, sourceClocks, type Family} from '../../conditions.ts';
+import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastPointName, forecastRows, readingsAt, sourceClocks, type Family, type ForecastFailureReason} from '../../conditions.ts';
 import {CDFW_REGULATIONS} from '../../map/habitat.ts';
 import {disagreements, sentence} from '../../model-disagreement.ts';
 import disagreeStyles from './model-disagreement.css?url';
@@ -39,6 +39,19 @@ import {conditionsCopy, fixed, localTime} from '../../view-copy.ts';
 function useForecast(): void {
   const id = region.value, near = regionInfo.value?.id === id ? regionInfo.value.center : null;
   useEffect(() => { if (id) void ensureRegionalForecast(id, near); }, [id, near?.[0], near?.[1]]);
+}
+
+/**
+ * SCB2222-09: the failure code of the selected region's forecast read at its current point, or null. Only a settled failure of that exact
+ * request, or that request still pending after the verdict epoch gave up on it (a timeout), counts: loading, loaded (even with no model
+ * rows), absent and another region's or point's state are not failures. The key is the one ensureRegionalForecast builds.
+ */
+function forecastFailure(): {reason?: ForecastFailureReason; status?: number} | null {
+  const id = region.value, near = regionInfo.value?.id === id ? regionInfo.value.center : null, s = regionalForecastState.value;
+  if (!id || s.region !== id || s.key !== `${id}|${near?.join(',') ?? ''}`) return null;
+  if (s.state === 'failed') return {reason: s.reason, ...s.status === undefined ? {} : {status: s.status}};
+  const epoch = verdictEpoch.value;
+  return s.state === 'loading' && epoch?.region === id && epoch.parts.forecast === s.key && epoch.inputs.forecast.state === 'timedout' ? {reason: 'timeout'} : null;
 }
 
 /** Ask for the local coast report while the view is shown; a report left in error is asked again on return. */
@@ -118,7 +131,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
   const span = conditionsSpan(now);
   const local = report && binding ? coastRows(report, binding.areaId, now) : {rows: [], site: null};
   const rows = displayRows(copy.rows(conditionsRows(forecastRows(forecast, family, span.start), local.rows)), choice);
-  const brief = currentBrief(now);
+  const brief = currentBrief(now), failure = forecastFailure();
   const clocks = sourceClocks(forecast, family, report && binding ? report : null, local.site);
   const notes = PROFILE_TABLE[profile.value], disagree = forecast ? disagreements(forecast, now, tz) : [];
   return (
@@ -129,6 +142,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
       </header>
       {disagree.length ? <><link rel="stylesheet" href={disagreeStyles} />
         <ul class="app-conditions-disagree" aria-label={t('conditions.disagree.aria', lang)}>{disagree.map(d => <li key={d.date}>{sentence(d, now, tz, lang)}</li>)}</ul></> : null}
+      {failure ? <ForecastFailure as="p" failure={failure} /> : null}
       <PortAlert now={now} tz={tz} />
       <dl class="app-conditions-now" aria-label={t('conditions.now.aria', lang, {time: timeText(selected, tz, true, lang)})}>
         {readingsAt(rows, selected).map(r => <div key={r.label}><dt class="ui-eyebrow">{r.label}</dt><dd class="ui-mono">{value(r.value, r.unit, lang)}</dd></div>)}

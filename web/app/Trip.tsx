@@ -117,6 +117,17 @@ export function LegalChecklist({meta, lang}: {meta: PackMeta; lang: Language}) {
   </details>;
 }
 
+/** SCB2222-11: the chart pack's save display. The bar and the visible item/byte counts follow every progress tick, outside any live region; the one
+ * status speaks only the phase label while saving (identical text for every tick of a phase) and then the saved, failed, cancelled or deleted result. */
+export function PackStatus({progress, status, lang}: {progress: Progress | null; status: Status; lang: Language}) {
+  const phase = progress ? (PHASES[progress.phase] ? t(PHASES[progress.phase]!, lang) : progress.phase) : '';
+  return <>
+    {progress ? <progress max={Math.max(1, progress.total)} value={progress.done} aria-label={t('trip.saving', lang)} /> : null}
+    <p role="status" aria-live="polite">{progress ? phase : statusText(status, lang)}</p>
+    {progress ? <p>{t('trip.progress', lang, {phase, done: progress.done, total: progress.total, bytes: sizeText(progress.bytes, lang)})}</p> : null}
+  </>;
+}
+
 function ChartPack() {
   const lang = language.value, id = region.value, name = regionInfo.value?.name ?? id ?? t('trip.thisRegion', lang);
   const [packs, setPacks] = useState<{cache: string; meta: PackMeta}[] | null>(null);
@@ -172,8 +183,7 @@ function ChartPack() {
         <Button variant="primary" icon="download" disabled={!id || !!busy} onClick={() => void save()}>{t('trip.save', lang, {name})}</Button>
         {busy ? <Button onClick={() => busy.abort()}>{t('trip.cancel', lang)}</Button> : null}
       </div>
-      {progress ? <progress max={Math.max(1, progress.total)} value={progress.done} aria-label={t('trip.saving', lang)} /> : null}
-      <p role="status" aria-live="polite">{progress ? t('trip.progress', lang, {phase: PHASES[progress.phase] ? t(PHASES[progress.phase]!, lang) : progress.phase, done: progress.done, total: progress.total, bytes: sizeText(progress.bytes, lang)}) : statusText(status, lang)}</p>
+      <PackStatus progress={progress} status={status} lang={lang} />
       {inventoryState !== 'success' ? <p role="status" aria-live="polite">
         {inventoryState === 'loading' ? t('trip.checking', lang) : t('trip.checkFailed', lang)}
         {packs !== null ? t('trip.retained', lang) : ''}

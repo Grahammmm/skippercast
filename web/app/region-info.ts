@@ -32,7 +32,11 @@ export interface RegionInfo {
   readonly rules?: RulesRegion;
   /** The forecast points' published names (region.json `forecast_points[].name`), point id → name; absent where it names none. Display only (web/conditions.ts forecastPointName). */
   readonly forecastPoints?: Readonly<Record<string, string>>;
+  /** The package's own lifecycle (region.json `status`), kept only when it is a recognized value; absent otherwise (SCB2222-14). */
+  readonly status?: RegionStatus;
 }
+export type RegionStatus = 'active' | 'preview';
+const regionStatus = (s: unknown): RegionStatus | null => s === 'active' || s === 'preview' ? s : null;
 export const regionInfo = signal<RegionInfo | null>(null);
 export {DEFAULT_ZONE};
 export const currentRegionInfo = (): RegionInfo | null => {
@@ -66,7 +70,7 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
   return (id: string, retry = false): Promise<RegionInfo | typeof REGION_MISSING | null> => admission.read(`${retry ? 'retry' : 'cached'}:${id}`, async signal => {
     const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`, {signal, ...(retry ? {cache: 'reload' as const} : {})});
     if (!response.ok) { void response.body?.cancel().catch(() => {}); return response.status === 404 ? REGION_MISSING : null; }
-    const json = await response.json() as {id?: unknown; name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown; forecast_points?: unknown}
+    const json = await response.json() as {id?: unknown; name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown; forecast_points?: unknown; status?: unknown}
       & Omit<RulesRegion, 'id' | 'assets'>;
     if (!json || typeof json !== 'object' || Array.isArray(json) || json.id !== id) return null;
     const center = json.map?.center;
@@ -74,10 +78,11 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
     const timezone = json.timezone === undefined ? DEFAULT_ZONE : validZone(json.timezone) ? json.timezone : null;
     if (!timezone) return null;
     const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
+    const status = regionStatus(json.status);
     const aerial = aerialBase(json), tide = tideRegion(id, json), unavailable = unavailableTargets(json), chartFiles = chartFilesOf(json.chart_files);
     const pointNames = forecastPointNames(json.forecast_points);
     return {id, name: json.name, center: [center[0], center[1]], timezone,
-      ...tide ? {tide} : {}, ...chartFiles ? {chartFiles} : {},
+      ...status ? {status} : {}, ...tide ? {tide} : {}, ...chartFiles ? {chartFiles} : {},
       ...Object.keys(pointNames).length ? {forecastPoints: pointNames} : {},
       localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {},
       ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {},
