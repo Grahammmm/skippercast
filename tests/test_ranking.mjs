@@ -93,6 +93,27 @@ test('atlas reasons use only the selected target screen, otherwise neutral terra
   assert.deepEqual(atlasPicks(data, screen, 'unknown-target', 100), [], 'unknown target remains ineligible');
 });
 
+// SCB2222-08. Contract: a ranked reef prints each distinct credit-and-notice pair once, in first-seen order. Bug it catches: a reef built from two
+// USGS surveys carries two identical source_rights entries and the Where to look reason repeated the USGS credit.
+const USGS = {credit: 'USGS', notice: 'Original US government data; retain source attribution and survey limitations.'};
+const CSUMB = {credit: 'CSUMB', notice: 'Public noncommercial use only.'};
+const creditReason = source_rights => habitatPicks([reef('credit-reef', {source_rights})], CHECKED, 'morro-bay', 'lingcod', 300, null)[0].reason;
+const credits = (...rights) => rights.map(r => ` ${r.credit} ${r.notice}`).join('');
+test('ranked_reef_credit_pairs_are_unique: a repeated credit-and-notice pair prints once, distinct pairs all stay in first-seen order', () => {
+  assert.equal(creditReason([USGS, {...USGS}, CSUMB]), `Terrain score 70/100 · grade B.${credits(USGS, CSUMB)}`, 'one USGS pair, then the CSUMB notice');
+  assert.equal(creditReason([CSUMB, USGS, {...CSUMB}, {...USGS}]), `Terrain score 70/100 · grade B.${credits(CSUMB, USGS)}`, 'first-seen order, not sorted');
+  const other = {credit: 'USGS', notice: 'A different survey limitation.'};
+  assert.equal(creditReason([USGS, other, USGS]), `Terrain score 70/100 · grade B.${credits(USGS, other)}`, 'same credit with another notice survives');
+  const rights = [USGS, {...USGS}, CSUMB];
+  creditReason(rights);
+  assert.equal(rights.length, 3, 'the published rights are not mutated');
+});
+
+test('ranked_reef_single_credit_bytes: one valid pair renders as before and malformed entries stay ignored', () => {
+  assert.equal(creditReason([USGS]), `Terrain score 70/100 · grade B. USGS ${USGS.notice}`);
+  assert.equal(creditReason([null, {credit: 'USGS'}, {notice: 'x'}, {credit: 1, notice: 'x'}, USGS]), `Terrain score 70/100 · grade B. USGS ${USGS.notice}`);
+});
+
 test('items outside the limit, without a depth band, or withheld by the screen never appear', () => {
   const best = ATLAS.targets.find(t => t.id === atlasPicks(DATA, CHECKED, 'lingcod', 300)[0].id);
   const deep = {...best, id: 'ZZ-deep', neighborhood_depth_ft: [200, 301]}, unknown = {...best, id: 'ZZ-unknown', neighborhood_depth_ft: undefined};
