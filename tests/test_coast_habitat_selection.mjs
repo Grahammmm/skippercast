@@ -1,6 +1,10 @@
-import test from 'node:test';
+import test, {beforeEach, afterEach, mock as nodeMock} from 'node:test';
 import assert from 'node:assert/strict';
 import {resolveHabitatSelection} from '../packages/coast/src/state/habitat-selection.ts';
+// Freeze only Date at an instant after the year-2000 refusal and before the earliest fixture expiry (2027-01-01),
+// so the expiry decisions below do not depend on the host clock (they used to go red from 2026-12-31 16:00 PST).
+beforeEach(()=>nodeMock.timers.enable({apis:['Date'],now:Date.parse('2026-11-22T12:00:00Z')}));
+afterEach(()=>nodeMock.timers.reset());
 const expires='2027-02-01T00:00:00Z',region={regionId:'cambria-san-simeon',ready:true,commercialArchivePermitted:true,license:'public-domain-us-gov',expiresAt:expires,archiveSha256:'a'.repeat(64),archiveETag:'"original"',archiveBytes:100};
 const manifest={ready:true,expiresAt:'2027-03-01T00:00:00Z',regions:[region]};
 const reef={id:123,geometry:{type:'Polygon',coordinates:[]},properties:{id:'different-id',region:'cambria-san-simeon',waypoint_latitude:35.9,waypoint_longitude:-121.5,depth_max_ft:90,exportable:true,screen_status:'pass',screen_expires_at:'2027-04-01T00:00:00Z',fit_lingcod:2,fit_gopher_rockfish:1,terrain_score:50}};

@@ -14,6 +14,7 @@ import {savedHomeURL} from '../ports.ts';
 import {followStoredLimits, loadCruise, loadLimits} from '../limits.ts';
 import {loadLaunch, loadReach, loadSpear} from '../reach.ts';
 import {startTrip} from '../trip.ts';
+import {bindShellTitle} from './LanguageChoice.tsx';
 import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo, regionLoad} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
 import {failVerdictMetadata, beginVerdictRegion, bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, savedBrief, showSavedBrief, verdictEpoch} from '../brief/Brief.tsx';
@@ -61,6 +62,7 @@ width.addEventListener('change', event => { narrow.value = event.matches; });
 /** The first render (in the page language, its table ready) and what follows it. initReadyLanguage never rejects. */
 async function start(): Promise<void> {
   await ready;
+  bindShellTitle(document);   // SC2052-05: the tab title in the page language, from here on
   effect(() => beginVerdictRegion(region.value));
   const host = document.getElementById('app');
   if (host) { host.replaceChildren(); render(<App />, host); }

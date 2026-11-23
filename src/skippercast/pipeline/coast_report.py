@@ -200,10 +200,16 @@ def alerts(payload, zones):
         areas = [a[0] for a in AREAS if affected.intersection(zones.get(a[0], ())) or _inside(a, feature.get("geometry"))]
         ident = next((str(v) for v in (feature.get("id"), p.get("id"), p.get("@id")) if v is not None), "")
         if areas and ident:
-            unique[ident] = {"id": ident, "event": event, "headline": headline,
-                             "description": str(p.get("description") or ""), "effective": _iso(p.get("effective")),
-                             "expires": _iso(p.get("expires")), "url": p["@id"] if isinstance(p.get("@id"), str) else ident,
-                             "areaIds": areas}
+            # onset/ends are the hazard's own start and stop; effective/expires stay the message's issue and replacement.
+            row = {"id": ident, "event": event, "headline": headline,
+                   "description": str(p.get("description") or ""), "effective": _iso(p.get("effective")),
+                   "onset": _iso(p.get("onset")), "expires": _iso(p.get("expires")), "ends": _iso(p.get("ends")),
+                   "url": p["@id"] if isinstance(p.get("@id"), str) else ident, "areaIds": areas}
+            # A hazard time that is present but unreadable is unknown, not absent: readers must not fall back to the message time.
+            unreadable = [k for k in ("onset", "ends") if p.get(k) not in (None, "") and row[k] is None]
+            if unreadable:
+                row["unreadableHazardTime"] = unreadable
+            unique[ident] = row
     return list(unique.values())
 
 
