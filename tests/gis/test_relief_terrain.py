@@ -11,7 +11,7 @@ import pytest
 import rasterio
 from affine import Affine
 
-from skippercast.relief import receipts
+from skippercast.relief import receipts, terrain
 from tests._support import ROOT
 
 ORIGIN = (-124.2, 41.7)
@@ -93,6 +93,42 @@ def read_asset(folder, asset):
     assert len(payload) == asset['decodedBytes'] == 5 * size**2
     return (np.frombuffer(payload, '<f4', count=size**2).reshape(size, size),
             np.frombuffer(payload, 'u1', offset=4 * size**2).reshape(size, size))
+
+
+def test_companion_nodata_is_not_support_even_when_internal_mask_says_valid(tmp_path):
+    profile = dict(driver='GTiff', crs='EPSG:3857', width=4, height=4, count=1,
+                   transform=Affine(1, 0, 100, 0, -1, 100))
+    grid, support = tmp_path / 'depth.tif', tmp_path / 'support.tif'
+    with rasterio.open(grid, 'w', **profile, dtype='float32') as ds:
+        ds.write(np.full((4, 4), -12, dtype='float32'), 1)
+    cells = np.full((4, 4), 7, dtype='uint16')
+    cells[0] = [99, 7, 0, 7]  # Nodata, valid neighbour, zero, explicit mask hole.
+    mask = np.full((4, 4), 255, dtype='uint8')
+    mask[0, 3] = 0
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True):
+        with rasterio.open(support, 'w', **profile, dtype=cells.dtype, nodata=99) as ds:
+            ds.write(cells, 1)
+            ds.write_mask(mask)
+
+    frame = terrain.Frame([-1, -1, 1, 1])  # x = Mercator easting, z = -northing.
+    with rasterio.open(grid) as depth, rasterio.open(support) as companion:
+        terrain.aligned(depth, companion)
+        assert companion.files == [str(support)]  # No external mask sidecar.
+        # GDAL's explicit mask exposes the positive sentinel as unmasked.
+        assert companion.nodata == 99
+        assert companion.read(1, masked=True)[0].tolist() == [99, 7, 0, None]
+        mosaic, native = [terrain.samples(frame, 100.5, -99.5, 1, 1, 4, depth, companion,
+                                          contributor=contributor)
+                          for contributor in (True, False)]
+        for (values, codes), expected_codes in [(mosaic, [0, 7, 0, 0]), (native, [0, 0, 0, 0])]:
+            np.testing.assert_array_equal(values[0], [np.nan, -12, np.nan, np.nan])
+            np.testing.assert_array_equal(codes[0], expected_codes)
+
+        # A positive centre is not enough if its wider footprint covers the sentinel.
+        values, codes = terrain.samples(frame, 101.25, -98.75, 1.5, 1.5, 1, depth, companion,
+                                        contributor=True)
+        np.testing.assert_array_equal(values, [[np.nan]])
+        np.testing.assert_array_equal(codes, [[0]])
 
 
 def test_receipted_overview_round_trip_and_real_noop(tmp_path, capsys):

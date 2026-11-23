@@ -24,12 +24,14 @@ def region_inputs(tmp_path):
     def position(x, y):
         return geom.Point(*project(x0 + x, y0 + y))
 
-    def write_raster(name, data, *, cell=10, x=200, y=-500, nodata=0):
+    def write_raster(name, data, *, cell=10, x=200, y=-500, nodata=0, mask=None):
         data = np.asarray(data)
-        with rio.open(tmp_path / name, "w", driver="GTiff", count=1, crs="EPSG:3310",
-                      width=data.shape[1], height=data.shape[0], dtype=data.dtype, nodata=nodata,
-                      transform=rio.Affine(cell, 0, x0 + x, 0, -cell, y0 + y)) as ds:
+        profile = dict(driver="GTiff", count=1, crs="EPSG:3310", width=data.shape[1], height=data.shape[0],
+                       dtype=data.dtype, nodata=nodata, transform=rio.Affine(cell, 0, x0 + x, 0, -cell, y0 + y))
+        with rio.Env(GDAL_TIFF_INTERNAL_MASK=True), rio.open(tmp_path / name, "w", **profile) as ds:
             ds.write(data, 1)
+            if mask is not None:
+                ds.write_mask(mask)
 
     def write_json(name, doc):
         (tmp_path / name).write_text(json.dumps(doc), encoding="utf-8")
@@ -37,8 +39,13 @@ def region_inputs(tmp_path):
     region = "synthetic-coast"
     write_json("region.json", {"id": region, "bounds": [*project(-250, y0 - 3500), *project(3600, y0 + 100)]})
     # The coarse contour lies at x=1500; water extends past the buffer and has an island.
-    write_raster("coarse.tif", np.tile(np.float32([20, -10, -30, -91.44, -95, -110, -130, -150]), (8, 1)),
-                 x=-500, y=0, cell=500, nodata=-9999)
+    # The second shallow patch is invalid only by virtue of the internal TIFF
+    # mask. Counting it would extend the zone past the native shoal's halo.
+    mask = np.full((8, 8), 255, dtype="uint8")
+    mask[:, 6] = 0
+    write_raster("coarse.tif", np.tile(np.float32([20, -10, -30, -91.44, -95, -110, -10, -150]), (8, 1)),
+                 x=-500, y=0, cell=500, nodata=-9999, mask=mask)
+    assert not (tmp_path / "coarse.tif.msk").exists()
     water = geom.box(0, y0 - 4000, 3500, y0 + 500).difference(geom.box(1200, y0 - 1400, 1400, y0 - 1200))
     write_json("water.geojson", {"type": "FeatureCollection", "features": [
         {"type": "Feature", "properties": {}, "geometry": geom.mapping(
@@ -96,7 +103,7 @@ def test_zone_and_hatch_keep_land_and_offshore_out_and_keep_survey_holes(region_
     assert zone_geom.covers(point(2490, -1500))  # 1 km buffer, beyond the 300 ft contour
     assert not zone_geom.covers(point(2510, -1500))
     assert _at(detail, point(2490, -1500), geom) == [{"tier": "none", "sources": [], "date": None}]
-    for x, y in [(2600, -1500), (-50, -1500), (1300, -1300)]:
+    for x, y in [(2600, -1500), (3200, -1500), (-50, -1500), (1300, -1300)]:
         assert not zone_geom.covers(point(x, y))  # out-of-zone water, mainland, island hole
         assert not _at(detail, point(x, y), geom)
     assert _at(detail, point(215, -515), geom)[0]["tier"] == "none"
@@ -137,14 +144,79 @@ def test_coarse_contour_in_neighboring_region_still_buffers_into_region(region_i
     assert not _at(detail, point(2600, -1500), geom)  # beyond the halo
 
 
-def test_zone_and_detail_are_byte_stable(region_inputs):
+@pytest.fixture
+def ambient_sidecars(monkeypatch):
+    monkeypatch.setenv("GDAL_PAM_ENABLED", "YES")
+    monkeypatch.setenv("GDAL_DISABLE_READDIR_ON_OPEN", "FALSE")
+    monkeypatch.setenv("GDAL_GEOREF_SOURCES", "PAM,INTERNAL")
+
+
+def _write_pam(path, transform, crs=None):
+    coefficients = ", ".join(map(str, transform.to_gdal()))
+    srs = f"<SRS>{crs.to_wkt()}</SRS>" if crs is not None else ""
+    path.with_suffix(".tif.aux.xml").write_text(
+        f"<PAMDataset>{srs}<GeoTransform>{coefficients}</GeoTransform></PAMDataset>", encoding="utf-8",
+    )
+
+
+def test_zone_and_detail_are_byte_stable(region_inputs, tmp_path, ambient_sidecars):
+    rio = pytest.importorskip("rasterio")
+
     run, _, _, selection, write_json = region_inputs
-    first = [hashlib.sha256(data).hexdigest() for data in run("first")]
+    first = run("first")
     selection["sources"].reverse()
     write_json("selection.json", selection)
-    second = [hashlib.sha256(data).hexdigest() for data in run("second")]
-    print(f"SHA-256 (zone, detail): {first} == {second}")
-    assert first == second
+    assert run("reordered") == first
+
+    # An external mask hides a valid contributor without changing TIFF bytes.
+    contributor = tmp_path / "contributor.tif"
+    with rio.open(contributor) as grid:
+        profile = dict(driver="GTiff", count=1, width=grid.width, height=grid.height,
+                       dtype="uint8", transform=grid.transform, crs=grid.crs)
+        mask = grid.read_masks(1)
+    assert mask[0, 0] == 255
+    mask[0, 0] = 0
+    with rio.open(tmp_path / "contributor.tif.msk", "w", **profile) as sidecar:
+        sidecar.write(mask, 1)
+        sidecar.update_tags(INTERNAL_MASK_FLAGS_1="2")  # GDAL per-dataset mask
+    with rio.open(contributor) as grid:
+        assert grid.read_masks(1)[0, 0] == 0
+    external_mask = run("external-mask")
+
+    # PAM moves the coarse grid entirely offshore without changing TIFF bytes.
+    coarse = tmp_path / "coarse.tif"
+    with rio.open(coarse) as grid:
+        shifted = rio.Affine.translation(10_000, 0) @ grid.transform
+    _write_pam(coarse, shifted)
+    with rio.open(coarse) as grid:
+        assert grid.transform == shifted
+    both_sidecars = run("both-sidecars")
+
+    for label, outputs in [("clean", first), ("external mask", external_mask), ("mask and PAM", both_sidecars)]:
+        print(f"SHA-256 ({label}: zone, detail): {[hashlib.sha256(data).hexdigest() for data in outputs]}")
+    assert external_mask == first, "external mask changed zone or detail bytes"
+    assert both_sidecars == first, "PAM georeferencing changed zone or detail bytes"
+
+
+def test_zone_refuses_georeferencing_supplied_only_by_sidecar(region_inputs, tmp_path, ambient_sidecars):
+    rio = pytest.importorskip("rasterio")
+
+    run, _, _, _, _ = region_inputs
+    coarse = tmp_path / "coarse.tif"
+    with rio.open(coarse) as grid:
+        profile = dict(driver="GTiff", count=1, width=grid.width, height=grid.height,
+                       dtype=grid.dtypes[0], nodata=grid.nodata)
+        transform, crs, data = grid.transform, grid.crs, grid.read(1)
+    with pytest.warns(rio.errors.NotGeoreferencedWarning), rio.open(coarse, "w", **profile) as grid:
+        grid.write(data, 1)
+    _write_pam(coarse, transform, crs)
+    with rio.open(coarse) as grid:
+        assert (grid.transform, grid.crs) == (transform, crs)
+    result = run(ok=False)
+    print(f"Sidecar-only georeferencing: CLI exit={result.returncode}; output={(tmp_path / 'out').exists()}")
+    assert result.returncode == 1
+    assert "coarse.tif must be a north-up, single-band EPSG:3310 raster" in result.stderr
+    assert not (tmp_path / "out").exists()
 
 
 def test_unapproved_mosaic_contributor_is_refused(region_inputs, tmp_path):

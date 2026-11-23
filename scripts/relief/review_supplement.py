@@ -9,8 +9,10 @@ import sys
 if __name__ == '__main__' and not __package__:
     sys.dont_write_bytecode = True
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src'))
+    from pointer_diff import _read_git_pointer, _text_value, diff_fields
     from r8_packet import _current_envelope, _print_region
 else:
+    from .pointer_diff import _read_git_pointer, _text_value, diff_fields
     from .r8_packet import _current_envelope, _print_region
 
 from skippercast.relief import envelope, package, receipts
@@ -119,12 +121,55 @@ def _depth_rows(out: Path, region_id: str) -> list[tuple[str, str]]:
     return rows
 
 
+def _reason(exc: BaseException) -> str:
+    return ' '.join(str(exc).splitlines())
+
+
+def _pointer_rows(out: Path, region_id: str, repo: Path | None, ref: str) -> tuple[list[tuple[str, str]], bool]:
+    """Preview the pointer fields a release would carry; return rows and whether the base is invalid.
+
+    The pointer itself needs an approval, so compare the verified release's copied fields
+    instead. Nothing is built or written and no approval is read.
+    """
+    if repo is None:
+        return [('pointer preview', 'not compared (no --repo)')], False
+    try:
+        base = _read_git_pointer(repo, ref, region_id, package.pointer_schema())
+        if base is not None and base['region'] != region_id:
+            raise ValueError(f"base pointer is for region {base['region']!r}")
+    except (OSError, ValueError, ImportError) as exc:
+        return [('pointer preview', f"invalid base ({_reason(exc).removeprefix('base: ')})")], True
+    try:
+        release = envelope.verify_artifacts(_current_envelope(out, region_id)).release
+        candidate = {key: release[key] for key in (*package.METADATA, 'generation')}
+    except (OSError, ValueError, ImportError, KeyError, TypeError, RecursionError) as exc:
+        return [('pointer preview', f'unavailable ({_reason(exc)})')], False
+    if 'style' in release:
+        candidate['style'] = release['style']
+    changes = diff_fields(base or {}, candidate, (*package.METADATA, 'generation', 'style'))
+    rows = [('pointer preview', f'against {ref}, changed fields: {len(changes)}'),
+            ('previous will be', 'null (first release)' if base is None else base['generation'][:12])]
+    rows.extend((f'pointer {row["field"]}',
+                 f'{_text_value(row["base"], row["field"])} -> {_text_value(row["candidate"], row["field"])}')
+                for row in changes)
+    return rows, False
+
+
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(prog='review_supplement.py', description=__doc__)
+    parser = argparse.ArgumentParser(
+        prog='review_supplement.py', description=__doc__,
+        usage='%(prog)s [-h] --out OUT [--markdown] [--repo CLONE [--ref REF]] REGION [REGION ...]')
     parser.add_argument('--out', required=True, type=Path, metavar='OUT')
     parser.add_argument('--markdown', action='store_true', help='print one review table per region')
+    parser.add_argument('--repo', type=Path, metavar='CLONE',
+                        help='preview pointer changes against the reviewed pointer in this clone (read-only)')
+    parser.add_argument('--ref', metavar='REF', help='Git ref to compare with --repo (default: origin/main)')
     parser.add_argument('regions', nargs='+', metavar='REGION')
     args = parser.parse_args(argv)
+    if args.ref is not None and args.repo is None:
+        parser.error('--ref requires --repo')
+    if args.ref is not None and (not args.ref or ':' in args.ref):
+        parser.error('--ref must name a Git revision, not an index or tree path')
     if len(args.regions) > 3:
         parser.error('expected at most 3 regions')
     for region in args.regions:
@@ -132,9 +177,14 @@ def main(argv=None) -> int:
             receipts.check_names('envelope', region=region)
         except receipts.ReceiptError as exc:
             parser.error(str(exc))
+    ref = 'origin/main' if args.ref is None else args.ref
+    status = 0
     for region in args.regions:
-        _print_region(f'Depth coverage {region} (supplement only)', _depth_rows(args.out, region), args.markdown)
-    return 0
+        pointer_rows, invalid_base = _pointer_rows(args.out, region, args.repo, ref)
+        status |= invalid_base
+        _print_region(f'Depth coverage {region} (supplement only)',
+                      _depth_rows(args.out, region) + pointer_rows, args.markdown)
+    return status
 
 
 if __name__ == '__main__':

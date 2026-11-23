@@ -66,24 +66,46 @@ test('10 rapid idle switches each apply all edits exactly once, with no source o
   watcher.stop();
 });
 
-// Without serialization, the older delayed apply could overwrite a newer
-// theme after the region's layers are mounted. No timers or browser are needed.
-test('switches during a region load replay only the latest theme on all mounted layers', async () => {
+// Without serialization a delayed apply can overwrite a newer paint. Without
+// queued waiters a subscriber can resume before even the superseding paint runs.
+test('switches during a region load wait for the latest paint on all mounted layers', async () => {
   const {target, layers, edits} = fakeTarget('earth');
-  const loaded = Promise.withResolvers(), starts = [];
+  const palettes = tokenPalettes();
+  const paint = theme => [
+    ['earth', 'fill-color', palettes[theme].mapLand],
+    ['harbors', 'text-color', palettes[theme].mapLabel],
+    ['harbors', 'text-halo-color', palettes[theme].mapHalo],
+  ];
+  const gates = [Promise.withResolvers(), Promise.withResolvers()];
+  const latestStarted = Promise.withResolvers(), starts = [], completed = [];
   const watcher = watch(async theme => {
+    const gate = gates[starts.length];
     starts.push(theme);
-    if (starts.length === 1) await loaded.promise;
-    restyle(target, sentinel(theme), providers);
+    if (starts.length === 2) latestStarted.resolve();
+    await gate.promise;
+    restyle(target, palettes[theme], providers);
   });
-  const burst = [watcher.emit('light')];
-  for (let i = 0; i < 9; ++i) burst.push(watcher.emit(i % 2 ? 'light' : 'dark'));
-  assert.deepEqual(starts, ['light']);
+  const emit = (label, theme) => watcher.emit(theme).then(() => {
+    completed.push([label, edits.slice()]);
+  });
+  // A dark refresh is already in flight when the user switches light–dark–light.
+  const first = emit('in-flight', 'dark');
+  const queued = [emit('light', 'light'), emit('dark', 'dark'), emit('latest', 'light')];
+  await new Promise(setImmediate);
+  assert.deepEqual(starts, ['dark']);
+  assert.deepEqual(completed, [], 'notifications settled before the first paint');
   layers.add('harbors');
-  loaded.resolve();
-  await Promise.all(burst);
-  assert.deepEqual(starts, ['light', 'dark']);
-  assert.deepEqual(edits, [...expectedEdits('light'), ...expectedEdits('dark')]);
+  gates[0].resolve();
+  await latestStarted.promise;
+  await new Promise(setImmediate);
+  assert.deepEqual(edits, paint('dark'));
+  assert.deepEqual(completed, [['in-flight', paint('dark')]], 'queued notifications must wait for the superseding paint');
+  gates[1].resolve();
+  await Promise.all([first, ...queued]);
+  const finalEdits = [...paint('dark'), ...paint('light')];
+  assert.deepEqual(starts, ['dark', 'light']);
+  assert.deepEqual(edits, finalEdits);
+  assert.deepEqual(completed.slice(1), ['light', 'dark', 'latest'].map(label => [label, finalEdits]));
   watcher.stop();
 });
 
@@ -111,20 +133,30 @@ test('pattern images are installed before paint and replaced under the same ID',
   assert.deepEqual([...images], [['hatch', {image: light, pixelRatio: 2}]]);
 });
 
-// Force the in-flight error case: simply exiting the drain would strand the
-// latest notification; swallowing the error would hide the renderer failure.
-test('a rejected apply reports the failure without stranding a queued theme', async () => {
-  const first = Promise.withResolvers(), seen = [];
+// Exiting on failure strands the queue; rejecting the drain as a whole hands
+// the wrong error to subscribers. An unattended receipt must not leak a rejection.
+test('each failed paint rejects its own waiters and later notifications still paint', async () => {
+  const first = Promise.withResolvers(), latest = Promise.withResolvers(), seen = [];
   const watcher = watch(theme => {
     seen.push(theme);
-    if (theme === 'dark') return first.promise;
+    return [first.promise, latest.promise][seen.length - 1];
   });
-  const done = watcher.emit('dark');
-  await watcher.emit('light');
-  const error = new Error('apply failed');
-  first.reject(error);
-  await assert.rejects(done, error);
+  const firstError = new Error('in-flight paint failed'), latestError = new Error('queued paint failed');
+  const inFlight = assert.rejects(watcher.emit('dark'), error => error === firstError);
+  const superseded = watcher.emit('dark');
+  const queued = watcher.emit('light');
+  first.reject(firstError);
+  await inFlight;
   assert.deepEqual(seen, ['dark', 'light']);
+  latest.reject(latestError);
+  // Leave queued receipts unobserved for a turn. node:test fails on an unhandled rejection.
+  await new Promise(setImmediate);
+  await Promise.all([
+    assert.rejects(superseded, error => error === latestError),
+    assert.rejects(queued, error => error === latestError),
+  ]);
+  await watcher.emit('dark');
+  assert.deepEqual(seen, ['dark', 'light', 'dark']);
   watcher.stop();
 });
 
@@ -135,12 +167,16 @@ test('unsubscribe drops queued and late notifications', async () => {
   const watcher = watch(theme => { seen.push(theme); return first.promise; });
   const notify = watcher.subscriber();
   const done = watcher.emit('dark');
-  await watcher.emit('light');
+  let painted = false;
+  const inFlight = done.then(() => { painted = true; });
+  const dropped = [watcher.emit('light'), watcher.emit('dark')];
   watcher.stop();
   assert.equal(watcher.subscriber(), undefined);
-  await notify('light');
+  await Promise.all([...dropped, notify('light')]);
+  assert.equal(painted, false, 'disposal must not acknowledge an in-flight paint');
+  assert.deepEqual(seen, ['dark']);
   first.resolve();
-  await done;
+  await inFlight;
   assert.deepEqual(seen, ['dark']);
 });
 

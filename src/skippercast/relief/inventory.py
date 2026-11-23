@@ -48,7 +48,7 @@ class InventoryError(receipts.ReceiptError):
 
 
 def archive_metadata(path):
-    """The JSON metadata of a PMTiles v3 archive (header and metadata only)."""
+    """The JSON metadata of a PMTiles v3 archive, with zooms checked against its header."""
     with path.open('rb') as stream:
         header = stream.read(127)
         if len(header) != 127 or header[:8] != b'PMTiles\x03':
@@ -66,9 +66,17 @@ def archive_metadata(path):
     elif compression not in (0, 1):
         raise InventoryError('unsupported PMTiles metadata compression')
     try:
-        return package.decode_document(data)
+        metadata = package.decode_document(data)
     except ValueError as exc:
         raise InventoryError(f'invalid PMTiles metadata: {exc}') from exc
+    # PMTiles v3 stores min_zoom and max_zoom as consecutive uint8 fields.
+    for field, header_zoom in zip(('minzoom', 'maxzoom'), header[100:102]):
+        zoom = metadata.get(field)
+        if type(zoom) is not int:
+            raise InventoryError(f'PMTiles metadata {field} must be an integer')
+        if zoom != header_zoom:
+            raise InventoryError(f'PMTiles metadata {field} {zoom} does not match header {header_zoom}')
+    return metadata
 
 
 def owned(doc, prefix=package.LAYERS):
