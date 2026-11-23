@@ -44,6 +44,9 @@ type Loaded =
 // Deletion outlives the sheet; keep its guard until failure or the successful reload.
 const deletingAccount = signal(false);
 const hours = (v: FormDataEntryValue | null) => Number(v);
+const WINDOW_ORDER: StringId = 'alerts.problem.window';
+/** Drops only the From/Until ordering message; any other status (a request outcome, another note) is kept. */
+const clearWindowOrder = (say: Say): Say => say && 'id' in say && say.id === WINDOW_ORDER ? null : say;
 const sayError = (error: unknown): Say => error instanceof AlertCopyError ? {id: error.id} : {literal: (error as Error).message};
 /** What a server wrote stays English: in Spanish it is marked as such, and only there. */
 const englishOnly = (lang: Language) => lang === 'es' ? 'en' : undefined;
@@ -332,6 +335,10 @@ function SignedIn({session, region, boat, target, seed}: {session: SessionAnswer
     return () => ctl.abort();
   }, []);
 
+  // The From/Until ordering problem, while it is the current status, is tied to both hour fields (WCAG 3.3.1); request failures stay in the general status only.
+  const windowOrderError = !!status && 'id' in status && status.id === WINDOW_ORDER;
+  const windowFieldProps = windowOrderError ? {'aria-invalid': 'true' as const, 'aria-describedby': 'alert-status'} : {};
+
   const save = async (event: TargetedSubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const f = new FormData(event.currentTarget);
@@ -339,6 +346,7 @@ function SignedIn({session, region, boat, target, seed}: {session: SessionAnswer
       wind_limit: hours(f.get('wind_limit')), gust_limit: hours(f.get('gust_limit')), sea_limit: hours(f.get('sea_limit'))};
     const problem = formProblemId(form, dateRange(region.timezone));
     if (problem) { setStatus({id: problem}); return; }
+    setStatus(clearWindowOrder);
     if (!region.forecast_points.some(point => point.id === form.point) || !region.species.includes(species)) { setStatus({id: 'alerts.status.choose'}); return; }
     // Synchronous guard: a second submit before the first POST settles (a double tap) would create a second pending alert.
     if (saving.current) return;
@@ -450,14 +458,18 @@ function SignedIn({session, region, boat, target, seed}: {session: SessionAnswer
         <form id="save-alert" ref={formRef} class="insight-form" onSubmit={e => void save(e)} onInput={e => {
           const field = e.target as HTMLInputElement | HTMLSelectElement;
           if (!field.value || !field.validity?.valid) return;
+          if (windowOrderError && (field.name === 'start_hour' || field.name === 'end_hour')) {
+            const [from, until] = (['start_hour', 'end_hour'] as const).map(name => e.currentTarget.elements.namedItem(name) as HTMLInputElement | null);
+            if (from?.value && until?.value && from.validity?.valid && until.validity?.valid && Number(until.value) > Number(from.value)) setStatus(clearWindowOrder);
+          }
           const note = field.name === 'date' ? 'alerts.problem.date' : field.name === 'point' ? 'alerts.prefill.area'
             : (field.name === 'start_hour' || field.name === 'end_hour') && new FormData(e.currentTarget).get(field.name === 'start_hour' ? 'end_hour' : 'start_hour') ? 'alerts.prefill.hours' : null;
           if (note && prefillNotes.includes(note)) setPrefillNotes(prefillNotes.filter(id => id !== note));
         }}>
           <label>{t('alerts.date', lang)}<input name="date" type="date" defaultValue={alertDate(region.timezone)} min={range.min} max={range.max} required /></label>
           <label>{t('alerts.area', lang)}<select name="point" required={!!seed}>{seed ? <option value="" disabled /> : null}{region.forecast_points.map(point => <option key={point.id} value={point.id}>{point.name}</option>)}</select></label>
-          <label>{t('alerts.from', lang)}<input name="start_hour" type="number" min="0" max="22" defaultValue="7" required /></label>
-          <label>{t('alerts.until', lang)}<input name="end_hour" type="number" min="1" max="23" defaultValue="13" required /></label>
+          <label>{t('alerts.from', lang)}<input name="start_hour" type="number" min="0" max="22" defaultValue="7" required {...windowFieldProps} /></label>
+          <label>{t('alerts.until', lang)}<input name="end_hour" type="number" min="1" max="23" defaultValue="13" required {...windowFieldProps} /></label>
           <label>{t('alerts.wind', lang)}<input name="wind_limit" type="number" min="1" max="30" defaultValue={limits.wind} required /></label>
           <label>{t('alerts.gust', lang)}<input name="gust_limit" type="number" min="1" max="40" defaultValue={limits.gust} required /></label>
           <label>{t('alerts.sea', lang)}<input name="sea_limit" type="number" min="0.5" max="10" step="0.5" defaultValue={limits.sea} required /></label>

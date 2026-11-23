@@ -713,7 +713,9 @@ for (const lang of ['en', 'es']) {
     expect(reads).toBe(isMobile ? 2 : 1); // one per page, not one per Location/brief consumer
     expect(pageErrors).toEqual([]);
   });
-  for (const mode of ['active', '503', 'malformed', 'rejected']) test(`SC1922-04 ${mode} status shows no disclosure, ${lang}`, async ({page, pageErrors, v2}) => {
+  // SCB2222-14: Preview now comes from the loaded package's own status. An active package never discloses; a preview
+  // package keeps its disclosure when home-ports is down, malformed or aborted (the old port-only reader hid it).
+  for (const mode of ['active', '503', 'malformed', 'rejected']) test(`SC1922-04 ${mode === 'active' ? 'active status shows no disclosure' : `${mode} ports read still shows the package's own Preview`}, ${lang}`, async ({page, pageErrors, v2}) => {
     let reads = 0;
     await page.route('**/data/home-ports.json', async route => {
       reads++;
@@ -725,7 +727,11 @@ for (const lang of ['en', 'es']) {
     await v2.open('app', {region: mode === 'active' ? 'morro-bay' : 'monterey-point-sur', lang, profile: 'shore'});
     await expect(page.locator('.app-location')).toContainText(mode === 'active' ? 'Morro Bay' : 'Monterey');
     await expect.poll(() => reads).toBe(1);
-    await expect(page.locator('.app-region-preview-label, .app-region-preview-reason')).toHaveCount(0);
+    if (mode === 'active') await expect(page.locator('.app-region-preview-label, .app-region-preview-reason')).toHaveCount(0);
+    else {
+      await expect(page.locator('.app-location-preview .app-region-preview-label')).toHaveText(label);
+      await expect(page.locator('.app-location-preview .app-region-preview-reason')).toHaveText(reason);
+    }
     await expect(page.locator('h1')).toBeAttached();
     await page.waitForTimeout(250);
     expect(reads).toBe(1);
