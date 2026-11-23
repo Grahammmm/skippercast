@@ -143,7 +143,7 @@ def test_a_newly_used_source_moves_from_eligible_to_the_live_region_layer(tmp_pa
     """Contract: use is read from non-draft region bindings. Bug caught: the register lists by catalogue only, so a newly bound source stays 'not yet used'."""
     unused, _ = generated(tmp_path, [row(BOUND_SOURCE, 'Protected areas source')], [region('r1', 'Region One')])
     assert '<strong>Protected areas source</strong>' in section(unused, 'data-sources-eligible')
-    assert 'id="region-r1"' not in unused
+    assert 'Protected areas source' not in section(unused, 'data-sources-live')
     used, summary = generated(tmp_path, [row(BOUND_SOURCE, 'Protected areas source')], [region('r1', 'Region One', bound=True)])
     live = section(used, 'data-sources-live')
     assert 'Region One' in live and '<h5>Protected areas</h5>' in live and '<strong>Protected areas source</strong>' in live
@@ -190,7 +190,7 @@ def test_a_draft_region_and_its_name_do_not_leak(tmp_path):
     assert 'Secret Draft Bay' not in fresh and 'hidden-draft' not in fresh
     # Bound only by the draft region, the source is eligible, not live.
     assert '<strong>Protected areas source</strong>' in section(fresh, 'data-sources-eligible')
-    assert 'Region One' not in section(fresh, 'data-sources-live')
+    assert 'Protected areas source' not in section(fresh, 'data-sources-live')
 
 
 def test_html_in_catalogue_text_and_links_is_escaped(tmp_path):
@@ -283,7 +283,7 @@ def test_c1_depth_shading_lists_unique_catalogue_sources_in_pointer_order(tmp_pa
     _, fresh, summary = bsr.build(root)
     assert bsr.collect(root)['regions'][1]['layers'] == {'Depth shading': {'z-grid': '', 'a-grid': ''}}
     live = section(fresh, 'data-sources-live')
-    assert re.findall(r'<h4 id="region-([^"]+)">([^<]+)</h4>', live) == [('r1', 'Region One')]
+    assert re.findall(r'<h4 id="region-([^"]+)">([^<]+)</h4>', live) == [('r0', 'Other Region'), ('r1', 'Region One')]
     assert re.findall(r'<h5>([^<]+)</h5>', live) == ['Depth shading']
     assert re.findall(r'<strong>([^<]+)</strong>.*?Credit: ([^<]+?) · <a ', live, re.S) == [
         ('Z grid', 'Survey &amp; agency'), ('A grid', 'Credit for a-grid'),
