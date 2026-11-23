@@ -5,6 +5,7 @@ The rest of the daily feed still publishes. A fresh charter source leaves the fe
 is unchanged: the section carries no trip records at all rather than zero catches.
 """
 from datetime import datetime, timedelta, timezone
+import copy
 import json
 from hashlib import sha256
 
@@ -48,6 +49,46 @@ def build(monkeypatch, ok_days):
 
 def days(count_ok, offset=0):
     return {(TODAY - timedelta(days=i)).isoformat() for i in range(1 + offset, 1 + offset + count_ok)}
+
+
+TIDE_LABELS = [
+    ('Monterey Harbor tide predictions', 'NOAA Monterey Harbor reference tide predictions'),
+    ('San Simeon NOAA subordinate tide predictions', 'NOAA San Simeon subordinate reference tide predictions'),
+    ('Port San Luis', 'NOAA Port San Luis reference tide predictions'),
+    ('Shelter Cove predictions', 'NOAA Shelter Cove reference tide predictions'),
+    ('Bodega Harbor entrance predictions · distant southern reference',
+     'NOAA Bodega Harbor entrance tide predictions · distant southern reference'),
+    ('Monterey Harbor tide predictions · distant reference', 'NOAA Monterey Harbor tide predictions · distant reference'),
+]
+
+
+@pytest.mark.parametrize('tide_name,label', TIDE_LABELS)
+def test_collect_tide_job_has_one_provider_and_prediction_phrase(monkeypatch, tide_name, label):
+    # Contract: the daily feed's tide source name says NOAA and 'tide predictions' once whatever the region's
+    # tide_name already contains; a label built by plain concatenation repeats both words.
+    real = collect.settings
+
+    def settings(region_id):
+        config = copy.deepcopy(real(region_id))
+        config['region']['stations']['tide_name'] = tide_name
+        return config
+
+    monkeypatch.setattr(collect, 'settings', settings)
+    feed = build(monkeypatch, days(30))
+    tide = feed['sources']['tides']
+    other = next(s for k, s in feed['sources'].items() if k.startswith('alerts-'))
+    station = real('morro-bay')['region']['stations']['tide']
+    assert tide['name'] == label
+    assert (tide['kind'], tide['max_age_hours']) == ('prediction', 36)
+    assert f'station={station}&' in tide['url']
+    assert other['name'].startswith('NWS ') and other['name'].endswith(' advisories'), 'other labels unchanged'
+
+
+def test_every_region_tide_label_names_noaa_and_predictions_once():
+    for path in sorted((ROOT / 'regions').glob('*/region.json')):
+        label = collect.tide_source_name(json.loads(path.read_text())['stations']['tide_name'])
+        assert label.startswith('NOAA ') and label.count('NOAA') == 1, (path.parent.name, label)
+        assert label.count('tide predictions') == 1 and 'predictions predictions' not in label, (path.parent.name, label)
 
 
 def test_stale_charter_source_publishes_with_section_not_available(monkeypatch):
