@@ -271,6 +271,53 @@ class PlatformGateTests(unittest.TestCase):
         self.assertEqual(published, slim_shoreline(source))
         self.assertEqual(sorted(f['properties']['source_date'] for f in published['features']), ['0001-01-01', '2024-02-29'])
 
+    def test_publish_keeps_rounded_clip_endpoints_inside_region(self):
+        root, output, region = self.publication(['2010-05-09'] * 3)
+        region['bounds'] = box = [-124.300006, 40.100004, -123.900004, 40.500006]
+        path = root / 'catalog/shoreline/test-region.geojson'
+        source = json.loads(path.read_text())
+        source['provenance']['bounds'] = box
+        for feature, line in zip(source['features'], (
+            [(-124.4, 40.256784), (-123.8, 40.256784)],  # west and east
+            [(-124.123456, 40.0), (-124.123456, 40.6)],   # south and north
+            [(-124.222226, 40.333334), (-124.111114, 40.444446)],  # interior control
+        )):
+            (clipped,) = cusp.clip(line, box)
+            feature['geometry']['coordinates'] = clipped
+            feature['properties'].update(HOR_ACC='4.31', source_tile='12/1/2')
+        path.write_text(json.dumps(source))
+        # All inputs pass the gate; ordinary rounding alone sends the clipped endpoints back outside.
+        check_shoreline(source, region)
+        self.assertEqual(publish_shoreline(root, region, output), 'regions/test-region/shoreline.geojson')
+        published = json.loads((output / 'shoreline.geojson').read_text())
+        check_shoreline(published, region)
+        (group,) = published['features']
+        self.assertEqual(group['id'], 'cusp-12-1-2-0')
+        self.assertEqual(group['geometry'], {'type': 'MultiLineString', 'coordinates': [
+            [[-124.3, 40.25678], [-123.90001, 40.25678]],
+            [[-124.12346, 40.10001], [-124.12346, 40.5]],
+            [[-124.22223, 40.33333], [-124.11111, 40.44445]],
+        ]})
+        self.assertEqual(group['properties'], source['features'][0]['properties'])
+        provenance = published['provenance']
+        self.assertEqual((provenance['bounds'], provenance['coordinate_decimals'], provenance['source_features']), (box, 5, 3))
+
+    def test_publish_refuses_outside_import_or_interval_without_grid_point(self):
+        for west, east, coords, error in (
+            (-124.1, -124.0, [-124.100001, -124.05], 'not a line inside'),
+            (-124.100004, -124.100001, [-124.100004, -124.100001], 'no 5-decimal coordinate'),
+        ):
+            with self.subTest(west=west, east=east):
+                root, output, region = self.publication(['2010-05-09'])
+                region['bounds'] = [west, 40.1, east, 40.5]
+                path = root / 'catalog/shoreline/test-region.geojson'
+                source = json.loads(path.read_text())
+                source['features'][0]['geometry']['coordinates'] = [[coords[0], 40.2], [coords[1], 40.3]]
+                path.write_text(json.dumps(source))
+                with self.assertRaisesRegex(ValueError, error):
+                    publish_shoreline(root, region, output)
+                self.assertEqual(list(output.iterdir()), [])
+
     def publication(self, dates):
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(lambda: shutil.rmtree(tmp, ignore_errors=True))

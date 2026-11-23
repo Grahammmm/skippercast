@@ -14,11 +14,13 @@ first paint (scripts/startup-budget.json):
   with one set of properties (which include its source_tile) becomes one line
   of a single MultiLineString feature carrying that set once. A click on any
   line still reads its own SOURCE_ID, dates, method and HOR_ACC.
-- Coordinates are rounded to 5 decimals. The import's lines are NOAA's zoom-12
-  display tiles, 4096 units a side (display_quantisation_m, about 1.96 m at
-  35.85° N): one unit is 360 / 2^24 = 2.15e-5° of longitude and at least
-  1.74e-5° of latitude across the region. A 5-decimal rounding moves a point at
-  most 5e-6°, under half a unit, so every tile vertex keeps its own grid
+- Coordinates are rounded to 5 decimals. When publishing, a rounded coordinate
+  that crosses a region edge moves to the nearest in-range point on that same
+  decimal grid. The import's lines are NOAA's zoom-12 display tiles, 4096
+  units a side (display_quantisation_m, about 1.96 m at 35.85° N): one unit is
+  360 / 2^24 = 2.15e-5° of longitude and at least 1.74e-5° of latitude across
+  the region. Ordinary 5-decimal rounding moves a point at most 5e-6°, under
+  half a unit, so every tile vertex keeps its own grid
   position (tests/unit/test_cusp_shoreline.py re-snaps them); 4 decimals
   (up to 5e-5°) would merge neighbouring vertices.
 
@@ -84,13 +86,34 @@ def feature_lines(geometry):
     return [geometry['coordinates']] if geometry['type'] == 'LineString' else geometry['coordinates']
 
 
-def slim_shoreline(collection):
-    """The published form of a checked import: one MultiLineString per distinct property set, 5-decimal coordinates."""
+def _grid_interval(lower, upper, axis):
+    """First and last 5-decimal coordinates inside an inclusive interval."""
+    step = 10 ** -DECIMALS
+    lo, hi = round(lower, DECIMALS), round(upper, DECIMALS)
+    # A rounded edge is already on the grid; if it landed outside, step inward once.
+    if lo < lower:
+        lo = round(lo + step, DECIMALS)
+    if hi > upper:
+        hi = round(hi - step, DECIMALS)
+    if lo > hi:
+        raise ValueError(f'Shoreline {axis} bounds [{lower}, {upper}] contain no {DECIMALS}-decimal coordinate')
+    return lo, hi
+
+
+def slim_shoreline(collection, *, bounds=None):
+    """Group a checked import by properties and round onto the grid inside bounds, if supplied."""
+    if bounds is None:
+        west = south = -math.inf
+        east = north = math.inf
+    else:
+        west, east = _grid_interval(bounds[0], bounds[2], 'longitude')
+        south, north = _grid_interval(bounds[1], bounds[3], 'latitude')
     groups = {}
     for feature in collection['features']:
         key = json.dumps(feature['properties'], sort_keys=True, ensure_ascii=False)
         group = groups.setdefault(key, {'properties': feature['properties'], 'lines': []})
-        group['lines'] += [[[round(x, DECIMALS), round(y, DECIMALS)] for x, y in line] for line in feature_lines(feature['geometry'])]
+        group['lines'] += [[[min(max(round(x, DECIMALS), west), east), min(max(round(y, DECIMALS), south), north)]
+                            for x, y in line] for line in feature_lines(feature['geometry'])]
     features, per_tile = [], {}
     for group in groups.values():
         tile = str(group['properties'].get('source_tile', 'region')).replace('/', '-')
@@ -114,7 +137,7 @@ def publish_shoreline(root, region, output):
         return None
     collection = read_json(source)
     check_shoreline(collection, region)
-    published = slim_shoreline(collection)
+    published = slim_shoreline(collection, bounds=region['bounds'])
     check_shoreline(published, region)
     atomic_json(target, published)
     return f"regions/{region['id']}/shoreline.geojson"
