@@ -93,33 +93,39 @@ def write_pmtiles(
     Consume ((z, x, y), png_bytes) pairs from a single-pass iterable, or pass
     `tiles.items()` for an existing mapping. Input can be in any order, but
     coordinates must be unique and tile zooms must be within the inclusive
-    [minzoom, maxzoom] range. Only the tile index and directories grow in memory;
-    temporary disk usage can reach input plus output size. Distinct contents
-    are stored in order of first Hilbert occurrence.
+    [minzoom, maxzoom] range. Only indexes and directories grow in memory;
+    temporary disk usage can reach the unique payload size plus output size.
+    Distinct contents are stored in order of first Hilbert occurrence.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    records = []
+    records, sources = [], {}
     with tempfile.TemporaryFile(dir=path.parent) as spool:
         for zxy, data in tiles:
             if not data:
                 raise ValueError(f'empty tile payload at {zxy}')
             if not minzoom <= zxy[0] <= maxzoom:
                 raise ValueError(f'tile {zxy} outside PMTiles zoom range [{minzoom}, {maxzoom}]')
-            records.append((_tile_id(*zxy), spool.tell(), len(data), hashlib.sha256(data).digest()))
-            spool.write(data)
+            tid = _tile_id(*zxy)
+            digest = hashlib.sha256(data).digest()
+            source = sources.get(digest)
+            if source is None:
+                source = sources[digest] = spool.tell()
+                spool.write(data)
+            records.append((tid, source, len(data)))
+        del sources
         records.sort()
 
         entries, contents = [], {}
         size, previous = 0, -1
-        for tid, source, length, digest in records:
+        for tid, source, length in records:
             if tid == previous:
                 raise ValueError(f'duplicate tile id: {tid}')
             previous = tid
-            if digest not in contents:
-                contents[digest] = (size, source)
+            if source not in contents:
+                contents[source] = (size, length)
                 size += length
-            offset, _ = contents[digest]
+            offset, _ = contents[source]
             if entries and entries[-1][0] + entries[-1][3] == tid and entries[-1][1] == offset:
                 entries[-1] = (*entries[-1][:3], entries[-1][3] + 1)
             else:
@@ -147,11 +153,10 @@ def write_pmtiles(
                 output.write(root)
                 output.write(meta)
                 output.write(leaves)
-                # Read each distinct blob once, in first-occurrence order.
-                for _, source, length, digest in records:
-                    if source == contents[digest][1]:
-                        spool.seek(source)
-                        output.write(spool.read(length))
+                # Insertion order here is first Hilbert occurrence, not spool order.
+                for source, (_, length) in contents.items():
+                    spool.seek(source)
+                    output.write(spool.read(length))
             part.replace(path)
         finally:
             if part is not None:

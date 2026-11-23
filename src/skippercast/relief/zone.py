@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from skippercast.platform.contracts import atomic_json
 from skippercast.relief import mosaic, receipts
 
 SCOPES = ('public',)
@@ -70,25 +71,44 @@ def build(ctx, out):
     if sources['scope'] != 'public' or any(row['rights_class'] != 'public' for row in sources['sources']):
         raise receipts.ReceiptError('expected the public selection')
     labels = []
+    catalog_ids = {}
     for row in sources['sources']:
-        if row['id'] not in included:
-            raise receipts.ReceiptError(f'no public selection decision for {row["id"]}')
+        contributor = row['id']
+        if contributor not in included:
+            raise receipts.ReceiptError(f'no public selection decision for {contributor}')
+        if contributor in catalog_ids:
+            raise receipts.ReceiptError(f'duplicate public selection binding for {contributor}')
+        catalog_ids[contributor] = row.get('source_id') or contributor  # same as inventory
         label = {k: row[k] for k in ('id', 'rights_class', 'label', 'name', 'date', 'provenance') if k in row}
         if row.get('priority_class') == 'compiled':
             label['provenance'] = 'compiled'
         labels.append(label)
     files, support = grids(ctx)
     with TemporaryDirectory(dir=out) as scratch:
-        path = Path(scratch) / 'selection.json'
+        work = Path(scratch)
+        path = work / 'selection.json'
         path.write_bytes(receipts.canonical({'region': ctx.region.id, 'sources': labels}))
         flags = ['--region', mosaic.region_config(ctx), '--coarse', args.coarse, '--water', args.water,
-                 '--mosaic', files[0].parent, '--selection', path, '--output', out,
+                 '--mosaic', files[0].parent, '--selection', path, '--output', work,
                  '--coarse-source', args.coarse_source]
         if args.coarse_date:
             flags.extend(('--coarse-date', args.coarse_date))
         if support:
             flags.extend(('--support', support))
         mosaic.run_tool(SCRIPT, *flags)
-    for filename in ('zone.geojson', 'detail.geojson'):
-        if not (out / filename).is_file():
-            raise receipts.ReceiptError(f'zone did not produce {filename}')
+        zone, detail = work / 'zone.geojson', work / 'detail.geojson'
+        for output in (zone, detail):
+            if not output.is_file():
+                raise receipts.ReceiptError(f'zone did not produce {output.name}')
+        # Polygonization uses contributor IDs; the public Chart layer uses catalog IDs.
+        document = json.loads(detail.read_bytes())
+        for feature in document['features']:
+            props = feature['properties']
+            contributors = props['sources']
+            try:
+                props['sources'] = [catalog_ids[ident] for ident in contributors]
+            except KeyError as exc:
+                raise receipts.ReceiptError(f'no public selection binding for {exc.args[0]}') from exc
+        atomic_json(detail, document, unique_tmp=True)
+        for output in (zone, detail):
+            output.replace(out / output.name)

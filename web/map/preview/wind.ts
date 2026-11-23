@@ -31,6 +31,7 @@ export const attach: PreviewAttach = async ctx => {
     return null;
   }
   const canvas = document.createElement('canvas');
+  if (!canvas.getContext('2d')) throw new Error('2D canvas context is unavailable');
   canvas.setAttribute('aria-hidden', 'true');
   canvas.dataset.previewLayer = 'wind';
   Object.assign(canvas.style, {position: 'absolute', inset: '0', width: '100%', height: '100%', pointerEvents: 'none'});

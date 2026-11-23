@@ -7,6 +7,7 @@ small independent directory decoder instead. The optional command uses the
 app's locked reader and measures writer RSS before starting Node.
 """
 
+from contextlib import contextmanager
 import gzip
 import hashlib
 import json
@@ -14,11 +15,12 @@ from pathlib import Path
 import struct
 import subprocess
 import sys
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, TemporaryFile
 from typing import TypedDict
 
 import pytest
 
+from skippercast.relief import pmtiles_v3
 from skippercast.relief.pmtiles_v3 import write_pmtiles
 from tests._support import ROOT
 
@@ -55,15 +57,58 @@ def _tiles(count: int, *, small: bool = False):
         yield (9, index // 256, index % 256), _payload(index, small)
 
 
-@pytest.mark.parametrize('count', [2, 7145])
-def test_root_only_archive_matches_legacy(tmp_path, count):
+def _small_tiles():
+    from scripts.build_bathy_tiles import tile_id
+
+    coords = sorted(((9, 0, i) for i in range(4)), key=lambda zxy: tile_id(*zxy))
+    return list(zip(coords, (_payload(i, small=True) for i in (0, 2, 0, 3)), strict=True))
+
+
+@contextmanager
+def _measure_spool_writes(monkeypatch):
+    writes = []
+
+    @contextmanager
+    def measured_spool(**kwargs):
+        with TemporaryFile(**kwargs) as spool:
+            write = spool.write
+
+            def counted_write(data):
+                written = write(data)
+                writes.append(written)
+                return written
+
+            spool.write = counted_write
+            yield spool
+
+    with monkeypatch.context() as patch:
+        patch.setattr(pmtiles_v3.tempfile, 'TemporaryFile', measured_spool)
+        yield writes
+
+
+@pytest.mark.parametrize('count', [4, 7145])
+def test_root_only_archive_matches_legacy(tmp_path, monkeypatch, count):
     # Reordering payloads, changing gzip settings or changing a legacy header
     # field would break exact-byte compatibility with the current writer.
     from scripts.build_bathy_tiles import write_pmtiles as legacy_writer
 
-    old = legacy_writer(tmp_path / 'old.pmtiles', dict(_tiles(count, small=True)), **_OPTIONS)
-    new = write_pmtiles(tmp_path / 'new.pmtiles', _tiles(count, small=True), **_OPTIONS)
-    assert new.read_bytes() == old.read_bytes()
+    if count != 4:
+        old = legacy_writer(tmp_path / 'old.pmtiles', dict(_tiles(count, small=True)), **_OPTIONS)
+        new = write_pmtiles(tmp_path / 'new.pmtiles', _tiles(count, small=True), **_OPTIONS)
+        assert new.read_bytes() == old.read_bytes()
+        return
+
+    tiles = _small_tiles()
+    old = legacy_writer(tmp_path / 'old.pmtiles', dict(tiles), **_OPTIONS).read_bytes()
+    # A, B, A, C in Hilbert order; B, A, C, A in shuffled arrival order.
+    # Deduplicating only at copy-out preserves the archive but wastes a spool write.
+    shuffled = [tiles[i] for i in (1, 2, 3, 0)]
+    expected_writes = sorted(len(data) for data in {data for _, data in tiles})
+    for order in (tiles, shuffled):
+        with _measure_spool_writes(monkeypatch) as writes:
+            new = write_pmtiles(tmp_path / 'new.pmtiles', iter(order), **_OPTIONS)
+        assert new.read_bytes() == old
+        assert sorted(writes) == expected_writes
 
 
 def test_leaf_offsets_runs_and_payload_order(tmp_path):
@@ -135,6 +180,18 @@ def test_interrupted_input_does_not_replace_existing_archive(tmp_path):
     with pytest.raises(RuntimeError, match='render failed'):
         write_pmtiles(path, broken_tiles(), **_OPTIONS)
     assert path.read_bytes() == b'previous archive'
+    assert list(tmp_path.iterdir()) == [path]
+
+
+def test_duplicate_coordinate_does_not_replace_existing_archive(tmp_path):
+    tiles = _small_tiles()
+    path = write_pmtiles(tmp_path / 'existing.pmtiles', iter(tiles), **_OPTIONS)
+    previous = path.read_bytes()
+    a, b, same_payload, _ = tiles
+    # Payload dedup must not hide a repeated coordinate with the same bytes.
+    with pytest.raises(ValueError, match='duplicate tile id'):
+        write_pmtiles(path, iter((a, b, same_payload, a)), **_OPTIONS)
+    assert path.read_bytes() == previous
     assert list(tmp_path.iterdir()) == [path]
 
 
