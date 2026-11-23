@@ -66,4 +66,6 @@ NDBC, NWS and NOAA CO-OPS supply observational, advisory and tide facts. Open-Me
 
 The Central Coast Three.js renderer and report components are ported from the owner-authorized Fish application at commit `4ac5e0cabb369c97beba5db639856b855fda347a`. Its public coastal bridge retains original source attribution, rights, dates, native sample inspection, publication checks and modeled-context distinctions; see [coastal service](docs/coastal-service.md). No new survey admission is made by copying the renderer.
 
-Three.js 0.180.0 is MIT licensed ([retained notice](dist/vendor/THREE-LICENSE.txt)). SunCalc 2.1.0 is BSD 2-Clause licensed ([retained notice](dist/vendor/SUNCALC-LICENSE.txt)). These notices remain separate from the SkipperCast license. The coastal interface uses the already self-hosted DM Sans font under the retained SIL OFL notice above.
+Three.js 0.187.0 is MIT licensed ([retained notice](dist/vendor/THREE-LICENSE.txt)). SunCalc 2.1.4 is BSD 2-Clause licensed ([retained notice](dist/vendor/SUNCALC-LICENSE.txt)). These notices remain separate from the SkipperCast license. The coastal interface uses the already self-hosted DM Sans font under the retained SIL OFL notice above.
+
+The web app also bundles Preact 11.2.0, @preact/signals 2.11.4 (including @preact/signals-core 1.14.5) and fflate 0.8.3, all MIT licensed. It loads @simplewebauthn/browser 14.0.0 separately for passkeys (MIT; [retained notice](dist/vendor/simplewebauthn-browser-14.0.0/LICENSE.md)). The licences page carries their licence texts.
