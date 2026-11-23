@@ -114,6 +114,38 @@ test('planner_en_bytes_and_es_chrome: es then en restores the exact English page
   } finally { ui.language.value = 'en'; p.dispose(); }
 });
 
+// SC2052-08 contract: a ranked reef's terrain line in Spanish is built from the numbers behind it (page number format, 'Sin dato' for a missing one, zero kept);
+// English is the published line byte for byte; a ranked record with no numbers and a non-ranked record keep today's behaviour. Believable bugs: parsing the English prose, a
+// '.' decimal, a missing number printed as 0 or 'undefined', Spanish leaking into English, the line appearing on a non-ranked row.
+test('planner_es_reef_terrain_line: Spanish from the numbers, English byte-identical, fallbacks and unranked rows unchanged', () => {
+  const line = (html, id) => new RegExp(`data-spot="${id}"[\\s\\S]*?</label>`).exec(html)?.[0].match(/<small>([^<]*(?:local relief|relieve local|terrain)[^<]*)<\/small>/)?.[1];
+  const spots = [
+    ranked(1, 90, {id: 'a', terrain_interpretation: '24.0 m local relief; 1.7 ha reef footprint.', terrain_display: {reliefM: 24, areaHa: 1.7}}),
+    ranked(2, 80, {id: 'b', terrain_interpretation: 'Unknown m local relief; 0.0 ha reef footprint.', terrain_display: {reliefM: null, areaHa: 0}}),
+    ranked(3, 70, {id: 'c', terrain_interpretation: '0.0 m local relief; unknown ha reef footprint.', terrain_display: {reliefM: 0, areaHa: null}}),
+    ranked(4, 60, {id: 'd'}),
+    {...ranked(5, 50, {id: 'e', terrain_interpretation: '9.0 m local relief; 1.0 ha reef footprint.', terrain_display: {reliefM: 9, areaHa: 1}}), trip_rank: undefined, trip_fit: undefined}];
+  const { p, model } = mk({spots: {value: spots}});
+  try {
+    ui.language.value = 'en';
+    const en = page(model);
+    assert.equal(line(en, 'a'), '24.0 m local relief; 1.7 ha reef footprint.');
+    assert.equal(line(en, 'b'), 'Unknown m local relief; 0.0 ha reef footprint.');
+    assert.equal(line(en, 'c'), '0.0 m local relief; unknown ha reef footprint.');
+    assert.equal(line(en, 'd'), 'Ledge &lt;b>terrain&lt;/b>');
+    assert.equal(line(en, 'e'), undefined, 'a record that is not ranked shows no terrain line');
+    ui.language.value = 'es';
+    const es = page(model);
+    assert.equal(line(es, 'a'), '24,0 m de relieve local; 1,7 ha de superficie del arrecife.');
+    assert.equal(line(es, 'b'), 'Sin dato m de relieve local; 0,0 ha de superficie del arrecife.');
+    assert.equal(line(es, 'c'), '0,0 m de relieve local; sin dato ha de superficie del arrecife.');
+    assert.equal(line(es, 'd'), 'Ledge &lt;b>terrain&lt;/b>', 'no numbers: the published text, escaped, as before');
+    assert.equal(line(es, 'e'), undefined);
+    ui.language.value = 'en';
+    assert.equal(page(model), en, 'switching back restores the exact English page');
+  } finally { ui.language.value = 'en'; p.dispose(); }
+});
+
 test('planner_es_status_follows_language: a model message is re-rendered, never replayed', () => {
   const { p, model } = mk();
   try {

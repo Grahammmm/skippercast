@@ -262,3 +262,43 @@ test('status_slice_check: CLI detects missing Spanish and stale status slice wit
     assert.match(run('--check').stderr, /status.heading: no Spanish/);
   } finally { rmSync(root, {recursive: true, force: true}); }
 });
+
+// SC2137-10: a screen reader must read the names that stay English as published with English pronunciation on the Spanish page.
+test('status_page_spanish_english_names: published English names carry lang="en", translated labels and English output do not', async () => {
+  await statusPage.initStatusPage({querySelectorAll: () => []}, {search: '?lang=es', storage: null});
+  const feeds = fresh();
+  feeds.data.sources.sst.name = 'Odd <b>"name"</b> & co';                                     // a raw daily feed name with markup punctuation
+  feeds.data.sources.model = src('model', 'forecast', {id: 'model-gfs_global'});              // a forecast label from the page's own English table
+  feeds.data.sources.unlabelled = src('unlabelled', 'forecast', {id: 'model-unknown'});       // the forecast fallback label
+  feeds.coast = {ocean: null};                                                                // unreadable coast items still carry their catalogue names
+  const es = renderRows(statusRows(feeds, NOW, 'es'), 'es'), en = renderRows(statusRows(feeds, NOW), 'en');
+  const th = (name, lang) => `<th scope="row"${lang ? ' lang="en"' : ''}>${name}</th>`;
+  for (const name of ['GOES East and West longwave infrared imagery (nowCOAST WMS time index)', 'Odd &lt;b&gt;&quot;name&quot;&lt;/b&gt; &amp; co',
+    'NOAA wind forecast tiles', 'Forecast model tiles']) assert.ok(es.includes(th(name, true)), name);
+  for (const name of ['Fuente de condiciones en vivo', 'Boyas: Morro Bay', 'Informes de desembarques', 'Páginas de normas de pesca y áreas protegidas']) {
+    assert.ok(es.includes(th(name, false)), `${name} is Spanish, not tagged English`);
+  }
+  assert.equal((es.match(/<th scope="row"/g) || []).length, (en.match(/<th scope="row"/g) || []).length, 'same row count in both languages');
+  assert.ok(!en.includes('lang='), 'the English page gains no language markup');
+  const coverage = renderCoverage(undefined, 'es');
+  assert.ok(coverage.includes('<li lang="en">NOAA ENC display service (chart images on the map)</li>'));
+  assert.ok(!/<li>/.test(coverage) && !renderCoverage().includes('lang='), 'Spanish names are all tagged; English coverage is untouched');
+  assert.ok(/<h3>[^<]*<\/h3>/.test(coverage) && !/<h3[^>]*lang=/.test(coverage), 'translated headings stay untagged');
+});
+
+test('status_page_narrow_layout: the phone layout keeps one table and is scoped to the status table below 480 px', () => {
+  const css = readFileSync(new URL('../dist/coast-readable.css', import.meta.url), 'utf8');
+  const block = css.match(/@media \(max-width: 479px\) \{([\s\S]*?)\n\}/);
+  assert.ok(block, 'a phone-width block exists');
+  const selectors = [...block[1].matchAll(/^\s*([^{}\n]+)\{/gm)].map(m => m[1].trim());
+  assert.ok(selectors.length >= 3 && selectors.every(s => s.startsWith('.coast-readable .status-table')), 'every narrow rule is scoped to the status table');
+  assert.match(block[1], /\.status-table \{ table-layout: fixed; \}/);
+  assert.match(block[1], /overflow-wrap: anywhere/);
+  const widths = [...block[1].matchAll(/th:nth-child\((\d)\) \{ width: (\d+)%/g)].map(m => Number(m[2]));
+  assert.equal(widths.length, 4, 'all four columns have a share');
+  assert.equal(widths.reduce((a, b) => a + b, 0), 100);
+  assert.doesNotMatch(block[1], /display: none|text-overflow|display: block/, 'no column is hidden, clipped or stacked away');
+  const html = renderRows([{group: 'G', name: 'A', state: 'ok', lastSuccess: null, ageHours: null, expectedHours: 3, note: ''}], 'es');
+  assert.equal((html.match(/<table /g) || []).length, 1);
+  assert.equal((html.match(/<th scope="col"/g) || []).length, 4, 'headers stay for wider screens');
+});
