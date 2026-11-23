@@ -44,15 +44,16 @@ def argv(workspace, bindings, *extra):
             *(token for role, entry in bindings.items() for token in ('--input', role, *entry))]
 
 
-@pytest.mark.parametrize('explicit_zone', [False, True], ids=['receipt-zone', 'explicit-zone'])
-def test_stdout_round_trips_through_runner(workspace, bindings, explicit_zone):
+@pytest.mark.parametrize(('explicit_zone', 'fresh_out'), [(False, False), (True, False), (False, True)],
+                         ids=['receipt-zone', 'explicit-zone', 'fresh-receipt-zone'])
+def test_stdout_round_trips_through_runner(workspace, bindings, explicit_zone, fresh_out):
     # Catch emitted schema/role drift, an accidentally normalized file spelling,
     # or placeholder paths/metadata displacing the runner's receipt fallback.
-    extra = []
+    extra = ['--fresh-out'] if fresh_out else []
     if explicit_zone:
         for role in ('coarse', 'water', 'qa_support'):
             bindings[role] = (role, pin(workspace / role, role.encode()))
-        extra = ['--coarse-source', 'fixture-family', '--coarse-date', '2026-01-01']
+        extra += ['--coarse-source', 'fixture-family', '--coarse-date', '2026-01-01']
     command = argv(workspace, bindings, *extra)
     command[-1] = command[-1].upper()  # same reviewed pin, different hex case
     result = subprocess.run(
@@ -89,16 +90,21 @@ def assert_refused(command, capsys, reason):
     assert reason in result.err
 
 
-def test_refuses_one_changed_basemap_byte(workspace, bindings, capsys):
-    # Catch a self-pinning assembler (or a check limited to JSON/census inputs).
-    (workspace / 'tiles/basemap tiles.pmtiles').write_bytes(b'basf')
-    assert_refused(argv(workspace, bindings), capsys, 'expected sha256')
+@pytest.mark.parametrize(('path', 'content', 'extra'), [
+    ('tiles/basemap tiles.pmtiles', b'basf', ()),
+    ('census.json', census_bytes(REGION) + b'\n', ('--fresh-out', '--through', 'select')),
+], ids=['envelope-basemap', 'fresh-select-census'])
+def test_refuses_changed_input_bytes(workspace, bindings, capsys, path, content, extra):
+    # Catch self-pinning, or comparing parsed census content instead of pinned bytes.
+    (workspace / path).write_bytes(content)
+    assert_refused(argv(workspace, bindings, *extra), capsys, 'expected sha256')
 
 
-def test_refuses_other_region_even_with_matching_census_pin(workspace, bindings, capsys):
+@pytest.mark.parametrize('extra', [(), ('--fresh-out', '--through', 'select')], ids=['envelope', 'fresh-select'])
+def test_refuses_other_region_even_with_matching_census_pin(workspace, bindings, capsys, extra):
     # Hash success does not establish that the census belongs to this region.
     bindings['census'] = ('census.json', pin(workspace / 'census.json', census_bytes('big-sur-coast')))
-    assert_refused(argv(workspace, bindings), capsys, 'census region mismatch')
+    assert_refused(argv(workspace, bindings, *extra), capsys, 'census region mismatch')
 
 
 @pytest.mark.parametrize('missing', ['census', 'basemap'])
@@ -106,8 +112,47 @@ def test_envelope_rejects_incomplete_inputs_but_earlier_form_accepts(workspace, 
     # Catch a partial record presented as complete, or early prep requiring an envelope's files.
     del bindings[missing]
     assert_refused(argv(workspace, bindings), capsys, 'envelope requires pinned census and basemap')
+    assert_refused(argv(workspace, bindings, '--fresh-out'), capsys, 'envelope requires pinned census and basemap')
     assert central_run_input_assembly.main(argv(workspace, bindings, '--through', 'select')) == 0
     assert set(json.loads(capsys.readouterr().out)['inputs']) == set(bindings)
+
+
+@pytest.mark.parametrize('through', ['select', 'qa'])
+def test_fresh_out_refuses_census_free_handoff(workspace, bindings, capsys, through):
+    # An envelope-only gate can emit a plausible record that needs a leftover OUT census.
+    del bindings['census']
+    assert_refused(argv(workspace, bindings, '--fresh-out', '--through', through), capsys,
+                   'fresh OUT requires pinned census')
+
+
+def test_fresh_select_round_trips_with_only_census(workspace, bindings, capsys):
+    # Requiring envelope or producer inputs here would prevent a census-only select handoff.
+    census, reviewed = bindings['census']
+    command = argv(workspace, {'census': (census, reviewed)}, '--fresh-out', '--through', 'select')
+    assert central_run_input_assembly.main(command) == 0
+    result = capsys.readouterr()
+    assert not result.err
+    record = workspace / 'assembled.json'
+    record.write_text(result.out, encoding='utf-8')
+    out = workspace / 'empty-out'
+    out.mkdir()
+    parser, options = run_region.parse([REGION, '--out', str(out), '--through', 'select', '--inputs', str(record)])
+    _, pins = run_region.load_inputs(options, parser)
+    run_region.resolve_options(options, parser, pins)
+    assert pins == {'census': reviewed}
+    assert options.census == str(workspace / census)
+    assert options.census_sha256 == reviewed
+    assert (options.basemap, options.coarse, options.water) == (None, None, None)
+    assert not list(out.iterdir())
+
+
+def test_fresh_out_keeps_basemap_conditional_on_shots(workspace, bindings, capsys):
+    # Catch a basemap requirement moving earlier or being dropped before envelope.
+    del bindings['basemap']
+    assert central_run_input_assembly.main(argv(workspace, bindings, '--fresh-out', '--through', 'package')) == 0
+    assert set(json.loads(capsys.readouterr().out)['inputs']) == {'census'}
+    assert_refused(argv(workspace, bindings, '--fresh-out', '--through', 'shots'), capsys,
+                   'runner requires --basemap')
 
 
 @pytest.mark.parametrize('role', ['coarse', 'water'])
