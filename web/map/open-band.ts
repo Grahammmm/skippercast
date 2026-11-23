@@ -7,6 +7,7 @@ const EDGE = 8;
 /**
  * A cover counts if its four numbers are finite, it overlaps `host` and spans at least half its width; one at
  * the top edge (within 8 px) pads the top, one at the bottom edge pads the bottom, one at both (a full sheet) neither.
+ * Edge coverage is measured on the visible intersection with the host.
  * A band under `minBand` px shrinks both in proportion to exactly `minBand`; a host under `minBand` pads nothing.
  */
 export function openBandPadding(host: Box, covers: readonly Box[], minBand = 160): {top: number; bottom: number; left: 0; right: 0} {
@@ -17,11 +18,12 @@ export function openBandPadding(host: Box, covers: readonly Box[], minBand = 160
   if (!(height >= minBand)) return {top, bottom, left: 0, right: 0};
   for (const c of covers) {
     if (![c.top, c.bottom, c.left, c.right].every(Number.isFinite)) continue;
-    if (c.bottom <= host.top || c.top >= host.bottom || c.right <= host.left || c.left >= host.right) continue;
-    if (Math.min(c.right, host.right) - Math.max(c.left, host.left) < width / 2) continue;
-    const atTop = Math.abs(c.top - host.top) <= EDGE, atBottom = Math.abs(c.bottom - host.bottom) <= EDGE;
-    if (atTop && !atBottom) top = Math.max(top, c.bottom - host.top);
-    else if (atBottom && !atTop) bottom = Math.max(bottom, host.bottom - c.top);
+    const visibleTop = Math.max(c.top, host.top), visibleBottom = Math.min(c.bottom, host.bottom);
+    const visibleWidth = Math.min(c.right, host.right) - Math.max(c.left, host.left);
+    if (visibleTop >= visibleBottom || visibleWidth <= 0 || visibleWidth < width / 2) continue;
+    const atTop = visibleTop - host.top <= EDGE, atBottom = host.bottom - visibleBottom <= EDGE;
+    if (atTop && !atBottom) top = Math.max(top, visibleBottom - host.top);
+    else if (atBottom && !atTop) bottom = Math.max(bottom, host.bottom - visibleTop);
   }
   const clamp = (v: number): number => Math.round(Math.min(Math.max(v, 0), height));
   top = clamp(top); bottom = clamp(bottom);
