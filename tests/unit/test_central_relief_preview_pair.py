@@ -180,6 +180,15 @@ def _ihdr(depth=8, color=2, interlace=0):
     return _chunk(b'IHDR', struct.pack('>IIBBBBB', 256, 256, depth, color, 0, 0, interlace))
 
 
+def _rows(row_bytes, ihdr, extra=b'', after=b''):
+    body = zlib.compress((b'\x00' + bytes(row_bytes)) * 256)
+    return b'\x89PNG\r\n\x1a\n' + ihdr + extra + _chunk(b'IDAT', body) + after + _chunk(b'IEND', b'')
+
+
+def _indexed(extra, depth=8, after=b''):
+    return _rows(256 // 8 * depth, _ihdr(depth, 3), extra, after)
+
+
 @pytest.mark.parametrize('label, tile, reason', [
     ('signature and IHDR prefix only (33 bytes)', _png((1, 2, 3))[:33], 'must start with IHDR and end with IEND'),
     ('prefix plus a partial next chunk', _png((1, 2, 3))[:33 + 4], 'truncated PNG chunk'),
@@ -192,6 +201,21 @@ def _ihdr(depth=8, color=2, interlace=0):
     ('bytes after IEND', _png((1, 2, 3)) + b'\x00', 'trailing bytes'),
     ('invalid scanline filter', _png((1, 2, 3))[:8] + _ihdr()
      + _chunk(b'IDAT', zlib.compress((b'\x09' + b'\x00' * 3 * 256) * 256)) + _chunk(b'IEND', b''), 'invalid filter'),
+    ('indexed with a one-byte PLTE (gdk-pixbuf: PLTE invalid)',
+     _indexed(_chunk(b'PLTE', b'\x00')), 'PLTE chunk is invalid'),
+    ('indexed with an empty PLTE', _indexed(_chunk(b'PLTE', b'')), 'PLTE chunk is invalid'),
+    ('indexed with more palette entries than the bit depth allows',
+     _indexed(_chunk(b'PLTE', bytes(9)), depth=1), 'PLTE chunk is invalid'),
+    ('indexed with two PLTE chunks', _indexed(_chunk(b'PLTE', bytes(3)) * 2), 'more than one PLTE'),
+    ('indexed with PLTE after IDAT', _indexed(b'', after=_chunk(b'PLTE', bytes(3))), 'PLTE chunk comes after IDAT'),
+    ('indexed with no PLTE', _indexed(b''), 'indexed PNG needs PLTE'),
+    ('grayscale with a PLTE', _rows(256, _ihdr(8, 0), _chunk(b'PLTE', bytes(3))), 'must not have a PLTE'),
+    ('indexed with more tRNS entries than palette entries',
+     _indexed(_chunk(b'PLTE', bytes(3)) + _chunk(b'tRNS', b'\xff\xff')), 'tRNS chunk is invalid'),
+    ('truecolor with a tRNS of the wrong length', _rows(768, _ihdr(8, 2), _chunk(b'tRNS', b'\x00\x00')),
+     'tRNS chunk is invalid'),
+    ('RGBA with a tRNS', _rows(1024, _ihdr(8, 6), _chunk(b'tRNS', b'\x00\x00')), 'tRNS chunk is invalid'),
+    ('unknown critical chunk', _rows(768, _ihdr(8, 2), _chunk(b'ABCD', b'')), 'unknown critical chunk'),
 ])
 def test_prefix_or_broken_png_refused_not_embedded(tmp_path, make_package, capsys, label, tile, reason):
     # Catches accepting any bound tile with a PNG signature and 256x256 IHDR and emitting a broken <img>.
@@ -215,6 +239,9 @@ def test_valid_png_variants_still_embedded(tmp_path, make_package):
         (8, 41, 2): head + _ihdr(16, 6) + _chunk(b'IDAT', zlib.compress(rows(256 * 8))),
         (8, 41, 3): head + _ihdr(1, 0) + _chunk(b'IDAT', zlib.compress(rows(32))),
         (8, 41, 4): head + _ihdr(8, 0, 1) + _chunk(b'IDAT', zlib.compress(adam7)),
+        (8, 41, 5): _indexed(_chunk(b'PLTE', bytes(range(12))) + _chunk(b'tRNS', b'\x80\xff'), depth=2)[:-12],
+        (8, 41, 6): _indexed(_chunk(b'PLTE', bytes(768)), depth=8)[:-12],
+        (8, 41, 7): _rows(768, _ihdr(8, 2), _chunk(b'PLTE', bytes(6)) + _chunk(b'tRNS', bytes(6)))[:-12],
     }
     for address, body in tiles.items():
         tiles[address] = body + _chunk(b'IEND', b'')
