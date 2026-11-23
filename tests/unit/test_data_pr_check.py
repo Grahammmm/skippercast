@@ -17,6 +17,7 @@ from tests.unit.test_pointer_diff import git, pointer, previous_for
 
 POINTER = 'catalog/relief/fixture-bay.json'
 CONTOURS = 'catalog/depth-contours/fixture-bay.geojson'
+SCHEMA = 'catalog/relief/pointer.schema.json'
 OTHER_POINTER = 'catalog/relief/other-bay.json'
 OTHER_CONTOURS = 'catalog/depth-contours/other-bay.geojson'
 FIRST = pointer()
@@ -54,6 +55,13 @@ BRANCHES = {
     'over-invalid-base': ('invalid-pointer', {POINTER: SECOND, CONTOURS: contours(interval=20)}),
     'foreign-base': ('seed', {POINTER: {**FIRST, 'region': 'other-bay'}, CONTOURS: contours()}),
     'over-foreign-base': ('foreign-base', {POINTER: SECOND, CONTOURS: contours(interval=20)}),
+    # Both refs lack a usable pointer schema, so check_catalog has no context to read.
+    'no-schema': ('seed', {SCHEMA: None}),
+    'no-schema-first': ('no-schema', FIRST_PAIR),
+    'bad-schema': ('seed', {SCHEMA: '{}'}),
+    'bad-schema-first': ('bad-schema', FIRST_PAIR),
+    'garbled-schema': ('seed', {SCHEMA: 'not json'}),
+    'garbled-schema-first': ('garbled-schema', FIRST_PAIR),
 }
 
 
@@ -130,10 +138,18 @@ def test_c1_scope_failures(repo, capsys, base, head, paths):
                  id='C2: invalid base pointer'),
     pytest.param('foreign-base', 'over-foreign-base',
                  ["lineage region mismatch: base 'other-bay', head 'fixture-bay'"], id='C2: base pointer region'),
+    pytest.param('no-schema', 'no-schema-first', [f'catalog missing {SCHEMA}'],
+                 id='C2: head catalog without the pointer schema'),
+    pytest.param('bad-schema', 'bad-schema-first',
+                 ["catalog cannot check head catalog: KeyError: '$defs'"], id='C2: head schema without definitions'),
+    pytest.param('garbled-schema', 'garbled-schema-first',
+                 ['catalog cannot check head catalog: JSONDecodeError: Expecting value: line 1 column 1 (char 0)'],
+                 id='C2: head schema that is not JSON'),
 ])
 def test_c2_head_failures(repo, capsys, base, head, failures):
     """C2: the head pointer, its lineage and the catalog pair each fail with their own line."""
-    # Believable bug: skipping lineage for a release, or reading the pair check from the wrong tree.
+    # Believable bug: skipping lineage for a release, or reading the pair check from the wrong tree;
+    # or a head catalog with a missing/malformed pointer schema crashing with a traceback, not a FAIL.
     expected = ''.join(f'FAIL {failure}\n' for failure in failures) + 'data-pr: FAIL\n'
     assert check(repo, base, head, capsys) == (1, expected, '')
 

@@ -163,7 +163,15 @@ def check_head(repo: Path, base: str, head: str, region: str, pointer_changed: b
                 target = Path(tmp, path)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(data)
-        rows = catalog_check.check_catalog(tmp)
+        rows = []
+        if not Path(tmp, _CATALOG_CONTEXT[0]).is_file():
+            # check_catalog cannot run without the head's pointer schema.
+            failures.append(('catalog', f'missing {_CATALOG_CONTEXT[0]}'))
+        else:
+            try:
+                rows = catalog_check.check_catalog(tmp)
+            except Exception as exc:  # noqa: BLE001 - a bad head catalog is a reported failure, not a crash
+                failures.append(('catalog', f'cannot check head catalog: {type(exc).__name__}: {exc}'))
     failures.extend(('catalog', f"{row['check']}: {row['reason']}") for row in rows
                     if row['region'] == region and row['status'] == 'FAIL')
     return candidate, lineage, failures
