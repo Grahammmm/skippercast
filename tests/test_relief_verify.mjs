@@ -42,7 +42,7 @@ const archiveHash = sha(original.bytes);
 const pointerPath = '/catalog/relief/north.json';
 const archivePath = `/feeds/tiles/relief/north/${archiveHash}.pmtiles`;
 
-function chart(t, {fault, status = 'reviewed', holdRoot} = {}) {
+function chart(t, {fault, status = 'reviewed', rootResponse} = {}) {
   const globals = Object.fromEntries(['document', 'MutationObserver', 'getComputedStyle'].map(key => [key, globalThis[key]]));
   Object.assign(globalThis, {
     document: {documentElement: {dataset: {}}},
@@ -53,7 +53,7 @@ function chart(t, {fault, status = 'reviewed', holdRoot} = {}) {
   assert.equal(served.bytes.length, original.bytes.length);
   assert.deepEqual(served.bytes.subarray(0, 127), original.bytes.subarray(0, 127));
   const rows = coords.map(([, x, y], i) => [x, y, sha(payloads[i])]);
-  const chunk = json(fault === 'missing digest' ? rows.slice(0, 1) : rows);
+  const chunk = fault === 'malformed' ? Buffer.from('[') : json(fault === 'missing digest' ? rows.slice(0, 1) : rows);
   const root = json({chunks: {[chunkName]: sha(chunk)}});
   const digestRoot = sha(root);
   const index = `/feeds/tiles/relief/north/${archiveHash}.digests/${digestRoot}/`;
@@ -64,29 +64,37 @@ function chart(t, {fault, status = 'reviewed', holdRoot} = {}) {
       label: 'estimated', vertical_datum: 'synthetic', survey_dates: ['2026-01-01']}],
     detail_summary: {mask: 'transparent-nodata', depth_bands: [{source_id: 'fixture', resolution_m: 10, min_depth_m: 0, max_depth_m: 90}]},
     native_support_by_zoom: {10: {tiles: 2, limit_m: 91.44, sources: []}}};
-  const requests = [], unavailable = [], handedToMap = [];
-  let action, overlay, handle, template;
+  const requests = [], unavailable = [], handedToMap = [], removed = [];
+  let action, overlay, handle, template, outageAttempts = 0;
   t.after(() => { handle?.destroy(); Object.assign(globalThis, globals); });
   return {
-    requests, unavailable, handedToMap, index,
+    requests, unavailable, handedToMap, index, removed,
     get overlay() { return overlay; },
     async on() {
       handle = attachBottomRelief({region: 'north', page: 'https://chart.test/map',
-        engine: {setOverlay(_, next) { overlay = next; if (next) template = Object.values(next.sources)[0].tiles[0]; }},
+        engine: {setOverlay(id, next) {
+          overlay = next;
+          if (next) template = Object.values(next.sources)[0].tiles[0];
+          else removed.push(id);
+        }},
         library: {addProtocol(_, read) { action = read; }}, seafloorOn: () => false, fieldOn: () => false,
         unavailable: error => unavailable.push(error.message),
-        async fetchFn(url, {headers, signal}) {
-          signal.throwIfAborted();
+        async fetchFn(url, {headers, signal, redirect}) {
           const path = new URL(url).pathname;
           const range = headers?.Range;
           requests.push([path, range]);
+          signal.throwIfAborted();
           if (path === pointerPath) return Response.json(pointer);
           if (path === index + 'root.json') {
-            await holdRoot?.(signal);
-            return new Response(fault === 'root' ? Buffer.concat([root, Buffer.from(' ')]) : root);
+            return await rootResponse?.(url, {signal, redirect}) ??
+              new Response(fault === 'root' ? Buffer.concat([root, Buffer.from(' ')]) : root);
           }
           if (path === index + chunkName) {
             if (fault === 'fetch') return new Response(null, {status: 404});
+            if (fault === 'outage') {
+              assert.ok(++outageAttempts <= 2, 'a third digest fetch must not be attempted');
+              return new Response(null, {status: 503});
+            }
             return new Response(fault === 'chunk' ? Buffer.concat([chunk, Buffer.from(' ')]) : chunk);
           }
           assert.equal(path, archivePath);
@@ -123,10 +131,34 @@ test('verified tiles reach the map, sharing one digest root and chunk per viewpo
   assert.deepEqual(c.unavailable, []);
 });
 
+// If the first 503 escapes the shared read, attachBottomRelief tears down
+// the overlay before a later tile can recover it. Both tiles must share the retry.
+test('one root 503 keeps the same overlay and delivers both verified tiles', async t => {
+  const attempts = [];
+  const c = chart(t, {rootResponse(url, {signal, redirect}) {
+    attempts.push([String(url), signal, redirect]);
+    if (attempts.length === 1) return new Response(null, {status: 503});
+  }});
+  await c.on();
+  const overlay = c.overlay;
+  assert.ok(overlay);
+  await Promise.all(coords.map(zxy => c.tile(zxy)));
+  assert.deepEqual(c.handedToMap.map(sha).sort(), payloads.map(sha).sort());
+  assert.strictEqual(c.overlay, overlay);
+  assert.deepEqual(c.removed, []);
+  assert.deepEqual(c.unavailable, []);
+  const rootRequest = [`https://chart.test${c.index}root.json`, 'error'];
+  assert.deepEqual(attempts.map(([url, , redirect]) => [url, redirect]), [rootRequest, rootRequest]);
+  assert.strictEqual(attempts[1][1], attempts[0][1]);
+  assert.equal(c.requests.filter(([path]) => path === c.index + chunkName).length, 1);
+});
+
 // Every failure is reached after the existing archive/header checks. Without
 // the hash chain, even JSON bytes changed only by whitespace would pass.
+// An unbounded retry would keep a persistent outage from tearing down the overlay.
 for (const [fault, error] of Object.entries({tile: /tile hash mismatch/, root: /root\.json hash mismatch/,
-  chunk: /10\/2_6\.json hash mismatch/, fetch: /unavailable \(HTTP 404\)/,
+  chunk: /10\/2_6\.json hash mismatch/, malformed: SyntaxError, fetch: /unavailable \(HTTP 404\)/,
+  outage: /unavailable \(HTTP 503\)/,
   'missing digest': /Missing relief tile digest/, directory: /Indexed relief tile missing/})) {
   test(`${fault}: reject before handing bytes to the map and remove the whole overlay once`, async t => {
     const c = chart(t, {fault});
@@ -135,13 +167,18 @@ for (const [fault, error] of Object.entries({tile: /tile hash mismatch/, root: /
     if (fault === 'tile') await c.tile(coords[0]); // previously verified relief must go too
     await assert.rejects(c.tile(coords[1]), error);
     assert.equal(c.overlay, null);
+    assert.equal(c.removed.length, 1);
     assert.equal(c.handedToMap.length, fault === 'tile' ? 1 : 0);
     assert.equal(c.unavailable.length, 1);
-    assert.match(c.unavailable[0], error);
+    if (error instanceof RegExp) assert.match(c.unavailable[0], error);
+    const chunks = fault === 'root' ? [] : fault === 'outage' ? [chunkName, chunkName] : [chunkName];
+    assert.deepEqual(c.requests.filter(([path]) => path.startsWith(c.index)).map(([path]) => path.slice(c.index.length)),
+      ['root.json', ...chunks]);
     const count = c.requests.length;
     await assert.rejects(c.tile(coords[0]), {status: 404});
     assert.equal(c.requests.length, count);
     assert.equal(c.unavailable.length, 1);
+    assert.equal(c.removed.length, 1);
   });
 }
 
@@ -174,12 +211,17 @@ test('normal sparse tiles and overzoom stay available; switching off makes no re
 });
 
 // Retirement must also cancel an in-flight shared fetch, not just delete the
-// protocol reader. A late response must never start a chunk read or return bytes.
-test('switching off during a digest request discards its late response', async t => {
+// protocol reader. A late success must not start a chunk read; a late 503
+// must not invoke fetch at all, even with an already-aborted signal.
+for (const status of [200, 503]) test(`switching off during a digest request discards its late ${status}`, async t => {
   let started, release;
   const entered = new Promise(resolve => { started = resolve; });
   const pending = new Promise(resolve => { release = resolve; });
-  const c = chart(t, {holdRoot: signal => { started(signal); return pending; }});
+  const c = chart(t, {async rootResponse(_, {signal}) {
+    started(signal);
+    await pending;
+    if (status === 503) return new Response(null, {status});
+  }});
   await c.on();
   const tile = c.tile(coords[0]);
   const signal = await entered;

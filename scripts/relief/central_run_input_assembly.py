@@ -54,6 +54,8 @@ def assemble(args):
         runner_argv.append(f'--{role.replace("_", "-")}={path}')
     if args.through == 'envelope' and not {'census', 'basemap'} <= pins.keys():
         raise ValueError('envelope requires pinned census and basemap')
+    if args.fresh_out and 'select' in run_region.chain_through(args.through) and 'census' not in pins:
+        raise ValueError('fresh OUT requires pinned census for select')
     if ('coarse' in pins) != ('water' in pins):
         raise ValueError('supply pinned coarse and water together, or omit both')
     if 'census' in pins:
@@ -95,6 +97,8 @@ def main(argv=None):
     parser.add_argument('--norm', required=True, help='explicit normalized-cache path')
     parser.add_argument('--through', choices=run_region.STAGES, default='envelope',
                         help='check required inputs through this stage (default: envelope); run nothing')
+    parser.add_argument('--fresh-out', action='store_true',
+                        help='require a pinned census for select without relying on one already in OUT')
     parser.add_argument('--input', action='append', nargs=3, required=True, metavar=('ROLE', 'PATH', 'SHA256'),
                         help='repeat for each reviewed file; roles: ' + ', '.join(sorted(run_region.RECORD_FILES)))
     parser.add_argument('--coarse-source')

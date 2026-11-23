@@ -66,29 +66,34 @@ def _check(plan, ceiling, expected, expected_stages):
     summary_matches = isinstance(summary, dict) and all(
         type(summary.get(key)) is int and summary[key] == count for key, count in counts.items())
     missing_stages = {}
+    unexpected_stages = {}
     for region, rows in regions.items():
-        required = REQUIRED_STAGES | {key for name, key in inventory if name == region}
-        missing = required - {row['stage'] for row in rows}
+        inventory_keys = {key for name, key in inventory if name == region}
+        actual = {row['stage'] for row in rows}
+        missing = (REQUIRED_STAGES | inventory_keys) - actual
         if missing:
             missing_stages[region] = sorted(missing)
+        if region in expected_set and (unexpected := actual - inventory_keys):
+            unexpected_stages[region] = sorted(unexpected)
     outside = [{'region': region, **row} for region, row in rebuilds
                if (region, row['stage']) not in allowed]
     missing_regions = sorted(set(expected) - regions.keys())
     unexpected_regions = sorted(observed - set(expected))
     return {
         'within_ceiling': not (outside or missing_regions or unexpected_regions or missing_stages
-                               or not summary_matches),
+                               or unexpected_stages or not summary_matches),
         'outside_ceiling': outside,
         'missing_regions': missing_regions,
         'unexpected_regions': unexpected_regions,
         'missing_stages': missing_stages,
+        'unexpected_stages': unexpected_stages,
         'summary_matches': summary_matches,
     }
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, epilog=(
-        'Exit 0: complete and within ceiling; 1: outside ceiling or roster/count mismatch; '
+        'Exit 0: complete and within ceiling; 1: outside ceiling or roster/stage/count mismatch; '
         '2: malformed input. This report does not authorize or run any rebuild.'))
     parser.add_argument('--plan', required=True, type=Path, help='saved rebuild_plan.py --json output')
     parser.add_argument('--allow', required=True, type=Path,
