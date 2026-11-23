@@ -34,21 +34,39 @@ export function manifestState(manifest, region, now = Date.now()) {
   return { state: 'ready', reason: '', manifest, expires };
 }
 
-/** Fetch and gate the manifest; never throws, never uses a cached copy. */
+// Same 15 s deadline as the Chart's own manifest read (web/map/habitat-feed.ts).
+export const MANIFEST_TIMEOUT_MS = 15_000;
+
+/**
+ * Fetch and gate the manifest; never throws, never uses a cached copy. One
+ * deadline covers the headers and the body; hitting it ends as 'unavailable'
+ * (never 'updating' and never a manifest), so a stalled read cannot leave the
+ * habitat layer checking forever.
+ */
 export async function loadManifest(region, fetchImpl = globalThis.fetch, now = Date.now()) {
   if (!REGION.test(region || '')) return { ...manifestState(null, region, now), published: false };
+  const controller = new AbortController();
+  const { signal } = controller;
+  const timer = setTimeout(() => controller.abort(), MANIFEST_TIMEOUT_MS);
+  // Also settles a read whose fetch or body ignores the signal.
+  const deadline = new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+  deadline.catch(() => {});
+  const within = (work) => Promise.race([work, deadline]);
   try {
-    const response = await fetchImpl(manifestURL(region), { cache: 'no-store' });
+    const response = await within(fetchImpl(manifestURL(region), { cache: 'no-store', signal }));
     if (response.status === 503) {
-      const body = await response.json().catch(() => null);
+      const body = await within(response.json()).catch(() => null);
+      if (signal.aborted) return manifestState(null, region, now);
       return manifestState(body || { status: 'updating' }, region, now);
     }
     // A 404 means this region has no seafloor publication at all: hide the layer.
     if (response.status === 404) return { ...manifestState(null, region, now), published: false };
     if (!response.ok) return manifestState(null, region, now);
-    return manifestState(await response.json(), region, now);
+    return manifestState(await within(response.json()), region, now);
   } catch {
     return manifestState(null, region, now);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
