@@ -169,3 +169,60 @@ def test_symlink_output_cannot_escape_scratch(tmp_path, make_package, capsys):
         _run(scratch, left, right)
     assert 'paths must stay inside scratch root' in capsys.readouterr().err
     assert not outside.exists()
+
+
+def _chunk(kind, payload):
+    data = kind + payload
+    return struct.pack('>I', len(payload)) + data + struct.pack('>I', zlib.crc32(data))
+
+
+def _ihdr(depth=8, color=2, interlace=0):
+    return _chunk(b'IHDR', struct.pack('>IIBBBBB', 256, 256, depth, color, 0, 0, interlace))
+
+
+@pytest.mark.parametrize('label, tile, reason', [
+    ('signature and IHDR prefix only (33 bytes)', _png((1, 2, 3))[:33], 'must start with IHDR and end with IEND'),
+    ('prefix plus a partial next chunk', _png((1, 2, 3))[:33 + 4], 'truncated PNG chunk'),
+    ('IHDR with no image data or IEND', _png((1, 2, 3))[:8] + _ihdr(), 'must start with IHDR and end with IEND'),
+    ('IHDR and IEND but no IDAT', _png((1, 2, 3))[:8] + _ihdr() + _chunk(b'IEND', b''), 'contiguous IDAT'),
+    ('image data cut off before IEND', _png((1, 2, 3))[:-24], 'truncated PNG chunk'),
+    ('pixel rows missing', _png((1, 2, 3))[:8] + _ihdr() + _chunk(b'IDAT', zlib.compress(b'\x00' * 3 * 256 * 255))
+     + _chunk(b'IEND', b''), 'truncated, oversized'),
+    ('corrupted image data checksum', _png((1, 2, 3))[:60] + b'\xff' + _png((1, 2, 3))[61:], 'checksum mismatch'),
+    ('bytes after IEND', _png((1, 2, 3)) + b'\x00', 'trailing bytes'),
+    ('invalid scanline filter', _png((1, 2, 3))[:8] + _ihdr()
+     + _chunk(b'IDAT', zlib.compress((b'\x09' + b'\x00' * 3 * 256) * 256)) + _chunk(b'IEND', b''), 'invalid filter'),
+])
+def test_prefix_or_broken_png_refused_not_embedded(tmp_path, make_package, capsys, label, tile, reason):
+    # Catches accepting any bound tile with a PNG signature and 256x256 IHDR and emitting a broken <img>.
+    left = make_package('candidate', 'a', {ADDRESS: _png((255, 0, 0))})
+    right = make_package('comparator', 'b', {ADDRESS: tile})
+    with pytest.raises(SystemExit, match='^2$'):
+        _run(tmp_path, left, right)
+    err = capsys.readouterr().err
+    assert 'selected tile is not a complete decodable 256×256 PNG' in err and reason in err, label
+    assert not (tmp_path / 'pair.html').exists()
+
+
+def test_valid_png_variants_still_embedded(tmp_path, make_package):
+    # Catches an over-strict decoder refusing real tiles: palette, 16-bit RGBA, 1-bit gray and Adam7 interlace.
+    rows = lambda size: (b'\x00' + bytes(size)) * 256
+    adam7 = b''.join((b'\x00' + bytes(w)) * h for w, h in
+                     ((32, 32), (32, 32), (64, 32), (64, 64), (128, 64), (128, 128), (256, 128)))
+    head = b'\x89PNG\r\n\x1a\n'
+    tiles = {
+        (8, 41, 1): head + _ihdr(8, 3) + _chunk(b'PLTE', b'\x00\x00\x00') + _chunk(b'IDAT', zlib.compress(rows(256))),
+        (8, 41, 2): head + _ihdr(16, 6) + _chunk(b'IDAT', zlib.compress(rows(256 * 8))),
+        (8, 41, 3): head + _ihdr(1, 0) + _chunk(b'IDAT', zlib.compress(rows(32))),
+        (8, 41, 4): head + _ihdr(8, 0, 1) + _chunk(b'IDAT', zlib.compress(adam7)),
+    }
+    for address, body in tiles.items():
+        tiles[address] = body + _chunk(b'IEND', b'')
+    for address, body in tiles.items():
+        left = make_package(f'candidate{address[2]}', 'a', {address: body})
+        right = make_package(f'comparator{address[2]}', 'b', {address: body})
+        output = f'pair{address[2]}.html'
+        assert preview.main(['--scratch-root', str(tmp_path), '--region', REGION, '--xyz', *map(str, address),
+                             '--candidate-envelope', str(left), '--comparator-envelope', str(right),
+                             '--output', output]) == 0
+        assert _images((tmp_path / output).read_text(encoding='utf-8')) == [body, body]

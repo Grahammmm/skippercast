@@ -13,6 +13,7 @@ import struct
 from zlib import error as ZlibError
 
 from scripts.relief.central_camera_bounds import REGIONS
+from scripts.relief.central_relief_preview_pair_png import validate_png
 from skippercast.relief import envelope, package
 from skippercast.seafloor.rough_first import read_tiles
 
@@ -81,7 +82,12 @@ def _selected_png(path, binding, xyz):
             if (not 33 <= len(tile) <= TILE_LIMIT or tile[:16] != PNG
                     or struct.unpack_from('>II', tile, 16) != (256, 256)):
                 raise ValueError('selected tile is not a bounded 256×256 PNG')
-            return bytes(tile)
+            png = bytes(tile)
+            try:
+                validate_png(png, 256, 256)
+            except ValueError as exc:
+                raise ValueError(f'selected tile is not a complete decodable 256×256 PNG: {exc}') from exc
+            return png
         finally:
             # The reader's recursive walk can retain its dictionary until cycle collection.
             tiles.clear()
