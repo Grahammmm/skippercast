@@ -169,6 +169,23 @@ def test_individually_valid_but_different_sets_cannot_form_a_pair(tmp_path, inpu
     assert set(report['candidates'][0]['errors']) == {'pair'}
 
 
+@pytest.mark.parametrize('version', [dc.FT_V2, dc.FT_V3])
+def test_overview_from_another_candidate_cannot_be_spliced_into_a_pair(tmp_path, inputs, version):
+    # Contract: a pickup is one candidate's full file plus ITS shipping overview.
+    # Catches a pair check that compares provenance only: a full at y=0.2 with a
+    # separately pinned, individually valid overview at y=0.3 (identical provenance).
+    region, sources, pointer, argv = inputs
+    full, _ = _pair(region, version)
+    _, other_overview = _pair(region, version, y=0.3)
+    assert dc.check_catalog_contours(other_overview, region, sources, pointer) == {SOURCE}
+    spliced = _candidate(tmp_path, 'spliced', (full, other_overview))
+    own = _candidate(tmp_path, 'own', _pair(region, version))
+    _write(tmp_path, 'manifest.json', {'candidates': [spliced, own]})
+    status, report = _run(argv, '--pick', 'spliced')
+    assert status == 1 and 'pickup' not in report and report['candidates'][1]['fits']
+    assert set(report['candidates'][0]['errors']) == {'pair'}
+
+
 @pytest.mark.parametrize('symlink', [False, True])
 def test_unenveloped_file_must_be_scratch_local_and_pinned(tmp_path, inputs, symlink):
     # A valid GeoJSON file is not accepted just because its bytes are readable:

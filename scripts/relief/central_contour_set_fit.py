@@ -67,15 +67,10 @@ def _load(root, ref, layers):
 
 
 def _pair_metadata(full, overview):
-    # These are the only provenance fields the shipping overview projection changes.
-    projected = {'overview', 'coordinate_decimals', 'features'}
-
-    def common(value):
-        return {key: item for key, item in value.items() if key not in projected}
-
-    if ('overview' in full or overview.get('overview', {}).get('max_zoom') != dc.OVERVIEW_MAX_ZOOM
-            or common(full) != common(overview)):
-        raise ValueError('full and overview do not have matching pair provenance and roles')
+    # Bind the pair: the overview must be exactly the shipping projection of this
+    # full file, not merely another valid overview with matching provenance.
+    if 'overview' in full['provenance'] or dc.overview_contours(full) != overview:
+        raise ValueError('overview is not the shipping projection of this full contour file')
 
 
 def _fit(root, candidate, region, sources, pointer, layers):
@@ -105,7 +100,7 @@ def _fit(root, candidate, region, sources, pointer, layers):
                     errors.setdefault(role, f"{info['bytes']} bytes exceeds {cap}-byte cap")
     if not errors:
         try:
-            _pair_metadata(*(loaded[role][0]['provenance'] for role in ROLES))
+            _pair_metadata(*(loaded[role][0] for role in ROLES))
         except INPUT_ERRORS as exc:
             errors['pair'] = str(exc)
     if errors:
