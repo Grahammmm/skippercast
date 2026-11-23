@@ -173,3 +173,40 @@ def test_archive_limits_refuse_unbounded_index_evaluation(candidate, tmp_path, c
     assert cli.main(_argv(tmp_path)) == 2
     out, err = capsys.readouterr()
     assert not out and why in err
+
+
+def _hostile_archive(root, entries, addressed):
+    """Pinned one-blob archive whose root directory is replaced by ``entries`` (tile id, offset, length, run)."""
+    blob = _png(b'only')
+    path = pmtiles_v3.write_pmtiles(root / REGION / package.ARCHIVE, [(LIGHT, blob)], metadata={},
+                                    bounds=(-123, 35, -120, 37), minzoom=8, maxzoom=8, center=(8, -121, 36))
+    raw = path.read_bytes()
+    header = list(struct.unpack_from('<11Q', raw, 8))
+    old_root = header[1]
+    root_dir = pmtiles_v3._directory(entries)
+    shift = len(root_dir) - old_root
+    header[1], header[2], header[4], header[6], header[8] = len(root_dir), header[2] + shift, header[4] + shift, \
+        header[6] + shift, addressed
+    path.write_bytes(raw[:8] + struct.pack('<11Q', *header) + raw[96:127] + root_dir + raw[127 + old_root:])
+    _pin_candidate(root / REGION, 1)
+    return len(blob)
+
+
+def test_directory_run_cannot_outgrow_header_count(tmp_path, capsys):
+    """A header saying one tile must stop a 250,001-tile run before it is expanded, not after decoding it."""
+    tid = pmtiles_v3._tile_id(*LIGHT)
+    size = _hostile_archive(tmp_path, [(tid, 0, len(_png(b'only')), cli.MAX_ADDRESSED_TILES + 1)], addressed=1)
+    assert size
+    assert cli.main(_argv(tmp_path, desktop=(LIGHT,), phone=(LIGHT,))) == 2
+    out, err = capsys.readouterr()
+    assert not out and 'directory runs address more than 1 tiles' in err
+
+
+def test_index_failure_after_tile_views_still_exits_invalid_input(tmp_path, capsys):
+    """A bad later directory row leaves earlier tile views alive; unmapping must not raise BufferError."""
+    tid = pmtiles_v3._tile_id(*LIGHT)
+    length = len(_png(b'only'))
+    _hostile_archive(tmp_path, [(tid, 0, length, 1), (tid + 1, length, length, 1)], addressed=2)
+    assert cli.main(_argv(tmp_path, desktop=(LIGHT,), phone=(LIGHT,))) == 2
+    out, err = capsys.readouterr()
+    assert not out and 'cannot read PMTiles index: tile payload span outside declared tile data' in err

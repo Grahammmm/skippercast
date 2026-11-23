@@ -69,7 +69,7 @@ def _payload_lengths(path, pin, requested):
             if not 1 <= addressed <= MAX_ADDRESSED_TILES:
                 raise ValueError(f'PMTiles addressed tile count outside 1–{MAX_ADDRESSED_TILES}')
             try:
-                tiles = read_tiles(view)
+                tiles = read_tiles(view, max_tiles=addressed)  # runs are bounded before they expand
             except (OSError, ValueError, IndexError, EOFError, zlib.error) as exc:
                 # Drop the reader traceback (which can retain tile views) before unmapping.
                 failure = str(exc)

@@ -122,8 +122,12 @@ def _zxy(tile_id):
     return z, x, y
 
 
-def read_tiles(data):
-    """{(z, x, y): stored tile bytes} for a PMTiles v3 archive with gzip directories."""
+def read_tiles(data, max_tiles=None):
+    """{(z, x, y): stored tile bytes} for a PMTiles v3 archive with gzip directories.
+
+    ``max_tiles`` (optional) bounds the run lengths the directories may expand to, checked before each run is
+    expanded, so a small header cannot make a hostile index build an unbounded table. On any failure the partial
+    table is released (when ``data`` is a memoryview) so the caller can unmap its buffer."""
     if data[:8] != b'PMTiles\x03' or len(data) < 127:
         raise ValueError('not PMTiles v3')
     h = struct.unpack_from('<11Q', data, 8)
@@ -132,6 +136,7 @@ def read_tiles(data):
     if h[6] + h[7] > len(data):
         raise ValueError('declared tile data extends beyond archive')
     tiles = {}
+    expanded = [0]
 
     def walk(offset, length, depth=0):
         if depth > 3:
@@ -154,11 +159,24 @@ def read_tiles(data):
                 continue
             if size <= 0 or off < 0 or off + size > h[7]:
                 raise ValueError('tile payload span outside declared tile data')
+            expanded[0] += run
+            if max_tiles is not None and expanded[0] > max_tiles:
+                raise ValueError(f'directory runs address more than {max_tiles} tiles')
             for k in range(run):
                 tiles[_zxy(tid + k)] = data[h[6] + off:h[6] + off + size]
-    walk(h[0], h[1])
-    if len(tiles) != h[8]:
-        raise ValueError('addressed tile count mismatch')
+
+    try:
+        walk(h[0], h[1])
+        if len(tiles) != h[8]:
+            raise ValueError('addressed tile count mismatch')
+    except BaseException:
+        # The recursive closure keeps this table alive in a reference cycle, so views into a caller's mmap would
+        # otherwise outlive the failure and make the unmap raise BufferError.
+        for blob in tiles.values():
+            if isinstance(blob, memoryview):
+                blob.release()
+        tiles.clear()
+        raise
     return tiles
 
 
