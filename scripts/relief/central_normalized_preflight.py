@@ -39,6 +39,9 @@ def check_pair(elevation, support):
                 ]
                 detail = f"; mismatched {', '.join(differences)}" if differences else ''
                 return 'incompatible', f'{exc}{detail}'
+            # The transforms match, but a singular lattice has no map-to-pixel inverse.
+            if grid.transform.determinant == 0:
+                return 'unavailable', 'shared affine transform is singular'
     except (OSError, ValueError, RasterioIOError):
         return 'unavailable', 'could not open both inputs as local GeoTIFFs'
     return 'compatible', 'CRS, affine transform and shape match'
