@@ -23,6 +23,8 @@ capture. The runner checks ``region.py status --json`` after package and shots: 
 the exact package release hash and the shots stage's own generation, while the envelope
 uses the package generation. No caller-supplied manifest, evidence path for shots, or
 release identity can replace these handoffs.
+After a successful envelope stage, the runner prints that region's read-only R8 packet.
+A NOT READY packet exits 1 without changing the written envelope.
 
 --inputs loads a sc-run-inputs/1 JSON record for the positional region. Listed files are
 SHA-256 checked as a group before any stage, even if the chain stops early. Paths use the
@@ -139,6 +141,7 @@ class Config:
     python: str = sys.executable
     free_bytes: object = field(default=_default_free_bytes)
     pid: int = field(default_factory=os.getpid)
+    r8_packet_py: Path = Path(__file__).resolve().with_name('r8_packet.py')
 
 
 def effective_norm(option, environ=None):
@@ -654,6 +657,8 @@ def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap, *,
         note = f'  # verify {attest}' if attest else ''
         say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, extra))}{note}')
     say('not run: ' + ', '.join(STAGES[STAGES.index(through) + 1:]) if through != STAGES[-1] else 'not run: (none)')
+    if through == 'envelope':
+        say('r8 packet: after envelope')
     if show_plan:
         show_rebuild_plan(cfg, out, region)
     say('guards (re-checked before every stage):')
@@ -720,6 +725,23 @@ def run_chain(cfg, region, out, norm, through, extra, inputs, basemap):
         os.close(slot)
 
 
+def print_r8_packet(cfg, region, out):
+    command = [*cfg.prefix, cfg.python, '-B', str(cfg.r8_packet_py), '--out', str(out), region]
+    try:
+        result = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors='replace')
+    except OSError as exc:
+        reason = f'cannot start the command: {exc}'
+    else:
+        print(result.stdout, end='', flush=True)
+        if not result.returncode:
+            return 0
+        heading = f'NOT READY {region}: '
+        reason = (result.stdout.rstrip('\n').removeprefix(heading) if result.stdout.startswith(heading)
+                  else result.stderr.strip() or f'r8_packet.py exit {result.returncode}')
+    say(f'run_region: envelope written but R8 packet NOT READY: {reason}')
+    return 1
+
+
 def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
     try:
         fd = acquire_lock(cfg, out, region)
@@ -773,7 +795,8 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
             say(f'run_region: STOPPED at {label}: exit {code}')
             return code if 0 < code < 256 else 1
         say(f'run_region: {region} complete through {through}')
-        return 0
+        # Keep the region lock until the packet has read the just-built evidence.
+        return print_r8_packet(cfg, region, out) if through == 'envelope' else 0
     finally:
         os.close(fd)  # releases the lock
 

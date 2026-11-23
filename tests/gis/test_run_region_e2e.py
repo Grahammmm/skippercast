@@ -19,7 +19,7 @@ from rasterio.transform import from_bounds, from_origin
 from rasterio.warp import transform, transform_bounds
 from shapely.geometry import box, mapping
 
-from scripts.relief import region as cli, run_region
+from scripts.relief import r8_packet, region as cli, run_region
 from skippercast.relief import contours, envelope, mosaic, package, pmtiles_v3, qa, receipts, select, shots
 from tests._support import FIXTURES, ROOT
 from tests.gis.test_relief_qa import shot_png, write_json
@@ -201,8 +201,20 @@ def test_guarded_tiny_release_through_envelope(tmp_path, monkeypatch, blank_char
     real_run = subprocess.run
     qa_command = []
     baseline_release = []
+    packet_runs = []
 
     def dispatch(command, *, capture_output=False, **kwargs):
+        packet_prefix = [*cfg.prefix, cfg.python, '-B', str(cfg.r8_packet_py)]
+        if command[:len(packet_prefix)] == packet_prefix:
+            # C1: the post-envelope R8 packet must read this fixture's rights registry and
+            # runs while the region lock is held. A fresh process would load the checkout's
+            # catalog (no 'tiny-grid' rights) and report NOT READY for a good envelope.
+            assert run_region.lock_is_held(region.out_root, region.id)
+            out = StringIO()
+            with redirect_stdout(out):
+                code = r8_packet.main(command[len(packet_prefix):])
+            packet_runs.append((command[len(packet_prefix):], out.getvalue()))
+            return subprocess.CompletedProcess(command, code, out.getvalue(), '')
         if command[:len(cfg.prefix) + 2] != [*cfg.prefix, cfg.python, str(cfg.region_py)]:
             return real_run(command, capture_output=capture_output, **kwargs)
         # Dispatch the runner's exact CLI argv in this fixture process so its synthetic
@@ -261,6 +273,10 @@ def test_guarded_tiny_release_through_envelope(tmp_path, monkeypatch, blank_char
         print(f'tiny 24x24 control: QA exit 1, rendered-content refusal; {len(shot_doc["shots"])} shots')
         return
     assert code == 0
+    # C1: run_region must print the packet for the envelope it just wrote (exit 0 means READY).
+    [(packet_argv, packet_out)] = packet_runs
+    assert packet_argv == ['--out', str(region.out_root), 'tiny']
+    assert packet_out.startswith('READY tiny\n') and f'APPROVED release tiny envelope={receipts.sha256_file(envelope_path)}' in packet_out
     assert [release.read_bytes()] == baseline_release
     release_doc = package.decode_document(release.read_bytes())
     assert release_doc['bounds'] == bounds

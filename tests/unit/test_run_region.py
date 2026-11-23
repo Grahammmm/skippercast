@@ -50,6 +50,23 @@ if stage == 'status':
     print(json.dumps({'region': region, 'stages': rows}))
 sys.exit(plan.get('codes', {}).get(stage, 0))
 '''
+PACKET_STUB = '''\
+import json, sys
+from pathlib import Path
+here = Path(sys.argv[0]).parent
+with (here / 'calls.jsonl').open('a') as log:
+    log.write(json.dumps(['r8 packet', *sys.argv[1:]]) + '\\n')
+code = json.loads((here / 'codes.json').read_text())['codes'].get('r8 packet', 0)
+if code == 0:
+    region = sys.argv[-1]
+    print(f'READY {region}\\n  qa.json sha256: {"b" * 64}\\n  land_leak_pct: 0\\n'
+          f'APPROVED release {region} envelope={"a" * 64}')
+elif code == 1:
+    print(f'NOT READY {sys.argv[-1]}: qa.json does not match envelope')
+elif code == 2:
+    print('packet could not read the evidence', file=sys.stderr)
+sys.exit(code)
+'''
 
 
 class Box:
@@ -62,6 +79,7 @@ class Box:
         self.stub_dir = root / 'stub'
         self.stub_dir.mkdir()
         (self.stub_dir / 'region.py').write_text(STUB)
+        (self.stub_dir / 'r8_packet.py').write_text(PACKET_STUB)
         self.codes({})
         self.basemap = root / 'basemap.pmtiles'
         self.basemap.touch()
@@ -75,6 +93,7 @@ class Box:
         self.slots = root / 'slots'
         self.free = {'/': 900 * RR.GB, '/mnt/agentorange-backup': 900 * RR.GB}
         self.cfg = RR.Config(region_py=self.stub_dir / 'region.py', stop_files=(self.local_stop, self.unitfeed_stop),
+                             r8_packet_py=self.stub_dir / 'r8_packet.py',
                              proc_root=str(self.proc), prefix=(), pid=424242, slot_dir=self.slots,
                              basemap_roots=(self.root,),
                              free_bytes=lambda path: self.free[path],
@@ -336,10 +355,23 @@ def test_c3_dry_run_reports_exact_record_hash_and_every_verdict(box, capsys, mon
     assert box.calls() == [] and box.out_tree() == [] and not box.slots.exists()
 
 
-def test_chain_order_and_stage_arguments(box, capsys):
+@pytest.mark.parametrize('packet_code,expected', [
+    pytest.param(0, ['READY morro-bay', f'  qa.json sha256: {SHOT_GEN}', '  land_leak_pct: 0',
+                     f'APPROVED release morro-bay envelope={GEN}'], id='C1: print ready packet after envelope'),
+    pytest.param(1, ['NOT READY morro-bay: qa.json does not match envelope',
+                     'run_region: envelope written but R8 packet NOT READY: qa.json does not match envelope'],
+                 id='C1: not-ready packet makes the run fail'),
+    pytest.param(2, ['run_region: envelope written but R8 packet NOT READY: packet could not read the evidence'],
+                 id='C1: packet failure relays stderr when no report was printed'),
+    pytest.param(3, ['run_region: envelope written but R8 packet NOT READY: r8_packet.py exit 3'],
+                 id='C1: packet failure without a report makes the run fail'),
+])
+def test_chain_order_and_stage_arguments(box, capsys, packet_code, expected):
     # CI-ARTICLE-1: a wrong producer, a hash of transformed JSON, or confusing the two
     # generations would break the consumer handoff. Inspect the actual argv at the process boundary.
-    assert box.run() == 0
+    # C1: a misplaced packet or a dropped stdout/exit status sends the wrong evidence to review.
+    box.codes({'r8 packet': packet_code})
+    assert box.run() == (0 if packet_code == 0 else 1)
     root = box.out / 'morro-bay'
     mosaic = root / 'mosaic/public'
     extras = {
@@ -356,9 +388,57 @@ def test_chain_order_and_stage_arguments(box, capsys):
                '--shots', str(root / 'shots' / SHOT_GEN / 'shots.json')],
         'envelope': ['--generation', GEN],
     }
-    assert box.calls() == [[stage, '--region', 'morro-bay', '--out', str(box.out), *extras.get(stage, [])]
-                           for stage in STAGE_ORDER]
-    assert 'complete through envelope' in capsys.readouterr().out
+    stages = [[stage, '--region', 'morro-bay', '--out', str(box.out), *extras.get(stage, [])]
+              for stage in STAGE_ORDER]
+    assert box.calls() == [*stages, ['r8 packet', '--out', str(box.out), 'morro-bay']]
+    out = capsys.readouterr().out.splitlines()
+    assert out[out.index('run_region: morro-bay complete through envelope'):] == [
+        'run_region: morro-bay complete through envelope', *expected]
+
+
+@pytest.mark.parametrize('failure', [pytest.param('stub launch failure', id='C1: packet cannot start')])
+def test_r8_packet_launch_failure(box, capsys, monkeypatch, failure):
+    # A launch error must still distinguish the successful write from the failed readback.
+    run = RR.subprocess.run
+
+    def dispatch(command, **kwargs):
+        if str(box.cfg.r8_packet_py) in command:
+            assert command[:5] == ['nice', '-n', '19', 'ionice', '-c3']
+            assert RR.lock_is_held(box.out, 'morro-bay')
+            raise OSError(failure)
+        return run(command, **kwargs)
+
+    box.cfg.prefix = RR.Config().prefix
+    monkeypatch.setattr(RR.subprocess, 'run', dispatch)
+    assert box.run() == 1
+    assert box.ran() == STAGE_ORDER
+    assert capsys.readouterr().out.splitlines()[-2:] == [
+        'run_region: morro-bay complete through envelope',
+        f'run_region: envelope written but R8 packet NOT READY: cannot start the command: {failure}',
+    ]
+
+
+@pytest.mark.parametrize('through,stage_code,expected', [
+    pytest.param('qa', 0, 0, id='C2: stopping before envelope skips packet'),
+    pytest.param('envelope', 7, 7, id='C1: failed envelope skips packet'),
+])
+def test_r8_packet_skipped_without_successful_envelope(box, capsys, through, stage_code, expected):
+    # A partial or failed chain must not print stale evidence from a previous run.
+    box.codes({'envelope': stage_code})
+    assert box.run(through=through) == expected
+    assert box.ran() == STAGE_ORDER[:STAGE_ORDER.index(through) + 1]
+    assert 'R8 packet' not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('through,expected', [
+    pytest.param('envelope', ['r8 packet: after envelope'], id='C2: envelope dry run previews packet'),
+    pytest.param('qa', [], id='C2: earlier dry run does not preview packet'),
+])
+def test_r8_packet_dry_run(box, capsys, through, expected):
+    # Dry-run must announce the planned read without executing the chain or packet.
+    assert box.run('--dry-run', through=through) == 0
+    assert [line for line in capsys.readouterr().out.splitlines() if line.startswith('r8 packet:')] == expected
+    assert (box.calls(), box.out_tree(), box.slots.exists()) == ([], [], False)
 
 
 def test_through_stops_after_that_stage(box):
