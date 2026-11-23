@@ -9,6 +9,7 @@ import {seaward, shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreD
 import {BAR_CHECK, barDay, barHours, crossingCheck, crossingHours, entranceFor, type BarDay, type BarHour} from './bar-conditions.ts';
 import {clampLimits, defaultLimits, limitsText, looserFields, sameLimits, stricterFields, type ComfortLimits} from './limits.ts';
 import {dateTimeFormat} from './date-format.ts';
+import {hazardEndMs, hazardStartMs} from './alert-window.ts';
 
 export type DailyDay = {date:string;label:string;weekday:string;dayNumber:number;provisional:boolean};
 export type DailyBrief = {
@@ -92,10 +93,10 @@ function textRange(value:{min:number|null;max:number|null},unit:string):string|n
 function relevantAlerts(report:Report,area:Area,start:number,end:number,now:Date):Alert[] {
  return report.alerts.filter(alert=>{
   if(alert.areaIds&&!alert.areaIds.includes(area.id))return false;
-  const effective=alert.effective?Date.parse(alert.effective):-Infinity;
-  const expires=alert.expires?Date.parse(alert.expires):Infinity;
+  // The hazard's own start and end (onset ?? effective, ends ?? expires), not the message's issue and expiry.
+  const from=hazardStartMs(alert),to=hazardEndMs(alert);
   // Invalid warning clocks are treated conservatively rather than disappearing.
-  return (Number.isNaN(effective)||effective<end)&&(Number.isNaN(expires)||expires>Math.max(start,now.getTime()));
+  return (Number.isNaN(from)||from<end)&&(Number.isNaN(to)||to>Math.max(start,now.getTime()));
  });
 }
 function astro(date:string,county:County,area:Area) {
