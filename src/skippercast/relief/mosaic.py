@@ -97,6 +97,8 @@ def build(ctx, out):
     run_tool(SCRIPT, '--region', config, '--sources', table, '--output', out, '--reserve-gib', RESERVE_GIB)
     path = out / 'manifest.json'
     manifest = read_json(path)
+    if manifest.get('segment') != ctx.region.id:
+        raise receipts.ReceiptError('mosaic manifest segment differs from the requested region')
     for row in manifest['sources']:
         # The tool records input locations for research; the stage manifest keeps provenance, not host paths.
         row.pop('path', None)
