@@ -74,7 +74,7 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
 export function Desktop({now: fixedNow, clock}: {now?: Date; clock?: HourClock} = {}) {
   const now = useHourNow(fixedNow, clock);
   return (
-    <main class="app-main">
+    <main class="app-main" data-overlay={appView.value === 'plan' || appView.value === 'reports' ? appView.value : undefined}>
       {appView.value === 'fleet' ? <aside class="app-brief" aria-label={t('shell.fleet', language.value)}><Guard name="fleet"><Fleet /></Guard></aside> : <Brief now={now} />}
       <MapStage clock={clock}>
         {appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <>{mapUnavailable.value ? null : <div class="app-chrome-left"><Guard name="mark-card"><MarkCard /></Guard><Guard name="legend"><Legend /></Guard></div>}<Guard name="layer-rail"><LayerRail /></Guard></>}
