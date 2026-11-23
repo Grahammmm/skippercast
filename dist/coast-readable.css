@@ -104,6 +104,17 @@ body.coast-readable {
   .coast-readable header, .coast-readable main, .coast-readable footer { padding: var(--space-4); }
   .coast-readable th, .coast-readable td { padding: var(--space-2); }
 }
+/* The status page's phone layout: one fixed-layout table that fits its column, so each row's Status is in view without sideways
+ * scrolling. Cells wrap (long names and notes break inside the cell); no column is hidden or clipped. Wider screens keep the
+ * natural table and its scrolling region. */
+@media (max-width: 479px) {
+  .coast-readable .status-table { table-layout: fixed; }
+  .coast-readable .status-table th, .coast-readable .status-table td { overflow-wrap: anywhere; }
+  .coast-readable .status-table thead th:nth-child(1) { width: 33%; }
+  .coast-readable .status-table thead th:nth-child(2) { width: 22%; }
+  .coast-readable .status-table thead th:nth-child(3) { width: 16%; }
+  .coast-readable .status-table thead th:nth-child(4) { width: 29%; }
+}
 @media print {
   /* Outranks web/tokens.css's :root wherever the built page orders the two sheets. */
   html:root { color-scheme: light; }
