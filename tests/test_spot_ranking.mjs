@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {bestSpots as checkedBestSpots,distanceNm,evidenceConfidence,waypointTitle,plotterName} from '../dist/spot-ranking.js';
 import {tripGPX} from '../dist/gpx.js';
+import {readFileSync} from 'node:fs';
+import {assessScreen} from '../web/map/habitat.ts';
+import {habitatPicks, ranking} from '../web/ranking.ts';
 // These tests cover the other filters: every spot is water here (the land/water check: test_land_water.mjs).
 const bestSpots=(atlas,screen,options={})=>checkedBestSpots(atlas,screen,{place:()=>({state:'water'}),...options});
 import {loadReefTrip} from '../dist/reef-trip-data.js';
@@ -208,4 +211,40 @@ test('SC-PERF-PROTCHECK-1: the publish-time verdicts and boundary fingerprint re
  assert.equal((await loadReefTrip('morro-bay',{fetchImpl:bad.fetchImpl})).targets[0].protected_place,undefined);
  const old=await loadReefTrip('morro-bay',{fetchImpl:(await fixture()).fetchImpl});   // an export from before this change
  assert.equal(old.protected_fingerprint,undefined);assert.equal(old.targets[0].protected_place,undefined);
+});
+
+// SCB2222-08. Contract: a ranked reef's Where to look reason prints each distinct source credit-and-notice pair once, in first-seen order (web/ranking.ts
+// `sourceCredits`, shared by the reviewed-terrain and published-reef lists). Bug it catches: a reef built from two identical USGS surveys carries two
+// identical source_rights entries and the USGS credit and notice printed twice. The same credit with another notice, and CSUMB's noncommercial notice, stay.
+const CREDIT_USGS={credit:'USGS',notice:'Original US government data; retain source attribution and survey limitations.'};
+const CREDIT_CSUMB={credit:'CSUMB',notice:'Public noncommercial use only.'};
+const credits=(...rights)=>rights.map(r=>` ${r.credit} ${r.notice}`).join('');
+const habitatReason=source_rights=>habitatPicks([{type:'Feature',id:'credit-reef',geometry:{type:'Polygon',coordinates:[[[0,0],[1,0],[1,1],[0,0]]]},properties:{
+ id:'credit-reef',region:'morro-bay',exportable:true,screen_status:'pass',screen_expires_at:new Date(Date.now()+864e5).toISOString(),waypoint_latitude:35.3,waypoint_longitude:-120.95,
+ depth_min_ft:40,depth_max_ft:80,terrain_score:70,terrain_grade:'B',fit_lingcod:2,source_rights}}],
+ assessScreen({areas:JSON.parse(readFileSync(new URL('../dist/data/protected-areas.geojson',import.meta.url),'utf8')).features,checkedAt:new Date().toISOString(),live:true},Date.now()),'morro-bay','lingcod',300,null,undefined,()=>({state:'water'}))[0].reason;
+test('ranked_reef_credit_pairs_are_unique: a repeated credit-and-notice pair prints once, in first-seen order; a new notice for the same credit stays',()=>{
+ assert.equal(habitatReason([CREDIT_USGS,{...CREDIT_USGS},CREDIT_CSUMB]),`Terrain score 70/100 · grade B.${credits(CREDIT_USGS,CREDIT_CSUMB)}`);
+ assert.equal(habitatReason([CREDIT_CSUMB,CREDIT_USGS,{...CREDIT_CSUMB},{...CREDIT_USGS}]),`Terrain score 70/100 · grade B.${credits(CREDIT_CSUMB,CREDIT_USGS)}`,'first-seen order, not sorted');
+ const other={credit:'USGS',notice:'A different survey limitation.'};
+ assert.equal(habitatReason([CREDIT_USGS,other,CREDIT_USGS]),`Terrain score 70/100 · grade B.${credits(CREDIT_USGS,other)}`);
+ const rights=[CREDIT_USGS,{...CREDIT_USGS},CREDIT_CSUMB];habitatReason(rights);
+ assert.equal(rights.length,3,'the published rights are not mutated');
+});
+test('ranked_reef_single_credit_bytes: one valid pair renders as before and malformed entries stay ignored',()=>{
+ assert.equal(habitatReason([CREDIT_USGS]),`Terrain score 70/100 · grade B. USGS ${CREDIT_USGS.notice}`);
+ assert.equal(habitatReason([null,{credit:'USGS'},{notice:'x'},{credit:1,notice:'x'},CREDIT_USGS]),`Terrain score 70/100 · grade B. USGS ${CREDIT_USGS.notice}`);
+});
+test('ranked_reef_credit_pairs_are_unique: a published reef with two identical USGS rights prints one USGS pair then CSUMB (the live /map?region=morro-bay&profile=kayak line)',()=>{
+ const reef={id:'pub-reef',canonical_habitat:true,name:'pub-reef',label:'Surveyed reef habitat',latitude:35.3,longitude:-120.95,neighborhood_depth_ft:[40,80],habitat_score:50,
+  species_fit:{lingcod:3,'rockfish-reef':2},resolution_m:2,evidence_confidence:{percent:85},area_ids:['pub-reef'],terrain_interpretation:'pub-reef relief.'};
+ const area={id:'pub-reef',geometry:{type:'Polygon',coordinates:[[[-120.952,35.298],[-120.948,35.298],[-120.948,35.302],[-120.952,35.302],[-120.952,35.298]]]}};
+ const reasons=source_rights=>ranking({region:'morro-bay',profile:'boat',target:'lingcod',coast:'lingcod',data:{region:{id:'morro-bay'},atlas:{targets:[]},survey:null,geology:null},
+  screen:{status:'ready',note:'',source:'test',boundaries:[],until:Infinity},terrain:{state:'idle'},now:Date.now(),place:()=>({state:'water'}),
+  publication:{state:'ready',region:'morro-bay',loaded:{targets:[{...reef,source_rights}],areas:[area],publication:{status:'ready',region:'morro-bay',archive_sha256:'a'.repeat(64),export_sha256:'b'.repeat(64),expires_at:new Date(Date.now()+36e5).toISOString()}}},
+  plannerScreen:{state:'loaded',region:'morro-bay',screen:{ready:()=>true,pointAllowed:()=>true,geometryAllowed:()=>true}}}).picks.map(p=>p.reason);
+ const two=reasons([CREDIT_USGS,{...CREDIT_USGS},CREDIT_CSUMB]);
+ assert.equal(two.length,1,'the comparison is over a real pick');
+ assert.equal(two[0],`pub-reef relief.${credits(CREDIT_USGS,CREDIT_CSUMB)}`);
+ assert.equal(reasons([CREDIT_USGS])[0],`pub-reef relief.${credits(CREDIT_USGS)}`);
 });
