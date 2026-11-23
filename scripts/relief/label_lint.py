@@ -11,6 +11,11 @@ from collections.abc import Iterator
 from pathlib import Path
 
 SOURCE_FIELDS = ('id', 'name', 'label', 'provider', 'attribution')
+STRING_LANGUAGES = ('en', 'es')
+# Keep strings/templates and comments intact so embedded code-looking text is not a call.
+TS_TOKEN = re.compile(r'''//[^\n]*|/\*[\s\S]*?\*/|"(?:\\[\s\S]|[^"\\])*"'''
+                      r'''|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`|[\w$]+|[^\s]''')
+TS_GROUPS = {'(': ')', '[': ']', '{': '}'}
 
 
 class InputError(ValueError):
@@ -106,7 +111,91 @@ def display_path(path: Path, root: Path) -> str:
     return str(path.relative_to(root) if path.is_relative_to(root) else path)
 
 
-def scan(root: Path, styles: list[Path], data: list[Path], fields: set[str]) -> Iterator[dict]:
+def ts_value_end(tokens: list[str], start: int) -> int:
+    """Find the next sibling property or enclosing delimiter after a value."""
+    stack: list[str] = []
+    for i in range(start, len(tokens)):
+        token = tokens[i]
+        if token in TS_GROUPS:
+            stack.append(TS_GROUPS[token])
+        elif stack and token == stack[-1]:
+            stack.pop()
+        elif not stack and token in (',', '}', ')', ']'):
+            return i
+    return len(tokens)
+
+
+def lookup_keys(tokens: list[str]) -> Iterator[str]:
+    for i in range(len(tokens) - 3):
+        name, opening, key, following = tokens[i:i + 4]
+        if (name == 't' and (i == 0 or tokens[i - 1] != '.') and opening == '('
+                and key.startswith(('"', "'")) and following in (',', ')')):
+            yield key[1:-1]
+
+
+def drawn_string_keys(source: str) -> set[str]:
+    """Follow literal t() calls in text-field values and their local GeoJSON fields.
+
+    Saved spots use the second form: a translated fallback in properties.name,
+    drawn by ['get', 'name'] in the same module. This is a source scan of those
+    shapes, not general TypeScript dataflow (computed lookup keys are excluded).
+    """
+    tokens = [token for token in TS_TOKEN.findall(source) if not token.startswith(('//', '/*'))]
+    keys: set[str] = set()
+    fields: set[str] = set()
+    properties: list[int] = []
+    for i in range(len(tokens) - 2):
+        name, colon, start = tokens[i:i + 3]
+        if colon != ':':
+            continue
+        if name in ('"text-field"', "'text-field'"):
+            value = tokens[i + 2:ts_value_end(tokens, i + 2)]
+            keys.update(lookup_keys(value))
+            for opening, op, comma, field in zip(value, value[1:], value[2:], value[3:]):
+                if opening == '[' and op in ('"get"', "'get'") and comma == ',' and field.startswith(('"', "'")):
+                    fields.add(field[1:-1])
+        elif name in ('properties', '"properties"', "'properties'") and start == '{':
+            properties.append(i + 3)
+    for i in properties:
+        while i + 1 < len(tokens) and tokens[i] != '}':
+            if tokens[i + 1] == ':':
+                end = ts_value_end(tokens, i + 2)
+                if tokens[i].strip('"\'') in fields:
+                    keys.update(lookup_keys(tokens[i + 2:end]))
+            else:
+                end = ts_value_end(tokens, i)
+            if end == len(tokens) or tokens[end] != ',':
+                break
+            i = end + 1
+    return keys
+
+
+def catalogue_labels(root: Path) -> Iterator[tuple[dict, str | None]]:
+    keys: set[str] = set()
+    for path in files_in(root / 'web/map', '.ts'):
+        try:
+            source = path.read_text(encoding='utf-8')
+        except (OSError, UnicodeError) as exc:
+            raise InputError(f'{path}: {type(exc).__name__}: {exc}') from exc
+        keys.update(drawn_string_keys(source))
+    if not keys:
+        return
+    for lang in STRING_LANGUAGES:
+        path = root / f'web/strings.{lang}.generated.json'
+        table = object_at(read_json(path), path, 'string catalogue')
+        for key in sorted(keys):
+            location = {'file': display_path(path, root), 'key': key, 'lang': lang}
+            if key not in table:
+                yield location, None
+                continue
+            # The bundled English table wraps values; the Spanish overlay is flat.
+            text = object_at(table[key], path, key).get(lang) if lang == 'en' else table[key]
+            if not isinstance(text, str):
+                raise InputError(f'{path}: expected translated text for {key}')
+            yield location, text
+
+
+def scan(root: Path, styles: list[Path], data: list[Path], fields: set[str], *, strings: bool = False) -> Iterator[dict]:
     patterns = source_patterns(root)
 
     def matches(text: str, location: dict) -> Iterator[dict]:
@@ -145,6 +234,13 @@ def scan(root: Path, styles: list[Path], data: list[Path], fields: set[str]) -> 
                 if isinstance(value, str):
                     yield from matches(value, {'file': file, 'feature_index': i, 'property': field})
 
+    if strings:
+        for location, text in catalogue_labels(root):
+            if text is None:
+                yield {**location, 'kind': 'missing-key'}
+            else:
+                yield from matches(text, location)
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -154,12 +250,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--data', type=Path, nargs='+', action='extend', default=[],
                         help='GeoJSON inputs in addition to catalog/depth-contours/*.geojson')
     parser.add_argument('--field', nargs='+', action='extend', help='extra feature properties (default: label)')
+    parser.add_argument('--strings', action='store_true', help='also check translated map feature labels')
     parser.add_argument('--json', action='store_true', help='print a JSON array of findings')
     args = parser.parse_args(argv)
     root = args.root.resolve()
     try:
         findings = list(scan(root, [root / p for p in args.style], [root / p for p in args.data],
-                             set(args.field or ['label'])))
+                             set(args.field or ['label']), strings=args.strings))
     except InputError as exc:
         print(f'label_lint: {exc}', file=sys.stderr)
         return 2
@@ -167,13 +264,20 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(findings, indent=2, ensure_ascii=False))
     elif findings:
         for finding in findings:
+            if 'key' in finding:
+                origin = f"{finding['file']}: {finding['lang']} key {finding['key']!r}"
+                if finding.get('kind') == 'missing-key':
+                    print(f'{origin}: missing-key')
+                else:
+                    print(f"{origin}: {finding['text']!r} matches {finding['source_id']!r}")
+                continue
             origin = (f"layer {finding['layer_id']!r}" if 'layer_id' in finding
                       else f"feature {finding['feature_index']}")
             print(f"{finding['file']}: {origin}, {finding['property']!r}: "
                   f"{finding['text']!r} matches {finding['source_id']!r}")
     else:
         print('No source names found in scanned labels.')
-    return int(bool(findings))
+    return int(any('source_id' in finding for finding in findings))
 
 
 if __name__ == '__main__':
