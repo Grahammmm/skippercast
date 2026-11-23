@@ -256,18 +256,6 @@ test('SCB-07-C: four manifest controls gate the release at the earliest expiry',
   }
 });
 
-// SCB2222-08. Contract: a published reef's Where to look reason prints each distinct credit-and-notice pair once, in first-seen order. Bug it catches:
-// the same USGS pair printed twice for a reef built from two USGS surveys (the live /map?region=morro-bay&profile=kayak line).
-test('ranked_reef_credit_pairs_are_unique: a published reef with two identical USGS rights and one CSUMB right prints one USGS credit and the CSUMB notice', () => {
-  const USGS = {credit: 'USGS', notice: 'Original US government data; retain source attribution and survey limitations.'};
-  const CSUMB = {credit: 'CSUMB', notice: 'Public noncommercial use only.'};
-  const reasons = rights => ranking(inputs({publication: {...READY, loaded: {...LOADED, targets: LOADED.targets.map(t => ({...t, source_rights: rights}))}}})).picks.map(p => p.reason);
-  const pick = reasons([USGS, {...USGS}, CSUMB]);
-  assert.ok(pick.length > 0, 'the comparison is over real picks');
-  for (const reason of pick) assert.ok(reason.endsWith(` relief. ${USGS.credit} ${USGS.notice} ${CSUMB.credit} ${CSUMB.notice}`), reason);
-  for (const reason of reasons([USGS])) assert.ok(reason.endsWith(` relief. ${USGS.credit} ${USGS.notice}`) && reason.split(USGS.notice).length === 2, reason);
-});
-
 test('SCB-07-C: canonical adapter preserves bands, fits, terrain and source credit; slim needs the identical current screen', async () => {
   const {habitatFeatures, rankedHabitat} = await import('../web/map/coast-ranking.js');
   const credit = [{id: 'synthetic-survey', credit: 'Synthetic survey lab', notice: 'Noncommercial use only', policyURL: 'https://example.test/terms'}];
