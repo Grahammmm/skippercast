@@ -34,7 +34,15 @@ function v2(w=4,h=3,region='morro-bay',target='t2'):BottomWindowData{
 test('schema 1 decodes decimetre elevations and keeps nodata blank',()=>{
  const z=decodeBottom(v1());assert.equal(z.length,129*129);assert.equal(z[0],null);assert.equal(z[1],-10.1);
  const g=decodeBottomWindow(v1());assert.equal(g.depths[1],10.1);assert.equal(g.mask[0],0);assert.equal(g.uncertainty,null);
- for(const bad of [{width:128},{encoding:'base64-int16-be'},{nodata:0},{cell_m:0},{elevations:'AAAA'}])assert.throws(()=>decodeBottom({...v1(),...bad}));
+ for(const bad of [{width:128},{encoding:'base64-int16-be'},{nodata:0},{elevations:'AAAA'}])assert.throws(()=>decodeBottom({...v1(),...bad}));
+ // A positivity-only check lets JSON exponent overflow and numeric strings drive the section scale.
+ const window=v1();
+ for(const [label,cell_m] of Object.entries({overflow:JSON.parse('1e309'),string:'2',boolean:true,nan:NaN,zero:0,negative:-2})){
+  const bad={...window,cell_m};
+  assert.throws(()=>decodeBottom(bad),/Unsupported survey window/,`${label}: decode`);
+  assert.throws(()=>bottomProbe(bad,1,0),/Unsupported survey window/,`${label}: probe`);
+  assert.throws(()=>bottomSection(bad,135),/Unsupported survey window/,`${label}: section`);
+ }
 });
 test('schema 2 keeps positive-down depths, mask and producer uncertainty separate from display elevations',()=>{
  const g=decodeBottomWindow(v2());
@@ -61,8 +69,16 @@ test('sections pass through the window centre, span the footprint and leave gaps
  assert.ok(Math.abs(east.at(-1)!.distance_ft-8*3.28084)<1e-9);assert.ok(Math.abs(east[0].depth_ft!-15*3.28084)<1e-4);
  const north=bottomSection(v2(3,3),0);assert.deepEqual(north.map(p=>p.x),[1,1,1]);assert.equal(north[2].depth_ft,null,'blank node stays blank');
  assert.throws(()=>bottomSection(v2(),NaN),/bearing/);
- const diagonal=bottomSection(v1(),135);assert.equal(diagonal.length,129);assert.equal(diagonal[0].depth_ft,null);
- assert.ok(diagonal.slice(1).every(p=>Number.isFinite(p.depth_ft)));
+ const window=v1();
+ for(const cell_m of [2,2.5]){
+  const diagonal=bottomSection({...window,cell_m},135);assert.equal(diagonal.length,129);
+  assert.equal(diagonal[0].depth_ft,null);
+  assert.ok(diagonal.slice(1).every(p=>Number.isFinite(p.depth_ft)));
+  diagonal.forEach(({distance_ft},i)=>{
+   const expectedFeet=Math.hypot(i,i)*cell_m*3.28084;
+   assert.ok(Math.abs(distance_ft-expectedFeet)<1e-9,`${cell_m} m spacing at node ${i}`);
+  });
+ }
 });
 
 const ORIGIN='https://skippercast.test';

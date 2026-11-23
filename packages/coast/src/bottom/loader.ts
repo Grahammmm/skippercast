@@ -55,7 +55,8 @@ export interface BottomView {
 export function decodeBottom(data: BottomWindowData): (number | null)[] {
   if (data.schema_version === 2) return decodeBottomWindow(data).elevations;
   if (data.schema_version !== 1 || data.encoding !== 'base64-int16-le' || data.width !== 129 || data.height !== 129 ||
-    data.elevation_unit_m !== 0.1 || data.nodata !== -32768 || !(data.cell_m > 0)) throw new Error('Unsupported survey window');
+    data.elevation_unit_m !== 0.1 || data.nodata !== -32768 || !Number.isFinite(data.cell_m) || data.cell_m <= 0)
+    throw new Error('Unsupported survey window');
   const bytes = Uint8Array.from(atob(data.elevations), (c) => c.charCodeAt(0));
   if (bytes.length !== data.width * data.height * 2) throw new Error('Incomplete survey window');
   const view = new DataView(bytes.buffer);
