@@ -57,7 +57,57 @@ def test_C1_wait_refetches_history_for_descendant_that_appears_mid_wait(checkout
     assert len(descendants) == 1 and descendants[0] not in (checkout.deployed, checkout.merge)
     assert json.loads(checkout.report.read_bytes()) == report(
         checkout, site, descendants[0], verified(release, 'ancestor') + [row('contours', 'none-merged', key=CONTOURS)],
-        'PASS', 10)
+        'PASS', 11)  # the refetch is a network operation and is counted
+
+
+@pytest.mark.parametrize('when, polls, passes, requests, deploys', [
+    pytest.param('poll', 11, True, 20, 12, id='refetch on the last poll fits the 20-operation limit'),
+    pytest.param('poll', 12, False, 13, 12, id='refetch on the last of 12 polls would be the 21st: budget'),
+    pytest.param('proof', 11, True, 20, 12, id='refetch in the full-proof re-read fits the limit'),
+    pytest.param('proof', 12, False, 14, 13, id='refetch in the full-proof re-read would be the 21st: budget'),
+])
+def test_C1_history_refetch_is_charged_and_never_exceeds_the_budget(
+        checkout, release, site, monkeypatch, when, polls, passes, requests, deploys):
+    """C1: An uncounted refetch reaches 21 operations; a skipped one passes without proof. Both must stay visible."""
+    serve_commit(site, checkout.stale)
+    served = []
+
+    def land_descendant():
+        (checkout.origin / 'notes').write_text(f'landed {len(served)}')
+        served.append(commit(checkout.origin, 'Descendant deployed during the wait'))
+        serve_commit(site, served[0])
+
+    sleeps = []
+
+    def advance(delay):
+        sleeps.append(delay)
+        if len(sleeps) == polls - 1:
+            if when == 'poll':
+                land_descendant()
+            else:
+                serve_commit(site, checkout.deployed)
+
+    if when == 'proof':  # the ready poll is known; main moves on before the full proof re-reads deploy.json
+        real_metadata = live_check.Site.metadata
+
+        def move_on(transport, key):
+            body = real_metadata(transport, key)
+            if site.requests == trace(*['deploy.json'] * polls):
+                land_descendant()
+            return body
+
+        monkeypatch.setattr(live_check.Site, 'metadata', move_on)
+    assert live_check.main([*argv(checkout, site), '--wait', str(polls)], sleeper=advance) == (0 if passes else 1)
+    assert len(served) == 1
+    if passes:
+        assert site.requests == trace(*['deploy.json'] * deploys, POINTER, release.archive, release.root,
+                                      *release.chunks, CONTOURS)
+        checks = verified(release, 'ancestor') + [row('contours', 'none-merged', key=CONTOURS)]
+    else:  # refused with an explicit reason: no refetch, no asset read
+        assert site.requests == trace(*['deploy.json'] * deploys)
+        checks = [row('deploy', 'budget', fail=True)]
+    assert json.loads(checkout.report.read_bytes()) == report(checkout, site, served[0], checks,
+                                                              'PASS' if passes else 'FAIL', requests)
 
 
 def test_C1_cli_dispatch_waits_once_when_already_deployed(checkout, release, site):
@@ -133,8 +183,9 @@ def test_C2_does_not_label_other_failures_not_deployed(checkout, site, reason):
         }[reason]
     assert live_check.main([*argv(checkout, site), '--wait', '3'], sleeper=pytest.fail) == 1
     assert site.requests == trace('deploy.json')
+    # The unknown-commit refetch is one more network operation, so the receipt counts it.
     assert json.loads(checkout.report.read_bytes()) == report(
-        checkout, site, deployed, [row('deploy', reason, fail=True)], 'FAIL', 2)
+        checkout, site, deployed, [row('deploy', reason, fail=True)], 'FAIL', 3 if reason == 'unknown-commit' else 2)
 
 
 def test_C2_rollback_after_ready_poll_remains_stale(checkout, site, monkeypatch):

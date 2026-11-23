@@ -44,13 +44,19 @@ class Site:
     def __init__(self, base):
         self.base = base
         self.opener = build_opener(NoRedirect())
-        # The single Git fetch counts as one operation against the same budget.
+        # The first Git fetch counts as one operation against the same budget.
         self.requests = 1
+        # Operations still owed to later steps of the proof; a wait never spends them.
+        self.reserve = 0
 
-    def fetch(self, key, *, max_bytes):
-        if self.requests >= _LIMIT:
+    def charge(self, key):
+        """Count one non-site network operation (a history refetch) against the budget."""
+        if self.requests + 1 + self.reserve > _LIMIT:
             raise FetchError(key, 'budget')
         self.requests += 1
+
+    def fetch(self, key, *, max_bytes):
+        self.charge(key)
         try:
             response = self.opener.open(Request(f'{self.base}/{key}', method='GET'), timeout=15)
         except HTTPError as exc:
@@ -201,8 +207,11 @@ def _check_deploy(site, history, merge, refresh=None):
     check = verdict()
     if check['reason'] == 'unknown-commit' and refresh is not None:
         # While waiting, main may have advanced after the history snapshot and
-        # deployed a descendant of the merge. Refetch once and judge the same receipt again.
-        refresh()
+        # deployed a descendant of the merge. Refetch (a charged operation) and judge the same receipt again.
+        try:
+            refresh()
+        except FetchError as exc:
+            return deployed, _failure('deploy', exc.reason)
         check = verdict()
     return deployed, check
 
@@ -220,14 +229,23 @@ def _wait_for_deploy(site, history, merge, polls, interval, sleeper, refresh):
 
 
 def _check(site, history, merge, key, raw, pointer, contours, *, polls, interval, sleeper):
-    refresh = None if polls is None else (lambda: _refresh_history(history))
+    refresh = None
     if polls is not None:
+        def refetch():
+            site.charge('history')  # a refetch is one operation, counted before it runs
+            _refresh_history(history)
+        refresh = refetch
+        # Pointer, archive, root, one chunk per zoom and contours stay owed after the deploy read.
+        tail = 4 + pointer['maxzoom'] - pointer['minzoom'] + 1
+        site.reserve = tail + 1  # polls and refetches must leave the full proof's deploy read and tail
         deployed, poll = _wait_for_deploy(site, history, merge, polls, interval, sleeper, refresh)
         if poll['status'] == 'FAIL':
             return deployed, [poll]
+        site.reserve = tail  # the re-read may refetch only if the tail still fits
     # Re-read deployment in the full proof: the site may have rolled back
     # since a passing poll. Such a stale receipt is not a wait timeout.
     deployed, check = _check_deploy(site, history, merge, refresh)
+    site.reserve = 0
     checks = [check]
     if checks[-1]['status'] == 'PASS':
         try:
