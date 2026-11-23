@@ -12,6 +12,7 @@
 import type {Alert, ForecastHour} from './types.ts';
 import type {NearshoreSite} from './enrichment-types.ts';
 import {nearshoreAt} from './nearshore.ts';
+import {hazardEndMs, hazardStartMs, type AlertClocks} from './alert-window.ts';
 import {periodSecondsText} from './period-display.ts';
 import {SHORE, shoreWind, surf, type Surf, type WindSide} from './shore-conditions.ts';
 
@@ -124,10 +125,10 @@ export function launchCaution(s: Surf): boolean {
 }
 
 /** Whether a fog or visibility alert is in force at `at`. */
-export function fogAt(at: number, alerts: readonly Pick<Alert, 'event' | 'effective' | 'expires'>[]): boolean {
+export function fogAt(at: number, alerts: readonly (Pick<Alert, 'event'> & AlertClocks)[]): boolean {
   return alerts.some(alert => {
     if (!KAYAK.fog.alert.test(alert.event)) return false;
-    const from = alert.effective ? Date.parse(alert.effective) : -Infinity, to = alert.expires ? Date.parse(alert.expires) : Infinity;
+    const from = hazardStartMs(alert), to = hazardEndMs(alert);   // the hazard's onset ?? effective and ends ?? expires
     // Unreadable clocks count as in force, as the alert check does.
     return (Number.isNaN(from) || from <= at) && (Number.isNaN(to) || to > at);
   });
@@ -168,7 +169,7 @@ export type KayakInputs = {
   site: NearshoreSite | undefined;
   /** The vetted shoreline bearing (shore-conditions.ts `seaward`), or null. */
   seawardDeg: number | null;
-  alerts: readonly Pick<Alert, 'event' | 'effective' | 'expires'>[];
+  alerts: readonly (Pick<Alert, 'event'> & AlertClocks)[];
   sunrise: string | null;
   sunset: string | null;
 };
