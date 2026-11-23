@@ -299,6 +299,7 @@
     "verdict.reason.seas": {"en": "{band} seas{detail}", "es": "mar {band}{detail}"},
     "verdict.reason.surge": {"en": "{band} surge{basis}", "es": "vaivén del agua {band}{basis}"},
     "verdict.reason.chop": {"en": "{band} chop", "es": "oleaje corto {band}"},
+    "verdict.reason.chopChoppy": {"en": "choppy water", "es": "oleaje corto picado"},
     "verdict.reason.clarity": {"en": "clarity estimate {band}", "es": "estimación de claridad {band}"},
     "verdict.reason.detail": {"en": " ({height} {heightUnit}{period}{basis})", "es": " ({height} {heightUnit}{period}{basis})"},
     "verdict.reason.period": {"en": " at {period} s", "es": " a {period} s"},

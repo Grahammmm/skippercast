@@ -288,6 +288,7 @@
 "verdict.reason.seas":{"en":"{band} seas{detail}"},
 "verdict.reason.surge":{"en":"{band} surge{basis}"},
 "verdict.reason.chop":{"en":"{band} chop"},
+"verdict.reason.chopChoppy":{"en":"choppy water"},
 "verdict.reason.clarity":{"en":"clarity estimate {band}"},
 "verdict.reason.detail":{"en":" ({height} {heightUnit}{period}{basis})"},
 "verdict.reason.period":{"en":" at {period} s"},
