@@ -21,7 +21,14 @@ export function reliefVerifier(archive: {object_key: string; digest_root_sha256:
 
   async function read(path: string, expected: string): Promise<unknown> {
     signal.throwIfAborted();
-    const response = await fetchFn(new URL(path, index), {signal, redirect: 'error'});
+    const url = new URL(path, index);
+    const options: RequestInit = {signal, redirect: 'error'};
+    let response = await fetchFn(url, options);
+    // Recover inside the shared read, before a 503 can tear down the overlay.
+    if (response.status === 503) {
+      signal.throwIfAborted();
+      response = await fetchFn(url, options);
+    }
     if (!response.ok) throw new Error(`Relief digest ${path} unavailable (HTTP ${response.status})`);
     const bytes = await response.arrayBuffer();
     if (await hash(bytes) !== expected) throw new Error(`Relief digest ${path} hash mismatch`);

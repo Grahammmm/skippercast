@@ -13,6 +13,7 @@ REGION = 'monterey-point-sur'
 BOUNDS = [-122.35, 36.3, -121.65, 36.625]
 SOURCE = 'synthetic-grid'
 GEN = 'a' * 64
+BASEMAP_BYTES = b'synthetic basemap'
 
 
 def _write(path, data):
@@ -37,7 +38,7 @@ def candidate(tmp_path, monkeypatch):
     monkeypatch.setattr(envelope, 'repo_root', lambda: config)
     out = tmp_path / 'scratch OUT'
     basemap = tmp_path / 'base $map.pmtiles'
-    _write(basemap, b'synthetic basemap')
+    _write(basemap, BASEMAP_BYTES)
 
     def make(region=REGION, bounds=BOUNDS):
         root = out / region
@@ -98,7 +99,14 @@ def test_request_round_trips_to_actual_shots(camera, center, candidate, monkeypa
     assert msg['camera_id'] == camera
     assert msg['expected_release_sha256'] == release['sha256']
     assert msg['expected_envelope_sha256'] == review_sha
-    program, no_pyc, script, *shots_argv = msg['argv']
+    assert msg['expected_basemap_sha256'] == sha256(BASEMAP_BYTES).hexdigest()
+    assert msg['invocation_authorized'] is False
+
+    replay = [*_args(data, camera), '--expect-basemap-sha256', msg['expected_basemap_sha256']]
+    assert request.main(replay) == 0 and not seen
+    replayed = json.loads(capsys.readouterr().out)
+    assert replayed == msg
+    program, no_pyc, script, *shots_argv = replayed['argv']
     assert (program, no_pyc, script) == ('python', '-B', 'scripts/relief/region.py')
     assert cli.main(shots_argv) == 0 and seen == ['shots']
 
@@ -109,6 +117,14 @@ def _refusal(args, capsys, reason):
     assert exc.value.code == 2
     out, err = capsys.readouterr()
     assert not out and reason in err
+
+
+def test_refuses_same_length_basemap_substitution(candidate, capsys):
+    """Catch treating the same path and file size as proof of unchanged bytes."""
+    data = candidate()
+    data[2].write_bytes(BASEMAP_BYTES.upper())
+    replay = [*_args(data), '--expect-basemap-sha256', sha256(BASEMAP_BYTES).hexdigest()]
+    _refusal(replay, capsys, 'basemap SHA-256 mismatch')
 
 
 def test_refuses_valid_envelope_from_other_region(candidate, capsys):
