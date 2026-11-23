@@ -134,32 +134,78 @@ def lookup_keys(tokens: list[str]) -> Iterator[str]:
             yield key[1:-1]
 
 
-def local_bindings(tokens: list[str]) -> dict[str, list[str]]:
-    """Map each locally bound name to the tokens of the value assigned to it."""
-    bindings: dict[str, list[str]] = {}
-    for i in range(len(tokens) - 2):
+Span = tuple[int, int]
+MODULE: Span = (-1, 1 << 60)  # the whole file
+Binding = tuple[Span, int, int]  # (scope, value start, value end) in token positions
+
+
+def block_spans(tokens: list[str]) -> list[Span]:
+    """Token spans of every {...} block (function bodies, blocks, object literals)."""
+    spans: list[Span] = []
+    opened: list[int] = []
+    for i, token in enumerate(tokens):
+        if token == '{':
+            opened.append(i)
+        elif token == '}' and opened:
+            spans.append((opened.pop(), i))
+    spans.extend((start, len(tokens)) for start in opened)  # unbalanced: runs to the end
+    return spans
+
+
+def scope_at(spans: list[Span], i: int) -> Span:
+    inside = [span for span in spans if span[0] < i < span[1]]
+    return min(inside, key=lambda span: span[1] - span[0], default=MODULE)
+
+
+def local_bindings(tokens: list[str], spans: list[Span]) -> dict[str, list[Binding]]:
+    """Map each local name to the values assigned to it, each tagged with its block scope."""
+    declared: dict[str, list[Binding]] = {}
+    assigned: list[tuple[str, int, int, int]] = []
+    for i in range(len(tokens) - 1):
         name = tokens[i]
-        if not IDENTIFIER.fullmatch(name) or tokens[i + 1] != '=' or tokens[i + 2] in ('=', '>'):
+        if not IDENTIFIER.fullmatch(name):
+            continue
+        declaration = i > 0 and tokens[i - 1] in ('const', 'let', 'var')
+        if tokens[i + 1] != '=' or (i + 2 < len(tokens) and tokens[i + 2] in ('=', '>')):
+            if declaration:  # `let label;` still opens a local of that name
+                declared.setdefault(name, []).append((scope_at(spans, i), i, i))
             continue  # not a binding: ==, === or an arrow function (x => ...)
         if i and tokens[i - 1] in ('.', '=', '!', '<', '>'):
             continue  # a member store or a comparison, not a local binding
-        bindings.setdefault(name, []).extend(tokens[i + 2:ts_value_end(tokens, i + 2)])
+        end = ts_value_end(tokens, i + 2)
+        if declaration:
+            declared.setdefault(name, []).append((scope_at(spans, i), i + 2, end))
+        else:
+            assigned.append((name, i, i + 2, end))
+    bindings = {name: list(rows) for name, rows in declared.items()}
+    for name, i, start, end in assigned:  # a bare `label = ...` updates the nearest declared local
+        scopes = [row[0] for row in declared.get(name, []) if row[0][0] < i < row[0][1]]
+        scope = min(scopes, key=lambda span: span[1] - span[0], default=MODULE)
+        bindings.setdefault(name, []).append((scope, start, end))
     return bindings
 
 
-def value_keys(value: list[str], bindings: dict[str, list[str]]) -> set[str]:
-    """Literal t() keys in a value, following local names to what they were assigned."""
+def value_keys(tokens: list[str], start: int, end: int, bindings: dict[str, list[Binding]]) -> set[str]:
+    """Literal t() keys in tokens[start:end], following each local name to what its scope assigned."""
     keys: set[str] = set()
-    seen: set[str] = set()
-    pending = [value]
+    seen: set[Binding] = set()
+    pending = [(start, end)]
     while pending:
-        tokens = pending.pop()
-        keys.update(lookup_keys(tokens))
-        for i, token in enumerate(tokens):
-            if (token in bindings and token not in seen and (i == 0 or tokens[i - 1] != '.')
-                    and (i + 1 == len(tokens) or tokens[i + 1] not in ('(', ':'))):
-                seen.add(token)
-                pending.append(bindings[token])
+        begin, stop = pending.pop()
+        keys.update(lookup_keys(tokens[begin:stop]))
+        for i in range(begin, stop):
+            token = tokens[i]
+            if (token not in bindings or (i > begin and tokens[i - 1] == '.')
+                    or (i + 1 < stop and tokens[i + 1] in ('(', ':'))):
+                continue
+            visible = [row for row in bindings[token] if row[0][0] < i < row[0][1]]
+            if not visible:
+                continue
+            innermost = min(row[0][1] - row[0][0] for row in visible)  # shadowing: nearest scope wins
+            for row in visible:
+                if row[0][1] - row[0][0] == innermost and row not in seen:
+                    seen.add(row)
+                    pending.append((row[1], row[2]))
     return keys
 
 
@@ -171,7 +217,7 @@ def drawn_string_keys(source: str) -> set[str]:
     shapes, not general TypeScript dataflow (computed lookup keys are excluded).
     """
     tokens = [token for token in TS_TOKEN.findall(source) if not token.startswith(('//', '/*'))]
-    bindings = local_bindings(tokens)
+    bindings = local_bindings(tokens, block_spans(tokens))
     keys: set[str] = set()
     fields: set[str] = set()
     properties: list[int] = []
@@ -180,8 +226,9 @@ def drawn_string_keys(source: str) -> set[str]:
         if colon != ':':
             continue
         if name in ('"text-field"', "'text-field'"):
-            value = tokens[i + 2:ts_value_end(tokens, i + 2)]
-            keys.update(value_keys(value, bindings))
+            end = ts_value_end(tokens, i + 2)
+            value = tokens[i + 2:end]
+            keys.update(value_keys(tokens, i + 2, end, bindings))
             for opening, op, comma, field in zip(value, value[1:], value[2:], value[3:]):
                 if opening == '[' and op in ('"get"', "'get'") and comma == ',' and field.startswith(('"', "'")):
                     fields.add(field[1:-1])
@@ -192,11 +239,11 @@ def drawn_string_keys(source: str) -> set[str]:
             if tokens[i + 1] == ':':
                 end = ts_value_end(tokens, i + 2)
                 if tokens[i].strip('"\'') in fields:
-                    keys.update(value_keys(tokens[i + 2:end], bindings))
+                    keys.update(value_keys(tokens, i + 2, end, bindings))
             else:
                 end = ts_value_end(tokens, i)
                 if tokens[i] in fields:  # shorthand: {name} reads the local called name
-                    keys.update(value_keys(tokens[i:end], bindings))
+                    keys.update(value_keys(tokens, i, end, bindings))
             if end == len(tokens) or tokens[end] != ',':
                 break
             i = end + 1

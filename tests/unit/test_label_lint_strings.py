@@ -95,6 +95,28 @@ def test_c1_follows_local_binding(tree, capsys, source):
     )
 
 
+@pytest.mark.parametrize(('source', 'keys'), [
+    pytest.param("function credits() { const label = t('credit', lang); return label; }\n"
+                 "function map() { const label = 'Harbor'; return {layout: {'text-field': label}}; }",
+                 set(), id='same name in another function is not drawn'),
+    pytest.param("function credits() { const label = t('credit', lang); return label; }\n"
+                 "function map() { const label = t('spot.unnamed', lang); return {layout: {'text-field': label}}; }",
+                 {KEY}, id='drawn function binding selected, sibling credit not'),
+    pytest.param("const label = t('credit', lang);\n"
+                 "function map() { const label = 'Harbor'; return {layout: {'text-field': label}}; }",
+                 set(), id='inner binding shadows an outer one'),
+    pytest.param("const label = t('spot.unnamed', lang);\n"
+                 "function map() { if (ok) { return {layout: {'text-field': label}}; } }",
+                 {KEY}, id='outer binding reaches a nested block'),
+    pytest.param("function map() { let label; if (ok) { label = t('spot.unnamed', lang); }\n"
+                 "return {layout: {'text-field': label}}; }",
+                 {KEY}, id='later bare assignment updates the declared local'),
+])
+def test_c1_bindings_respect_local_scope(source, keys):
+    """C1: a same-named local in another function must not leak its lookup (false violation on a credit)."""
+    assert label_lint.drawn_string_keys(source) == keys
+
+
 def test_c1_binding_to_an_undrawn_lookup_is_ignored(tree, capsys):
     """C1: a binding only matters when drawn; an unused or same-named property key adds nothing."""
     write(tree, MAP, "const label = t('spot.unnamed', lang); const layer = {layout: {'text-field': other}};\n"
