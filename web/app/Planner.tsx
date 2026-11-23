@@ -192,6 +192,8 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
     orderFocus.current = {id, direction};
     if (!m.moveStop(id, direction)) orderFocus.current = null;
   };
+  // SC2052-09: the note (model signal) belongs to the order it was about (`ids` identity), so any later change to the stops clears it.
+  const shorter = m.shorterNote.value;
   // BF-closures-everywhere: the planner's shared screen for THIS region, else null (every leg then reads not checked). Its contents are mutable, so the tick (minute and boundary updates) is read here too.
   void m.tick.value;
   const shown = protectedScreen.value, screen = shown.state === 'loaded' && shown.region === m.region.id ? shown.screen : null;
@@ -243,6 +245,8 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
         <div class="export-card-body">
           {stops.length > 0 && <section aria-label={t('planner.stops.heading', lang)}>
             <h3>{t('planner.stops.heading', lang)}</h3>
+            {d.ids.length > 1 && <p><button type="button" id="export-shorter-order" disabled={m.restorePending.value} onClick={() => { m.shortenRun(); }}>{t('planner.order.shorter', lang)}</button>
+              <small class="export-note" role="status" id="export-shorter-note"> {shorter?.ids === d.ids ? t(shorter.key, lang) : ''}</small></p>}
             <ol aria-label={t('planner.stops.aria', lang)}>{stops.map(stop => {
               const index = d.ids.indexOf(stop.id), name = stop.name || stop.label;
               return <li key={stop.id} data-stop-id={stop.id}>{name}{index >= 0 && (['up', 'down'] as const).map(direction =>
