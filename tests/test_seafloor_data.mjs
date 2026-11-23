@@ -104,7 +104,10 @@ test('loadManifest bypasses caches and fails closed', async () => {
   const calls = [];
   const ok = async (url, opts) => { calls.push([url, opts]); return { ok: true, status: 200, json: async () => READY }; };
   assert.equal((await loadManifest('morro-bay', ok, NOW)).state, 'ready');
-  assert.deepEqual(calls[0], ['/feeds/tiles/seafloor/manifest-morro-bay.json', { cache: 'no-store' }]);
+  assert.equal(calls[0][0], '/feeds/tiles/seafloor/manifest-morro-bay.json');
+  assert.equal(calls[0][1].cache, 'no-store');
+  assert.ok(calls[0][1].signal instanceof AbortSignal, 'the read carries the 15 s deadline signal');
+  assert.deepEqual(Object.keys(calls[0][1]).sort(), ['cache', 'signal']);
   const busy = async () => ({ ok: false, status: 503, json: async () => { throw new Error('text'); } });
   assert.equal((await loadManifest('morro-bay', busy, NOW)).state, 'updating');
   const missing = async () => ({ ok: false, status: 404, json: async () => ({}) });

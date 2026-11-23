@@ -101,6 +101,21 @@ test('RSS retains assembly and observation dates across reads and deduplicates o
  const b=await(await serveCoastPage(request('/feed.xml'),{...options(data),now:new Date('2026-10-10T12:00:00Z')})).text();
  assert.equal(a,b);assert.match(a,/<lastBuildDate>Wed, 07 Oct 2026 11:50:00 GMT/);assert.match(a,/<pubDate>Wed, 07 Oct 2026 10:30:00 GMT/);assert.equal((a.match(/<item>/g)||[]).length,2);assert.doesNotMatch(a,/10 Oct/);
 });
+// Contract: the report item's guid is one per Pacific report date, so a reader does not add an item per assembly; bug: guid carried generatedAt.
+// Contract: a missing water reading is worded 'water not reported', never 'Water — F'; zero and known readings keep 'Water <n> F'.
+test('RSS report guid is one per Pacific date and a missing water reading is worded plainly',async()=>{
+ const feed=async(data,path='/feed.xml')=>(await serveCoastPage(request(path),options(data))).text();
+ const guid=xml=>xml.match(/<guid isPermaLink="false">(slo:report:[^<]*)<\/guid>/)[1];
+ const pub=xml=>xml.match(/<item><title>SLO report[^]*?<pubDate>([^<]*)<\/pubDate>/)[1];
+ const at=iso=>feed({...report,generatedAt:iso});
+ const early=await at('2026-10-07T20:00:00Z'),late=await at('2026-10-08T05:00:00Z'),next=await at('2026-10-08T07:00:00Z');
+ assert.equal(guid(early),'slo:report:2026-10-07');assert.equal(guid(late),'slo:report:2026-10-07');assert.equal(guid(next),'slo:report:2026-10-08');
+ assert.notEqual(pub(early),pub(late));assert.equal(pub(late),'Thu, 08 Oct 2026 05:00:00 GMT');
+ assert.match(early,/<title>SLO report · 2026-10-07<\/title>/);
+ const water=async waterTempF=>feed({...report,observations:[{...report.observations[0],waterTempF}]});
+ for(const missing of [undefined,null,NaN]){const xml=await water(missing);assert.match(xml,/water not reported; waves 4\.0 ft/);assert.doesNotMatch(xml,/Water —|—/);}
+ assert.match(await water(56),/Water 56\.0 F; waves/);assert.match(await water(0),/Water 0\.0 F; waves/);assert.doesNotMatch(await water(0),/water not reported/);
+});
 test('escaped markup, unsafe source links and replacement tokens remain inert',async()=>{
  const html=await(await serveCoastPage(request('/report?target=%3Cscript%3E'),options())).text();
  assert.match(html,/NWS \$&amp; &lt;script&gt;/);assert.match(html,/target &lt;script&gt;/);assert.doesNotMatch(html,/javascript:|<script/);assert.doesNotMatch(html,/<!--COAST_REPORT-->/);
