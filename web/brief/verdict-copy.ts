@@ -86,6 +86,8 @@ export function verdictCopy(lang: Language = 'en', u: Units = units.value) {
 
   /** A recognised profile reason in `lang`; English is returned as the grader wrote it (its kt and ft numbers converted when other units are chosen). */
   const profileReason = (raw: string): string => {
+    // SC2137-09: the spear grader's Choppy band writes "choppy chop"; say it as its own catalogue sentence in both languages (es is unchanged).
+    if (raw === 'choppy chop') return say('reason.chopChoppy');
     // Display only: the grader's English decided the reason and its cost; a recognised reason keeps its words and swaps its numbers.
     if (lang === 'en') {
       const match = SURF_REASON.exec(raw) ?? WIND_REASON.exec(raw) ?? SEAS_REASON.exec(raw);
