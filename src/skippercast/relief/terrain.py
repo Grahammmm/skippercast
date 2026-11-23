@@ -146,9 +146,13 @@ def samples(frame, x, z, dx, dz, size, elevation, companion, *, contributor=Fals
             valid = ~np.ma.getmaskarray(depth) & np.isfinite(depth.data)
             if elevation.nodata is not None:
                 valid &= depth.data != elevation.nodata
-            support = companion.read(1, window=window, masked=True).filled(0) if companion is not None else None
-            if support is not None:
+            support = None
+            if companion is not None:
+                support = companion.read(1, window=window, masked=True).filled(0)
                 valid &= support > 0
+                # An explicit GDAL mask can leave the nodata value unmasked.
+                if companion.nodata is not None:
+                    valid &= support != companion.nodata
             # Integral image answers arbitrary rectangular validity queries in O(1).
             missing = np.zeros((valid.shape[0] + 1, valid.shape[1] + 1), dtype=np.int32)
             missing[1:, 1:] = np.cumsum(np.cumsum(~valid, axis=0, dtype=np.int32), axis=1, dtype=np.int32)
