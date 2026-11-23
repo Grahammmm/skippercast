@@ -111,9 +111,29 @@ def test_c1_follows_local_binding(tree, capsys, source):
     pytest.param("function map() { let label; if (ok) { label = t('spot.unnamed', lang); }\n"
                  "return {layout: {'text-field': label}}; }",
                  {KEY}, id='later bare assignment updates the declared local'),
+    pytest.param("const label = t('credit', lang);\n"
+                 "function map(label) { return {layout: {'text-field': label}}; }\nmap('Harbor');",
+                 set(), id='function parameter shadows an outer lookup'),
+    pytest.param("const label = t('credit', lang);\n"
+                 "const map = (a, label = 'x') => ({layout: {'text-field': label}});",
+                 set(), id='arrow parameter with a default shadows an outer lookup'),
+    pytest.param("const label = t('credit', lang);\n"
+                 "const map = label => { return {layout: {'text-field': label}}; };",
+                 set(), id='bare arrow parameter shadows an outer lookup'),
+    pytest.param("const label = t('credit', lang);\n"
+                 "function map({ label }: Opts): Layer { return {layout: {'text-field': label}}; }",
+                 set(), id='destructured typed parameter shadows an outer lookup'),
+    pytest.param("const label = t('spot.unnamed', lang);\n"
+                 "function map(other) { return {layout: {'text-field': label}}; }",
+                 {KEY}, id='an unrelated parameter does not hide the outer lookup'),
+    pytest.param("function map(label) { label = t('spot.unnamed', lang); return {layout: {'text-field': label}}; }",
+                 {KEY}, id='parameter reassigned to a lookup is drawn'),
+    pytest.param("const label = t('spot.unnamed', lang); show(label);\n"
+                 "if (label) { draw = {layout: {'text-field': label}}; }",
+                 {KEY}, id='call arguments and conditions are not parameters'),
 ])
 def test_c1_bindings_respect_local_scope(source, keys):
-    """C1: a same-named local in another function must not leak its lookup (false violation on a credit)."""
+    """C1: a same-named local or parameter elsewhere must not leak its lookup (false violation on a credit)."""
     assert label_lint.drawn_string_keys(source) == keys
 
 

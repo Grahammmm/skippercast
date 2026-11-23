@@ -157,10 +157,57 @@ def scope_at(spans: list[Span], i: int) -> Span:
     return min(inside, key=lambda span: span[1] - span[0], default=MODULE)
 
 
+NOT_PARAMETERS = ('if', 'for', 'while', 'switch', 'with')
+
+
+def parameter_scopes(tokens: list[str], spans: list[Span]) -> Iterator[tuple[str, int, Span]]:
+    """Yield (name, token position, body scope) for each function parameter.
+
+    Covers `function f(a)`, methods, `(a, {b}) => ...`, `a => ...` and `catch (e)`,
+    with a block or an expression body. A parameter shadows an outer local of the
+    same name inside its body, so the outer lookup is not what that body draws.
+    """
+    block_end = {start: (start, stop) for start, stop in spans}
+    opened: list[int] = []
+    pairs: list[tuple[int, int]] = []
+    for i, token in enumerate(tokens):
+        if token == '(':
+            opened.append(i)
+        elif token == ')' and opened:
+            pairs.append((opened.pop(), i))
+    heads = [(tokens[p + 1:q], p + 1, q) for p, q in pairs if p == 0 or tokens[p - 1] not in NOT_PARAMETERS]
+    heads += [(tokens[i:i + 1], i, i + 1) for i in range(len(tokens) - 2)
+              if IDENTIFIER.fullmatch(tokens[i]) and tokens[i + 1:i + 3] == ['=', '>']
+              and (i == 0 or tokens[i - 1] != '.')]
+    for inner, first, close in heads:
+        after = close + 1 if tokens[close:close + 1] == [')'] else close
+        j = after
+        if (j < len(tokens) and tokens[j] == ':' and tokens[close:close + 1] == [')']
+                and tokens[first - 1] != '?'):  # not the `(a) ? (b) : {...}` ternary
+            while j < len(tokens) and tokens[j] not in ('{', '=', ';'):  # skip a return type
+                j += 1
+        if tokens[j:j + 2] == ['=', '>']:
+            j += 2
+            body = block_end.get(j) or (j - 1, ts_value_end(tokens, j))
+        elif j < len(tokens) and tokens[j] == '{' and tokens[close:close + 1] == [')'] and j in block_end:
+            body = block_end[j]
+        else:
+            continue  # a call or a condition, not a function head
+        for k, name in enumerate(inner):
+            if not IDENTIFIER.fullmatch(name) or name in ('function', 'async'):
+                continue
+            before = inner[k - 1] if k else '('
+            following = inner[k + 1] if k + 1 < len(inner) else ')'
+            if before in ('(', ',', '...', '{', '[') and following in (',', ')', '=', ':', '?', '}', ']'):
+                yield name, first + k, body
+
+
 def local_bindings(tokens: list[str], spans: list[Span]) -> dict[str, list[Binding]]:
     """Map each local name to the values assigned to it, each tagged with its block scope."""
     declared: dict[str, list[Binding]] = {}
     assigned: list[tuple[str, int, int, int]] = []
+    for name, i, body in parameter_scopes(tokens, spans):  # a parameter is a local with no lookup
+        declared.setdefault(name, []).append((body, i, i))
     for i in range(len(tokens) - 1):
         name = tokens[i]
         if not IDENTIFIER.fullmatch(name):
