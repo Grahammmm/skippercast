@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {isDeepStrictEqual} from 'node:util';
 import {createPlanner} from '../web/planner.ts';
+import {distanceNm} from '../dist/spot-ranking.js';
 import {draftKey} from '../dist/trip-export.js';
 import {tripLegs} from '../web/trip-legs.ts';
 import {launchPoints} from '../web/launches.ts';
@@ -16,9 +17,9 @@ const point = (id,n) => ({id,label:id,name:id,latitude:35+n/100,longitude:-121,h
 const publication = {export_sha256:'a'.repeat(64),status:'ready',expires_at:'2099-12-31T00:00:00Z',region:region.id};
 const reefs = {targets:[point('A',1),point('B',3),point('C',4)],areas:['A','B','C'].map((id,i)=>({id:`area-${id}`,target_ids:[id],geometry:{type:'Polygon',coordinates:[[[-121,35+i/100],[-120.999,35+i/100],[-120.999,35.001+i/100],[-121,35+i/100]]]}})),publication};
 const wp = {id:'user:W',name:'W',category:'other',latitude:35.02,longitude:-121};
-function make({raw,blocked=false,loadReefs=async()=>reefs,water=()=>({state:'water'})}={}) {
+function make({raw,blocked=false,loadReefs=async()=>reefs,water=()=>({state:'water'}),ports=[]}={}) {
   const store=new Map(raw?[[draftKey(region.id),raw]]:[]), calls=[], emitted=[];
-  const p=createPlanner({atlas:{targets:[],areas:[]},region,screen,map,getVisible:()=>[],now:()=>now,landWater:async()=>water,loadReefs,loadPorts:async()=>({ports:[]}),emit:d=>emitted.push(d),
+  const p=createPlanner({atlas:{targets:[],areas:[]},region,screen,map,getVisible:()=>[],now:()=>now,landWater:async()=>water,loadReefs,loadPorts:async()=>({ports}),emit:d=>emitted.push(d),
     storage:{getItem:k=>store.get(k)??null,setItem:(k,v)=>{if(blocked)throw Error('blocked');store.set(k,v);}},nav:{open(){},showMap(){},conditions(){}},
     alertSettings:()=>({profile:'boat',ownBoatLimits:false,limits:{wind:12,gust:18,seas:4},factors:{wind:1,sea:1,custom:false},boat:null}),
     alertFetch:async(url,init)=>{calls.push(JSON.parse(init.body));return {ok:true,status:201,json:async()=>({id:'trip-1'})};}});
@@ -99,4 +100,58 @@ test('alert preview and explicit snapshots follow moves; no implicit send, dupli
  }finally{p.dispose();}
  const releases=[];let hold=false;const race=make({loadReefs:()=>hold?new Promise(r=>releases.push(r)):Promise.resolve(reefs)});await select(race);race.p.setAlertOpen(true);await new Promise(r=>setTimeout(r,0));hold=true;
  const saving=race.p.saveAlert(legs);race.p.moveStop('B','up');hold=false;for(const release of releases)release(reefs);await saving;assert.equal(race.calls.length,0);assert.match(race.p.alertStatus.value,/changed/i);race.p.dispose();session.value={state:'loading'};activeRegion.value=null;
+});
+
+// SC2052-09. Protects: shorterRunOrder improves a zigzag rank order, keeps the anchors, never adds/drops a stop, leaves ties and optimal orders alone.
+// Fails if it reorders on a tie, returns a longer order, drops a stop, or moves the pinned first stop or an anchor.
+// The pure ordering is module-private in web/planner.ts (the closures guard lists its exports); it is reached through the planner model.
+const shorterRunOrder=(...args)=>{const h=make();try{return h.p.shorterRunOrder(...args);}finally{h.p.dispose();}};
+const S=Object.fromEntries([5,1,4,2,3,0].map((o,i)=>[`S${i+1}`,{id:`S${i+1}`,latitude:35+o/10,longitude:-121}])), rank=Object.values(S);
+const total=(order,{start,end}={})=>[start,...order,end].filter(Boolean).reduce((sum,p,i,all)=>i?sum+distanceNm(all[i-1],p):0,0);
+const idsOf=r=>r.ids.join(',');
+test('shorterRunOrder: six-stop zigzag beats rank order; first stop pinned, launch/return anchors fixed, same stops',()=>{
+ const r=shorterRunOrder(rank);
+ assert.equal(idsOf(r),'S1,S3,S5,S4,S2,S6');assert.equal(r.changed,true);
+ const byId=r.ids.map(id=>S[id]);assert.ok(Math.abs(total(byId)-r.afterNm)<1e-9&&Math.abs(total(rank)-r.beforeNm)<1e-9&&r.afterNm<r.beforeNm/2,'independent sums');
+ eq([...r.ids].sort(),rank.map(s=>s.id).sort());
+ const port={latitude:35,longitude:-121};
+ assert.equal(idsOf(shorterRunOrder(rank,{start:port})),'S6,S2,S4,S5,S3,S1');
+ const ramp=shorterRunOrder(rank,{end:port});assert.equal(idsOf(ramp),'S1,S3,S5,S4,S2,S6');assert.ok(total(ramp.ids.map(id=>S[id]),{end:port})<total(rank,{end:port}));
+ const loop=shorterRunOrder(rank,{start:port,end:port});assert.equal(loop.changed,true);assert.ok(Math.abs(total(loop.ids.map(id=>S[id]),{start:port,end:port})-loop.afterNm)<1e-9&&loop.afterNm<loop.beforeNm);
+});
+test('shorterRunOrder: ties and an already-shortest order stay exactly as they are',()=>{
+ const A=at('A',35.1),B=at('B',34.9),from={latitude:35,longitude:-121};
+ for(const order of [[A,B],[B,A]]){const r=shorterRunOrder(order,{start:from});assert.equal(r.changed,false);eq(r.ids,order.map(s=>s.id));}
+ const best=shorterRunOrder(rank),again=shorterRunOrder(best.ids.map(id=>S[id]));
+ assert.equal(again.changed,false);eq(again.ids,best.ids);assert.equal(again.afterNm,again.beforeNm);
+ for(const few of [[],[S.S1]])assert.equal(shorterRunOrder(few).changed,false);
+});
+function at(id,latitude){return {id,latitude,longitude:-121};}
+
+// Protects: the planner button only reorders when called, commits through the manual-order path (manualOrder, status, persisted, legs/alert/notes follow),
+// and a refusal or a repeat changes nothing. Fails if it runs on its own, drops the rank claim wrongly, loses the order on reload or touches a refused plan.
+const lat={A:1,B:9,C:2,D:8,E:3},zig=ids=>({targets:ids.map((id,i)=>({...point(id,i+1),latitude:35+lat[id]/100})),areas:ids.map((id,i)=>({id:`area-${id}`,target_ids:[id],geometry:{type:'Polygon',coordinates:[[[-121,35+i/100],[-120.999,35+i/100],[-120.999,35.001+i/100],[-121,35+i/100]]]}})),publication});
+const straight=s=>tripLegs(null,s,12);
+test('shortenRun: tap only; persists as manualOrder; legs, alert preview and notes follow; repeat, restore and unknown stop change nothing',async()=>{
+ const h=make({loadReefs:async()=>zig(['A','B','C','D','E'])});activeRegion.value=region.id;session.value={state:'signed-in',name:'Synthetic'};await select(h);const p=h.p;
+ try{
+  eq(p.draft.value.ids,['A','B','C','D','E']);const was=straight(stops(p)).totalNm;
+  assert.equal(p.shortenRun(),'moved');eq(p.draft.value.ids,['A','C','E','D','B']);
+  assert.equal(p.draft.value.rankedPlan.manualOrder,true);assert.equal(p.ranked.value,false);assert.equal(p.scopeStatus.value,'Your own stop order.');
+  assert.ok(straight(stops(p)).totalNm<was);
+  const reload=make({raw:h.raw(),loadReefs:async()=>zig(['A','B','C','D','E'])});await reload.p.restore();eq(reload.p.draft.value.ids,['A','C','E','D','B']);assert.equal(reload.p.scopeStatus.value,'Your own stop order.');reload.p.dispose();
+  p.setAlertOpen(true);const preview=p.alertPreview(s=>straight(s));assert.equal(preview.ok,true,preview.message);eq(preview.preview.legList.map(l=>[l.from,l.to]),[['A','C'],['C','E'],['E','D'],['D','B']]);
+  const notes=await(await p.exportFile('notes')).text();let last=-1;for(const n of ['A','C','E','D','B']){const i=notes.indexOf(`<h2>${n} · ${n}`);assert.ok(i>last,`${n} in notes order`);last=i;}
+  const settled=p.draft.value;assert.equal(p.shortenRun(),'same');assert.equal(p.draft.value,settled);
+  p.restorePending.value=true;p.draft.value={...settled,ids:['B','A','C','D','E']};const queued=p.draft.value;assert.equal(p.shortenRun(),'refused');assert.equal(p.draft.value,queued);p.restorePending.value=false;
+  p.draft.value={...queued,ids:['B','A','ghost']};const unknown=p.draft.value;assert.equal(p.shortenRun(),'refused');assert.equal(p.draft.value,unknown);assert.equal(h.calls.length,0);
+ }finally{p.dispose();session.value={state:'loading'};activeRegion.value=null;}
+});
+test('shortenRun: home port starts the legs and the launch ramp stays last, never reordered',async()=>{
+ const h=make({loadReefs:async()=>zig(['A','B','C','D','E']),ports:[{id:'pt',name:'Port',region:region.id,match:[35.1,-121]}]});const p=h.p;
+ try{
+  await new Promise(r=>setTimeout(r,0));p.setFilter('port','pt');await select(h);
+  launchPoints.value={region:region.id,points:[{id:'r',name:'Ramp',latitude:35,longitude:-121}]};p.setLaunch(true);
+  assert.equal(p.shortenRun(),'moved');eq(p.draft.value.ids,['B','D','E','C','A']);eq(p.orderedStops.value.map(t=>t.id),['B','D','E','C','A','user:launch-r']);
+ }finally{p.dispose();launchPoints.value=null;}
 });
