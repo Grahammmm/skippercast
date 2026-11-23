@@ -178,3 +178,24 @@ test('language_and_region_redraw', () => {
   v.dailyFeed.value = null;
   assert.equal(items(render()).length, 0, 'no brief, no alert lines');
 });
+
+// SCB2222-02: the span reads the hazard (onset to ends), and an alert whose onset is days away is not listed as current.
+// Contract: the real Conditions view, over a daily-feed advisory row carrying all four NWS times, shows onset to ends.
+// Bug caught: "from <issue time> to <message expiry>" under a headline that says the hazard runs days longer.
+test('SCB2222-02: the span reads onset to ends; a later onset is not listed; no onset or ends reads as before', () => {
+  setAlerts([
+    {id: 'surf', event: 'High Surf Advisory', headline: 'High Surf Advisory until Friday', effective: '2026-10-08T20:00:00Z', onset: '2026-10-09T01:00:00Z', expires: '2026-10-09T06:00:00Z', ends: '2026-10-10T22:00:00Z'},
+    {id: 'watch', event: 'Coastal Flood Watch', headline: 'Later', effective: '2026-10-08T20:00:00Z', onset: '2026-10-14T01:00:00Z', expires: '2026-10-09T06:00:00Z', ends: '2026-10-15T22:00:00Z'},
+    {id: 'plain', event: 'Small Craft Advisory', headline: 'Plain', effective: '2026-10-08T20:00:00Z', expires: '2026-10-09T04:00:00Z'},
+    {id: 'bad-onset', event: 'Gale Warning', headline: 'Bad', effective: '2026-10-08T20:00:00Z', onset: 'soon', expires: '2026-10-09T10:00:00Z'},
+    {id: 'num-onset', event: 'Hazardous Seas Warning', headline: 'Num', effective: '2026-10-08T20:00:00Z', onset: 5, expires: '2026-10-09T10:00:00Z'},
+  ]);
+  const brief = v.currentBrief(NOW);
+  assert.ok(isDeepStrictEqual(brief.alerts.map(a => a.id), ['surf', 'plain', 'bad-onset', 'num-onset']), JSON.stringify(brief.alerts.map(a => a.id)));
+  const rows = items(render());
+  assert.equal(text(rows[0].rest), ' · from Thu, Oct 8, 6:00 PM PDT to Sat, Oct 10, 3:00 PM PDT' + 'High Surf Advisory until Friday');
+  assert.equal(text(rows[1].rest), ' · from Thu, Oct 8, 1:00 PM PDT to Thu, Oct 8, 9:00 PM PDT' + 'Plain');
+  // Unreadable onsets are unknown, never the issue time: the alert is listed and its span has no start.
+  assert.equal(text(rows[2].rest), ' · until Fri, Oct 9, 3:00 AM PDT' + 'Bad');
+  assert.equal(text(rows[3].rest), ' · until Fri, Oct 9, 3:00 AM PDT' + 'Num');
+});

@@ -5,6 +5,7 @@ import {resolveReportBinding,type ManagedReportContext,type ReportLocalArea} fro
 import {slo} from '../packages/coast/src/counties.ts';
 import {escape as esc,informationContent} from '../packages/coast/src/information.ts';
 import type {Report,ForecastHour,SourceStatus} from '../packages/coast/src/types.ts';
+import {hazardEnd,hazardEndMs,hazardStart,hazardStartMs} from '../packages/coast/src/alert-window.ts';
 import type {NearshoreSite,NearshoreHour} from '../packages/coast/src/enrichment-types.ts';
 
 export type CoastPageRegion={id:string;map?:{center?:readonly number[];local_areas?:readonly ReportLocalArea[]}};
@@ -78,6 +79,11 @@ function nearshoreSample(site:NearshoreSite,at:Date,now:Date):NearshoreHour|unde
  if(!first||!last||selected<fieldClock(first.at)||selected>fieldClock(last.at)||(hasEnd&&!(selected<=declared)))return undefined;
  return frames.filter(item=>Math.abs(fieldClock(item.at)-selected)<=1.5*HOUR).sort((a,b)=>Math.abs(fieldClock(a.at)-selected)-Math.abs(fieldClock(b.at)-selected))[0];
 }
+/** Names the hazard's own times when the source gave them, else the message's 'Effective ...; expires ...' as before. */
+function alertClockLine(alert:Report['alerts'][number]):string{
+ const startLabel=alert.onset&&!alert.unreadableHazardTime?.includes('onset')?'Hazard starts':'Effective',endLabel=alert.ends&&!alert.unreadableHazardTime?.includes('ends')?'hazard ends':'expires';
+ return `${startLabel} ${stamp(hazardStart(alert))}; ${endLabel} ${stamp(hazardEnd(alert))}.`;
+}
 function marineAlertsMarkup(report:Report,areaId:string,at:Date,now:Date):string{
  const heading='<h2>Marine alerts for the selected hour</h2>';
  const unavailable=heading+'<p class="gap">Marine alert source unavailable for this report. Check the official forecast before planning.</p>';
@@ -92,12 +98,13 @@ function marineAlertsMarkup(report:Report,areaId:string,at:Date,now:Date):string
  // Hour in progress at retrieval: only alerts valid at fetchedAt are known; the hour start is not covered.
  const inProgress=hourStart<fetched,instant=inProgress?fetched:hourStart,alerts=report.alerts.filter(alert=>{
   if(alert.areaIds&&!alert.areaIds.includes(areaId))return false;
-  const effective=fieldClock(alert.effective),expires=fieldClock(alert.expires);
+  // The hazard's own start and end (onset ?? effective, ends ?? expires); an unreadable bound is unknown, never the message time.
+  const from=hazardStartMs(alert),to=hazardEndMs(alert);
   // Unknown validity bounds do not silently exclude a warning.
-  return (Number.isNaN(effective)||effective<=instant)&&(Number.isNaN(expires)||expires>instant);
+  return (Number.isNaN(from)||from<=instant)&&(Number.isNaN(to)||to>instant);
  });
  const check=`<p class="small">${sourceLink(source.url,source.label)} checked ${stamp(source.fetchedAt)}.</p>`;
- const list=alerts.map(alert=>`<article><h3>${esc(alert.event)}</h3><p>Source: ${sourceLink(alert.url,source.label)}. Effective ${stamp(alert.effective)}; expires ${stamp(alert.expires)}.</p></article>`).join('');
+ const list=alerts.map(alert=>`<article><h3>${esc(alert.event)}</h3><p>Source: ${sourceLink(alert.url,source.label)}. ${alertClockLine(alert)}</p></article>`).join('');
  if(inProgress)return `<h2>Marine alerts active at retrieval, ${stamp(source.fetchedAt)}</h2>`+(alerts.length?list:`<p>No marine alerts were active when the source was retrieved at ${stamp(source.fetchedAt)}.</p>`)+`<p class="gap">Alerts that ended or were cancelled between ${stamp(at.toISOString())} and this retrieval are not shown; the active-alert snapshot cannot establish coverage of the start of the selected hour.</p>`+check;
  return heading+(alerts.length?list:'<p>No active marine alerts were reported for this area and selected hour.</p>')+check;
 }

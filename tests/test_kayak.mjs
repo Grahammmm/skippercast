@@ -187,3 +187,21 @@ test('brief rendering for kayak: headline, caveat, wind side and seas in the til
   assert.ok(regional.kayak.hours.every(h => h.wind.side === null));
   assert.equal(regional.caveat, brief.caveat);
 });
+
+// SCB2222-02: fog is in force over the hazard (onset ?? effective .. ends ?? expires), not over the message's issue and expiry.
+// Contract: fogAt starts at the onset and lasts to the hazard end. Bug caught: fog read as over when the message expires, or as under way from its issue.
+test('SCB2222-02: fogAt follows the hazard onset and end, not the message issue and expiry', () => {
+  const fog = {event: 'Dense Fog Advisory', effective: iso(start), onset: iso(start + 2 * HOUR), expires: iso(start + 3 * HOUR), ends: iso(start + 6 * HOUR)};
+  assert.equal(fogAt(start + HOUR, [fog]), false, 'issued but the fog has not begun');
+  assert.equal(fogAt(start + 2 * HOUR, [fog]), true, 'the onset is inclusive');
+  assert.equal(fogAt(start + 4 * HOUR, [fog]), true, 'past the message expiry, inside the hazard');
+  assert.equal(fogAt(start + 6 * HOUR, [fog]), false, 'the hazard end is exclusive');
+  const plain = {event: fog.event, effective: fog.effective, expires: fog.expires};
+  assert.deepEqual([fogAt(start + HOUR, [plain]), fogAt(start + 4 * HOUR, [plain]), fogAt(start + 4 * HOUR, [{...plain, onset: null, ends: null}])], [true, false, false]);
+  // One unreadable bound leaves the other side in force; neither falls back to the message time.
+  assert.equal(fogAt(start + HOUR, [{...fog, onset: null, unreadableHazardTime: ['onset']}]), true, 'unknown onset: in force');
+  assert.equal(fogAt(start + 7 * HOUR, [{...fog, onset: null, unreadableHazardTime: ['onset']}]), false, 'the valid end still applies');
+  assert.equal(fogAt(start + 4 * HOUR, [{...fog, ends: null, unreadableHazardTime: ['ends']}]), true, 'unknown end: in force');
+  assert.equal(fogAt(start + HOUR, [{...fog, ends: null, unreadableHazardTime: ['ends']}]), false, 'the valid onset still applies');
+  assert.equal(fogAt(start + 4 * HOUR, [{...fog, ends: 'never'}]), true, 'an unparseable end is in force');
+});
