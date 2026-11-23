@@ -8,6 +8,7 @@ const instant=(value:unknown)=>typeof value==='string'?Date.parse(value):NaN;
 /** Validate the original selected product, not unrelated optional products. */
 export function validCurrentField(value:unknown):value is CurrentField{
  if(!object(value)||!isCurrentLayer(value.id)||value.id==='off'||value.surfaceOnly!==true||value.kind!==(value.id==='wcofs'?'forecast':'observation')||typeof value.label!=='string'||!value.label||!Number.isFinite(instant(value.fetchedAt))||!Number.isFinite(value.nativeResolutionKm)||value.nativeResolutionKm<=0||!Array.isArray(value.frames)||!value.frames.length)return false;
+ if(!Number.isSafeInteger(value.sampleStride)||value.sampleStride<=0)return false;
  if(value.issuedAt!==undefined&&value.issuedAt!==null&&!Number.isFinite(instant(value.issuedAt)))return false;
  if(value.sampleAt!==undefined&&value.sampleAt!==null&&!Number.isFinite(instant(value.sampleAt)))return false;
  if(value.kind==='forecast'&&!Number.isFinite(instant(value.issuedAt)))return false;
