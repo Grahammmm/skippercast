@@ -496,3 +496,27 @@ test('brief_adapters_share_dst_fleet_bounds', () => offline(() => {
     assert.deepEqual(buildBrief({context: morroContext, coast: {report, county: slo}, regional: {daily, forecast: montereyForecast, place: morro}, profile: 'boat', date: local, now: at}).fleet, expected, `buildBrief ${instant}`);
   }
 }));
+
+// SCB2222-02: a day is judged against the alert's hazard (onset ?? effective .. ends ?? expires), not the message's issue and expiry.
+// Contract: relevantAlerts lists a day the hazard still covers after the message expired, and not a day wholly before its onset.
+// Bug caught: reading only effective/expires drops a Nov 26 advisory from the Nov 23 to 26 briefs and lists a watch days early.
+test('SCB2222-02: a day between the message expiry and the hazard end lists the alert; a day before its onset does not', () => {
+  const area = slo.areas.find(a => a.id === 'central');
+  const surf = {id: 'surf', event: 'High Surf Advisory', headline: 'High Surf Advisory', description: '', url: 'https://api.weather.gov/alerts/surf', areaIds: ['central'],
+    effective: '2026-10-08T21:00:00.000Z', onset: '2026-10-10T15:00:00.000Z', expires: '2026-10-09T10:00:00.000Z', ends: '2026-10-11T22:00:00.000Z'};
+  const listed = (alert, day) => buildDaily({...report, alerts: [alert]}, slo, area, 'boat', day, now).alerts.map(a => a.id);
+  assert.deepEqual(listed(surf, '2026-10-08'), [], 'the issue time has passed but the hazard has not started');
+  assert.deepEqual(listed(surf, '2026-10-09'), [], 'a day wholly before the onset');
+  assert.deepEqual(listed(surf, '2026-10-10'), ['surf'], 'after the message expiry, inside the hazard');
+  assert.deepEqual(listed({...surf, ends: '2026-10-10T08:00:00.000Z'}, '2026-10-10'), ['surf'], 'the hazard end falls inside the day');
+  assert.deepEqual(listed({...surf, ends: '2026-10-10T06:00:00.000Z'}, '2026-10-10'), [], 'the hazard ended before the day began');
+  // Without onset and ends the message times decide, as before.
+  const plain = {...surf, onset: null, ends: null};
+  assert.deepEqual([listed(plain, '2026-10-08'), listed(plain, '2026-10-10')], [['surf'], []]);
+  // An unreadable hazard bound is unknown, never the message time: the alert still applies.
+  assert.deepEqual(listed({...surf, onset: null, unreadableHazardTime: ['onset']}, '2026-10-09'), ['surf']);
+  assert.deepEqual(listed({...surf, ends: null, unreadableHazardTime: ['ends']}, '2026-10-09'), [], 'an unknown end does not hide a day before the valid onset');
+  assert.deepEqual(listed({...surf, onset: 'soon'}, '2026-10-09'), ['surf'], 'an unparseable onset applies');
+  assert.deepEqual(listed({...surf, ends: 'never'}, '2026-10-10'), ['surf'], 'an unparseable end applies');
+  assert.deepEqual(listed({...surf, ends: null, unreadableHazardTime: ['ends']}, '2026-10-10'), ['surf'], 'a marked end applies');
+});
