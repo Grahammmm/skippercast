@@ -68,6 +68,20 @@ test('shared target/time remain exact while later-day, stale and missing forecas
   if(query.includes('unlisted')){assert.match(html,/target unlisted/);assert.match(html,/2026-10-11T12:00:00.000Z/);}
  }
 });
+test('the readable report labels the selected hour and says plainly when a source publishes no issue time or sample date',async()=>{
+ const beach=sampledAt=>({areaId:'central',name:'Beach',status:'Rain Advisory',...(sampledAt?{sampledAt}:{}),fetchedAt:'2026-10-07T11:50:00Z',url:'https://example.com/'});
+ const text=async data=>await(await serveCoastPage(request('/report'),options(data))).text();
+ const missing=await text({...report,sources:[{...report.sources[0],issuedAt:undefined}],waterQuality:[beach()]});
+ assert.match(missing,/<p>Selected hour: <time datetime="2026-10-07T12:00:00.000Z">Oct 7, 2026, 5:00 AM PDT<\/time> \(<code>2026-10-07T12:00:00.000Z<\/code>\)\.<\/p>/);
+ assert.doesNotMatch(missing,/Selected UTC hour/);
+ assert.match(missing,/forecast · ok\. Issue time not published by the source; retrieved <time datetime="2026-10-07T11:50:00Z">/);
+ assert.match(missing,/Rain Advisory · sample date not published · retrieved <time datetime="2026-10-07T11:50:00Z">/);
+ assert.doesNotMatch(missing,/Issued Unknown time|sample Unknown time/);
+ const present=await text({...report,waterQuality:[beach('2026-10-07T09:00:00Z')]});
+ assert.match(present,/forecast · ok\. Issued <time datetime="2026-10-07T10:00:00Z">Oct 7, 2026, 3:00 AM PDT<\/time>; retrieved <time datetime="2026-10-07T11:50:00Z">Oct 7, 2026, 4:50 AM PDT<\/time>\./);
+ assert.match(present,/Rain Advisory · sample <time datetime="2026-10-07T09:00:00Z">Oct 7, 2026, 2:00 AM PDT<\/time> · retrieved <time datetime="2026-10-07T11:50:00Z">/);
+ assert.doesNotMatch(present,/not published/);
+});
 test('nearshore original sampling remains visible only within supported first/last range',async()=>{
  for(const [hour,present] of [['11',false],['13',true],['16',false]]){
   const html=await(await serveCoastPage(request('/report?hour=2026-10-07T'+hour+':00Z'),options())).text();
@@ -242,3 +256,26 @@ test('FE-61 legal pages: licence summaries keep a 44 px target and dark panels d
  assert.match(reset,/background:\s*none/);assert.match(reset,/color:\s*inherit/,'ink on paper in print');
 });
 
+
+// SCB2222-02: the readable report lists alerts by the hazard (onset ?? effective .. ends ?? expires) and says when it ends.
+// Contract: both the selected-hour list and the retrieval-time snapshot list read the hazard bounds and the article names them.
+// Bug caught: a High Surf Advisory whose message expired before the hour vanishing from a report whose hazard runs days longer.
+const hazardAlert=(event,over)=>({id:event,event,headline:event,description:'synthetic',effective:'2026-10-07T10:00:00Z',expires:'2026-10-09T00:00:00Z',url:'https://api.weather.gov/alerts/'+event.replace(/ /g,'-'),...over});
+const hazardReport=(alerts,fetchedAt)=>({...report,alerts,sources:[...report.sources,{id:'nws-alerts',label:'NWS alerts',kind:'forecast',outcome:'ok',fetchedAt,url:'https://api.weather.gov/alerts/active'}]});
+const hazardPage=async(alerts,fetchedAt)=>(await serveCoastPage(request('/report'),options(hazardReport(alerts,fetchedAt)))).text();
+const HAZARDS=[
+ hazardAlert('High Surf Advisory',{expires:'2026-10-07T11:00:00Z',onset:'2026-10-07T11:30:00Z',ends:'2026-10-09T00:00:00Z'}),
+ hazardAlert('Coastal Flood Watch',{onset:'2026-10-07T18:00:00Z',ends:'2026-10-08T00:00:00Z'}),
+ hazardAlert('Gale Warning',{ends:'2026-10-07T11:00:00Z'}),
+ hazardAlert('Dense Fog Advisory',{effective:'2026-10-08T00:00:00Z',onset:null,unreadableHazardTime:['onset']}),
+ hazardAlert('Small Craft Advisory',{expires:'2026-10-07T13:00:00Z'}),
+];
+for(const [name,fetchedAt] of [['selected hour','2026-10-07T11:50:00Z'],['retrieval-time snapshot','2026-10-07T12:20:00Z']])test('SCB2222-02: the '+name+' list uses the hazard start and end and the article names the hazard end',async()=>{
+ const html=await hazardPage(HAZARDS,fetchedAt);
+ assert.match(html,name==='selected hour'?/<h2>Marine alerts for the selected hour<\/h2>/:/<h2>Marine alerts active at retrieval, /);
+ assert.match(html,/<h3>High Surf Advisory<\/h3>[^]*?Hazard starts <time datetime="2026-10-07T11:30:00Z">[^]*?; hazard ends <time datetime="2026-10-09T00:00:00Z">/,'the message expired at 11:00; the hazard runs on to Oct 9');
+ assert.ok(!html.includes('Coastal Flood Watch'),'the onset is hours after the selected time');
+ assert.ok(!html.includes('<h3>Gale Warning</h3>'),'the hazard ended at 11:00 although the message is still live');
+ assert.match(html,/<h3>Dense Fog Advisory<\/h3><p>Source: [^]*?Effective Unknown time; expires <time/,'an unreadable onset applies; the issue time is not the start');
+ assert.match(html,/<h3>Small Craft Advisory<\/h3><p>Source: [^]*?Effective <time datetime="2026-10-07T10:00:00Z">[^]*?; expires <time datetime="2026-10-07T13:00:00Z">/,'no onset or ends: the message times, worded as before');
+});

@@ -8,6 +8,7 @@
 import {useEffect, useId, useState} from 'preact/hooks';
 import type {Series} from '../../../packages/coast/src/charts/series.ts';
 import type {Alert} from '../../../packages/coast/src/types.ts';
+import {hazardEnd, hazardStart} from '../../../packages/coast/src/alert-window.ts';
 import {alertTimeSpan} from '../../alert-time.ts';
 import {daylightText} from '../../conditions-daylight.ts';
 import {Segmented} from '../../ui/Chip.tsx';
@@ -112,7 +113,7 @@ function tideHeight(heightFt: number, datum: string | null, height: Units['heigh
 
 /** SC2252-07: one marine alert, its published event linked to the source, its span in the region zone and its headline as the description. */
 function AlertLine({alert, tz, lang}: {alert: Alert; tz: string; lang: Language}) {
-  const id = useId(), span = alertTimeSpan(alert.effective, alert.expires, tz, lang), described = alert.headline.trim() ? id : undefined;
+  const id = useId(), span = alertTimeSpan(hazardStart(alert), hazardEnd(alert), tz, lang), described = alert.headline.trim() ? id : undefined;
   return <li aria-describedby={described}><a href={alert.url} target="_blank" rel="noopener" aria-describedby={described}>{alert.event}</a>
     {span ? ` · ${span}` : null}{described ? <span id={id} class="app-visually-hidden">{alert.headline}</span> : null}</li>;
 }

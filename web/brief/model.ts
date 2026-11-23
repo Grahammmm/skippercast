@@ -43,6 +43,9 @@ export const LOCAL_REPORT_LINE = {
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+/** The advisory row's hazard onset: carried when it is text, marked unreadable when present but not text (never the message time). */
+const hazardOnset = (value: unknown): Pick<Alert, 'onset' | 'unreadableHazardTime'> =>
+  typeof value === 'string' && value ? {onset: value} : value == null || value === '' ? {} : {unreadableHazardTime: ['onset']};
 const compass = (deg: number | null | undefined) => finite(deg) ? COMPASS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]! : null;
 
 function tile(id: TileId, label: string, value: number | null, unit: string, detail: string, source: Pick<SourceStatus, 'label' | 'url'> | null, at: string | null, limitMs: number, now: Date, lastGood = false, display?: TileDisplay): BriefTile {
@@ -286,6 +289,7 @@ export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForec
   const alerts: Alert[] = advisories.flatMap(source => ((source.data?.alerts as Record<string, unknown>[] | undefined) ?? []).map(row => ({
     id: String(row.id), event: String(row.event), headline: String(row.headline ?? row.event), description: '',
     effective: typeof row.effective === 'string' ? row.effective : null, expires: typeof (row.ends ?? row.expires) === 'string' ? String(row.ends ?? row.expires) : null, url: source.url,
+    ...hazardOnset(row.onset),
   })));
   const alertCheck = advisories.length ? advisories.reduce((a, b) => Date.parse(a.checked_at) <= Date.parse(b.checked_at) ? a : b) : undefined;
   const sources: SourceStatus[] = [];
