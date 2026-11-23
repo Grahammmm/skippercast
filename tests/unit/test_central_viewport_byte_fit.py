@@ -1,7 +1,9 @@
 """Offline CLI controls with an actual PMTiles index and release envelope."""
+from collections import Counter
 import hashlib
 import json
 import struct
+from unittest.mock import Mock
 import zlib
 
 import pytest
@@ -15,7 +17,7 @@ REVIEW = f'{REGION}/review/{GEN}/envelope.json'
 SOURCE = 'usgs-3dep-1m-dem'  # Metadata vocabulary only; no source data used.
 LIGHT = (8, 41, 100)
 SHARED = (8, 41, 101)
-HEAVY = (8, 42, 100)
+HEAVY = (10, 168, 400)
 MISSING = (8, 42, 101)
 
 
@@ -38,23 +40,27 @@ def _write(path, doc):
     return path
 
 
-def _pin_candidate(root, count):
+def _pin_candidate(root, coords):
     def ref(path):
         return {'path': path.relative_to(root).as_posix(), 'sha256': _sha(path)}
 
+    counts = Counter(z for z, _, _ in coords)
+    low, high = min(counts), max(counts)
     digest = _write(root / package.DIGEST_ROOT, {'synthetic': True})
     layers = [ref(root / p) | {'bytes': (root / p).stat().st_size} for p in (package.DIGEST_ROOT, package.ARCHIVE)]
     release = _write(root / f'release/{GEN}/release.json', {
         'schema': package.RELEASE_SCHEMA, 'region': REGION, 'generation': GEN,
         'code_sha': 'c' * 40, 'private': False, 'disclaimer': package.DISCLAIMER,
-        'bounds': [-123, 35, -120, 37], 'minzoom': 8, 'maxzoom': 8,
+        'bounds': [-123, 35, -120, 37], 'minzoom': low, 'maxzoom': high,
         'sources': [{'id': SOURCE, 'attribution': 'Synthetic fixture, no survey data', 'rights_class': 'public',
                      'label': 'estimated', 'vertical_datum': 'NAVD88', 'survey_dates': ['2020'],
                      'rights': {'public_display': 'allowed', 'license': 'public-domain'}}],
         'detail_summary': {'mask': 'transparent-nodata', 'depth_bands': [
             {'source_id': SOURCE, 'min_depth_m': 0, 'max_depth_m': 20, 'resolution_m': 2, 'support_class': 2},
         ]},
-        'native_support_by_zoom': {'8': {'tiles': count, 'limit_m': 91.44, 'sources': []}},
+        'native_support_by_zoom': {
+            str(z): {'tiles': counts[z], 'limit_m': 91.44, 'sources': []} for z in range(low, high + 1)
+        },
         'layers': layers, 'digest_root_sha256': _sha(digest),
     })
     qa = _write(root / f'qa/{GEN}/qa.json', {'status': 'PASS', 'release_sha256': _sha(release)})
@@ -73,8 +79,8 @@ def candidate(tmp_path, monkeypatch):
     payloads = {LIGHT: light, SHARED: light, HEAVY: heavy}
     payloads.update({(8, 44 + i % 8, 100 + i // 8): _png(b'o' * (13 + i * i)) for i in range(40)})
     archive = pmtiles_v3.write_pmtiles(tmp_path / REGION / package.ARCHIVE, payloads.items(), metadata={},
-                                      bounds=(-123, 35, -120, 37), minzoom=8, maxzoom=8, center=(8, -121, 36))
-    return archive, _pin_candidate(tmp_path / REGION, len(payloads)), payloads
+                                      bounds=(-123, 35, -120, 37), minzoom=8, maxzoom=10, center=(8, -121, 36))
+    return archive, _pin_candidate(tmp_path / REGION, payloads), payloads
 
 
 def _argv(root, desktop=(LIGHT, SHARED), phone=(HEAVY,), review=REVIEW):
@@ -119,6 +125,26 @@ def test_missing_address_cannot_be_a_zero_byte_fit(candidate, tmp_path, capsys):
         window=[list(LIGHT), list(MISSING)], measured_bytes=len(payloads[LIGHT]), cap_bytes=800_000,
         missing_tiles=[list(MISSING)], status='INCOMPLETE',
     )
+
+
+@pytest.mark.parametrize(('device', 'zoom', 'why'), [
+    ('desktop', 7, 'outside release range'),
+    ('phone', 11, 'outside release range'),
+    ('phone', 9, 'declares zero tiles'),
+])
+def test_unserved_candidate_zoom_is_invalid_not_incomplete(
+    candidate, tmp_path, capsys, monkeypatch, device, zoom, why,
+):
+    """Checking only the generic tile grid makes a wrong camera look like missing tiles."""
+    extract = Mock(wraps=cli._payload_lengths)
+    monkeypatch.setattr(cli, '_payload_lengths', extract)
+    window = ((zoom, 41, 100),)
+    args = _argv(tmp_path, desktop=window) if device == 'desktop' else _argv(tmp_path, phone=window)
+    assert cli.main(args) == 2
+    out, err = capsys.readouterr()
+    assert not out and err.startswith(f'invalid: {device}: requested zoom z{zoom}')
+    assert why in err and 'z8–z10' in err
+    extract.assert_not_called()
 
 
 def test_pinned_mutation_refused_before_index_evaluation(candidate, tmp_path, capsys):
@@ -168,7 +194,7 @@ def test_archive_limits_refuse_unbounded_index_evaluation(candidate, tmp_path, c
         with archive.open('r+b') as file:
             file.seek(72)
             file.write(struct.pack('<Q', cli.MAX_ADDRESSED_TILES + 1))
-        _pin_candidate(tmp_path / REGION, len(payloads))
+        _pin_candidate(tmp_path / REGION, payloads)
         why = 'addressed tile count outside'
     assert cli.main(_argv(tmp_path)) == 2
     out, err = capsys.readouterr()
@@ -188,7 +214,7 @@ def _hostile_archive(root, entries, addressed):
     header[1], header[2], header[4], header[6], header[8] = len(root_dir), header[2] + shift, header[4] + shift, \
         header[6] + shift, addressed
     path.write_bytes(raw[:8] + struct.pack('<11Q', *header) + raw[96:127] + root_dir + raw[127 + old_root:])
-    _pin_candidate(root / REGION, 1)
+    _pin_candidate(root / REGION, (LIGHT,))
     return len(blob)
 
 
