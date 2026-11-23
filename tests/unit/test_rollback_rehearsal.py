@@ -62,7 +62,9 @@ def release(repo, *, first=False, wrong=None):
     previous = None if first else dict(FIELDS)
     if wrong and previous is not None:
         previous[wrong] = '0' * 64
-    if not first:
+    if first:
+        commit(repo, 'Legacy contours before v2', {CONTOURS: OLD[CONTOURS]})
+    else:
         commit(repo, 'Previous release', {**OLD, CONTOURS: NEW_CONTOURS})
         git(repo, 'switch', '-c', 'staged-release')
     pointer = json.dumps({'generation': '5' * 64, 'previous': previous}).encode()
@@ -84,12 +86,12 @@ def digest(data):
     return None if data is None else sha256(data).hexdigest()
 
 
-def receipt(head, rollback, expected, got, *, lineage_ok, bad=()):
+def receipt(head, rollback, expected, got, *, lineage_ok, bad=(), scope_ok=True):
     return {'region': REGION, 'repo_head': head, 'rollback_commit': rollback,
             'files': [{'path': path, 'expected_sha256': digest(expected.get(path)),
                        'got_sha256': digest(got.get(path)), 'ok': path not in bad}
                       for path in (POINTER, CONTOURS)],
-            'lineage_ok': lineage_ok, 'verdict': 'PASS' if lineage_ok and not bad else 'FAIL'}
+            'lineage_ok': lineage_ok, 'verdict': 'PASS' if scope_ok and lineage_ok and not bad else 'FAIL'}
 
 
 def observe_rollback(monkeypatch, repo, head, after=None):
@@ -111,9 +113,9 @@ def observe_rollback(monkeypatch, repo, head, after=None):
         oid = head[:2] + '/' + head[2:]
         assert not (clone / '.git/objects' / oid).samefile(repo / '.git/objects' / oid)
         result = real_run(argv, *args, **kwargs)
+        assert git(clone, 'rev-parse', 'HEAD^').decode().strip() == head
         if after:
             after(clone)
-        assert git(clone, 'rev-parse', 'HEAD^').decode().strip() == head
         observations.append((clone, git(clone, 'rev-parse', 'HEAD').decode().strip()))
         return result
 
@@ -129,7 +131,7 @@ def test_c1_restores_exact_history_and_isolates_git(repo, tmp_path, monkeypatch,
     report = tmp_path / 'report.json'
     assert rehearsal.main(args(repo, report)) == 0
     [(clone, rollback)] = observations
-    expected = {} if first else OLD
+    expected = {CONTOURS: OLD[CONTOURS]} if first else OLD
     assert json.loads(report.read_bytes()) == receipt(head, rollback, expected, expected, lineage_ok=True)
     assert not clone.parent.exists()
 
@@ -163,6 +165,31 @@ def test_c1_byte_mismatch_fails_even_when_lineage_matches(repo, tmp_path, monkey
     assert json.loads(report.read_bytes()) == receipt(
         head, rollback, OLD, {**OLD, CONTOURS: changed}, lineage_ok=True, bad=(CONTOURS,),
     )
+
+
+@pytest.mark.parametrize('fault', ['neighbor-edit', 'wrong-parent'])
+def test_c1_wrong_commit_scope_fails_even_when_both_catalog_bytes_match(repo, tmp_path, monkeypatch, fault):
+    """C1: Whole-index staging or a stale branch base can leave both target blobs correct."""
+    neighbor = 'catalog/depth-contours/neighbor\ncoast.geojson'
+    commit(repo, 'Neighbor contours', {neighbor: b'{"features": []}\n'})
+    head = release(repo)
+
+    def alter_commit(clone):
+        identity = ['-c', 'user.name=Fixture Builder', '-c', 'user.email=fixture@example.invalid']
+        if fault == 'neighbor-edit':
+            put(clone, neighbor, b'{"features": []}\n\n')
+            git(clone, 'add', '--', neighbor)
+            git(clone, *identity, 'commit', '--amend', '--no-edit')
+        else:
+            stale = git(clone, *identity, 'commit-tree', 'HEAD^{tree}', '-p', 'HEAD^^',
+                        '-m', 'Rollback based on a stale head').decode().strip()
+            git(clone, 'update-ref', f'refs/heads/{rehearsal.BRANCH}', stale)
+
+    observations = observe_rollback(monkeypatch, repo, head, alter_commit)
+    report = tmp_path / 'report.json'
+    assert rehearsal.main(args(repo, report)) == 1
+    [(_, rollback)] = observations
+    assert json.loads(report.read_bytes()) == receipt(head, rollback, OLD, OLD, lineage_ok=True, scope_ok=False)
 
 
 def test_c2_cli_leaves_dirty_clone_unchanged_and_replaces_report(repo, tmp_path, monkeypatch):
@@ -225,7 +252,8 @@ def test_c2_atomic_replace_error_preserves_old_report(repo, tmp_path, monkeypatc
     def block_replace(staged, target):
         [(_, rollback)] = observations
         assert staged.parent == target.parent and staged != target == report
-        assert json.loads(staged.read_bytes()) == receipt(head, rollback, {}, {}, lineage_ok=True)
+        expected = {CONTOURS: OLD[CONTOURS]}
+        assert json.loads(staged.read_bytes()) == receipt(head, rollback, expected, expected, lineage_ok=True)
         assert target.read_bytes() == b'old report'
         raise PermissionError('fixture refused replace')
 
