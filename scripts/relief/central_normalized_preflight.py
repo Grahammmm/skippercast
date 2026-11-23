@@ -19,11 +19,16 @@ def check_pair(elevation, support):
         paths = (select.local_path(elevation), select.local_path(support))
         if not all(path.is_file() for path in paths):
             return 'unavailable', 'both inputs must be local regular files'
-        with rasterio.open(paths[0], driver='GTiff') as grid, rasterio.open(
-            paths[1], driver='GTiff'
-        ) as mask:
+        # A copied GeoTIFF must not inherit georeferencing from its new directory.
+        with (
+            rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR', GDAL_PAM_ENABLED='NO', PROJ_NETWORK='OFF'),
+            rasterio.open(paths[0], driver='GTiff', GEOREF_SOURCES='INTERNAL') as grid,
+            rasterio.open(paths[1], driver='GTiff', GEOREF_SOURCES='INTERNAL') as mask,
+        ):
             if grid.crs is None or mask.crs is None:
                 return 'unavailable', 'both inputs must declare a CRS'
+            if grid.count != 1:
+                return 'unavailable', 'elevation must be single-band'
             try:
                 select.check_support(grid, mask)
             except ValueError as exc:

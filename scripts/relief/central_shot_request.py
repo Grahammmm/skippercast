@@ -2,9 +2,12 @@
 
 From the repo root, run ``python -m scripts.relief.central_shot_request --help``.
 The array is for use from that same checkout. The expected hashes identify the
-verified envelope and release; shots itself does not enforce these pins or
-select a generation from an envelope. Check the current package before using
-the array. Zoom, capture, QA and review stay in the existing pipeline.
+verified envelope and release and the local basemap bytes read by this request.
+To replay the request, pass its saved expected_basemap_sha256 as
+--expect-basemap-sha256. The JSON does not authorize invocation. Shots itself
+does not enforce these pins or select a generation from an envelope; the caller
+must check the inputs before invoking it. Zoom, capture, QA and review stay in
+the existing pipeline.
 """
 import argparse
 import json
@@ -13,7 +16,7 @@ from typing import cast
 
 from scripts.relief.central_camera_bounds import REGIONS
 from skippercast.paths import repo_root
-from skippercast.relief import envelope, package, render_config
+from skippercast.relief import envelope, package, receipts, render_config
 
 
 def _local_path(text: str) -> Path:
@@ -35,7 +38,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--envelope', required=True, type=_local_path,
                         help='OUT/<region>/review/<generation>/envelope.json')
     parser.add_argument('--basemap', required=True, type=_local_path, help='local basemap PMTiles file')
+    parser.add_argument('--expect-basemap-sha256', help='saved basemap SHA-256 (64 lowercase hex digits)')
     args = parser.parse_args(argv)
+    expected_basemap = args.expect_basemap_sha256
+    if expected_basemap is not None and not package.is_sha256(expected_basemap):
+        parser.error('--expect-basemap-sha256 must be 64 lowercase hex digits')
 
     try:
         directory = repo_root() / 'regions' / args.region
@@ -63,6 +70,9 @@ def main(argv: list[str] | None = None) -> int:
         basemap = args.basemap.resolve(strict=True)
         if not basemap.is_file():
             raise ValueError('basemap must be a local file')
+        basemap_sha256 = receipts.sha256_file(basemap)
+        if expected_basemap is not None and basemap_sha256 != expected_basemap:
+            raise ValueError(f'basemap SHA-256 mismatch: expected {expected_basemap}, got {basemap_sha256}')
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
 
@@ -71,6 +81,8 @@ def main(argv: list[str] | None = None) -> int:
         'camera_id': args.camera,
         'expected_release_sha256': verified.release_sha256,
         'expected_envelope_sha256': verified.envelope_sha256,
+        'expected_basemap_sha256': basemap_sha256,
+        'invocation_authorized': False,
         'argv': ['python', '-B', 'scripts/relief/region.py', 'shots', '--region', args.region,
                  '--out', str(out), '--basemap', str(basemap), '--lon', str(lon), '--lat', str(lat)],
     }, indent=2))

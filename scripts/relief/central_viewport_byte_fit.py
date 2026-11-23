@@ -101,6 +101,16 @@ def _measure(scratch, review, region, windows):
     archive = package.artifact_path(review.parents[2], package.ARCHIVE)
     _archive_size(archive.stat().st_size)
     verified = envelope.verify_artifacts(review)
+    release = verified.release
+    low, high = release['minzoom'], release['maxzoom']
+    for device, coords in windows.items():
+        zoom = coords[0][0]  # _window guarantees a nonempty single-zoom window.
+        if not low <= zoom <= high:
+            raise ValueError(f'{device}: requested zoom z{zoom} is outside release range z{low}–z{high}')
+        support = release['native_support_by_zoom'].get(str(zoom))
+        if support is not None and support['tiles'] == 0:
+            raise ValueError(f'{device}: requested zoom z{zoom} is not served: release declares zero tiles '
+                             f'at this tier (release range z{low}–z{high})')
     pin = next(row for row in verified.layers if row['path'] == package.ARCHIVE)
     lengths = _payload_lengths(archive, pin, set().union(*windows.values()))
     views = {}
