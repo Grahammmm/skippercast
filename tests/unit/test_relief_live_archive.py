@@ -25,14 +25,22 @@ def encoded(doc):
 
 @pytest.fixture
 def release(tmp_path):
-    path = write_pmtiles(tmp_path / 'tiny.pmtiles', {
+    return make_release(tmp_path)
+
+
+def make_release(tmp_path, *, without_zoom=None):
+    tmp_path.mkdir(exist_ok=True)
+    tiles = {
         (8, 5, 0): b'first-payload',
         (8, 6, 0): b'other-payload',
         (8, 0, 64): b'lower-x-in-higher-block',
         (9, 0, 0): b'zoom-nine',
         (10, 128, 0): b'block-two',
         (10, 640, 0): b'block-ten',
-    }.items(), metadata={}, bounds=(-121., 35., -120., 36.), minzoom=8, maxzoom=10,
+    }
+    path = write_pmtiles(tmp_path / 'tiny.pmtiles',
+        ((coord, data) for coord, data in tiles.items() if coord[0] != without_zoom),
+        metadata={}, bounds=(-121., 35., -120., 36.), minzoom=8, maxzoom=10,
         center=(8, -120.5, 35.5))
     archive = path.read_bytes()
     index = tmp_path / 'index'
@@ -44,7 +52,7 @@ def release(tmp_path):
 class Site:
     def __init__(self, release):
         archive, index = release
-        self.pointer = dict(region='fixture-bay', sha256=sha(archive), bytes=len(archive),
+        self.pointer: dict = dict(region='fixture-bay', sha256=sha(archive), bytes=len(archive),
                             minzoom=8, maxzoom=10, digest_root_sha256=sha(index['root.json']))
         stem = f"tiles/relief/fixture-bay/{self.pointer['sha256']}"
         self.archive = stem + '.pmtiles'
@@ -199,6 +207,50 @@ def test_C2_unlisted_zoom_reports_missing_without_fetch(release):
     expected = site.expected_rows()
     assert site.run() == expected[:4] + [row('chunk', site.prefix + '9/', 'missing')] + expected[6:]
     assert site.calls == site.expected_calls(site.archive, site.root, site.prefix + SELECTED[0], site.prefix + SELECTED[2])
+
+
+@pytest.mark.parametrize('zoom, local, remote, declaration, reason', [
+    pytest.param(9, False, False, 'empty', '', id='intentional-gap'),
+    pytest.param(9, False, False, 'legacy', 'missing', id='legacy-no-evidence'),
+    pytest.param(9, False, False, 'omitted', 'missing', id='undeclared'),
+    pytest.param(9, False, False, 'nonempty', 'missing', id='lost-tier'),
+    pytest.param(9, False, False, 'missing-sources', 'missing', id='incomplete-declaration'),
+    pytest.param(9, False, False, 'with-source', 'missing', id='zero-with-source'),
+    pytest.param(9, True, False, 'empty', 'invalid', id='local-only'),
+    pytest.param(9, False, True, 'empty', 'invalid', id='remote-only'),
+    pytest.param(9, True, True, 'empty', 'invalid', id='both-contradict-pointer'),
+    pytest.param(8, False, False, 'empty', 'missing', id='missing-minzoom'),
+    pytest.param(10, False, False, 'empty', 'missing', id='missing-maxzoom'),
+])
+def test_C2_only_explicit_and_corroborated_interior_gap_needs_no_sample(
+        release, tmp_path, zoom, local, remote, declaration, reason):
+    """Requiring every integer zoom false-fails; trusting only one inventory false-passes."""
+    gap = make_release(tmp_path / 'gap', without_zoom=zoom)
+    archive = (release if local else gap)[0]
+    # Both indexes come from the real producer; Site binds the served root hash.
+    served = (release if remote else gap)[1]
+    site = Site((archive, served))
+
+    if declaration != 'legacy':
+        support = {str(z): dict(tiles=count, limit_m=91.44, sources=[])
+                   for z, count in ((8, 3), (9, 1), (10, 2))}
+        site.pointer['native_support_by_zoom'] = support
+        if declaration == 'omitted':
+            del support[str(zoom)]
+        elif declaration != 'nonempty':
+            entry = support[str(zoom)]
+            entry['tiles'] = 0
+            if declaration == 'missing-sources':
+                del entry['sources']
+            elif declaration == 'with-source':
+                entry['sources'] = [dict(id='fixture-source', resolution_m=5, tiles=1)]
+
+    expected = site.expected_rows()
+    start = 2 + (zoom - 8) * 2
+    expected[start:start + 2] = [row('chunk', site.prefix + f'{zoom}/', reason)] if reason else []
+    assert site.run(budget=4) == expected
+    assert site.calls == site.expected_calls(site.archive, site.root,
+                                             *(site.prefix + p for p in SELECTED if not p.startswith(f'{zoom}/')))
 
 
 @pytest.mark.parametrize('data', [b'[]', encoded([[64, 0, '0' * 64]])], ids=['empty', 'wrong-block'])
