@@ -199,6 +199,8 @@ def _indexed(extra, depth=8, after=b''):
      + _chunk(b'IEND', b''), 'truncated, oversized'),
     ('corrupted image data checksum', _png((1, 2, 3))[:60] + b'\xff' + _png((1, 2, 3))[61:], 'checksum mismatch'),
     ('bytes after IEND', _png((1, 2, 3)) + b'\x00', 'trailing bytes'),
+    # Valid framing and CRC do not make a nonempty IEND legal.
+    ('CRC-correct nonempty IEND', _png((0, 255, 0))[:-12] + _chunk(b'IEND', b'\x00'), 'PNG IEND must be empty'),
     ('invalid scanline filter', _png((1, 2, 3))[:8] + _ihdr()
      + _chunk(b'IDAT', zlib.compress((b'\x09' + b'\x00' * 3 * 256) * 256)) + _chunk(b'IEND', b''), 'invalid filter'),
     ('indexed with a one-byte PLTE (gdk-pixbuf: PLTE invalid)',

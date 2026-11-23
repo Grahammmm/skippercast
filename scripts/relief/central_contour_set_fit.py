@@ -29,6 +29,8 @@ from skippercast.relief import envelope, package
 
 
 ROLES = ('full', 'overview')
+# Both supported sets (ft-v2 and ft-v3) share these pre-decode ceilings.
+READ_LIMITS = (dc.V2_MAX_BYTES, dc.V2_OVERVIEW_MAX_BYTES)
 INPUT_ERRORS = (ValueError, OSError, KeyError, TypeError, AttributeError, RecursionError)
 
 
@@ -46,7 +48,7 @@ def _generation(root, region_id, ref):
     return {path.parents[2] / row['path']: row for row in verified.layers}, verified.generation
 
 
-def _load(root, ref, layers):
+def _load(root, ref, layers, limit):
     if not isinstance(ref, dict) or 'path' not in ref or ref.keys() - {'path', 'sha256'}:
         raise ValueError('expected a file path and, for external bytes, an accepted SHA-256')
     path = package.artifact_path(root, ref['path'])
@@ -56,7 +58,15 @@ def _load(root, ref, layers):
         raise ValueError('invalid accepted SHA-256')
     if bound is None and pin is None:
         raise ValueError('external file needs an accepted SHA-256 (not R8-proven)')
-    raw = path.read_bytes()
+    size = path.stat().st_size
+    if size > limit:
+        raise ValueError(f'{size} bytes exceeds {limit}-byte cap')
+    # Bound the read itself in case the file grew after stat(). The extra byte
+    # distinguishes a file at the limit from an oversized prefix.
+    with path.open('rb') as stream:
+        raw = stream.read(limit + 1)
+    if len(raw) > limit:
+        raise ValueError(f'file exceeds {limit}-byte cap')
     digest, size = hashlib.sha256(raw).hexdigest(), len(raw)
     if bound is not None and (bound['sha256'] != digest or bound['bytes'] != size):
         raise ValueError('file differs from its generation-bound bytes')
@@ -76,9 +86,9 @@ def _pair_metadata(full, overview):
 def _fit(root, candidate, region, sources, pointer, layers):
     row = {'id': candidate['id'], 'fits': False, 'files': {}}
     loaded, errors = {}, {}
-    for role in ROLES:
+    for role, limit in zip(ROLES, READ_LIMITS):
         try:
-            loaded[role] = _load(root, candidate[role], layers)
+            loaded[role] = _load(root, candidate[role], layers, limit)
             collection, _, size, bound = loaded[role]
             row['files'][role] = {
                 'bytes': size,
