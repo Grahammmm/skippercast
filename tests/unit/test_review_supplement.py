@@ -21,6 +21,7 @@ _ROWS = (
     '  depth 66-300ft: measured=5.0% estimated=30.0% unsurveyed=65.0%\n'
     '  depth unknown-band: measured=n/a estimated=n/a unsurveyed=n/a\n'
 )
+_NO_REPO = '  pointer preview: not compared (no --repo)\n'
 
 
 def _report(**changes):
@@ -60,7 +61,7 @@ def test_C1_two_regions_use_each_band_total_and_keep_argument_order(tmp_path, ca
         '  depth 0-66ft: measured=66.7% estimated=0.0% unsurveyed=33.3%\n'
         '  depth 66-300ft: measured=5.0% estimated=30.0% unsurveyed=65.0%\n'
         '  depth unknown-band: measured=0.0% estimated=0.0% unsurveyed=100.0%\n'
-        + _HEADING + _ROWS
+        + _NO_REPO + _HEADING + _ROWS + _NO_REPO
     ), '')
 
 
@@ -70,7 +71,7 @@ def test_C2_missing_does_not_stop_next_region(tmp_path, capsys):
     assert _observe(tmp_path, capsys, 'fixture-missing', _REGION) == (0, (
         'Depth coverage fixture-missing (supplement only)\n'
         '  depth: not computed (run region.py depth-coverage)\n'
-        + _HEADING + _ROWS
+        + _NO_REPO + _HEADING + _ROWS + _NO_REPO
     ), '')
     assert not (tmp_path / 'fixture-missing').exists()
 
@@ -100,7 +101,7 @@ def test_C2_malformed_report_has_no_partial_rows(tmp_path, capsys, change, reaso
         path.write_bytes(change)
     else:
         fixture.write_json(path, json.loads(path.read_bytes()) | change)
-    assert _observe(tmp_path, capsys) == (0, _HEADING + f'  depth: invalid report ({reason})\n', '')
+    assert _observe(tmp_path, capsys) == (0, _HEADING + f'  depth: invalid report ({reason})\n' + _NO_REPO, '')
 
 
 def test_C2_unreadable_report_is_not_missing(tmp_path, capsys, monkeypatch):
@@ -114,13 +115,13 @@ def test_C2_unreadable_report_is_not_missing(tmp_path, capsys, monkeypatch):
         return read_bytes(self)
 
     monkeypatch.setattr(Path, 'read_bytes', deny_report)
-    assert _observe(tmp_path, capsys) == (0, _HEADING + '  depth: invalid report (permission denied)\n', '')
+    assert _observe(tmp_path, capsys) == (0, _HEADING + '  depth: invalid report (permission denied)\n' + _NO_REPO, '')
 
 
 def test_C2_directory_is_not_a_report(tmp_path, capsys):
     """C2: Catch treating a non-file at the report path as missing."""
     (tmp_path / _REGION / 'coverage' / 'depth-coverage.json').mkdir(parents=True)
-    assert _observe(tmp_path, capsys) == (0, _HEADING + '  depth: invalid report (expected a file)\n', '')
+    assert _observe(tmp_path, capsys) == (0, _HEADING + '  depth: invalid report (expected a file)\n' + _NO_REPO, '')
 
 
 def _mosaic(region, code_digest):
@@ -165,12 +166,12 @@ def test_C2_compares_against_packaged_mosaic_not_live_generation(build, capsys, 
     assert live and live != packaged
 
     _write_report(out, mosaic_generation=packaged)
-    assert _observe(out, capsys) == (0, _HEADING + _ROWS, '')
+    assert _observe(out, capsys) == (0, _HEADING + _ROWS + _NO_REPO, '')
     _write_report(out, mosaic_generation=live)
-    assert _observe(out, capsys) == (0, _HEADING + f'  depth: stale (mosaic {live[:12]})\n', '')
+    assert _observe(out, capsys) == (0, _HEADING + f'  depth: stale (mosaic {live[:12]})\n' + _NO_REPO, '')
     rebuild_tiles(region)
     _write_report(out, mosaic_generation=packaged)
-    assert _observe(out, capsys) == (0, _HEADING + _ROWS, '')
+    assert _observe(out, capsys) == (0, _HEADING + _ROWS + _NO_REPO, '')
 
 
 @pytest.mark.parametrize(('args', 'error'), [
@@ -185,7 +186,7 @@ def test_C2_usage_refuses_before_printing(args, error, capsys):
         review_supplement.main(args)
     assert type(exc.value) is SystemExit and exc.value.code == 2
     assert capsys.readouterr() == ('', (
-        'usage: review_supplement.py [-h] --out OUT [--markdown] REGION [REGION ...]\n'
+        'usage: review_supplement.py [-h] --out OUT [--markdown] [--repo CLONE [--ref REF]] REGION [REGION ...]\n'
         f'review_supplement.py: error: {error}\n'
     ))
 
@@ -205,10 +206,12 @@ def test_C3_direct_script_markdown_is_read_only(tmp_path):
         '| depth | reaches_300ft=true deepest_ft=320 |\n'
         '| depth 0-66ft | measured=66.7% estimated=0.0% unsurveyed=33.3% |\n'
         '| depth 66-300ft | measured=5.0% estimated=30.0% unsurveyed=65.0% |\n'
-        '| depth unknown-band | measured=n/a estimated=n/a unsurveyed=n/a |\n\n'
+        '| depth unknown-band | measured=n/a estimated=n/a unsurveyed=n/a |\n'
+        '| pointer preview | not compared (no --repo) |\n\n'
         '| Field | Value |\n'
         '| --- | --- |\n'
         '| Depth coverage fixture-missing (supplement only) |  |\n'
-        '| depth | not computed (run region.py depth-coverage) |\n\n'
+        '| depth | not computed (run region.py depth-coverage) |\n'
+        '| pointer preview | not compared (no --repo) |\n\n'
     ), '')
     assert _snapshot(tmp_path) == before
