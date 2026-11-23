@@ -147,6 +147,7 @@ def tiff(path, raw=None, *, tags=None, valid_mask=None, scales=None, offsets=Non
     pytest.param({'tags': {'sc_fine_proof': '1', 'zoom': '15'}, 'transform': lattice(15, 2, 3)},
                  'zoom tag', id='C2: z15 refused even with its own lattice'),
     pytest.param({'crs': 'EPSG:4326'}, 'CRS', id='C2: wrong CRS'),
+    pytest.param({'crs': 'EPSG:3395'}, 'CRS', id='C2: same lattice numbers in a different projected CRS'),
     pytest.param({'width': 255}, 'dimensions', id='C2: partial tile width'),
     pytest.param({'height': 257}, 'dimensions', id='C2: partial tile height'),
     pytest.param({'transform': lattice(16, 65536, 3)}, 'XYZ rectangle', id='C2: lattice origin outside world'),
@@ -188,14 +189,22 @@ def test_reader_refuses_non_geotiff(tmp_path, case):
         refused('raster read failed', read, path)
 
 
-@pytest.mark.parametrize('zoom', [pytest.param(16, id='C2: tolerate sub-micrometre affine noise')])
-def test_reader_recovers_grid_from_canonical_pitch(tmp_path, zoom):
+@pytest.mark.parametrize('encoding, raster_type', [
+    pytest.param({}, 'Area', id='C2: classic GeoTIFF'),
+    pytest.param({'BIGTIFF': 'YES', 'ENDIANNESS': 'BIG', 'GEOTIFF_VERSION': '1.1'}, 'Point',
+                 id='C2: big-endian BigTIFF with pixel-centre tiepoints'),
+])
+def test_reader_recovers_grid_from_canonical_pitch(tmp_path, encoding, raster_type):
+    zoom = 16
     path = tmp_path / 'proof.tif'
     t = lattice(zoom, 12223, 23781)
     moved = type(t)(t.a + 0.9e-6, 0, t.c + 0.9e-6, 0, t.e - 0.9e-6, t.f - 0.9e-6)
     # With small pixel-size noise, dividing the origin by file resolution
     # instead of the canonical pitch can yield the wrong tile index.
-    tiff(path, transform=moved)
+    # A reader that assumes little-endian TIFF or treats centre tiepoints as
+    # corners would refuse the second encoding of this same lattice.
+    tiff(path, transform=moved, tags={'sc_fine_proof': '1', 'zoom': str(zoom), 'AREA_OR_POINT': raster_type},
+         **encoding)
     proof = read(path)
     assert (proof.zoom, proof.x0, proof.y0, proof.x1, proof.y1) == (16, 12223, 23781, 12223, 23781)
 
