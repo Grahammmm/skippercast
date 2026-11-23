@@ -154,11 +154,14 @@ def write(path: _Path, zoom: int, x0: int, y0: int, x1: int, y1: int,
 
 
 def read(path: _Path) -> FineProof:
-    """Validate a GeoTIFF's grid, metadata, and full-resolution evidence."""
+    """Validate a GeoTIFF's internal grid, metadata, and full-resolution evidence."""
     try:
-        with rasterio.open(path) as ds:
-            if ds.driver != 'GTiff':
-                raise FineProofError('driver must be GTiff')
+        # The receipt pins the TIFF, not PAM metadata or the sibling masks,
+        # overviews and georeferencing files GDAL can discover by default.
+        with (
+            rasterio.Env(GDAL_PAM_ENABLED='NO', GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR', PROJ_NETWORK='OFF'),
+            rasterio.open(path, driver='GTiff', GEOREF_SOURCES='INTERNAL') as ds,
+        ):
             tags = ds.tags()
             if tags.get('sc_fine_proof') != '1':
                 raise FineProofError('sc_fine_proof tag must be 1')
@@ -180,5 +183,5 @@ def read(path: _Path) -> FineProof:
                 if not np.array_equal(ds.read_masks(index) != 0, proven):
                     raise FineProofError(f'band {index} mask disagrees with the nodata footprint')
     except RasterioError as exc:
-        raise FineProofError(f'raster read failed: {exc}') from exc
+        raise FineProofError(f'raster read failed (GTiff driver required): {exc}') from exc
     return FineProof(zoom, *rectangle, np.where(proven, cls, 0).astype('uint8'), elev, spacing, proven)
