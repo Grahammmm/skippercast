@@ -48,10 +48,15 @@ test('no covers, narrow, non-finite, non-overlapping and full-height covers pad 
   assert.deepEqual(openBandPadding(HOST, [{...TOP, top: 9}]), ZERO, 'a card just outside the 8 px tolerance');
 });
 
-test('a band under 160 px shrinks both in proportion to exactly 160; a host under 160 pads nothing', () => {
+test('a band under 160 px shrinks both in proportion to leave at least 160; a host under 160 pads nothing', () => {
   assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 400}, {...SHEET, top: 444}]), {...ZERO, top: 342, bottom: 342});
   assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 600}, {...SHEET, top: 644}]), {...ZERO, top: 513, bottom: 171}, '3:1 stays 3:1');
   assert.deepEqual(openBandPadding(HOST, [TOP, {...SHEET, top: 290}]), {...ZERO, top: 130, bottom: 554}, 'an exact-fit 160 px band');
+  // Rounding the two shares against a fractional remainder can spend 14 px of a 13.75 px allowance.
+  const short = {...HOST, bottom: 173.75};
+  assert.deepEqual(openBandPadding(short, [{...TOP, bottom: 90}, {...short, top: 143.75}]),
+    {...ZERO, top: 10, bottom: 3}, 'a 3:1 split fits the 13 px budget and exposes 160.75 px');
+  assert.deepEqual(openBandPadding({...HOST, bottom: 400}, [{...TOP, bottom: 70}]), {...ZERO, top: 70}, 'the taller host still exposes 330 px');
   assert.deepEqual(openBandPadding({top: 0, bottom: 120, left: 0, right: 390}, [{...TOP, bottom: 40}]), ZERO);
   assert.deepEqual(openBandPadding({top: 0, bottom: NaN, left: 0, right: 390}, [TOP]), ZERO);
 });
@@ -89,19 +94,20 @@ test('the engine passes the padding to MapLibre once, and a library without setP
   assert.equal(padded.maps[0].paddings[0], p, 'the exact object');
 });
 
-function chartAt(width, dom = false, flyoverGate = () => ({reduced: true, saveData: false, hidden: false, linked: false, seen: true})) {
+function chartAt(width, dom = false, flyoverGate = () => ({reduced: true, saveData: false, hidden: false, linked: false, seen: true}),
+  {height = HOST.bottom, top = TOP, theme = 'dark'} = {}) {
   globalThis.location = {href: `${PAGE}?region=morro-bay&presentation=chart`};
   globalThis.history = {state: null, pushState(_s, _t, url) { location.href = url; }, replaceState(_s, _t, url) { location.href = url; }};
   globalThis.dispatchEvent = () => true; configureStore({v2: true, storage: null}); syncFromURL(location.href);
   const fake = library(true);
-  const host = {dataset: {}, clientWidth: width, clientHeight: 844, getBoundingClientRect: () => ({...HOST, right: host.clientWidth})};
+  const host = {dataset: {}, clientWidth: width, clientHeight: Math.floor(height), getBoundingClientRect: () => ({...HOST, right: host.clientWidth, bottom: height})};
   terrainFailed.value = false; chartFailed.value = false; chartMark.value = null; unavailable.value = [];
   const fetchFn = async () => ({ok: false, status: 404, json: async () => ({})}), sheet = {...SHEET};
   const land = {styles: [], mountCoast: () => ({load: async () => true, destroy() {}, setOverlay() {}, removeOverlay() {}})};
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land, center: () => [35.37, -120.86], viewDelay: 0,
     doc: {hidden: false, addEventListener() {}, removeEventListener() {}},
-    renderers: [() => createChart({host, load: async () => fake.module, fetchFn, page: () => PAGE, palette: () => readPalette(n => /^map-.*-(?:opacity|width)$/.test(n) ? '1' : `token(${n})`), viewDelay: 0,
-      covers: dom ? undefined : () => [TOP, sheet], flyoverGate})]});
+    renderers: [() => createChart({host, load: async () => fake.module, fetchFn, page: () => PAGE, palette: () => readPalette(n => /^map-.*-(?:opacity|width)$/.test(n) ? '1' : `${theme}(${n})`), viewDelay: 0,
+      covers: dom ? undefined : () => [top, sheet], flyoverGate})]});
   return {fake, host, stage, sheet, view: () => new URL(location.href).searchParams.get('view')};
 }
 
@@ -131,6 +137,23 @@ test('Chart wiring: a phone pads at mount and on resize, desktop never, phone th
   map.fire('resize'); assert.deepEqual(map.paddings, [], 'desktop never pads');
   assert.equal(run.host.dataset.view, '35.37000,-120.86000,12');
   run.stage.destroy();
+});
+
+test('Chart wiring: a fractional phone host keeps the minimum open band in either theme', async t => {
+  for (const name of ['warn', 'error']) t.mock.method(console, name, () => {});
+  for (const theme of ['light', 'dark']) await t.test(theme, async t => {
+    const height = 160.75;
+    const run = chartAt(390, false, undefined, {height, top: {...TOP, bottom: 70}, theme});
+    t.after(() => run.stage.destroy());
+    await tick(); await tick(); const [map] = run.fake.maps;
+    const [pad] = map.paddings;
+    // Rounding the 0.75 px margin up to one pixel would expose only 159.75 px.
+    assert.ok(height - pad.top - pad.bottom >= 160, 'at least 160 px remain open');
+    assert.deepEqual(map.paddings, [ZERO]);
+    assert.deepEqual(map.center, {lat: 35.37, lng: -120.86});
+    assert.equal(map.zoom, 12);
+    assert.equal(run.view(), null);
+  });
 });
 
 test('the mount padding is not a camera move: a phone keeps ?view= unwritten and still flies on the first idle', async t => {

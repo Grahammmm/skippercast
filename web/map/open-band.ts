@@ -8,7 +8,7 @@ const EDGE = 8;
  * A cover counts if its four numbers are finite, it overlaps `host` and spans at least half its width; one at
  * the top edge (within 8 px) pads the top, one at the bottom edge pads the bottom, one at both (a full sheet) neither.
  * Edge coverage is measured on the visible intersection with the host.
- * A band under `minBand` px shrinks both in proportion to exactly `minBand`; a host under `minBand` pads nothing.
+ * If needed, shrink both pads proportionally to leave at least `minBand` px; a host under `minBand` pads nothing.
  */
 export function openBandPadding(host: Box, covers: readonly Box[], minBand = 160): {top: number; bottom: number; left: 0; right: 0} {
   const height = host.bottom - host.top, width = host.right - host.left;
@@ -27,9 +27,10 @@ export function openBandPadding(host: Box, covers: readonly Box[], minBand = 160
   }
   const clamp = (v: number): number => Math.round(Math.min(Math.max(v, 0), height));
   top = clamp(top); bottom = clamp(bottom);
-  if (height - top - bottom < minBand) {
-    top = Math.round(top * (height - minBand) / (top + bottom));
-    bottom = Math.round(height - minBand - top);
+  const budget = Math.max(0, Math.floor(height - minBand));
+  if (top + bottom > budget) {
+    top = Math.round(top * budget / (top + bottom));
+    bottom = budget - top;
   }
   return {top, bottom, left: 0, right: 0};
 }
