@@ -81,9 +81,9 @@ export function basemapThemePaint(palette: Palette): readonly PaintEdit[] {
 /**
  * Subscribe to theme changes. Apply immediately when idle; while an apply is
  * in flight, retain only the latest notification and apply it after settling.
- * The notification that starts a drain returns its completion (and first apply
- * error, if any) to the subscriber. Disposing drops queued and future work,
- * but cannot cancel an apply that has already started.
+ * Each notification settles with its own apply, or with the latest queued
+ * apply that supersedes it. Disposing resolves dropped and late notifications
+ * without painting, but leaves any in-flight apply to settle normally.
  */
 export function createThemeWatcher<Theme>(
   subscribe: (notify: (theme: Theme) => Promise<void>) => () => void,
@@ -91,29 +91,45 @@ export function createThemeWatcher<Theme>(
 ): () => void {
   let stopped = false;
   let applying = false;
-  let pending: {theme: Theme} | undefined;
-  const unsubscribe = subscribe(async theme => {
-    if (stopped) return;
-    pending = {theme};
-    if (applying) return;
+  let pending: {theme: Theme; done: Promise<void>; resolve: () => void; reject: (error: unknown) => void} | undefined;
+
+  async function drain(): Promise<void> {
     applying = true;
-    let failure: {error: unknown} | undefined;
     while (pending) {
-      const next = pending.theme;
+      const next = pending;
       pending = undefined;
       try {
-        const result = apply(next);
+        const result = apply(next.theme);
         if (result !== undefined) await result;
+        next.resolve();
       } catch (error) {
-        failure ??= {error};
+        next.reject(error);
       }
     }
     applying = false;
-    if (failure) throw failure.error;
+  }
+
+  const unsubscribe = subscribe(theme => {
+    if (stopped) return Promise.resolve();
+    if (pending) {
+      // Requests superseded before starting share the latest queued apply's receipt.
+      pending.theme = theme;
+      return pending.done;
+    }
+    let resolve!: () => void;
+    let reject!: (error: unknown) => void;
+    const done = new Promise<void>((ok, fail) => { resolve = ok; reject = fail; });
+    // Fire-and-forget subscribers must not leak unhandled rejections; return the
+    // original promise so callers that await it still see the apply error.
+    void done.catch(() => {});
+    pending = {theme, done, resolve, reject};
+    if (!applying) void drain();
+    return done;
   });
   return () => {
     if (stopped) return;
     stopped = true;
+    pending?.resolve();
     pending = undefined;
     unsubscribe();
   };
