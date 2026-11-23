@@ -3,6 +3,7 @@ from argparse import Namespace
 
 import pytest
 
+from scripts.relief import region as region_cli
 from skippercast.relief import package, receipts, shots
 
 
@@ -78,3 +79,22 @@ def test_attested_release_with_wrong_identity_is_refused_at_plan(shot_request, r
 
     with pytest.raises(receipts.ReceiptError, match=rf'release\.json {field} does not match'):
         shots.plan(ctx)
+
+
+@pytest.mark.parametrize(('region', 'generation', 'field'), [
+    ('other-synthetic-coast', GENERATION, 'region'),
+    (REGION, 'c' * 64, 'generation'),
+], ids=['wrong-region', 'wrong-generation'])
+def test_cli_refuses_wrong_identity_without_a_traceback_or_receipt(shot_request, tmp_path, capsys, region, generation,
+                                                                  field):
+    # Protects the operator contract: `region.py shots` must end in a handled blocked refusal (exit 3,
+    # one line). A refusal raised inside plan() but outside run_stage's handler crashed with a ReceiptError
+    # traceback, and a stage that never started must leave no shots receipt behind.
+    _, _, basemap = shot_request(region, generation)
+
+    rc = region_cli.main(['shots', '--region', REGION, '--out', str(tmp_path), '--basemap', str(basemap)])
+
+    out = capsys.readouterr().out
+    assert rc == receipts.EXIT_CODES['blocked']
+    assert '[shots] BLOCKED' in out and f'release.json {field} does not match' in out
+    assert not (tmp_path / REGION / 'stages' / 'shots.json').exists()
