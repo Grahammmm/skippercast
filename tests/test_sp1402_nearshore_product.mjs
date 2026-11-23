@@ -86,7 +86,10 @@ if (process.env.SP1402_TEST_SUITE !== 'baseline') {
     assert.deepEqual(r.rings.map(x => x.site.id), ['synthetic-a', 'synthetic-b']);
     assert.deepEqual(r.collection.features.map(f => [f.properties.id, +f.properties.radius.toFixed(6), f.geometry.coordinates]),
       [['synthetic-a', 15.4, [-120.75, 35.25]], ['synthetic-b', 15.4, [-120.9, 35.4]]]);
-    assert.equal(r.key, input.map(s => `${s.id}|${s.issuedAt}|${s.fetchedAt}|2026-10-09T20:00:00.000Z`).join(','));
+    // The draw key still carries each site's id, run and fetch clocks and sample hour, now followed by the
+    // rendered lon, lat and radius so a same-time correction of geometry is not skipped as an equal draw.
+    assert.equal(r.key, JSON.stringify(r.rings.map(x => [x.site.id, x.site.issuedAt, x.site.fetchedAt, '2026-10-09T20:00:00.000Z', x.site.lon, x.site.lat, ringRadius(x.waveFt)])));
+    assert.deepEqual(r.rings.map(x => [x.site.id, x.site.issuedAt, x.site.fetchedAt]), input.map(s => [s.id, s.issuedAt, s.fetchedAt]));
     assert.deepEqual([0, 5, 15, 30, -1].map(ringRadius), [4, 19, 49, 49, 4]);
     assert.deepEqual(ringHitLayer({blue: 'synthetic-blue'}).paint,
       {'circle-radius': ['max', 22, ['get', 'radius']], 'circle-color': 'synthetic-blue', 'circle-opacity': 0});
