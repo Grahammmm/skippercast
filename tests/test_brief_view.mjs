@@ -195,6 +195,21 @@ test('#542: the sampled regional forecast fills the wind and swell tiles, fresh 
   assert.equal((html.match(/<span class="ui-reading">—<\/span>/g) || []).length, 0);
 });
 
+// SCB2222-07 forecast_point_names_in_renderers (tile source, end to end). Contract: briefFrom hands the loaded region file to the forecast label,
+// so the Wind and Swell tiles read the published point name (a source label, the same in either page language), and the id only when the file names no such point.
+// Believable bug: briefFrom drops the region info and the tiles print 'monterey-bay'.
+test('SCB2222-07: the wind and swell tiles name the forecast point from the region file; the id when unnamed', async () => {
+  const {briefFrom, parseConditionsForecast, Tiles, render, h} = await load();
+  const forecast = parseConditionsForecast(forecastFeed(), INFO.id, INFO.center);
+  const tilesOf = info => briefFrom(sources({info, forecast}), NOW).tiles;
+  const named = {...INFO, forecastPoints: {'monterey-bay': 'Monterey Bay inner'}};
+  for (const id of ['wind', 'swell']) assert.equal(tilesOf(named).find(t => t.id === id).source, 'NOAA GFS model · Monterey Bay inner', id);
+  assert.equal(forecast.point.id, 'monterey-bay', 'the id stays the point\'s identity');
+  assert.match(render(h(Tiles, {tiles: tilesOf(named)})), /NOAA GFS model · Monterey Bay inner · 6 h old/, 'the published name, as published');
+  const unnamed = tilesOf({...INFO, forecastPoints: {other: 'Elsewhere'}});
+  for (const id of ['wind', 'swell']) assert.equal(unnamed.find(t => t.id === id).source, 'NOAA GFS model · monterey-bay', `${id}: an unnamed point reads its id`);
+});
+
 test('#542: an old run reads stale with its age, never as fresh', async () => {
   const {briefFrom, parseConditionsForecast, Tiles, render, h} = await load();
   const brief = briefFrom(sources({forecast: parseConditionsForecast(forecastFeed({runAgeH: 30}), INFO.id, INFO.center)}), NOW);

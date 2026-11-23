@@ -578,7 +578,7 @@ export function briefFrom({info, feed, forecast = null, coast, profile: p, hour:
     const county = coast ? counties[coast.report.countyId] : undefined;
     if (coast && county) return buildCoastBrief({report: coast.report, county, areaId: coast.areaId, profile: p, date, now, at: pivot, reports: feed.reports ?? [], port: feed.landing_names ?? [], daily: feed, limits});
     const [lat, lon] = info.center;
-    return buildRegionalBrief({daily: feed, forecast: forecast?.region === info.id ? briefForecast(forecast) : null, place: {id: info.id, name: info.name, lat, lon, timezone: info.timezone}, profile: p, date, now, at: pivot, limits});
+    return buildRegionalBrief({daily: feed, forecast: forecast?.region === info.id ? briefForecast(forecast, 'gfs', info) : null, place: {id: info.id, name: info.name, lat, lon, timezone: info.timezone}, profile: p, date, now, at: pivot, limits});
   } catch { return null; }
 }
 

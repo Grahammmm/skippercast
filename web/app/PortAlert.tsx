@@ -6,6 +6,7 @@ import {useEffect, useState} from 'preact/hooks';
 import type {TargetedSubmitEvent} from 'preact';
 import {Button} from '../ui/Button.tsx';
 import {regionalForecast} from '../brief/Brief.tsx';
+import {regionInfo} from './region-info.ts';
 import {briefForecast} from '../conditions.ts';
 import {language, num, t, type Language} from '../i18n.ts';
 import {units} from '../unit-choice.ts';
@@ -42,7 +43,7 @@ export function PortAlert({now, tz}: {now: Date; tz: string}) {
     setNote(saved ? 'saved' : 'invalid');
   };
   const raw = regionalForecast.value?.region === region.value ? regionalForecast.value : null;
-  const forecast = briefForecast(raw);
+  const forecast = briefForecast(raw, 'gfs', regionInfo.value);
   const result = limits ? evaluatePortAlert(limits, forecast, now.getTime()) : null;
   const stateId = !result ? 'portAlert.state.none' : result.state === 'alert' ? 'portAlert.state.alert' : result.state === 'clear' ? 'portAlert.state.clear' : result.state === 'partial' ? 'portAlert.state.partial' : result.state === 'stale' ? 'portAlert.state.stale' : 'portAlert.state.nodata';
   return (

@@ -218,6 +218,7 @@ async function components() {
       export {assessScreen} from './web/map/habitat.ts';
       export {regionalForecast} from './web/brief/Brief.tsx';
       export {regionInfo} from './web/app/App.tsx';
+      export {createRegionReader} from './web/app/region-info.ts';
       export {language} from './web/i18n.ts';
       export {parseConditionsForecast} from './web/conditions.ts';
       export * as state from './web/state.ts';
@@ -266,6 +267,37 @@ test('the card block: one row per family and model, the current, gaps as "—" w
   } finally { regionalForecast.value = null; regionInfo.value = null; }
   assert.equal(markPlace({id: 'spot:SC26-001', name: 'Reef mark withheld', kind: '', reading: '', source: '', basis: '', withheld: true}), null, 'never for a withheld mark');
   assert.equal(markPlace({id: 'coastline:x', name: 'Shoreline', kind: '', reading: '', source: '', basis: ''}), null, 'only marks and trip spots');
+});
+
+// SCB2222-07 forecast_point_names_in_renderers (mark card note, source lines, basis). Contract: the card names the forecast point from the
+// region file as the reader loaded it (forecast_points[].name), in English and Spanish, and reads the id only when that file names no such
+// point or belongs to another region. Believable bug: the card prints markForecast.point (the id) or reads a decoy region's name.
+test('SCB2222-07: the mark card names the forecast point from the loaded region file, in English and Spanish; the id when unnamed', async () => {
+  const {MarkForecast, regionalForecast, regionInfo, language, createRegionReader, parseConditionsForecast: parse, state, render, h} = await components();
+  state.configureStore({v2: true, storage: null});
+  state.syncFromURL('https://s.test/map?region=morro-bay');
+  const info = await createRegionReader(async () => new Response(JSON.stringify(MORRO)))('morro-bay');
+  assert.equal(info.forecastPoints.central, 'Estero Bay', 'the reader keeps the published name beside the id');
+  regionalForecast.value = parse(morroFeed(), 'morro-bay', MORRO.map.center);
+  assert.equal(regionalForecast.value.point.id, 'central', 'the id stays the point\'s identity in the feed');
+  const card = (shown, lang) => {
+    regionInfo.value = shown; language.value = lang;
+    try { return render(h(MarkForecast, {place: MARK, now: new Date(NOW)})); } finally { language.value = 'en'; }
+  };
+  try {
+    const en = card(info, 'en');
+    assert.match(en, /Wind and seas at forecast point Estero Bay\./);
+    assert.match(en, /ECMWF IFS · 0\.25° grid · forecast point Estero Bay · run /);
+    assert.match(en, /those rows are forecast point Estero Bay's values/);
+    assert.doesNotMatch(en, /forecast point central/);
+    const es = card(info, 'es');
+    assert.match(es, /punto de pronóstico Estero Bay/);
+    assert.doesNotMatch(es, /punto de pronóstico central/);
+    for (const [why, shown] of [['the file names other points only', {...info, forecastPoints: {north: 'Point Estero'}}], ['the file names none', {...info, forecastPoints: undefined}]]) {
+      assert.match(card(shown, 'en'), /Wind and seas at forecast point central\./, `English id: ${why}`);
+      assert.match(card(shown, 'es'), /punto de pronóstico central/, `Spanish id: ${why}`);
+    }
+  } finally { regionalForecast.value = null; regionInfo.value = null; }
 });
 
 test('the mark card carries the block for a reef mark the screen shows, and drops it when the screen withholds the mark', async () => {
