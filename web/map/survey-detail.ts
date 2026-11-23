@@ -25,8 +25,14 @@ function surveyDetailText(p: Record<string, unknown>): string | null {
   return measured(p.tier) && p.grid_m <= maximumGrid[p.tier] ? measuredLabel[p.tier] : null;
 }
 
-// Every finite binary64 is an integer multiple of 2^-1074. Keeping that
-// common scale makes the signed area exact, even for retraced or tiny rings.
+// Scaling by a power of two is exact here (the bounds prevent overflow and we
+// scale up, not down). Only use this coarser grid if every coordinate lands on
+// an integer. BigInt converts the represented integer exactly, even above 2^53.
+const areaScale = 2 ** 52;
+const areaCoordinate = (value: number): bigint => BigInt(value * areaScale);
+
+// Off-grid rings use the full binary64 grid: every finite value is an integer
+// multiple of 2^-1074, including subnormals.
 function exactCoordinate(value: number, bits: DataView): bigint {
   bits.setFloat64(0, value);
   const raw = bits.getBigUint64(0);
@@ -38,19 +44,24 @@ function exactCoordinate(value: number, bits: DataView): bigint {
 
 function validRing(ring: unknown): boolean {
   if (!Array.isArray(ring) || ring.length < 4) return false;
+  let onGrid = true;
   for (const pt of ring) {
     if (!Array.isArray(pt) || pt.length !== 2 ||
         !finite(pt[0]) || Math.abs(pt[0]) > 180 || !finite(pt[1]) || Math.abs(pt[1]) > 90) return false;
+    onGrid &&= Number.isInteger(pt[0] * areaScale) && Number.isInteger(pt[1] * areaScale);
   }
   const [x0, y0] = ring[0];
   const [lastX, lastY] = ring[ring.length - 1];
   if (x0 !== lastX || y0 !== lastY) return false;
 
-  const bits = new DataView(new ArrayBuffer(8));
+  // Use one scale for the entire sum: changing it multiplies every term by
+  // the same positive factor, preserving exact cancellation and zero area.
+  const bits = onGrid ? null : new DataView(new ArrayBuffer(8));
+  const coordinate = bits ? (value: number) => exactCoordinate(value, bits) : areaCoordinate;
   let twiceArea = 0n;
-  let previousX = exactCoordinate(x0, bits), previousY = exactCoordinate(y0, bits);
+  let previousX = coordinate(x0), previousY = coordinate(y0);
   for (let i = 1; i < ring.length; i++) {
-    const x = exactCoordinate(ring[i][0], bits), y = exactCoordinate(ring[i][1], bits);
+    const x = coordinate(ring[i][0]), y = coordinate(ring[i][1]);
     twiceArea += previousX * y - previousY * x;
     previousX = x;
     previousY = y;
