@@ -29,7 +29,12 @@ export function parseEddiesTile(raw: unknown): EddiesParse {
 
     path = 'frame_time';
     const frameTime = raw.frame_time;
-    if (typeof frameTime !== 'string' || !FRAME_TIME.test(frameTime) || !finite(Date.parse(frameTime))) return reject();
+    if (typeof frameTime !== 'string' || !FRAME_TIME.test(frameTime)) return reject();
+    const parsedTime = Date.parse(frameTime);
+    if (!finite(parsedTime)) return reject();
+    // Date.parse can roll nonexistent days and 24:00 forward. Require an exact UTC round trip.
+    const isoTime = `${frameTime.slice(0, -1)}${frameTime.length === 17 ? ':00' : ''}.000Z`;
+    if (new Date(parsedTime).toISOString() !== isoTime) return reject();
 
     path = 'features';
     const features = raw.features;
