@@ -496,3 +496,55 @@ test('brief_adapters_share_dst_fleet_bounds', () => offline(() => {
     assert.deepEqual(buildBrief({context: morroContext, coast: {report, county: slo}, regional: {daily, forecast: montereyForecast, place: morro}, profile: 'boat', date: local, now: at}).fleet, expected, `buildBrief ${instant}`);
   }
 }));
+
+// SCB2222-02: a day is judged against the alert's hazard (onset ?? effective .. ends ?? expires), not the message's issue and expiry.
+// Contract: relevantAlerts lists a day the hazard still covers after the message expired, and not a day wholly before its onset.
+// Bug caught: reading only effective/expires drops a Nov 26 advisory from the Nov 23 to 26 briefs and lists a watch days early.
+test('SCB2222-02: a day between the message expiry and the hazard end lists the alert; a day before its onset does not', () => {
+  const area = slo.areas.find(a => a.id === 'central');
+  const surf = {id: 'surf', event: 'High Surf Advisory', headline: 'High Surf Advisory', description: '', url: 'https://api.weather.gov/alerts/surf', areaIds: ['central'],
+    effective: '2026-10-08T21:00:00.000Z', onset: '2026-10-10T15:00:00.000Z', expires: '2026-10-09T10:00:00.000Z', ends: '2026-10-11T22:00:00.000Z'};
+  const listed = (alert, day) => buildDaily({...report, alerts: [alert]}, slo, area, 'boat', day, now).alerts.map(a => a.id);
+  assert.deepEqual(listed(surf, '2026-10-08'), [], 'the issue time has passed but the hazard has not started');
+  assert.deepEqual(listed(surf, '2026-10-09'), [], 'a day wholly before the onset');
+  assert.deepEqual(listed(surf, '2026-10-10'), ['surf'], 'after the message expiry, inside the hazard');
+  assert.deepEqual(listed({...surf, ends: '2026-10-10T08:00:00.000Z'}, '2026-10-10'), ['surf'], 'the hazard end falls inside the day');
+  assert.deepEqual(listed({...surf, ends: '2026-10-10T06:00:00.000Z'}, '2026-10-10'), [], 'the hazard ended before the day began');
+  // Without onset and ends the message times decide, as before.
+  const plain = {...surf, onset: null, ends: null};
+  assert.deepEqual([listed(plain, '2026-10-08'), listed(plain, '2026-10-10')], [['surf'], []]);
+  // An unreadable hazard bound is unknown, never the message time: the alert still applies.
+  assert.deepEqual(listed({...surf, onset: null, unreadableHazardTime: ['onset']}, '2026-10-09'), ['surf']);
+  assert.deepEqual(listed({...surf, ends: null, unreadableHazardTime: ['ends']}, '2026-10-09'), [], 'an unknown end does not hide a day before the valid onset');
+  assert.deepEqual(listed({...surf, onset: 'soon'}, '2026-10-09'), ['surf'], 'an unparseable onset applies');
+  assert.deepEqual(listed({...surf, ends: 'never'}, '2026-10-10'), ['surf'], 'an unparseable end applies');
+  assert.deepEqual(listed({...surf, ends: null, unreadableHazardTime: ['ends']}, '2026-10-10'), ['surf'], 'a marked end applies');
+});
+
+// SCB2222-02: the regional adapter carries the advisory row's hazard onset (and marks a present-but-unreadable one), so a regional brief
+// judges a day by the hazard, not the message time. Contract: regionalReport maps onset; buildDaily over it hides a day before the onset.
+// Bug caught: an adapter that supplies only effective lists a watch whose hazard begins days later, and drops the unreadable marker.
+test('SCB2222-02: the regional feed carries hazard onset; a future onset hides earlier days and an unreadable onset still applies', () => {
+  const s = montereyDaily.sources;
+  const row = {id: 'urn:watch', event: 'Coastal Flood Watch', headline: 'Coastal Flood Watch', effective: '2026-10-08T11:00:00Z', expires: '2026-10-09T10:00:00Z', ends: '2026-10-13T22:00:00Z'};
+  const feed = alert => ({...montereyDaily, sources: {...s, 'alerts-PZZ535': {...s['alerts-PZZ535'], data: {alerts: [alert]}}}});
+  const listed = (alert, day) => {
+    const {report: converted, county, area} = regionalReport(feed(alert), montereyForecast, montereyPlace);
+    return buildDaily(converted, county, area, 'boat', day, now).alerts.map(a => a.id);
+  };
+  const future = {...row, onset: '2026-10-12T15:00:00Z'};
+  const mapped = regionalReport(feed(future), montereyForecast, montereyPlace).report.alerts[0];
+  assert.deepEqual([mapped.effective, mapped.onset, mapped.expires], [row.effective, future.onset, row.ends]);
+  assert.deepEqual([listed(future, '2026-10-08'), listed(future, '2026-10-10'), listed(future, '2026-10-12')], [[], [], ['urn:watch']], 'listed only once the hazard has begun');
+  // No onset in the row: the message time still decides, as before.
+  const plain = regionalReport(feed(row), montereyForecast, montereyPlace).report.alerts[0];
+  assert.equal(plain.onset, undefined);
+  assert.equal(plain.unreadableHazardTime, undefined);
+  assert.deepEqual(listed(row, '2026-10-08'), ['urn:watch']);
+  // A present but non-text onset is unknown, never the message time: it is marked unreadable and the alert applies.
+  const garbled = {...row, onset: 12345};
+  const marked = regionalReport(feed(garbled), montereyForecast, montereyPlace).report.alerts[0];
+  assert.equal(marked.onset, undefined);
+  assert.deepEqual(marked.unreadableHazardTime, ['onset']);
+  assert.deepEqual(listed(garbled, '2026-10-08'), ['urn:watch']);
+});
