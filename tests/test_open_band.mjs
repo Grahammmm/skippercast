@@ -151,7 +151,7 @@ test('Chart wiring: a fractional phone host keeps the minimum open band in eithe
     assert.ok(height - pad.top - pad.bottom >= 160, 'at least 160 px remain open');
     assert.deepEqual(map.paddings, [ZERO]);
     assert.deepEqual(map.center, {lat: 35.37, lng: -120.86});
-    assert.equal(map.zoom, 12);
+    assert.equal(map.zoom, map.options.zoom, 'mount padding preserves the opening zoom');
     assert.equal(run.view(), null);
   });
 });
