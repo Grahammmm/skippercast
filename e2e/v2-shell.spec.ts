@@ -794,7 +794,7 @@ for (const view of ['plan', 'reports'] as const) {
     test.skip(isMobile, 'the desktop layout only');
     await v2.open('app', {...AREA, view});
     await expect(page.locator('main.app-main')).toHaveAttribute('data-overlay', view);
-    const heading = page.locator('.app-page h1').first();
+    const heading = page.locator('.app-page h1, .app-page h2').first();
     await expect(heading).toBeVisible();
     await page.emulateMedia({media: 'print'});
     await expect(page.locator('aside.app-brief')).toBeHidden();
