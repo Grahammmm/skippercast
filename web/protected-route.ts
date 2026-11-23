@@ -11,6 +11,12 @@ export interface RouteScreen {
   geometryAllowed(g: unknown): boolean;
   exportExclusions(): {checked_at: string} | null;
 }
+/** Why a planning route was refused, as data: the page words it in its language (planner-copy routeStatusText); `.message` stays the English sentence. */
+export type RouteRefusal = {code: 'planChanged'} | {code: 'fullCheck'} | {code: 'leg'; leg: number; reason: string};
+export class RouteError extends Error {
+  readonly refusal: RouteRefusal;
+  constructor(message: string, refusal: RouteRefusal) { super(message); this.refusal = refusal; }
+}
 export const ROUTE_WARNING = 'NOT FOR NAVIGATION. Planning only: no depth, hazards, tides or passage clearance. Check official charts and current rules.';
 export const ROUTE_SOURCES = 'CDFW MPA boundaries: https://wildlife.ca.gov/Conservation/Marine/MPAs; NOAA supplemental closures where supplied: https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas. Water routing: region NOAA shoreline land-water screen.';
 // GPX lat/lon are xsd:decimal: spell JS exponent notation (1e-7) as plain digits, without rounding. Mirrors dist/gpx.js.
@@ -46,10 +52,10 @@ export function buildProtectedRoute({model, lines, screen, stops, title, now = n
   let nm = 0;
   for (let i=1;i<stops.length;i++) {
     const r = waterRoute(model,lines,stops[i-1]!,stops[i]!,maxNodes,allows);
-    if (!r.ok) throw Error(`Planning route unavailable for leg ${i} (${r.reason}). No straight-line fallback is exported.`);
+    if (!r.ok) throw new RouteError(`Planning route unavailable for leg ${i} (${r.reason}). No straight-line fallback is exported.`, {code: 'leg', leg: i, reason: r.reason});
     points.push(...r.points,stops[i]!); nm += r.nm;
   }
-  if (points.length>3000 || !allows(points)) throw Error('Planning route unavailable: full-route check failed.');
+  if (points.length>3000 || !allows(points)) throw new RouteError('Planning route unavailable: full-route check failed.', {code: 'fullCheck'});
   // Recheck at serialization; an expired or replaced boundary screen cannot export.
   if (!screen.ready() || screen.exportExclusions()?.checked_at !== checkedAt) throw Error('Protected-area boundaries changed. Try routing again.');
   const description = `${ROUTE_WARNING} Avoids screened polygons plus the 70 m planning margin. Boundary check: ${checkedAt}. ${ROUTE_SOURCES} Water-screen source: ${model?.source}.`;

@@ -3,7 +3,7 @@
   "region": "cambria-san-simeon",
   "style": "nearshore-v1.0.0",
   "previews": [
-    {"id": "morro-bay-z13", "center": [-120.868, 35.3667], "size_m": 4000, "zoom": 13},
+    {"id": "cambria-san-simeon-overview-z13", "center": [-121.19, 35.595], "size_m": 4000, "zoom": 13},
     {"id": "cambria-z15", "center": [-121.15, 35.55], "size_m": 1200, "zoom": 15}
   ],
   "piers": []
