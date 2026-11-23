@@ -805,11 +805,13 @@ for (const view of ['plan', 'reports'] as const) {
     await page.emulateMedia({media: 'print'});
     await expect(page.locator('aside.app-brief')).toBeHidden();
     await expect(page.locator('section.app-stage')).toBeHidden();
+    await expect(page.locator('.app-first-answer'), 'the first answer is the brief\'s lead and does not print above the page').toBeHidden();
     await expect(heading).toBeVisible();
     const flow = await page.locator('.app-page').evaluate(el => ({position: getComputedStyle(el).position, scrolls: el.scrollHeight > el.clientHeight + 1}));
     expect(flow, 'the page is in normal flow with no inner scroll box').toEqual({position: 'static', scrolls: false});
     await page.emulateMedia({media: 'screen'});
     await expect(page.locator('aside.app-brief')).toBeVisible();
+    await expect(page.locator('.app-first-answer')).toBeVisible();
     expect(await page.locator('.app-page').evaluate(el => getComputedStyle(el).position), 'the screen layout is unchanged').toBe('absolute');
     expect(pageErrors).toEqual([]);
   });

@@ -43,6 +43,9 @@
      runs over as many pages as it needs. No marker, no change: the ordinary brief prints as above. */
   .app:has(> .app-main[data-overlay]) { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
   .app-main[data-overlay] > .app-brief, .app-main[data-overlay] > .app-stage { display: none !important; }
+  /* The first answer (App.tsx FirstAnswerLine) is the brief's lead and sits above the main wrapper, inside .app, wrapped by the
+     display: contents hour guard (so the section is not a direct child); it is hidden with that wrapper, and by its own class too. */
+  .app:has(> .app-main[data-overlay]) > .app-hour-guard, .app:has(> .app-main[data-overlay]) .app-first-answer { display: none !important; }
   .app-main[data-overlay] > .app-page {
     display: block !important; position: static !important; inset: auto !important; z-index: auto !important;
     height: auto !important; max-height: none !important; overflow: visible !important;

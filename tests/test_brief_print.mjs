@@ -137,9 +137,10 @@ async function loadDesktop() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {Desktop} from './web/app/Desktop.tsx';
+      export {FirstAnswerLine} from './web/app/FirstAnswerLine.tsx';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
-      export {h} from 'preact';`},
+      export {h, Fragment} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
   });
   desk = await import(pathToFileURL(out).href);
@@ -151,7 +152,9 @@ async function desktopHtml(view) {
   try {
     m.state.configureStore({v2: true, storage: null});
     m.state.syncFromURL(location.href);
-    return m.render(m.h(m.Desktop, {now: NOW}));
+    // The App's desktop composition (web/app/App.tsx): the first answer, inside its hour guard, sits above Desktop inside .app. The guard here
+    // is pending (no admitted brief), so the answer is the retained one that print shows.
+    return m.render(m.h(m.Fragment, null, m.h(m.FirstAnswerLine, {now: NOW}), m.h(m.Desktop, {now: NOW})));
   } finally { delete globalThis.location; }
 }
 // The real Desktop markup with a long synthetic body appended inside the open page: LAST-ROW is the final dated row.
@@ -171,7 +174,7 @@ async function printed(html, fn) {
 const pdfPages = async page => (await page.pdf({format: 'Letter'})).toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g)?.length ?? 0;
 const look = page => page.evaluate(() => {
   const shown = sel => { const e = document.querySelector(sel); return !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0; };
-  return {brief: shown('.app-brief'), stage: shown('.app-stage'), heading: shown('#page-heading'), last: shown('#last-row'),
+  return {answer: shown('.app-first-answer'), brief: shown('.app-brief'), stage: shown('.app-stage'), heading: shown('#page-heading'), last: shown('#last-row'),
     lastTop: document.querySelector('#last-row')?.getBoundingClientRect().top ?? null, page: document.querySelector('.app-page') && getComputedStyle(document.querySelector('.app-page')).position,
     overflow: document.querySelector('.app-page') && getComputedStyle(document.querySelector('.app-page')).overflowY};
 });
@@ -192,6 +195,7 @@ for (const view of ['plan', 'reports']) {
       await page.emulateMedia({media: 'print'});
       const p = await look(page);
       assert.ok(!p.brief && !p.stage, 'print: neither the brief nor the stage');
+      assert.ok(!p.answer, 'print: not the first answer (forecast and rules) above the page');
       assert.ok(p.heading && p.last, 'print: the heading and the last dated row show');
       assert.equal(p.page, 'static');
       assert.ok(p.lastTop > 1056, `the last row lies beyond the first sheet (top ${p.lastTop})`);
@@ -204,7 +208,7 @@ test('the ordinary desktop brief still prints the brief, and not Plan or Reports
   await printed(await desktopHtml(null), async page => {
     await page.emulateMedia({media: 'print'});
     const p = await look(page);
-    assert.ok(p.brief, 'the brief shows');
+    assert.ok(p.brief && p.answer, 'the brief and its first answer show');
     assert.ok(!p.stage && !p.heading && !p.last, 'no stage and no overlay page');
     assert.equal(await pdfPages(page), 1);
   });
