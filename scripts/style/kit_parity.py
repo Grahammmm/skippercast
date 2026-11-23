@@ -195,11 +195,21 @@ def render_engine(dem, out, baked, zoom_class):
 
 
 def compare(kit, kit_python, *args):
+    mode = args[0]
     proc = subprocess.run([kit_python, str(kit / "reference/compare.py"), *map(str, args)],
                           capture_output=True, text=True, timeout=1800)
     if proc.returncode not in (0, 1):
-        raise ParityError(f"compare.py {args[0]} failed: {proc.stderr.strip()[-400:]}")
-    return json.loads(proc.stdout)
+        raise ParityError(f"compare.py {mode} failed: {proc.stderr.strip()[-400:]}")
+    report = json.loads(proc.stdout)
+    if not isinstance(report, dict) or not isinstance(report.get("pass"), bool):
+        raise ParityError(f"compare.py {mode}: expected a JSON object with a boolean 'pass'")
+    if proc.returncode != (0 if report["pass"] else 1):
+        raise ParityError(f"compare.py {mode}: 'pass' disagrees with exit status {proc.returncode}")
+    if mode == "case":
+        for field in ("base.png", "piles"):
+            if not isinstance(report.get(field), dict):
+                raise ParityError(f"compare.py {mode}: expected an object for {field!r}")
+    return report
 
 
 def zoom_class_for(args, baked):
@@ -288,8 +298,8 @@ def run(kit, manifest, kit_zip, out_root, kit_python, version):
         report = compare(kit, kit_python, "case", ours, ref)
         report["case"] = case
         results[case] = report
-        print(case, "PASS" if report["pass"] else "FAIL", json.dumps(report.get("base.png", {}), sort_keys=True),
-              json.dumps(report.get("piles", {}), sort_keys=True))
+        print(case, "PASS" if report["pass"] else "FAIL", json.dumps(report["base.png"], sort_keys=True),
+              json.dumps(report["piles"], sort_keys=True))
     xres_dirs = []
     for k, name in XRES.items():
         out = work / "ours" / f"xres_{k}m"
@@ -298,8 +308,8 @@ def run(kit, manifest, kit_zip, out_root, kit_python, version):
     xres = compare(kit, kit_python, "xres", *xres_dirs)
     print("xres", "PASS" if xres["pass"] else "FAIL", json.dumps(xres, sort_keys=True))
 
-    cases_pass = {case: {"pass": bool(r["pass"]), "base": r["base.png"], "piles": r["piles"]} for case, r in results.items()}
-    ok = selftest["ok"] and all(c["pass"] for c in cases_pass.values()) and bool(xres["pass"])
+    cases_pass = {case: {"pass": r["pass"], "base": r["base.png"], "piles": r["piles"]} for case, r in results.items()}
+    ok = selftest["ok"] and all(c["pass"] for c in cases_pass.values()) and xres["pass"]
     doc = {"schema": "sc-style-parity/1", "pass": ok, "parity_key": pkey, "engine_digest": edigest,
            "engine_epoch": nearshore.ENGINE_EPOCH, "runtime": runtime, "style": loaded.version, "baked": b,
            "fixtures": {"kit_zip_sha256": kit_zip_sha256, "files_manifest_sha256": files_manifest_sha256,
