@@ -37,4 +37,19 @@
   .app-brief a[href], .app-sheet a[href] { text-decoration: none; }
   .app-brief a[href]::after, .app-sheet a[href]::after { content: none !important; }
   details > *:not(summary) { display: block !important; }
+
+  /* SCB2222-13: with the Plan or Reports page open on a desktop (Desktop.tsx marks the main wrapper data-overlay), that page is
+     what prints: the brief and the stage are hidden, and the page leaves its viewport-sized scroll box for normal flow, so it
+     runs over as many pages as it needs. No marker, no change: the ordinary brief prints as above. */
+  .app:has(> .app-main[data-overlay]) { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+  .app-main[data-overlay] > .app-brief, .app-main[data-overlay] > .app-stage { display: none !important; }
+  .app-main[data-overlay] > .app-page {
+    display: block !important; position: static !important; inset: auto !important; z-index: auto !important;
+    height: auto !important; max-height: none !important; overflow: visible !important;
+    background: Canvas !important; color: CanvasText !important;
+  }
+  .app-main[data-overlay] > .app-page * { color: CanvasText !important; background: transparent !important; box-shadow: none !important; }
+  .app-main[data-overlay] > .app-page li, .app-main[data-overlay] > .app-page tr { break-inside: avoid; page-break-inside: avoid; }
+  .app-main[data-overlay] > .app-page a[href] { text-decoration: none; }
+  .app-main[data-overlay] > .app-page a[href]::after { content: none !important; }
 }

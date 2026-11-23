@@ -787,3 +787,24 @@ for (const [percent, scale] of [[125, 1.25], [150, 1.5]] as const) {
     expect(pageErrors).toEqual([]);
   });
 }
+
+// SCB2222-13: on a desktop, Print / Save as PDF with the Plan or Reports page open prints that page, whole, not the brief under it.
+for (const view of ['plan', 'reports'] as const) {
+  test(`desktop_overlay_print: ${view} prints its own page in normal flow and not the brief`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(isMobile, 'the desktop layout only');
+    await v2.open('app', {...AREA, view});
+    await expect(page.locator('main.app-main')).toHaveAttribute('data-overlay', view);
+    const heading = page.locator('.app-page h1').first();
+    await expect(heading).toBeVisible();
+    await page.emulateMedia({media: 'print'});
+    await expect(page.locator('aside.app-brief')).toBeHidden();
+    await expect(page.locator('section.app-stage')).toBeHidden();
+    await expect(heading).toBeVisible();
+    const flow = await page.locator('.app-page').evaluate(el => ({position: getComputedStyle(el).position, scrolls: el.scrollHeight > el.clientHeight + 1}));
+    expect(flow, 'the page is in normal flow with no inner scroll box').toEqual({position: 'static', scrolls: false});
+    await page.emulateMedia({media: 'screen'});
+    await expect(page.locator('aside.app-brief')).toBeVisible();
+    expect(await page.locator('.app-page').evaluate(el => getComputedStyle(el).position), 'the screen layout is unchanged').toBe('absolute');
+    expect(pageErrors).toEqual([]);
+  });
+}

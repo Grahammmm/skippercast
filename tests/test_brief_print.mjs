@@ -3,13 +3,14 @@
 // (region zone), the do-not-update line and, after it, the C1 footer.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import {mkdtemp} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
-import {preparedRendererPlugins} from './helpers/esbuild-url.mjs';
+import {chromium} from '@playwright/test';
+import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 let mod;
@@ -123,4 +124,88 @@ test('print place line: English keeps the profile label, Spanish uses where.prof
     profile.value = was;
   } finally { setLanguage('en', {storage: {getItem: () => null, setItem() {}}, doc: null}); regionInfo.value = null; }
   assert.equal(language.value, 'en');
+});
+
+// SCB2222-13: with the Plan or Reports page open on a desktop, Print / Save as PDF prints that page (R4 of
+// docs/plans/print-and-save-as-pdf-coverage.md), not the brief under it. The real Desktop is rendered for each view; the page's rows are
+// synthetic and long enough to run over several sheets. The browser checks load the real app.css and brief-print.css in headless Chromium.
+const needsChromium = {skip: !existsSync(chromium.executablePath()) && 'chromium not installed'};
+let desk;
+async function loadDesktop() {
+  if (desk) return desk;
+  const out = join(await mkdtemp(join(tmpdir(), 'print-desktop-')), 'desktop.mjs');
+  await build({
+    stdin: {resolveDir: ROOT, loader: 'ts', contents: `
+      export {Desktop} from './web/app/Desktop.tsx';
+      export * as state from './web/state.ts';
+      export {render} from 'preact-render-to-string';
+      export {h} from 'preact';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+  });
+  desk = await import(pathToFileURL(out).href);
+  return desk;
+}
+async function desktopHtml(view) {
+  const m = await loadDesktop();
+  globalThis.location = {href: `https://s.test/map?region=morro-bay${view ? `&view=${view}` : ''}`};
+  try {
+    m.state.configureStore({v2: true, storage: null});
+    m.state.syncFromURL(location.href);
+    return m.render(m.h(m.Desktop, {now: NOW}));
+  } finally { delete globalThis.location; }
+}
+// The real Desktop markup with a long synthetic body appended inside the open page: LAST-ROW is the final dated row.
+const ROWS = 140;
+const longRows = `<ul>${Array.from({length: ROWS}, (_, i) => `<li class="synthetic-row" id="${i === ROWS - 1 ? 'last-row' : `row-${i}`}">2026-11-${String(1 + (i % 28)).padStart(2, '0')} · synthetic dated row ${i} · source note</li>`).join('')}</ul>`;
+const withRows = html => html.replace(/(<div class="app-page">)/, `$1<h1 id="page-heading">Synthetic heading</h1>${longRows}<div class="app-page-end"></div>`);
+
+async function printed(html, fn) {
+  const css = ['web/app/app.css', 'web/brief/brief-print.css'].map(f => readFileSync(join(ROOT, f), 'utf8')).join('\n');
+  const browser = await chromium.launch({headless: true, args: ['--no-sandbox']});
+  try {
+    const page = await browser.newPage({viewport: {width: 1280, height: 800}});
+    await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body><div class="app">${html}</div></body></html>`);
+    return await fn(page);
+  } finally { await browser.close(); }
+}
+const pdfPages = async page => (await page.pdf({format: 'Letter'})).toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g)?.length ?? 0;
+const look = page => page.evaluate(() => {
+  const shown = sel => { const e = document.querySelector(sel); return !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0; };
+  return {brief: shown('.app-brief'), stage: shown('.app-stage'), heading: shown('#page-heading'), last: shown('#last-row'),
+    lastTop: document.querySelector('#last-row')?.getBoundingClientRect().top ?? null, page: document.querySelector('.app-page') && getComputedStyle(document.querySelector('.app-page')).position,
+    overflow: document.querySelector('.app-page') && getComputedStyle(document.querySelector('.app-page')).overflowY};
+});
+
+test('Desktop marks the main wrapper only when Plan or Reports is open', async () => {
+  for (const view of ['plan', 'reports']) assert.match(await desktopHtml(view), new RegExp(`<main class="app-main" data-overlay="${view}">`), view);
+  for (const view of [null, 'fleet', 'history']) assert.match(await desktopHtml(view), /<main class="app-main">/, `${view ?? 'brief'} has no marker`);
+});
+
+for (const view of ['plan', 'reports']) {
+  test(`desktop ${view} prints its heading and last row over several pages, not the brief`, needsChromium, async () => {
+    await printed(withRows(await desktopHtml(view)), async page => {
+      await page.emulateMedia({media: 'screen'});
+      const screen = await look(page);
+      assert.equal(screen.page, 'absolute', 'screen: the page is still the overlay');
+      assert.equal(screen.overflow, 'auto', 'screen: it still scrolls inside itself');
+      assert.ok(screen.brief && screen.stage, 'screen: the brief and stage stay under it');
+      await page.emulateMedia({media: 'print'});
+      const p = await look(page);
+      assert.ok(!p.brief && !p.stage, 'print: neither the brief nor the stage');
+      assert.ok(p.heading && p.last, 'print: the heading and the last dated row show');
+      assert.equal(p.page, 'static');
+      assert.ok(p.lastTop > 1056, `the last row lies beyond the first sheet (top ${p.lastTop})`);
+      assert.ok(await pdfPages(page) > 1, 'the PDF runs over more than one page');
+    });
+  });
+}
+
+test('the ordinary desktop brief still prints the brief, and not Plan or Reports rows', needsChromium, async () => {
+  await printed(await desktopHtml(null), async page => {
+    await page.emulateMedia({media: 'print'});
+    const p = await look(page);
+    assert.ok(p.brief, 'the brief shows');
+    assert.ok(!p.stage && !p.heading && !p.last, 'no stage and no overlay page');
+    assert.equal(await pdfPages(page), 1);
+  });
 });
