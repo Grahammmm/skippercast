@@ -30,6 +30,8 @@ def _chunks(data):
         kinds.append((kind, body))
         pos = end
         if kind == b'IEND':
+            if size:
+                raise ValueError('PNG IEND must be empty')
             break
     return kinds, pos
 

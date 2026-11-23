@@ -423,6 +423,7 @@ export function createStage(options: StageOptions): Stage {
   // A mounted C2 release view (M9); either renderer records the region it mounted for.
   const c2View = signal<C2View | null>(null);
   let mountedRegion: string | null = null, again = false;
+  let coverageOwner: symbol | undefined;
   let applied: Partial<Record<keyof TerrainState, string>> = {};
   let draped = new Map<string, TerrainLayer>(), overlayPalette: Palette | undefined;
   const coarsened = new Set<string>();
@@ -478,6 +479,8 @@ export function createStage(options: StageOptions): Stage {
 
   const release = (): void => {
     const h = handle.peek();
+    coverageOwner = undefined;
+    terrainCoverage.value = null;
     handle.value = null; applied = {}; draped = new Map(); coarsened.clear(); if (terrainCoarsened.peek().length) terrainCoarsened.value = []; terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
     fpsArmed = false; monitor.reset();
     shownOptions = NATIVE_TERRAIN_DEFAULTS; terrainRamp.value = 'legacy'; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
@@ -520,6 +523,7 @@ export function createStage(options: StageOptions): Stage {
       }
       const state = wanted.peek();
       overlayPalette = options.overlayPalette?.();
+      const owner = coverageOwner = Symbol();
       const h = terrain.mountCoast(host, {
         styles: terrain.styles, chrome: 'host', hostCurrents: true, palette: options.palette?.(), overlayPalette, maxPitch: MAX_PITCH, sky: options.sky?.(),
         // Only a loaded, shown, visible 3D view is timed; anything else drops the open window.
@@ -531,7 +535,9 @@ export function createStage(options: StageOptions): Stage {
           if (layer) terrainPick.value = layer.pick(feature);
         },
         onReading: reading => { terrainReading.value = reading; if (reading) terrainPick.value = null; },
-        onSourceCoverage: coverage => { terrainCoverage.value = coverage; },
+        onSourceCoverage: coverage => {
+          if (alive && coverageOwner === owner && region.peek() === at) terrainCoverage.value = coverage;
+        },
         onShading: shading => { terrainShading.value = shading; },
         forecastHref: withParams(location.href, {view: 'conditions'}),
         initial: {...state, location: state.location ?? undefined},
@@ -658,6 +664,8 @@ export function createStage(options: StageOptions): Stage {
         }
       }
     }),
+    // Legacy terrain can stay mounted on a region change, but its source key cannot follow the user.
+    effect(() => { region.value; terrainCoverage.value = null; }),
     // The first terrain choice mounts the renderer; Chart only hides it (setVisible), so switching back is instant.
     effect(() => { if (shownPresentation.value !== 'chart') void mount(); }),
     effect(() => { const h = handle.value, state = wanted.value; if (h) apply(h, state); }),

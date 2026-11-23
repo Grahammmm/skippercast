@@ -15,7 +15,7 @@ const TOP = {top: 0, bottom: 130, left: 0, right: 390}, SHEET = {top: 611, botto
 const ZERO = {top: 0, bottom: 0, left: 0, right: 0};
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-test('phone at peek: the top card pads the top, the sheet the bottom', () => {
+test('phone at peek: the top card pads the top, the sheet the bottom', async t => {
   assert.deepEqual(openBandPadding(HOST, [TOP, SHEET]), {top: 130, bottom: 233, left: 0, right: 0});
   assert.deepEqual(openBandPadding({top: 50, bottom: 894, left: 0, right: 390}, [{...TOP, top: 50, bottom: 180}, {...SHEET, top: 661, bottom: 894}]),
     {top: 130, bottom: 233, left: 0, right: 0}, 'relative to the host');
@@ -26,21 +26,32 @@ test('phone at peek: the top card pads the top, the sheet the bottom', () => {
   // app.css at 390×844: the 704 px sheet on the 56 px tabs, translated to peek 612..1316, half 366..1070; a hidden sheet has no box.
   const edge = box => toEdge({...SHEET, ...box}, 844);
   assert.deepEqual([{top: 612, bottom: 1316}, {top: 366, bottom: 1070}, {top: 0, bottom: 0}].map(b => openBandPadding(HOST, [TOP, edge(b)]).bottom), [232, 478, 0]);
+  // The raw edge can be well outside the 8 px tolerance while the visible cover still meets the host edge.
+  const spill = {left: -20, right: 410};
+  await t.test('top card spilling past the viewport still pads the top', () => {
+    assert.deepEqual(openBandPadding(HOST, [{...TOP, ...spill, top: -24}]), {...ZERO, top: 130});
+  });
+  await t.test('half-open sheet spilling past the viewport still pads the bottom', () => {
+    assert.deepEqual(openBandPadding(HOST, [{...SHEET, ...spill, top: 366, bottom: 1070}]), {...ZERO, bottom: 478});
+  });
 });
 
 test('no covers, narrow, non-finite, non-overlapping and full-height covers pad nothing', () => {
   assert.deepEqual(openBandPadding(HOST, []), ZERO);
-  assert.deepEqual(openBandPadding(HOST, [{top: 0, bottom: 300, left: 346, right: 390}]), ZERO, 'a 44 px zoom button');
+  assert.deepEqual(openBandPadding(HOST, [{top: 0, bottom: 300, left: 346, right: 600}]), ZERO, 'only 44 px of the side control is visible');
   for (const bad of [NaN, Infinity, -Infinity]) assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: bad}, {...SHEET, left: bad}]), ZERO, String(bad));
   assert.deepEqual(openBandPadding(HOST, [{...TOP, top: -200, bottom: 0}, {...SHEET, top: 844, bottom: 1000}, {...TOP, left: 390, right: 780}]), ZERO, 'outside the host');
   assert.deepEqual(openBandPadding(HOST, [{...SHEET, top: 0}]), ZERO, 'a full-height sheet');
-  assert.deepEqual(openBandPadding(HOST, [{...TOP, top: 20}]), ZERO, 'a card more than 8 px below the top edge');
+  assert.deepEqual(openBandPadding(HOST, [{...SHEET, top: 0, bottom: 1070}]), ZERO, 'a sheet that fully covers the host and spills below it');
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, top: 8, bottom: 4}]), ZERO, 'an inverted rectangle near the top edge');
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, top: 8}]), {...ZERO, top: 130}, 'a card within the 8 px tolerance');
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, top: 9}]), ZERO, 'a card just outside the 8 px tolerance');
 });
 
 test('a band under 160 px shrinks both in proportion to exactly 160; a host under 160 pads nothing', () => {
   assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 400}, {...SHEET, top: 444}]), {...ZERO, top: 342, bottom: 342});
   assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 600}, {...SHEET, top: 644}]), {...ZERO, top: 513, bottom: 171}, '3:1 stays 3:1');
-  assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 2000}]), {...ZERO, top: 684}, 'clamped to the host, then shrunk');
+  assert.deepEqual(openBandPadding(HOST, [TOP, {...SHEET, top: 290}]), {...ZERO, top: 130, bottom: 554}, 'an exact-fit 160 px band');
   assert.deepEqual(openBandPadding({top: 0, bottom: 120, left: 0, right: 390}, [{...TOP, bottom: 40}]), ZERO);
   assert.deepEqual(openBandPadding({top: 0, bottom: NaN, left: 0, right: 390}, [TOP]), ZERO);
 });
