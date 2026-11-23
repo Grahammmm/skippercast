@@ -136,7 +136,7 @@ test('missing data is said plainly: no tide, no swell, no WCOFS', () => {
 const NOW = at(3, 20);
 function brief({events = EVENTS, wave = 2, tide = 'fresh', swell = 'fresh', entrance = MORRO, count = 12, from = 0} = {}) {
   const hours = hoursAt(events, wave, {entrance, count, from});
-  return {profile: 'boat', bar: {entrance, hours}, tideEvents: events, tides: [], sunrise: null, sunset: null, windows: [], alerts: [], missing: [],
+  return {profile: 'boat', bar: {entrance, hours}, tideEvents: events, entranceTide: {events, fresh: tide === 'fresh', source: 'NOAA tide predictions, Port San Luis'}, tides: [], sunrise: null, sunset: null, windows: [], alerts: [], missing: [],
     tiles: [{id: 'tide', state: tide, source: 'NOAA tide predictions, Port San Luis'}, {id: 'swell', state: swell, source: 'GFS-Wave'}]};
 }
 /** The feed's WCOFS block as /api/forecast carries it: three-hourly frames, [time s, lat, lon, kn, toward, km]. */
@@ -331,6 +331,76 @@ test('Spanish: every sentence reads in Spanish, with the estimate and not-for-na
   assert.match(v.timing, /^Vaciante: el agua sale\./);
   assert.match(v.caution, /^Vaciante con oleaje de 6 ft a 10 s: condiciones peligrosas en la barra \(estimación\)\.$/);
   assert.match(v.foot, /No apto para navegación/);
+});
+
+// ---- SCB2222-01: the timing brackets the day's first and last hours from the reference station's neighbouring days ------------
+// Morro Bay, 2026-11-21 (PST, UTC-8). Reference station events: a high the evening before, the day's four turns, a low just after midnight.
+const E = (type, utc) => ({at: `${utc}Z`, type, heightFt: type === 'H' ? 5 : 0});
+const PREV = E('H', '2026-11-21T05:30:00'), NEXT = E('L', '2026-11-22T08:55:00');
+const DAY = [E('L', '2026-11-21T10:10:00'), E('H', '2026-11-21T16:15:00'), E('L', '2026-11-21T22:20:00'), E('H', '2026-11-22T03:57:00')];
+const REF = [PREV, ...DAY, NEXT];
+const DAY0 = Date.parse('2026-11-21T08:00:00Z');   // local midnight
+const dayBrief = ({tide = 'fresh', ref = REF, source = 'NOAA tide predictions, Port San Luis'} = {}) => {
+  const hours = barHours({entrance: MORRO, tideEvents: REF, hours: Array.from({length: 24}, (_, i) => ({at: iso(DAY0 + i * HOUR), waveFt: 2, wavePeriodS: 10, windKnots: 0, windDirectionDeg: 0}))});
+  return {profile: 'boat', date: '2026-11-21', bar: {entrance: MORRO, hours}, tideEvents: DAY, entranceTide: {events: ref, fresh: tide === 'fresh', source}, tides: [], sunrise: null, sunset: null,
+    windows: [], alerts: [], missing: [], tiles: [{id: 'tide', state: tide, source}, {id: 'swell', state: 'fresh', source: 'GFS-Wave'}]};
+};
+const dayView = (b, utc) => view(b, forecast({toward: 80}), {now: new Date(`${utc}Z`)});
+const DAY_ONLY = {events: DAY, fresh: true, source: 'NOAA tide predictions, Port San Luis'};
+
+test('SCB2222-01: after the day\'s last turn the evening is judged from the reference high and the next day\'s low', () => {
+  // 10:33 pm PST: the 7:57 pm high is the day's last event; the low at 12:55 am is on the next day's list.
+  const v = dayView(dayBrief(), '2026-11-22T06:33:00');
+  assert.match(v.timing, /^Ebbing: the water is running out\. It turns to flood about 12:55 am \(slack 12:25 am to 1:25 am\)\.$/);
+  assert.deepEqual([v.reading.timing.phase, v.reading.timing.turnsTo, v.reading.timing.turnAt], ['ebb', 'flood', Date.parse(NEXT.at)]);
+  // The day-only list was the bug: it has no turn after the high.
+  assert.match(dayView({...dayBrief(), entranceTide: DAY_ONLY}, '2026-11-22T06:33:00').timing, /^Flood or ebb not judged: the tide predictions have no high and low around this hour\.$/);
+  // The day's turns line is the day's own, byte-identical with or without the neighbours.
+  assert.equal(v.turns, 'Turns: 2:10 am low water, then flood; 8:15 am high water, then ebb; 2:20 pm low water, then flood; 7:57 pm high water, then ebb.');
+  assert.equal(v.turns, dayView({...dayBrief(), entranceTide: DAY_ONLY}, '2026-11-22T06:33:00').turns);
+});
+
+test('SCB2222-01: before the day\'s first turn the early morning is judged from the evening-before high', () => {
+  const v = dayView(dayBrief(), '2026-11-21T08:40:00');
+  assert.match(v.timing, /^Ebbing: the water is running out\. It turns to flood about 2:10 am \(slack 1:40 am to 2:40 am\)\.$/);
+  assert.deepEqual([v.reading.timing.phase, v.reading.timing.turnType], ['ebb', 'L']);
+  assert.match(dayView({...dayBrief(), entranceTide: DAY_ONLY}, '2026-11-21T08:40:00').timing, /^Flood or ebb not judged: /);
+  assert.equal(v.turns, dayView({...dayBrief(), entranceTide: DAY_ONLY}, '2026-11-21T08:40:00').turns);
+});
+
+test('SCB2222-01: a mid-day hour reads the same with or without the neighbouring days', () => {
+  const a = dayView(dayBrief(), '2026-11-21T19:00:00'), b = dayView({...dayBrief(), entranceTide: DAY_ONLY}, '2026-11-21T19:00:00');
+  assert.match(a.timing, /^Ebbing: the water is running out\. It turns to flood about 2:20 pm \(slack 1:50 pm to 2:50 pm\)\.$/);
+  for (const k of ['title', 'timing', 'turns', 'caution', 'band', 'why', 'wcofs', 'basis', 'foot']) assert.equal(a[k], b[k], k);
+  assert.ok(isDeepStrictEqual(a.reading, b.reading), 'same reading');
+});
+
+test('SCB2222-01: a visitor\'s tide station changes the tile and the day list, never the entrance timing or its basis', async () => {
+  const {withTideSelection} = await import('../web/tide-stations.ts');
+  // A contrary, fresh station: every type swapped, so its phase is the opposite of the reference's.
+  const swapped = DAY.map(e => ({...e, type: e.type === 'H' ? 'L' : 'H'}));
+  for (const [utc, pattern] of [['2026-11-22T06:33:00', /^Ebbing: .* turns to flood about 12:55 am /], ['2026-11-21T19:00:00', /^Ebbing: .* turns to flood about 2:20 pm /]]) {
+    const now = new Date(`${utc}Z`), base = dayBrief();
+    const chosen = withTideSelection(base, {id: '9999999', name: 'Synthetic pier'}, {station: {id: '9999999', name: 'Synthetic pier', lat: 35, lng: -121, type: 'S'}, points: [], events: swapped, fetchedAt: now.toISOString(), failed: false}, TZ, now);
+    assert.equal(chosen.tiles.find(x => x.id === 'tide').source, 'NOAA 9999999 Synthetic pier');
+    assert.ok(isDeepStrictEqual(chosen.tideEvents, swapped), 'the display list is the chosen station\'s');
+    assert.ok(isDeepStrictEqual(chosen.entranceTide, base.entranceTide), 'the entrance input is not replaced');
+    const v = view(chosen, forecast({toward: 80}), {now}), ref = view(base, forecast({toward: 80}), {now});
+    assert.match(v.timing, pattern);
+    assert.match(v.basis, /Port San Luis/);
+    assert.doesNotMatch(v.basis, /Synthetic pier/);
+    for (const k of ['timing', 'caution', 'band', 'why', 'basis']) assert.equal(v[k], ref[k], k);
+  }
+});
+
+test('SCB2222-01: a stale or empty reference stays not judged even when the chosen station\'s tile is fresh', () => {
+  const now = '2026-11-21T19:00:00';
+  const stale = dayView({...dayBrief(), entranceTide: {...dayBrief().entranceTide, fresh: false}}, now);
+  assert.match(stale.timing, /^Flood or ebb not judged: the tide predictions are older than the app allows\.$/);
+  assert.equal(stale.band, 'Unknown');
+  const none = dayView({...dayBrief(), entranceTide: {...dayBrief().entranceTide, events: []}}, now);
+  assert.match(none.timing, /^Flood or ebb not judged: the tide predictions have no high and low around this hour\.$/);
+  assert.equal(none.band, 'Unknown');
 });
 
 // ---- layout at 390 px, the real component in headless Chromium ------------------------------------------------------------

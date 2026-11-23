@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- SCB2222-01: the Boat brief's entrance current line judges flood or ebb in the evening and early morning too, using the reference tide station's high or low from the neighbouring day, instead of "not judged" after the day's last turn. The turns list, tide tile and a tide station you pick are unchanged; the entrance still keeps the reference station.
 - SC2052-08: the trip planner's ranked-reef cards read the relief and reef area in Spanish, with the page's number format, when the page does; English and the exported notes are unchanged.
 - SC2052-06: the Trip dialog's saved-pack forecast end and browser-storage answer read Spanish when the page does, with the day and hour in the region's time zone; English is unchanged.
 - SC2052-05: the landing and the map show a Spanish browser-tab title when the page is Spanish. The English titles, search description and link previews are unchanged.

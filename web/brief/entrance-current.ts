@@ -77,7 +77,9 @@ export function entranceCurrentView({brief, forecast, region, tz, now, lang = 'e
   const times = bar.hours.map(h => Date.parse(h.at)).filter(finite);
   const title = t('entrance.title', lang, {name: bar.entrance.name}), foot = t('entrance.foot', lang);
   const tideTile = brief.tiles.find(x => x.id === 'tide'), swellTile = brief.tiles.find(x => x.id === 'swell');
-  const station = tideTile?.source && tideTile.source !== 'No source' ? tideTile.source : t('entrance.station', lang);
+  // The timing reads the reviewed reference station (brief.entranceTide), never the station a visitor picked for the tide tile.
+  const ref = brief.entranceTide;
+  const station = ref.source && ref.source !== 'No source' ? ref.source : t('entrance.station', lang);
   const basis = t('entrance.basis', lang, {station, min: CURRENT.slackMin});
   const start = times.length ? Math.min(...times) : NaN, end = times.length ? Math.max(...times) + HOUR : NaN;
   if (!times.length) {
@@ -86,10 +88,10 @@ export function entranceCurrentView({brief, forecast, region, tz, now, lang = 'e
   }
   const nowMs = now.getTime(), isNow = nowMs >= start && nowMs < end, at = isNow ? nowMs : start;
   const barHour = bar.hours.find(h => { const x = Date.parse(h.at); return at >= x && at < x + HOUR; }) ?? null;
-  const tideFresh = tideTile?.state === 'fresh', swellFresh = swellTile?.state === 'fresh';
+  const tideFresh = tideTile?.state === 'fresh', swellFresh = swellTile?.state === 'fresh';   // tideFresh gates the day's turns list only
   const read = offshoreRead(forecast, region, at, nowMs);
   const offshore: OffshoreFlow = offshoreFlow(read.sample, bar.entrance, read.gap ?? 'none');
-  const reading = entranceReading({at, entrance: bar.entrance, tideEvents: brief.tideEvents, tideFresh, swellFresh, barHour, offshore});
+  const reading = entranceReading({at, entrance: bar.entrance, tideEvents: ref.events, tideFresh: ref.fresh, swellFresh, barHour, offshore});
   const clock = (ms: number) => clockText(ms, tz, lang), lead = isNow ? '' : t('entrance.forHour', lang, {time: clock(at)});
 
   const tm = reading.timing;
