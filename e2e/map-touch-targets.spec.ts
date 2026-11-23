@@ -246,3 +246,46 @@ for (const theme of ['dark', 'light'] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), 'no page-level sideways scroll').toBe(true);
   });
 }
+
+// SC2052-02: every profile chip's icon and label sit inside its own touch-sized button, in both languages at the four phone sizes.
+const PROFILE_NAMES = {en: ['Boat', 'Shore', 'Spear', 'Kayak'], es: ['Barco', 'Orilla', 'Pesca submarina', 'Kayak']} as const;
+for (const [width, height] of [[360, 740], [390, 844], [780, 437], [844, 390]] as const) {
+  for (const lang of ['en', 'es'] as const) {
+    test(`profile_chips_fit_phone_${lang}_${width}x${height}: icon and label stay inside each touch-sized chip`, async ({page, pageErrors, v2, isMobile}) => {
+      void pageErrors;
+      test.skip(!isMobile, 'the phone layout runs in the phone project');
+      await page.setViewportSize({width, height});
+      await v2.open('app', {...AREA, lang});
+      const group = page.locator('.app-profile');
+      await expect(group.getByRole('button')).toHaveCount(4);
+      await page.evaluate(() => document.fonts.ready);
+      const min = await touchMin(page);
+      await expect.poll(async () => JSON.stringify(await group.boundingBox()), {message: 'profile switch has settled'}).toBe(JSON.stringify(await group.boundingBox()));
+      const chips = await group.getByRole('button').evaluateAll(els => els.map(el => {
+        const b = el.getBoundingClientRect(), icon = el.querySelector('svg')!.getBoundingClientRect();
+        const range = document.createRange(); range.selectNodeContents([...el.childNodes].find(n => n.nodeType === 3)!);
+        const text = range.getBoundingClientRect();
+        const inside = (r: DOMRect) => r.left >= b.left - 0.5 && r.right <= b.right + 0.5 && r.top >= b.top - 0.5 && r.bottom <= b.bottom + 0.5;
+        return {name: el.textContent, scroll: el.scrollWidth, client: el.clientWidth, w: b.width, h: b.height, iconIn: inside(icon), textIn: inside(text), pressed: el.getAttribute('aria-pressed')};
+      }));
+      expect(chips.map(c => c.name), `${lang} ${width}x${height} chip names`).toEqual([...PROFILE_NAMES[lang]]);
+      for (const c of chips) {
+        expect(c.scroll, `${c.name} scrollWidth ${JSON.stringify(c)}`).toBeLessThanOrEqual(c.client);
+        expect(c.iconIn, `${c.name} icon inside its chip`).toBe(true);
+        expect(c.textIn, `${c.name} label inside its chip`).toBe(true);
+        expect(c.w, `${c.name} width`).toBeGreaterThanOrEqual(min);
+        expect(c.h, `${c.name} height`).toBeGreaterThanOrEqual(min);
+      }
+      expect(chips.filter(c => c.pressed === 'true').map(c => c.name)).toEqual([PROFILE_NAMES[lang][0]]);
+      const [box, top] = await Promise.all([group.boundingBox(), page.locator('.app-top-row').boundingBox()]);
+      expect(box!.x + box!.width, 'the switch stays on screen').toBeLessThanOrEqual(width + 0.5);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), 'no sideways scroll').toBe(true);
+      if (width > height) expect(top!.x + top!.width, 'the control row ends before the switch starts').toBeLessThanOrEqual(box!.x + 0.5);
+      const shore = group.getByRole('button', {name: PROFILE_NAMES[lang][1], exact: true});
+      await shore.focus();
+      await page.keyboard.press('Enter');
+      await expect(shore).toHaveAttribute('aria-pressed', 'true');
+      await expect(group.locator('[aria-pressed="true"]')).toHaveCount(1);
+    });
+  }
+}

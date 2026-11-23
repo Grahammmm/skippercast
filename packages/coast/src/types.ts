@@ -14,7 +14,14 @@ export type AreaForecast = { id: string; hours: ForecastHour[]; sourceId: string
 export type Observation = { stationId: string; observedAt: string; url: string; waveFt: number|null; wavePeriodS: number|null; waterTempF: number|null; windKnots: number|null; gustKnots: number|null; directionDeg?: number|null };
 export type TidePoint = { at: string; heightFt: number };
 export type TideEvent = TidePoint & { type: 'H'|'L' };
-export type Alert = { id:string;event:string;headline:string;description:string;effective:string|null;expires:string|null;url:string;areaIds?:string[] };
+/** A hazard bound of an alert: NWS onset (when the hazard starts) or ends (when it stops). */
+export type HazardBound = 'onset'|'ends';
+/**
+ * effective and expires are when the message was issued and will be replaced; onset and ends are the hazard's own start and
+ * stop (absent or null: use effective and expires). unreadableHazardTime names a bound the source gave but could not be read:
+ * unknown, never the message time.
+ */
+export type Alert = { id:string;event:string;headline:string;description:string;effective:string|null;onset?:string|null;expires:string|null;ends?:string|null;unreadableHazardTime?:HazardBound[];url:string;areaIds?:string[] };
 export type CatchReport = { id:string;tripDate:string;boat:string;landing:string;anglers:number|null;tripType:string;species:{name:string;count:number;released?:boolean;disposition?:'reported'|'retained'|'released'}[];sourceUrl:string;reportedGround?:string;retrievedAt:string };
 export type CatchContext = {feedUrl:string;feedGeneratedAt:string;receivedAt:string;windowStart:string;windowEnd:string;latestTripDate:string|null;rights:{scope:'linked-factual-counts';reviewedAt:string;sourceCatalogUrl:string}};
 /** One satellite chlorophyll reading near a place: the median of nearby valid cells. */

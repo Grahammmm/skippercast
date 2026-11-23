@@ -209,7 +209,7 @@ test('verdict_es_profile_reason_matrix: every reason the Shore, Kayak and Spear 
     assert.ok(!s.startsWith(fallback), `"${r}" has a Spanish form`);
     assert.deepEqual(numbers(s), numbers(r), `"${r}" -> "${s}": same numbers`);
     assert.doesNotMatch(s, /\b(?:wind|seas?|surf|surge|chop|tide|swell|clarity|daylight|launch|fog|offshore|onshore|estimate|unknown|dawn|dusk|gust|period|likely|fair)\b/i, `"${r}" -> "${s}": no English left`);
-    assert.equal(verdictCopy('en').profileReason(r), r, 'English is returned as the grader wrote it');
+    assert.equal(verdictCopy('en').profileReason(r), r === 'choppy chop' ? 'choppy water' : r, 'English is returned as the grader wrote it (SC2137-09: but for the Choppy band\'s doubled word)');
   }
   const exact = {
     'Large surf (7 ft at 9 s)': 'oleaje de rompiente grande (7 ft a 9 s)', 'Heavy surf (4.5 ft, offshore estimate)': 'oleaje de rompiente muy intenso (4,5 ft, estimación mar adentro)',
@@ -268,4 +268,54 @@ test('verdict_es_catalogue: every verdict id has both languages with the same va
     const v = boatVerdict(brief({missing: [ALERT_CHECK_MISSING], bar: {hazardous: [{at: '2026-10-13T16:00:00Z'}]}}), f, NOW, TZ, undefined, lang);
     assert.doesNotMatch(`${v.limit} ${v.held}`, /[{}]/, lang);
   }
+});
+
+// SC1222-05: Spanish and the catalogue, in the chosen units.
+test('SC1222-05 Spanish wind and heights in the chosen units, with the decimal comma', () => {
+  const U = (wind, height) => ({temp: 'F', wind, height});
+  const f = forecast({at: t0 => t0 === hourAt(10) ? windy(22, 30) : {}});
+  assert.equal(boatVerdict(brief(), f, NOW, TZ, undefined, 'es', U('kmh', 'm')).limit, 'Viento de 41 km/h con ráfagas de 56 a las 10.');
+  assert.equal(boatVerdict(brief(), f, NOW, TZ, undefined, 'es').limit, 'Viento de 22 kt con ráfagas de 30 a las 10.');
+  const calm = forecast({over: {wave_height: 2, wam: 2, swell_wave_height: 1}});
+  assert.equal(boatVerdict(brief(), calm, NOW, TZ, undefined, 'es', U('kmh', 'm')).limit, 'Viento de hasta 11 km/h y mar de hasta 0,7 m hasta las 12.');
+  const seas = {wave_height: 7.31, wam: 7, wave_period: 8, swell_wave_height: 6.5};
+  assert.equal(boatVerdict(brief(), forecast({over: seas}), NOW, TZ, undefined, 'es', U('mph', 'm')).limit, 'Mar de 2,3 m a 8 s a las 8.');
+  const chop = forecast({over: {wind_wave_height: 2.2, wind_wave_period: 3, ...windy(12, 15)}});
+  assert.equal(boatVerdict(brief(), chop, NOW, TZ, undefined, 'es', U('mph', 'm')).limit, 'Viento de 14 mph con ráfagas de 17 a las 8, con oleaje corto y empinado por viento de 0,7 m.');
+  const cross = verdictCopy('es', U('kt', 'm')).phrase('cross', {}, {secondary: 3, secondary_from: 200});
+  assert.equal(cross, 'mar de fondo cruzado de 0,9 m del SSW');
+  assert.equal(verdictCopy('en', U('kt', 'm')).phrase('cross', {}, {secondary: 3, secondary_from: 200}), 'a 0.9 m cross swell from the SSW');
+  assert.equal(verdictCopy('en', U('kt', 'ft')).phrase('cross', {}, {secondary: 3, secondary_from: 200}), 'a 3 ft cross swell from the SSW');
+  // profile reasons: the numbers and unit change, the Spanish wording stays
+  const reason = (s, u) => verdictCopy('es', u).profileReason(s);
+  assert.equal(reason('strong wind (25 kt, gust 31) onshore', U('kmh', 'm')), 'viento fuerte (46 km/h, ráfagas de 57) hacia tierra');
+  assert.equal(reason('heavy seas (9 ft at 8 s)', U('kt', 'm')), 'mar muy intenso (2,7 m a 8 s)');
+  assert.equal(reason('heavy seas (9 ft at 8 s)', U('kt', 'ft')), 'mar muy intenso (9 ft a 8 s)');
+  assert.equal(verdictCopy('es', U('kmh', 'm')).profileReason('Gigantic surf (30 ft)'), 'Razón del modelo no disponible en español: Gigantic surf (30 ft)');
+  // every verdict template that names a unit takes it as a variable in both languages
+  for (const id of ['wind', 'calm']) for (const lang of ['en', 'es']) assert.match(catalogue.strings[`verdict.${id}`][lang], /\{windUnit\}/);
+  for (const id of ['seas', 'chop', 'steepChop', 'cross', 'calm', 'longPeriod', 'reason.detail']) for (const lang of ['en', 'es']) assert.match(catalogue.strings[`verdict.${id}`][lang], /\{heightUnit\}/);
+});
+
+// SC2137-09. Contract: the spear Choppy wind band reads "choppy water" in English (never "choppy chop"); every other reason, and Spanish, stay byte-identical.
+// A bug it catches: the Choppy reason falling through English's raw return (doubled word), or the new case swallowing Light/Rough chop or changing Spanish.
+test('SC2137-09 the Choppy spear chop reason reads choppy water in English; Light, Rough, Spanish and other reasons are unchanged', () => {
+  const copy = {en: verdictCopy('en'), es: verdictCopy('es')};
+  assert.equal(copy.en.profileReason('choppy chop'), 'choppy water');
+  assert.equal(copy.es.profileReason('choppy chop'), 'oleaje corto picado');
+  for (const [raw, en, es] of [['light chop', 'light chop', 'oleaje corto leve'], ['rough chop', 'rough chop', 'oleaje corto agitado'], ['Strong surge', 'Strong surge', 'vaivén del agua fuerte'], ['clarity unknown', 'clarity unknown', 'claridad desconocida']]) {
+    assert.equal(copy.en.profileReason(raw), en, `${raw}: English`);
+    assert.equal(copy.es.profileReason(raw), es, `${raw}: Spanish`);
+  }
+  // the spear headline end to end, from the real grader's reasons for a Choppy hour
+  const reasons = spearVerdict({band: 'Strong', energy: 3, heightFt: 2, periodS: 8, basis: 'nearshore'}, {band: 'Choppy', windKnots: 5, gustKnots: 8}, {band: 'Fair', drivers: [], missing: [], gaps: []}, false).reasons;
+  assert.ok(reasons.includes('choppy chop'), 'the producer still writes choppy chop (packages/coast is unchanged)');
+  const at = h => `2026-10-13T${String(h + 7).padStart(2, '0')}:00:00Z`;
+  const day = brief({profile: 'spear', spear: {hours: [8, 9, 10, 11].map(h => ({at: at(h), verdict: 'Rough', reasons: ['Strong surge', 'choppy chop']}))}});
+  const e = profileVerdict(day, NOW, TZ), s = profileVerdict(day, NOW, TZ, 'es');
+  assert.equal(e.limit, 'Strong surge, choppy water at 8 am.');
+  assert.equal(s.limit, 'Vaivén del agua fuerte, oleaje corto picado a las 8.');
+  const rough = brief({profile: 'spear', spear: {hours: [8, 9, 10, 11].map(h => ({at: at(h), verdict: 'Rough', reasons: ['Strong surge', 'rough chop']}))}});
+  assert.equal(profileVerdict(rough, NOW, TZ).limit, 'Rough chop, Strong surge at 8 am.');
+  assert.equal(catalogue.strings['verdict.reason.chop'].en, '{band} chop', 'the shared chop template is unchanged');
 });

@@ -185,6 +185,37 @@ test('own_limit_decimal_comma_strict: equality is not over and a just-above samp
   }
 });
 
+test("SC1222-07 units: stop forecasts and over-limit words show the chosen units; comparisons stay raw; default bytes unchanged", () => {
+  const kmh = {temp: "F", wind: "kmh", height: "m"}, mph = {temp: "F", wind: "mph", height: "ft"}, kt = {temp: "F", wind: "kt", height: "ft"};
+  const hour11 = {a: at(11)}, limits = {wind: 10, gust: 16, seas: 2};
+  // NOAA hour 11: wind 21 kt, gust 27 kt, seas 7.5 ft; ECMWF 31 / 37 / 8.5 ft
+  const m = run({times: ready(hour11), units: kmh}).stops.get("a").line;
+  assert.ok(m.includes("NOAA: wind 39 km/h, gusts 50 km/h") && m.includes("seas 2.3 m, 11 s") && m.includes("seas 2.6 m, 9 s"), m);
+  assert.doesNotMatch(m, /\d kt|\d ft/);
+  const p = run({times: ready(hour11), units: mph}).stops.get("a").line;
+  assert.ok(p.includes("NOAA: wind 24 mph, gusts 31 mph") && p.includes("seas 7.5 ft, 11 s"), p);
+  const es = run({times: ready(hour11), units: kmh, language: "es"}).stops.get("a").line;
+  assert.ok(es.includes("viento 39 km/h, ráfagas de 50 km/h") && es.includes("oleaje 2,3 m, 11 s"), es);
+  // over-limit words: limits in the chosen units, the comparison on raw kt/ft
+  const over = run({forecast: forecastOf(feed({frac: 0.4})), times: ready({a: at(0)}), ownLimits: limits, units: kmh}).stops.get("a");
+  assert.ok(util.isDeepStrictEqual(over.families[1].over, ["wind over your 19 km/h", "gusts over your 30 km/h", "seas over your 0.6 m"]), over.families[1].over.join());
+  assert.ok(util.isDeepStrictEqual(over.families[0].over, ["wind over your 19 km/h", "gusts over your 30 km/h"]), over.families[0].over.join());
+  const overEs = run({forecast: forecastOf(feed({frac: 0.4})), times: ready({a: at(0)}), ownLimits: limits, units: kmh, language: "es"}).stops.get("a");
+  assert.ok(overEs.families[1].over.includes("oleaje por encima de tu límite de 0,6 m"), overEs.families[1].over.join());
+  // equality is not over even when the displayed numbers match; a just-above sample is over
+  const exact = run({times: ready({a: at(0)}), ownLimits: {wind: 10, gust: 16, seas: 2}, units: kmh}).stops.get("a");
+  assert.deepEqual(exact.families[0].over, []);
+  // default bytes: kt and ft, English and Spanish, with or without an explicit units object
+  for (const language of ["en", "es"]) {
+    const base = run({times: ready(hour11), ownLimits: {wind: 10.5, gust: 16, seas: 2.5}, language}), explicit = run({times: ready(hour11), ownLimits: {wind: 10.5, gust: 16, seas: 2.5}, language, units: kt});
+    assert.equal(base.stops.get("a").line, explicit.stops.get("a").line, language);
+  }
+  const d = run({times: ready(hour11), ownLimits: {wind: 10.5, gust: 16, seas: 2.5}}).stops.get("a").line;
+  assert.ok(d.includes("wind 21 kt, gusts 27 kt") && d.includes("seas 7.5 ft, 11 s") && d.endsWith("wind over your 10.5 kt, gusts over your 16 kt, seas over your 2.5 ft (your limits)"), d);
+  const dEs = run({times: ready(hour11), ownLimits: {wind: 10.5, gust: 16, seas: 2.5}, language: "es"}).stops.get("a").line;
+  assert.ok(dEs.includes("viento 21 kt, ráfagas de 27 kt") && dEs.includes("oleaje 7,5 ft, 11 s") && dEs.includes("límite de 10,5 kt"), dEs);
+});
+
 const needsChromium = {skip: !existsSync(chromium.executablePath()) && 'chromium not installed'};
 const entry = `
   export {Planner, arrivalRead, readArrivalForecast, resetArrivalRead} from './web/app/Planner.tsx';

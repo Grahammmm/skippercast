@@ -581,7 +581,12 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
             upstream_rows.append(row)
             upstream_docs[ref.key] = verdict.receipt
         upstream_rows.sort(key=lambda r: (r['stage'], r.get('scope') or ''))
-        plan = run.plan(upstream_docs) if callable(run.plan) else (run.plan or Plan())
+        try:
+            plan = run.plan(upstream_docs) if callable(run.plan) else (run.plan or Plan())
+        except ReceiptError as exc:
+            # A stage refuses a request it cannot bind (wrong region, wrong generation) before any
+            # attempt exists: report it like a missing input, with no receipt written and no traceback.
+            return result('blocked', None, f'plan refused: {exc}')
         inputs = []
         for item in plan.inputs:
             path = Path(item.path)

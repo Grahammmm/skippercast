@@ -92,126 +92,124 @@ const rendered = (page: import('@playwright/test').Page, source: string) => page
 const frameBoundary = (page: import('@playwright/test').Page) => page.evaluate(() =>
   new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 
+// Use the real Shore profile. A selected profile alone would miss the
+// regression where a loaded package never reaches either live source.
+const plan = [{layers: 'stations', base: 'night', camera: view, profile: 'shore'},
+  {layers: choices[0]!, base: 'chart', camera: '35.16889,-120.75417,12', profile: 'boat'},
+  ...choices.map(layers => ({layers, base: 'night', camera: view, profile: 'boat'}))];
+
+// Each pair navigates to a different map and proves its own mount. Give it a
+// fresh context and its own deadline instead of summing nine page loads.
 for (const starting of ['dark', 'light'] as const) {
-  test(`mounted map stays in place and matches fresh ${other(starting)} paint (starts ${starting})`, async ({browser}, info) => {
-    // The paired full-page journeys plus the held-region transition share
-    // this deadline; individual readiness and request assertions stay bounded.
-    test.setTimeout(180_000);
-    const phone = info.project.name === 'phone';
-    const viewport = phone ? {width: 390, height: 844} : {width: 1200, height: 800};
-    const server = await serveThemeApp();
-    const contexts = await Promise.all([starting, other(starting)].map(colorScheme => browser.newContext({viewport, colorScheme,
-      hasTouch: phone, isMobile: phone, reducedMotion: 'reduce', serviceWorkers: 'block'})));
-    try {
-      const [live, fresh] = await Promise.all(contexts.map(context => context.newPage()));
-      await Promise.all([live, fresh].map(page => page.clock.setFixedTime(NOW)));
-      const data = await bindThemeFixture(contexts[0], server.origin, starting, process.env.D3_STALE_PAINT === '1');
-      const reference = await bindThemeFixture(contexts[1], server.origin, other(starting));
-      const toggle = async (theme: Theme) => {
-        await live.emulateMedia({colorScheme: theme});
-        await live.waitForFunction(expected => (document.documentElement.dataset.theme ?? 'dark') === expected, theme);
-      };
-      const duringRegionLoad = async () => {
-        // Hold both real readers before popstate. Use a per-transition request
-        // boundary, so an earlier visit cannot satisfy the held-load control.
-        const fixtures = [data, reference];
-        const seen = fixtures.map(f => f.seen.length);
-        fixtures.forEach(f => f.hold());
-        try {
-          await toggle(starting);
-          await Promise.all([live, fresh].map(page => page.evaluate(region => {
-            const url = new URL(location.href);
-            url.searchParams.set('region', region);
-            history.pushState({}, '', url);
-            dispatchEvent(new PopStateEvent('popstate'));
-          }, NEXT)));
-          await expect.poll(() => fixtures.every((f, i) => f.seen.slice(seen[i]).includes(`/regions/${NEXT}/region.json`))).toBe(true);
-          await expect.poll(async () => {
-            const count = data.requests.length;
-            await live.waitForFunction(() => window.d3Chart?.loaded());
+  for (const {layers, base, camera, profile} of plan) {
+    test(`${profile}/${base}/${layers}: mounted map stays in place and matches fresh ${other(starting)} paint (starts ${starting})`, async ({browser}, info) => {
+      const phone = info.project.name === 'phone';
+      const viewport = phone ? {width: 390, height: 844} : {width: 1200, height: 800};
+      const server = await serveThemeApp();
+      const contexts = await Promise.all([starting, other(starting)].map(colorScheme => browser.newContext({viewport, colorScheme,
+        hasTouch: phone, isMobile: phone, reducedMotion: 'reduce', serviceWorkers: 'block'})));
+      try {
+        const [live, fresh] = await Promise.all(contexts.map(context => context.newPage()));
+        await Promise.all([live, fresh].map(page => page.clock.setFixedTime(NOW)));
+        const data = await bindThemeFixture(contexts[0], server.origin, starting, process.env.D3_STALE_PAINT === '1');
+        const reference = await bindThemeFixture(contexts[1], server.origin, other(starting));
+        const toggle = async (theme: Theme) => {
+          await live.emulateMedia({colorScheme: theme});
+          await live.waitForFunction(expected => (document.documentElement.dataset.theme ?? 'dark') === expected, theme);
+        };
+        const duringRegionLoad = async () => {
+          // Hold both real readers before popstate. Use a per-transition request
+          // boundary, so an earlier visit cannot satisfy the held-load control.
+          const fixtures = [data, reference];
+          const seen = fixtures.map(f => f.seen.length);
+          fixtures.forEach(f => f.hold());
+          try {
+            await toggle(starting);
+            await Promise.all([live, fresh].map(page => page.evaluate(region => {
+              const url = new URL(location.href);
+              url.searchParams.set('region', region);
+              history.pushState({}, '', url);
+              dispatchEvent(new PopStateEvent('popstate'));
+            }, NEXT)));
+            await expect.poll(() => fixtures.every((f, i) => f.seen.slice(seen[i]).includes(`/regions/${NEXT}/region.json`))).toBe(true);
+            await expect.poll(async () => {
+              const count = data.requests.length;
+              await live.waitForFunction(() => window.d3Chart?.loaded());
+              await frameBoundary(live);
+              return data.requests.length - count;
+            }).toBe(0);
+            const before = await snapshot(live), boundary = data.requests.length;
+            await toggle(other(starting));
             await frameBoundary(live);
-            return data.requests.length - count;
-          }).toBe(0);
-          const before = await snapshot(live), boundary = data.requests.length;
-          await toggle(other(starting));
-          await frameBoundary(live);
-          const after = await snapshot(live), target = await snapshot(fresh);
-          expect.soft(data.requests.slice(boundary), 'new requests with next region held').toEqual([]);
-          expect.soft(ids(after)).toEqual(ids(before));
-          expect.soft([...ids(after)].sort()).toEqual([...ids(target)].sort());
-          expect.soft(after.camera).toEqual(before.camera);
-          expect.soft(after.images).toEqual(before.images);
-          expect.soft(after.duplicates).toEqual([]);
-          expect.soft(stalePaint(after, target), 'stale paint with next region held').toEqual([]);
-        } finally { fixtures.forEach(f => f.release()); }
-      };
+            const after = await snapshot(live), target = await snapshot(fresh);
+            expect.soft(data.requests.slice(boundary), 'new requests with next region held').toEqual([]);
+            expect.soft(ids(after)).toEqual(ids(before));
+            expect.soft([...ids(after)].sort()).toEqual([...ids(target)].sort());
+            expect.soft(after.camera).toEqual(before.camera);
+            expect.soft(after.images).toEqual(before.images);
+            expect.soft(after.duplicates).toEqual([]);
+            expect.soft(stalePaint(after, target), 'stale paint with next region held').toEqual([]);
+          } finally { fixtures.forEach(f => f.release()); }
+        };
 
-      // Use the real Shore profile. A selected profile alone would miss the
-      // regression where a loaded package never reaches either live source.
-      const plan = [{layers: 'stations', base: 'night', camera: view, profile: 'shore'},
-        {layers: choices[0]!, base: 'chart', camera: '35.16889,-120.75417,12', profile: 'boat'},
-        ...choices.map(layers => ({layers, base: 'night', camera: view, profile: 'boat'}))];
-      for (const {layers, base, camera, profile} of plan) {
-        await test.step(`${profile}/${base}/${layers}`, async () => {
-          const loadBoundary = data.requests.length;
-          const swell = layers.startsWith('swell,');
-          for (const fixture of [data, reference]) fixture.nearshore(swell);
-          await live.emulateMedia({colorScheme: starting});
-          const url = server.origin + link(FIRST, layers, base, camera, profile);
-          await Promise.all([live, fresh].map(page => page.goto(url)));
-          await Promise.all([live, fresh].map(page => page.waitForFunction(() => window.d3Chart?.isStyleLoaded() && window.d3Chart?.areTilesLoaded(), null, {timeout: 10_000})));
-          if (profile === 'boat') await Promise.all([live, fresh].map(page => enableFleet(page, phone)));
+        const loadBoundary = data.requests.length;
+        const swell = layers.startsWith('swell,');
+        for (const fixture of [data, reference]) fixture.nearshore(swell);
+        await live.emulateMedia({colorScheme: starting});
+        const url = server.origin + link(FIRST, layers, base, camera, profile);
+        await Promise.all([live, fresh].map(page => page.goto(url)));
+        await Promise.all([live, fresh].map(page => page.waitForFunction(() => window.d3Chart?.isStyleLoaded() && window.d3Chart?.areTilesLoaded(), null, {timeout: 10_000})));
+        if (profile === 'boat') await Promise.all([live, fresh].map(page => enableFleet(page, phone)));
 
-          await Promise.all([live, fresh].map(settled));
-          await Promise.all([live, fresh].map(page => page.waitForLoadState('networkidle')));
-          const positive = profile === 'shore' ? ['shore-runs', 'shore-access']
-            : base === 'chart' ? ['stations'] : layers === choices[0] ? ['depth-contours']
-            : swell ? ['swell-nearshore'] : [];
-          for (const source of positive) {
-            for (const page of [live, fresh]) {
-              await expect.poll(() => rendered(page, source), `${source} draws actual features`).toBeGreaterThan(0);
-            }
+        await Promise.all([live, fresh].map(settled));
+        await Promise.all([live, fresh].map(page => page.waitForLoadState('networkidle')));
+        const positive = profile === 'shore' ? ['shore-runs', 'shore-access']
+          : base === 'chart' ? ['stations'] : layers === choices[0] ? ['depth-contours']
+          : swell ? ['swell-nearshore'] : [];
+        for (const source of positive) {
+          for (const page of [live, fresh]) {
+            await expect.poll(() => rendered(page, source), `${source} draws actual features`).toBeGreaterThan(0);
           }
-          const before = await snapshot(live), target = await snapshot(fresh);
-          console.log(`${info.project.name}/${starting}/${layers}: ${before.layers.length} Chart layers, sources ${before.sources.join(', ')}`);
-          expect(before.theme).toBe(starting);
-          expect(target.theme).toBe(other(starting));
-          expect(before.layers.length).toBeGreaterThan(0);
-          expect(before.layers).not.toEqual(target.layers);
-          if (profile === 'boat') expect(before.sources).toEqual(expect.arrayContaining(['fleet-heat', 'fleet-tracks', 'fleet-events']));
-          if (base === 'chart') expect(await live.evaluate(() => window.d3Chart.getLayoutProperty('chart-enc', 'visibility'))).toBe('visible');
-          expect([...ids(before)].sort()).toEqual([...ids(target)].sort());
-          expect(data.requests.slice(loadBoundary).some(path => path.endsWith('.pmtiles'))).toBe(true);
-          if (!process.env.CI && layers === choices[0] && base === 'night') {
-            await live.screenshot({path: info.outputPath(`${starting}.png`)});
-          }
-          const boundary = data.requests.length;
-          for (let i = 0; i < 10; i++) {
-            const next = i % 2 === 0 ? other(starting) : starting;
-            await live.emulateMedia({colorScheme: next});
-            await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, next);
-          }
-          await frameBoundary(live);
-          const afterTen = await snapshot(live);
-          expect.soft(data.requests.slice(boundary), 'new requests after ten switches').toEqual([]);
-          expect.soft(afterTen).toEqual(before);
-          await live.emulateMedia({colorScheme: other(starting)});
-          await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, other(starting));
-          await frameBoundary(live);
-          const switched = await snapshot(live);
-          expect.soft(data.requests.slice(boundary), 'new requests after final switch').toEqual([]);
-          expect.soft(switched.camera).toEqual(before.camera);
-          expect.soft(switched.sources).toEqual(before.sources);
-          expect.soft(ids(switched)).toEqual(ids(before));
-          expect.soft(switched.images).toEqual(before.images);
-          expect.soft(switched.duplicates).toEqual([]);
-          expect.soft(stalePaint(switched, target), 'stale paint vs fresh page').toEqual([]);
-          if (profile === 'shore' || swell || layers === choices.at(-1)) await duringRegionLoad();
-        });
+        }
+        const before = await snapshot(live), target = await snapshot(fresh);
+        console.log(`${info.project.name}/${starting}/${layers}: ${before.layers.length} Chart layers, sources ${before.sources.join(', ')}`);
+        expect(before.theme).toBe(starting);
+        expect(target.theme).toBe(other(starting));
+        expect(before.layers.length).toBeGreaterThan(0);
+        expect(before.layers).not.toEqual(target.layers);
+        if (profile === 'boat') expect(before.sources).toEqual(expect.arrayContaining(['fleet-heat', 'fleet-tracks', 'fleet-events']));
+        if (base === 'chart') expect(await live.evaluate(() => window.d3Chart.getLayoutProperty('chart-enc', 'visibility'))).toBe('visible');
+        expect([...ids(before)].sort()).toEqual([...ids(target)].sort());
+        expect(data.requests.slice(loadBoundary).some(path => path.endsWith('.pmtiles'))).toBe(true);
+        if (!process.env.CI && layers === choices[0] && base === 'night') {
+          await live.screenshot({path: info.outputPath(`${starting}.png`)});
+        }
+        const boundary = data.requests.length;
+        for (let i = 0; i < 10; i++) {
+          const next = i % 2 === 0 ? other(starting) : starting;
+          await live.emulateMedia({colorScheme: next});
+          await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, next);
+        }
+        await frameBoundary(live);
+        const afterTen = await snapshot(live);
+        expect.soft(data.requests.slice(boundary), 'new requests after ten switches').toEqual([]);
+        expect.soft(afterTen).toEqual(before);
+        await live.emulateMedia({colorScheme: other(starting)});
+        await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, other(starting));
+        await frameBoundary(live);
+        const switched = await snapshot(live);
+        expect.soft(data.requests.slice(boundary), 'new requests after final switch').toEqual([]);
+        expect.soft(switched.camera).toEqual(before.camera);
+        expect.soft(switched.sources).toEqual(before.sources);
+        expect.soft(ids(switched)).toEqual(ids(before));
+        expect.soft(switched.images).toEqual(before.images);
+        expect.soft(switched.duplicates).toEqual([]);
+        expect.soft(stalePaint(switched, target), 'stale paint vs fresh page').toEqual([]);
+        if (profile === 'shore' || swell || layers === choices.at(-1)) await duringRegionLoad();
+      } finally {
+        await Promise.all(contexts.map(context => context.close()));
+        server.close();
       }
-    } finally {
-      await Promise.all(contexts.map(context => context.close()));
-      server.close();
-    }
-  });
+    });
+  }
 }

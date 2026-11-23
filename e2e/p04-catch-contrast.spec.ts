@@ -329,7 +329,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MAIN-RED-5: Chart loading-status hit-testing only; Reports paint/backing and thresholds unchanged.
   // MAIN-RED-7: app.css adds one landscape-phone sheet-footer link spacing rule (the Reports catch sheet mounts no sheet footer); no colour, backing or catch paint changed. Rebound from the final bytes.
   // MB-11: adds only .legend-* / chip rules for the Chart legend; no Reports catch class, colour or backdrop changes. Rebind only app.css.
-  "web/app/app.css": "6cfd414b3a2e127db5e2545a424428bd9ee67b79e14553462f2e9f47bf43235f",
+  // SC2052-02: only the mobile profile chip width rules; no Reports catch paint, backing or threshold changes (layout only). Rebound from the final bytes.
+  "web/app/app.css": "889eb4831ee826339f925f3505694b690d5666d8ded07559ec72fc8e20abf186",
   // SCA-479: app.css deletes only the earlier of two byte-identical phone account-trigger blocks (the .app-account[data-top] rules); the surviving copy is unchanged, the Reports catch sheet mounts no account menu, and no catch paint or backing changes. Rebound from the final bytes.
   // SC1407-15: decorative route swatch only; no Reports count paint/backing or threshold change.
   // UXFIX-10: app.css appends only a scoped .app-account[data-top] block (the phone top-card account button: icon size, visually hidden label, open-state colour, z-index while its panel is open); the Reports catch sheet mounts no account menu, so no catch paint or backing changes. Rebound from the final bytes.
@@ -342,7 +343,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/ui/guard.css": "8e53f065f8f7af23121f7eb346ebeefe571baa21eebf1b6179e27a8b86b74d11",
   // SC2037-04: Brief.tsx imports brief-print.css (only a hidden .app-print-only class and an @media print block; no screen paint); Reports bundles Brief.
   // SC1407-05: brief-print.css adds only .app-hour-guard/.app-hour-settled (display: contents) and .app-hour-updating (muted margin-less line) screen rules plus print-hide rules for the pending dock hour; the Reports catch sheet mounts none of those classes (they wrap the desktop/phone brief verdict), so no counted catch paint changes. Rebound from the final bytes.
-  "web/brief/brief-print.css": "859660d0a399f688ba5a61661c52c9ae3e5ce8be9c46d934dae8cde19600393f",
+  // SCB2222-13: brief-print.css appends only rules inside its existing @media print block (the desktop Plan/Reports overlay prints in normal flow, and its first answer is hidden in print); no screen paint, so no counted Reports catch paint, overlap or backing changes. Rebound from the final bytes.
+  "web/brief/brief-print.css": "a1840c3bf5e145c049a55133150c4284325ab9afb068a17d357e5bcfddffd1aa",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
   // SCB-16: scoped picker rules only; never mounted or requested by Reports.
   "web/region-picker.css": "ebc4fcaed679f3017e83921334f5c9ef5a10e70b7aed04eef6a995a0da75e6af",
@@ -438,7 +440,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MSK-1: only tokensCss source digest/comment changed in the checker; no contrast logic changed.
   // MSK-2: only the legendTsx surface hash and its comment changed; contrast() untouched. Rebound from the final bytes.
   // MSKL-1: only the tokensCss surface hash and applicability comment changed; contrast() and all gates are unchanged.
-  "scripts/check_contrast.mjs": "70b848ad2b0bc66cbee97525ad67c3f81673cc100cb89c9c2d097fd22019323a",
+  // SC2052-02: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "a082d33835d547cb3ab45323ad1edcdae28edc9aede4dae05a50ec525a1f2377",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // SCA-479: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.

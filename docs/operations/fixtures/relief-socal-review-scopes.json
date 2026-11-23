@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "umbrella_region_id": "southern-california",
+  "review_notes": {
+    "geographic_inclusion": "Compares the bounding rectangles in the committed region configs. Containment is geographic context only, not a finding about access or source rights.",
+    "military_access_hold_check": "Leave unresolved until the named owner supplies evidence for this scope. This checklist records no closure, access clearance, or change to an existing hold.",
+    "source_rights_evidence": "Leave unresolved until the named owner supplies source-specific evidence for this scope. See docs/legal/data-rights-register.md for the existing record; this checklist grants no rights."
+  },
+  "scopes": [
+    {
+      "region_id": "santa-barbara-channel",
+      "geographic_inclusion": "contained",
+      "military_access_hold_check": {"state": "unresolved", "owner": null, "evidence_ref": null},
+      "source_rights_evidence": {"state": "unresolved", "owner": null, "evidence_ref": null}
+    },
+    {
+      "region_id": "channel-islands-north",
+      "geographic_inclusion": "contained",
+      "military_access_hold_check": {"state": "unresolved", "owner": null, "evidence_ref": null},
+      "source_rights_evidence": {"state": "unresolved", "owner": null, "evidence_ref": null}
+    },
+    {
+      "region_id": "santa-monica-palos-verdes",
+      "geographic_inclusion": "contained",
+      "military_access_hold_check": {"state": "unresolved", "owner": null, "evidence_ref": null},
+      "source_rights_evidence": {"state": "unresolved", "owner": null, "evidence_ref": null}
+    },
+    {
+      "region_id": "san-pedro-orange-county",
+      "geographic_inclusion": "contained",
+      "military_access_hold_check": {"state": "unresolved", "owner": null, "evidence_ref": null},
+      "source_rights_evidence": {"state": "unresolved", "owner": null, "evidence_ref": null}
+    },
+    {
+      "region_id": "san-diego",
+      "geographic_inclusion": "contained",
+      "military_access_hold_check": {"state": "unresolved", "owner": null, "evidence_ref": null},
+      "source_rights_evidence": {"state": "unresolved", "owner": null, "evidence_ref": null}
+    },
+    {
+      "region_id": "outer-islands-borderland",
+      "geographic_inclusion": "contained",
+      "military_access_hold_check": {"state": "unresolved", "owner": null, "evidence_ref": null},
+      "source_rights_evidence": {"state": "unresolved", "owner": null, "evidence_ref": null}
+    }
+  ]
+}

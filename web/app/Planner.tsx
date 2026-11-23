@@ -14,6 +14,7 @@ import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, 
 import {ALERT_STORAGE_NOTE, PORTS_FAILED_NOTE, sharedConfidence, type AlertLegsFn} from '../planner.ts';
 import {AREA_NOTE} from '../planner-alerts.ts';
 import {readableDate, readableDates} from '../dates.ts';
+import {EnglishDetail} from './EnglishDetail.tsx';
 import {tripLegs} from '../trip-legs.ts';
 import {clockText, DEFAULT_TIMING, MAX_FISH_MIN, parseTiming, tripTimes} from '../trip-times.ts';
 import {tripStopForecast} from '../trip-forecast.ts';
@@ -26,7 +27,7 @@ import {protectedScreen} from '../trip.ts';
 import {cruiseSpeed, hasOwnLimits, limitsFor} from '../limits.ts';
 import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
-import {categoryText, countText, evidenceLabel, fitText, hitReading, nmText, plannerText, plannerVerdict} from '../planner-copy.ts';
+import {categoryText, countText, evidenceLabel, fitText, hitReading, nmText, plannerText, plannerVerdict, reefTerrainText, routeStatusText} from '../planner-copy.ts';
 import {PlanRules} from './PlanRules.tsx';
 import {waterRoute, type Route, type RoutePoint} from '../route.ts';
 // Leg routes over the land/water product and lines the Boat brief reads (FSC-05), kept until either changes so a re-render does not search again.
@@ -70,7 +71,7 @@ function SpotRow({t: spot, checked, hit, showConfidence = true, onToggle}: {t: T
         <small>{formatCoordinates(spot.latitude, spot.longitude, coordinates.value)}</small>
         <small>{spot.trip_rank ? spot.name : spot.id} · {t('planner.spot.grade', lang, {grade: spot.habitat_grade ?? ''})} · {depth} ft</small>
         {spot.trip_rank && spot.distance_basis && typeof spot.distance_nm === 'number' && Number.isFinite(spot.distance_nm) ? <small>{nmText(spot.distance_nm, lang)} nm {t(spot.distance_basis === 'water' ? 'planner.dist.water' : 'planner.dist.straight', lang)}</small> : null}
-        {spot.trip_rank ? <small>{spot.terrain_interpretation}</small> : null}
+        {spot.trip_rank ? <small>{reefTerrainText(spot, lang)}</small> : null}
         {hit ? <small>{hitReading(hit, lang)} {t('planner.boundary.context', lang)} {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{t('planner.boundary.link', lang, {agency: m.agency})}</a> </span>)}</small> : null}
       </span>
     </label>
@@ -191,6 +192,8 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
     orderFocus.current = {id, direction};
     if (!m.moveStop(id, direction)) orderFocus.current = null;
   };
+  // SC2052-09: the note (model signal) belongs to the order it was about (`ids` identity), so any later change to the stops clears it.
+  const shorter = m.shorterNote.value;
   // BF-closures-everywhere: the planner's shared screen for THIS region, else null (every leg then reads not checked). Its contents are mutable, so the tick (minute and boundary updates) is read here too.
   void m.tick.value;
   const shown = protectedScreen.value, screen = shown.state === 'loaded' && shown.region === m.region.id ? shown.screen : null;
@@ -205,6 +208,8 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
   const timing = d.timing ?? DEFAULT_TIMING;
   const typeTiming = (leave: string, fish: string) => { const ok = parseTiming(leave, fish); if (ok) { m.editTiming(ok); setTyped(null); } else setTyped({leave, fish}); };
   const zone = m.region.timezone;
+  const routeShown = m.routeView.value, routeText = routeStatusText(routeShown, lang, zone);
+  const routeLine = routeText ?? (typeof routeShown === 'object' && routeShown.kind === 'error' ? <EnglishDetail lang={lang} prefix={false}>{routeShown.message}</EnglishDetail> : '');
   const times = typed || !stops.length ? null : tripTimes({date: d.date, zone, timing, port: port ? {lat: port.match[0], lon: port.match[1]} : null,
     stops: stops.map(s => ({id: s.id, fishing: !s.id.startsWith('user:launch-')})), route});
   const clock = (at: number, after: boolean) => `${clockText(at, zone, d.date, lang, t('planner.times.nextDay', lang))}${after ? t('planner.times.afterSunset', lang) : ''}`;
@@ -240,6 +245,8 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
         <div class="export-card-body">
           {stops.length > 0 && <section aria-label={t('planner.stops.heading', lang)}>
             <h3>{t('planner.stops.heading', lang)}</h3>
+            {d.ids.length > 1 && <p><button type="button" id="export-shorter-order" disabled={m.restorePending.value} onClick={() => { m.shortenRun(); }}>{t('planner.order.shorter', lang)}</button>
+              <small class="export-note" role="status" id="export-shorter-note"> {shorter?.ids === d.ids ? t(shorter.key, lang) : ''}</small></p>}
             <ol aria-label={t('planner.stops.aria', lang)}>{stops.map(stop => {
               const index = d.ids.indexOf(stop.id), name = stop.name || stop.label;
               return <li key={stop.id} data-stop-id={stop.id}>{name}{index >= 0 && (['up', 'down'] as const).map(direction =>
@@ -370,7 +377,7 @@ export function Planner({model: m, open, now}: {model: Model; open: boolean; now
           <p><a href="https://wildlife.ca.gov/Conservation/Marine/MPAs" target="_blank" rel="noopener">CDFW MPA</a> · <a href="https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas" target="_blank" rel="noopener">NOAA</a></p>
           <button id="export-route" disabled={!s.ok || m.routing.value} onClick={() => void m.deliverRoute()}>{t(m.routing.value ? 'planner.route.busy' : 'planner.route.download', lang)}</button>
           <button id="show-planning-route" disabled={!s.ok || m.routing.value} onClick={() => void m.showRouteOnChart()}>{t(m.routing.value ? 'planner.route.busy' : 'planner.route.show', lang)}</button>
-          <p role="status">{m.routeStatus.value}</p>
+          <p role="status">{routeLine}</p>
         </section>
         {!s.ok && m.notesReady.value ? <p>{t('planner.withheld', lang)}</p> : null}
         <details class="export-help">

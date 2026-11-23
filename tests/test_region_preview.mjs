@@ -14,6 +14,8 @@ const out = join(await mkdtemp(join(tmpdir(), 'preview-')), 'shell.mjs');
 await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
   export {isPreviewRegion, currentRegionPreview} from './web/region-preview.ts';
   export {regionPorts, loadRegionPorts, loadPorts} from './web/ports.ts';
+  export {loadRegion} from './web/app/App.tsx';
+  export {regionInfo} from './web/app/region-info.ts';
   export {Location} from './web/app/Masthead.tsx';
   export {Mobile} from './web/app/Mobile.tsx';
   export {WhereToLook} from './web/brief/WhereToLook.tsx';
@@ -103,4 +105,77 @@ test('preview adds only the disclosure to populated ranking; active/failed/unkno
     assert.ok(preview.replace(/<p class="app-region-preview-reason">[^<]*<\/p>/, '') === baseline, 'only coverage copy changes, not picks/order/reasons');
     assert.ok(preview.indexOf(s.t('shell.regionPreview.reason', lang)) < preview.indexOf('<h2'));
   }
+});
+
+// SCB2222-14: the loaded package's own status decides the badge; the port is only a fallback.
+// Contract: a deep-linked preview region that no port lists still says Preview (bug: it rendered unbadged).
+const pkg = id => JSON.parse(readFileSync(new URL(`../dist/regions/${id}/region.json`, import.meta.url)));
+const served = body => async () => new Response(JSON.stringify(body));
+const noPort = 'big-sur-coast', active = 'morro-bay', listed = 'monterey-point-sur';
+const surfaces = lang => { s.language.value = lang; return [s.Location, s.Mobile, s.WhereToLook].map(render); };
+/** Real route: URL, ports directory for the id, then the real loadRegion reader and publication. */
+const open = async (id, body, list = directory.ports) => {
+  at(id); s.regionPorts.value = null;
+  await s.loadRegionPorts(id, async () => list);
+  return s.loadRegion(id, served(body));
+};
+const badged = async (id, body, list) => {
+  const info = await open(id, body, list);
+  assert.equal(info?.id, id, 'the package loaded');
+  const out = [];
+  for (const lang of ['en', 'es']) {
+    const reason = s.t('shell.regionPreview.reason', lang), label = s.t('shell.regionPreview.label', lang);
+    const [location, mobile, where] = surfaces(lang);
+    const says = [location.includes(`class="app-region-preview-label">${label}`), mobile.includes(`class="app-region-preview-label">${label}`),
+      location.includes(reason), mobile.includes(reason), where.includes(reason)];
+    out.push(says.every(Boolean) ? true : says.some(Boolean) ? 'partial' : false);
+  }
+  return out.every(v => v === true) ? true : out.every(v => v === false) ? false : 'partial';
+};
+
+test('a portless preview package says Preview on every surface, en/es, whatever the directory says', async () => {
+  assert.ok(!directory.ports.some(p => p.region === noPort), 'fixture: no port lists this preview region');
+  assert.equal(pkg(noPort).status, 'preview');
+  assert.equal(await badged(noPort, pkg(noPort)), true);
+  // A failed or empty directory cannot take the badge away from a package that says preview.
+  assert.equal(await badged(noPort, pkg(noPort), []), true);
+  at(noPort); s.regionPorts.value = {region: noPort, state: 'failed', list: []};
+  assert.equal(s.currentRegionPreview(), true);
+});
+
+test('a loaded active package is unbadged, even when the directory lists a preview port for it', async () => {
+  const conflicting = directory.ports.map(p => p.region === active ? {...p, status: 'preview'} : p);
+  assert.ok(conflicting.some(p => p.region === active && p.status === 'preview'), 'fixture: a conflicting preview port');
+  assert.equal(pkg(active).status, 'active');
+  assert.equal(await badged(active, pkg(active), conflicting), false);
+  assert.equal(await badged(active, pkg(active)), false);
+});
+
+test('missing or unrecognized package status is ignored: only the matching ready port decides', async () => {
+  for (const status of [undefined, 'bogus', 42, null, '', 'Preview']) {
+    const noStatus = {...pkg(noPort), status}, listedNoStatus = {...pkg(listed), status};
+    if (status === undefined) { delete noStatus.status; delete listedNoStatus.status; }
+    assert.equal(await badged(noPort, noStatus), false, `portless, status ${JSON.stringify(status)}: no badge`);
+    assert.equal(await badged(listed, listedNoStatus), true, `listed, status ${JSON.stringify(status)}: port fallback`);
+    assert.equal(s.regionInfo.value.status, undefined, 'an unrecognized status is not kept');
+  }
+});
+
+test('a previous region\'s package never badges a new id, delayed or not', async () => {
+  assert.equal(await badged(noPort, pkg(noPort)), true);
+  at(active);                                   // switch before anything for the new id has loaded
+  assert.equal(s.currentRegionPreview(), false);
+  assert.doesNotMatch(surfaces('en').join(''), /app-region-preview-label|app-region-preview-reason/);
+  // The old region's read still pending when the link changes to the active region.
+  at(noPort); s.regionPorts.value = null;
+  const gate = Promise.withResolvers(), pending = s.loadRegion(noPort, () => gate.promise);
+  at(active); await s.loadRegionPorts(active, async () => directory.ports);
+  gate.resolve(new Response(JSON.stringify(pkg(noPort)))); assert.equal(await pending, null);
+  assert.equal(s.regionInfo.value, null);
+  assert.equal(s.currentRegionPreview(), false);
+  assert.doesNotMatch(surfaces('es').join(''), /app-region-preview-label|app-region-preview-reason/);
+  // The info signal holding a foreign region's package is not read for this id.
+  s.regionInfo.value = {id: noPort, name: 'Foreign', center: [36, -121], timezone: 'America/Los_Angeles', status: 'preview'};
+  at(listed); s.regionPorts.value = {region: listed, state: 'loading', list: []};
+  assert.equal(s.isPreviewRegion(listed, s.regionPorts.value, s.regionInfo.value), false);
 });
