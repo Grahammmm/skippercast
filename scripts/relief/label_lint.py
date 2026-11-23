@@ -16,6 +16,7 @@ STRING_LANGUAGES = ('en', 'es')
 TS_TOKEN = re.compile(r'''//[^\n]*|/\*[\s\S]*?\*/|"(?:\\[\s\S]|[^"\\])*"'''
                       r'''|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`|[\w$]+|[^\s]''')
 TS_GROUPS = {'(': ')', '[': ']', '{': '}'}
+IDENTIFIER = re.compile(r'[A-Za-z_$][\w$]*')
 
 
 class InputError(ValueError):
@@ -120,7 +121,7 @@ def ts_value_end(tokens: list[str], start: int) -> int:
             stack.append(TS_GROUPS[token])
         elif stack and token == stack[-1]:
             stack.pop()
-        elif not stack and token in (',', '}', ')', ']'):
+        elif not stack and token in (',', ';', '}', ')', ']', 'const', 'let', 'var'):
             return i
     return len(tokens)
 
@@ -133,6 +134,35 @@ def lookup_keys(tokens: list[str]) -> Iterator[str]:
             yield key[1:-1]
 
 
+def local_bindings(tokens: list[str]) -> dict[str, list[str]]:
+    """Map each locally bound name to the tokens of the value assigned to it."""
+    bindings: dict[str, list[str]] = {}
+    for i in range(len(tokens) - 2):
+        name = tokens[i]
+        if not IDENTIFIER.fullmatch(name) or tokens[i + 1] != '=' or tokens[i + 2] in ('=', '>'):
+            continue  # not a binding: ==, === or an arrow function (x => ...)
+        if i and tokens[i - 1] in ('.', '=', '!', '<', '>'):
+            continue  # a member store or a comparison, not a local binding
+        bindings.setdefault(name, []).extend(tokens[i + 2:ts_value_end(tokens, i + 2)])
+    return bindings
+
+
+def value_keys(value: list[str], bindings: dict[str, list[str]]) -> set[str]:
+    """Literal t() keys in a value, following local names to what they were assigned."""
+    keys: set[str] = set()
+    seen: set[str] = set()
+    pending = [value]
+    while pending:
+        tokens = pending.pop()
+        keys.update(lookup_keys(tokens))
+        for i, token in enumerate(tokens):
+            if (token in bindings and token not in seen and (i == 0 or tokens[i - 1] != '.')
+                    and (i + 1 == len(tokens) or tokens[i + 1] not in ('(', ':'))):
+                seen.add(token)
+                pending.append(bindings[token])
+    return keys
+
+
 def drawn_string_keys(source: str) -> set[str]:
     """Follow literal t() calls in text-field values and their local GeoJSON fields.
 
@@ -141,6 +171,7 @@ def drawn_string_keys(source: str) -> set[str]:
     shapes, not general TypeScript dataflow (computed lookup keys are excluded).
     """
     tokens = [token for token in TS_TOKEN.findall(source) if not token.startswith(('//', '/*'))]
+    bindings = local_bindings(tokens)
     keys: set[str] = set()
     fields: set[str] = set()
     properties: list[int] = []
@@ -150,7 +181,7 @@ def drawn_string_keys(source: str) -> set[str]:
             continue
         if name in ('"text-field"', "'text-field'"):
             value = tokens[i + 2:ts_value_end(tokens, i + 2)]
-            keys.update(lookup_keys(value))
+            keys.update(value_keys(value, bindings))
             for opening, op, comma, field in zip(value, value[1:], value[2:], value[3:]):
                 if opening == '[' and op in ('"get"', "'get'") and comma == ',' and field.startswith(('"', "'")):
                     fields.add(field[1:-1])
@@ -161,9 +192,11 @@ def drawn_string_keys(source: str) -> set[str]:
             if tokens[i + 1] == ':':
                 end = ts_value_end(tokens, i + 2)
                 if tokens[i].strip('"\'') in fields:
-                    keys.update(lookup_keys(tokens[i + 2:end]))
+                    keys.update(value_keys(tokens[i + 2:end], bindings))
             else:
                 end = ts_value_end(tokens, i)
+                if tokens[i] in fields:  # shorthand: {name} reads the local called name
+                    keys.update(value_keys(tokens[i:end], bindings))
             if end == len(tokens) or tokens[end] != ',':
                 break
             i = end + 1

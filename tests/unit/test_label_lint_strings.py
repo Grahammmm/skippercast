@@ -76,6 +76,32 @@ const layer = {layout: {"text-field": ['concat', t("spot.unnamed", 'es'), t("spo
     )
 
 
+@pytest.mark.parametrize('source', [
+    pytest.param("const label = t('spot.unnamed', lang); const layer = {layout: {'text-field': label}};",
+                 id='bound then drawn, same line'),
+    pytest.param("let a = t('spot.unnamed', lang)\nconst label = a\nconst layer = {layout: {'text-field': ['concat', label, '!']}}",
+                 id='chained bindings, no semicolons'),
+    pytest.param("const label = t('spot.unnamed', lang);\nconst layer = {layout: {'text-field': ['get', 'name']}};\n"
+                 "const f = {properties: {name: label}};", id='bound fallback in feature properties'),
+    pytest.param("const name = t('spot.unnamed', lang);\nconst layer = {layout: {'text-field': ['get', 'name']}};\n"
+                 "const f = {properties: {key: 1, name}};", id='shorthand property'),
+])
+def test_c1_follows_local_binding(tree, capsys, source):
+    """C1: a lookup assigned to a local before it is drawn is still selected (else a source name slips through)."""
+    write(tree, MAP, source)
+    status, out, err = run(tree, capsys, '--strings', '--json')
+    assert (status, json.loads(out), err) == (
+        1, [hit(ES, KEY, 'es', 'Sin nombre (sHeLf SuRvEy)')], '',
+    )
+
+
+def test_c1_binding_to_an_undrawn_lookup_is_ignored(tree, capsys):
+    """C1: a binding only matters when drawn; an unused or same-named property key adds nothing."""
+    write(tree, MAP, "const label = t('spot.unnamed', lang); const layer = {layout: {'text-field': other}};\n"
+                     "const f = {label: 1};")
+    assert run(tree, capsys, '--strings', '--json') == (0, '[]\n', '')
+
+
 def test_c2_missing_key_is_not_a_violation(tree, capsys):
     """C2: report a missing Spanish key without fallback or a failing exit."""
     write(tree, ES, {})
