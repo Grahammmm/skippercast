@@ -7,7 +7,7 @@ import pytest
 
 from scripts.relief import rebuild_plan
 from tests._support import ROOT
-from tests.unit.test_rebuild_plan_cli import KEYS, record
+from tests.unit.test_rebuild_plan_cli import KEYS, record, row
 
 
 EAST, WEST = 'east-test', 'west-test'
@@ -19,6 +19,10 @@ def saved_plan(tmp_path_factory):
     current = rebuild_plan._stage_digests()
     record(out, EAST, 'select', current['select'])
     record(out, EAST, 'digests', current['digests'], upstream=[('tiles', 'public')])
+    return plan_json(out)
+
+
+def plan_json(out):
     result = subprocess.run([
         sys.executable, '-B', str(ROOT / 'scripts/relief/rebuild_plan.py'),
         '--out', str(out), '--json', EAST, WEST,
@@ -56,7 +60,7 @@ def test_allowed_subset_passes(tmp_path, candidate):
     assert (result.returncode, result.stderr) == (0, '')
     assert json.loads(result.stdout) == {
         'within_ceiling': True, 'outside_ceiling': [], 'missing_regions': [],
-        'unexpected_regions': [], 'missing_stages': {}, 'summary_matches': True,
+        'unexpected_regions': [], 'missing_stages': {}, 'unexpected_stages': {}, 'summary_matches': True,
     }
 
 
@@ -100,6 +104,42 @@ def test_missing_downstream_stage_fails_even_with_consistent_summary(tmp_path, c
     assert report['summary_matches'] is True
 
 
+@pytest.mark.parametrize('action', ['reuse', 'rebuild'])
+def test_stage_outside_regional_inventory_fails_within_allowance(tmp_path, action):
+    """Catch checking only missing keys, only rebuilds, or inventory pooled across regions."""
+    out = tmp_path / 'receipts'
+    out.mkdir()
+    current = rebuild_plan._stage_digests()
+    # All current receipts give the paint-only (all reuse) control; a stale tile
+    # receipt gives the single-region rebuild control.
+    for region in (EAST, WEST):
+        for key in KEYS:
+            stale = action == 'rebuild' and (region, key) == (EAST, 'tiles.public')
+            record(out, region, key, '0' * 64 if stale else current[key])
+    historical = 'tiles.private'
+    record(out, WEST, historical, current['tiles.public'])
+    inventory = {EAST: list(KEYS), WEST: [*KEYS, historical]}
+    allow = {EAST: ['tiles.public']} if action == 'rebuild' else {}
+    plan = json.loads(plan_json(out))
+    assert plan['summary']['rebuild_heavy'] == int(action == 'rebuild')
+    assert invoke(tmp_path, plan, allow, inventory).returncode == 0
+
+    rows = plan['regions'][0]['stages']
+    if action == 'rebuild':
+        rows.append(row(historical, 'code'))
+        allow[EAST].append(historical)
+        plan['summary']['rebuild_heavy'] += 1
+    else:
+        rows.append(row(historical))
+    result = invoke(tmp_path, plan, allow, inventory)
+    assert (result.returncode, result.stderr) == (1, ''), result.stdout
+    report = json.loads(result.stdout)
+    assert report['unexpected_stages'] == {EAST: [historical]}
+    assert report['outside_ceiling'] == []
+    assert report['missing_stages'] == {}
+    assert report['summary_matches'] is True
+
+
 @pytest.mark.parametrize('omitted', ['zone.private', 'legacy.private'])
 def test_missing_historical_or_upstream_rebuild_fails(tmp_path, omitted):
     out = tmp_path / 'receipts'
@@ -107,11 +147,7 @@ def test_missing_historical_or_upstream_rebuild_fails(tmp_path, omitted):
     current = rebuild_plan._stage_digests()
     record(out, EAST, 'zone.private', '0' * 64)
     record(out, EAST, 'digests', current['digests'], upstream=[('legacy', 'private')])
-    result = subprocess.run([
-        sys.executable, '-B', str(ROOT / 'scripts/relief/rebuild_plan.py'),
-        '--out', str(out), '--json', EAST, WEST,
-    ], cwd=out, capture_output=True, text=True, timeout=20, check=True)
-    plan = json.loads(result.stdout)
+    plan = json.loads(plan_json(out))
     rows = plan['regions'][0]['stages']
     assert {row['stage'] for row in rows if row['action'] == 'rebuild'} >= {'zone.private', 'legacy.private'}
     allow = {block['region']: [row['stage'] for row in block['stages'] if row['action'] == 'rebuild']
