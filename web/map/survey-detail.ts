@@ -17,6 +17,18 @@ const measured = (tier: unknown): tier is MeasuredTier => typeof tier === 'strin
 type FootprintProperties = {tier: Tier; grid_m?: number; source?: string; sourceId?: string;
   grid_tier?: '4-16m-compiled'; date?: string; label: string};
 
+/** Check Gregorian YYYY, YYYY-MM or YYYY-MM-DD without changing its precision. */
+function validSurveyDate(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const parts = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(value);
+  if (!parts || parts[1] === '0000') return false;
+  const [, year, month = '01', day = '01'] = parts;
+  const calendarDay = `${year}-${month}-${day}`;
+  const at = new Date(`${calendarDay}T00:00:00Z`);
+  // Date can roll a nonexistent day into the following month.
+  return Number.isFinite(at.getTime()) && at.toISOString().slice(0, 10) === calendarDay;
+}
+
 /** The renderer follows the producer's per-cell tier, not the nominal grid size. */
 function surveyDetailText(p: Record<string, unknown>): string | null {
   if (p.tier === 'none') return 'No survey';
@@ -99,7 +111,7 @@ export function decodeSurveyDetail(region: string, value: unknown, reviewedSourc
       properties.sourceId = id as string;
       properties.grid_m = p.grid_m as number;
       if (p.grid_tier === '4-16m-compiled') properties.grid_tier = p.grid_tier;
-      if (text(p.date)) properties.date = p.date;
+      if (validSurveyDate(p.date)) properties.date = p.date;
     }
     features.push({type: 'Feature' as const, geometry, properties});
   }
