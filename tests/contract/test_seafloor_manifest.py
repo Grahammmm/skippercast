@@ -358,6 +358,49 @@ class SchemaTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'conflicts'):
                     load_manifest(ROOT)
 
+    def test_loader_refuses_non_integer_native_counts_as_qualify_row_does(self):
+        # Contract: a usable or physical-only row loads only if qualify_row would
+        # accept its native counts (exact integers); the schema alone lets 5.0 pass.
+        # Bugs caught: the loader compares counts with `>` and admits a float shallow
+        # count (5.0), valid count or source-bytes count as physical depth evidence,
+        # or refuses with a different message than qualify_row. The integer control
+        # fails if the guard rejects real integer counts.
+        from unittest.mock import patch
+        from skippercast.seafloor.manifest import load_manifest, physical_source, qualify_row
+        usable = next(r for r in ROWS if r['status'] == 'usable')
+        receipt = dict(usable['adapter_review'], source_id=usable['id'], source_bytes=usable['bytes'],
+                       horizontal_crs=usable['horizontal_crs'])
+        rights = receipt['rights_source_url']
+        private = qualify_row(dict(usable, license='unknown'), receipt, rights_url=rights, physical_only=True)
+
+        def load(row):
+            document = deepcopy(MANIFEST)
+            document['surveys'] = [row if r['id'] == row['id'] else r for r in document['surveys']]
+            with patch('skippercast.seafloor.manifest.read_json', side_effect=[document, SCHEMA]):
+                loaded = load_manifest(ROOT)
+            return next(r for r in loaded['surveys'] if r['id'] == row['id'])
+
+        # Control: integer counts load and stay eligible as physical sources.
+        self.assertTrue(physical_source(load(deepcopy(usable))))
+        self.assertTrue(physical_source(load(deepcopy(private)), physical_only=True))
+        shallow, valid = ('nominal_0_300ft_pixels_in_requested_bounds',
+                          'valid_pixels_in_requested_bounds')
+        for base, physical_only in ((usable, False), (private, True)):
+            for field, in_review, receipt_key in ((shallow, True, shallow), (valid, True, valid),
+                                                  ('bytes', False, 'source_bytes')):
+                row = deepcopy(base)
+                holder = row['adapter_review'] if in_review else row
+                holder[field] = float(holder[field])
+                self.assertIs(type(holder[field]), float)
+                with self.subTest(status=base['status'], field=field):
+                    with self.assertRaisesRegex(ValueError, '^native_receipt_counts_invalid: ') as refused:
+                        qualify_row(dict(base, license=usable['license']),
+                                    dict(receipt, **{receipt_key: holder[field]}),
+                                    rights_url=rights, physical_only=physical_only)
+                    with self.assertRaisesRegex(ValueError, '^native_receipt_counts_invalid: ') as loaded:
+                        load(row)
+                    self.assertEqual(str(loaded.exception), str(refused.exception))
+
     def test_qualify_requires_rights_matching_source_and_shallow_pixels(self):
         from skippercast.seafloor.manifest import qualify_row
         row = deepcopy(next(r for r in ROWS if r['status'] == 'usable'))
