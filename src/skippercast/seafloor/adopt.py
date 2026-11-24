@@ -60,9 +60,28 @@ def adopt_private(reach_id, *, root=REPO):
             shutil.rmtree(staging)
 
 
+def _well_formed_receipt(receipt):
+    return (isinstance(receipt, dict)
+            and all(isinstance(receipt.get(key), dict) for key in ('inputs', 'outputs', 'ledger_summary'))
+            and isinstance(receipt.get('physical_input_hash'), str))
+
+
+def _well_formed_physical(physical):
+    return (isinstance(physical, dict) and isinstance(physical.get('input_hash'), str)
+            and isinstance(physical.get('outputs'), dict))
+
+
 def _adopt_staged(reach_id, root, reaches, private, staging, destination):
     from .run import VERSION
     receipt = read_json(staging/'run.json')
+    # Name a malformed receipt before any hash or comparison indexes into it.
+    if not _well_formed_receipt(receipt):
+        raise ValueError('Private run receipt is malformed')
+    physical = None
+    if (staging/'physical.json').exists():
+        physical = read_json(staging/'physical.json')
+        if not _well_formed_physical(physical):
+            raise ValueError('Private physical receipt is malformed')
     if set(receipt['outputs']) != set(OUTPUTS):
         raise ValueError('Private output inventory is incomplete')
     for name in OUTPUTS:
@@ -71,7 +90,8 @@ def _adopt_staged(reach_id, root, reaches, private, staging, destination):
     old = deepcopy(receipt['inputs'])
     old.pop('screen', None)
     old.pop('screen_implementation_sha256', None)
-    physical = read_json(staging/'physical.json')
+    if physical is None:  # unreachable: the checksum loop above needs the file
+        physical = read_json(staging/'physical.json')
     if (old.get('reach_id') != reach_id or not receipt.get('publication_prohibited')
             or receipt['ledger_summary'].get('processing_incomplete')
             or physical['input_hash'] != digest(old)
