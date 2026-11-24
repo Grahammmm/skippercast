@@ -3,6 +3,8 @@
 Footprints are projected to EPSG:3310 before area/intersection calculations.
 An absent interpolation mask stays unknown; explicit filled pixels are excluded.
 """
+import math
+
 import numpy as np
 from pyproj import Transformer
 import rasterio
@@ -15,21 +17,39 @@ import shapely
 from .raster import chunks
 
 
+CELL_ID_ERROR = 'Planning cell ID must be 3310:<x>:<y> with integer x and y'
+
+
 def cell_geometry(cell):
-    prefix, x, y = cell['id'].split(':')
+    parts = cell.get('id') if isinstance(cell, dict) else None
+    parts = parts.split(':') if isinstance(parts, str) else []
+    if len(parts) != 3:
+        raise ValueError(CELL_ID_ERROR)
+    prefix, x, y = parts
+    try:
+        x, y = int(x), int(y)
+    except ValueError:
+        raise ValueError(CELL_ID_ERROR) from None
     if prefix != '3310':
         raise ValueError('Planning cell must use EPSG:3310')
-    x, y = int(x)*250, int(y)*250
+    x, y = x*250, y*250
     return box(x, y, x+250, y+250)
 
 
+def _known(value):
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and math.isfinite(value))
+
+
 def priority(row):
-    year = row['year'] if isinstance(row['year'], int) else -1
+    year = row.get('year')
+    year = year if isinstance(year, int) else -1
     # A fine display grid containing upsampled deep pixels is not uniformly
     # fine evidence. Rank its overlap conservatively at the coarser resolution.
     profile = row.get('resolution_profile')
-    resolution = profile['coarse_resolution_m'] if profile else row['resolution_m']
-    return resolution, -year, row['id']
+    resolution = profile['coarse_resolution_m'] if profile else row.get('resolution_m')
+    # An unknown resolution is never evidence of a finer grid: rank it last.
+    return (resolution if _known(resolution) else math.inf), -year, row['id']
 
 
 def valid_depth(depth, mask, interpolated=None):
