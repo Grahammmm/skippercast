@@ -26,11 +26,13 @@ export const isPositiveFiniteHours = (value: unknown): value is number =>
 const zonedTime = /^(\d{4}|[+-]\d{6})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)? *(?:Z|UTC|[+-]\d{2}:?\d{2}) *$/i;
 
 // Date.parse normalises a date that does not exist (Feb 30 reads as Mar 2), so check the calendar date and clock ourselves.
-const isRealDateAndClock = ([, year, month, day, hour, minute, second]: RegExpExecArray): boolean => {
-  if (+hour > 24 || +minute > 59 || +(second ?? 0) > 59) return false;
+const isRealDateAndClock = (parts: RegExpExecArray): boolean => {
+  // Groups 1-5 always take part in a match; group 6 (seconds) is optional. `?? 0` satisfies noUncheckedIndexedAccess.
+  const [year, month, day, hour, minute, second] = [1, 2, 3, 4, 5, 6].map((i) => Number(parts[i] ?? 0)) as [number, number, number, number, number, number];
+  if (hour > 24 || minute > 59 || second > 59) return false;
   const check = new Date(0);
-  check.setUTCFullYear(+year, +month - 1, +day);
-  return check.getUTCMonth() === +month - 1 && check.getUTCDate() === +day;
+  check.setUTCFullYear(year, month - 1, day);
+  return check.getUTCMonth() === month - 1 && check.getUTCDate() === day;
 };
 
 /** Usable when a zoned time parses and is within `limitHours` (with 5 min of future clock slack). */
