@@ -89,6 +89,12 @@ def validate_manifest(document, root=REPO):
             from skippercast.platform.contracts import bbox
             receipt = row['adapter_review']
             bbox(receipt['requested_bounds_wgs84'])
+            # The schema accepts 5.0 as an integer; qualify_row does not. Refuse it
+            # here too so a catalog edit cannot admit what qualification would refuse.
+            if not _integer_counts(receipt['valid_pixels_in_requested_bounds'],
+                                   receipt['nominal_0_300ft_pixels_in_requested_bounds'],
+                                   *([] if row['bytes'] == 'unknown' else [row['bytes']])):
+                raise ValueError(_COUNTS_INVALID)
             if (receipt['source_sha256'] != row['sha256']
                     or receipt['vertical_datum'] != row['vertical_datum']
                     or review_spacing(receipt) != row['resolution_m']
@@ -202,9 +208,17 @@ def _require_native_counts(receipt):
     """Native counts are discrete observations: exact integers, never bools, floats or text."""
     counts = [receipt.get(field) for field in ('source_bytes', 'valid_pixels_in_requested_bounds',
                                                'nominal_0_300ft_pixels_in_requested_bounds')]
-    if any(type(value) is not int for value in counts) or not (counts[0] > 0 and 0 < counts[2] <= counts[1]):
-        raise ValueError('native_receipt_counts_invalid: source bytes and pixel counts must be integers '
-                         'with positive bytes and 0 < shallow <= valid')
+    if not _integer_counts(*counts) or not (counts[0] > 0 and 0 < counts[2] <= counts[1]):
+        raise ValueError(_COUNTS_INVALID)
+
+
+_COUNTS_INVALID = ('native_receipt_counts_invalid: source bytes and pixel counts must be integers '
+                   'with positive bytes and 0 < shallow <= valid')
+
+
+def _integer_counts(*values):
+    """The one integer rule for native counts: exact int, never bool, float or text."""
+    return all(type(value) is int for value in values)
 
 
 def promote_draft(path, *, rights_url, root=REPO, physical_only=False):
