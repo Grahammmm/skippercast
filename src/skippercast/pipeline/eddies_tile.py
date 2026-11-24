@@ -8,6 +8,9 @@ from skippercast.pipeline.eddies import EddyFeature
 
 _FEATURE_KEYS = {"outline", "sense", "diameter_km", "ow_min"}
 _TILE_KEYS = {"frame_time", "features"}
+# The Chart's parser (web/map/eddies-feed.ts MAX_EDDIES, MAX_OUTLINE_POINTS) refuses anything larger.
+_MAX_EDDIES = 200
+_MAX_OUTLINE_POINTS = 2000
 
 
 class EddyTileError(ValueError):
@@ -41,7 +44,10 @@ def _validate_feature(feature: object, index: int) -> None:
         raise EddyTileError(f"{label} must contain exactly outline, sense, diameter_km and ow_min")
     if feature["sense"] not in ("cw", "ccw"):
         raise EddyTileError(f"{label}.sense must be 'cw' or 'ccw'")
-    if not _valid_outline(feature["outline"]):
+    outline = feature["outline"]
+    if isinstance(outline, (list, tuple)) and len(outline) > _MAX_OUTLINE_POINTS:
+        raise EddyTileError(f"{label}.outline must have at most {_MAX_OUTLINE_POINTS} points")
+    if not _valid_outline(outline):
         raise EddyTileError(f"{label}.outline must be a closed ring of at least 5 valid [lon, lat] points")
     diameter = feature["diameter_km"]
     if not _finite_number(diameter) or diameter <= 0:
@@ -58,6 +64,8 @@ def eddies_tile(frame_time: datetime, features: Iterable[EddyFeature]) -> dict:
     stamp = frame_time.astimezone(timezone.utc).isoformat(timespec="seconds").removesuffix("+00:00") + "Z"
     encoded: list[EddyFeature] = []
     for index, feature in enumerate(features):
+        if index >= _MAX_EDDIES:
+            raise EddyTileError(f"features must contain at most {_MAX_EDDIES} eddies")
         _validate_feature(feature, index)
         diameter = round(feature["diameter_km"], 2)
         ow = float(f"{feature['ow_min']:.4g}")
@@ -91,6 +99,8 @@ def read_eddies_tile(doc: object) -> dict:
     features = doc["features"]
     if not isinstance(features, list):
         raise EddyTileError("features must be a list")
+    if len(features) > _MAX_EDDIES:
+        raise EddyTileError(f"features must contain at most {_MAX_EDDIES} eddies")
     for index, feature in enumerate(features):
         _validate_feature(feature, index)
     return doc
