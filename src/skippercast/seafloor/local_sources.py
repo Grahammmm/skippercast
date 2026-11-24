@@ -109,15 +109,26 @@ def import_manifest(surveys, cache, local_root, *, ids=None):
     are considered. Any refusal is reported per source and nothing is cached
     for it; the caller fails when ``refused`` is non-empty.
     """
-    selected = [r for r in surveys if (r['id'] in ids if ids else r.get('status') in IMPORTABLE)]
+    selected = [r for r in surveys if (r.get('id') in ids if ids else r.get('status') in IMPORTABLE)]
     if ids and {r['id'] for r in selected} != set(ids):
         raise ValueError('Unknown survey ID: ' + ', '.join(sorted(set(ids) - {r['id'] for r in selected})))
     report = {'imported': [], 'not_catalogued': [], 'refused': []}
     for row in selected:
+        source_id, url = row.get('id'), row.get('url')
+        missing = [key for key in ('id', 'url') if not (isinstance(row.get(key), str) and row[key])]
+        if missing:
+            report['refused'].append({'source_id': source_id, 'url': url,
+                                      'reason': 'Manifest row missing ' + ' and '.join(missing)})
+            continue
         try:
             result = import_local(row, cache, local_root)
         except (ValueError, FileNotFoundError) as error:
-            report['refused'].append({'source_id': row['id'], 'url': row['url'], 'reason': str(error)})
+            report['refused'].append({'source_id': source_id, 'url': url, 'reason': str(error)})
+            continue
+        except OSError as error:
+            # An original the operator cannot read (permissions, I/O error); never abort the batch.
+            report['refused'].append({'source_id': source_id, 'url': url,
+                                      'reason': f'Local original unreadable ({type(error).__name__}): {error}'})
             continue
         if result is None:
             report['not_catalogued'].append(row['id'])
