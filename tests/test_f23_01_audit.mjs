@@ -63,11 +63,17 @@ test('public CI only checks committed receipts and records the hold, without a p
   assert.ok(job, 'the hold must remain visible in the workflow');
   const [header, ...steps] = job[1].split(/^      - /m);
   // SC-CI-OC1 chains the research jobs with `needs:`/`if: ${{ !cancelled() }}` to cap
-  // parallelism; ordering lines are allowed, but the runner, timeout and steps stay pinned
-  // (a `runs-on:` change to a private runner still fails this check).
-  assert.deepEqual(header.split('\n').map(line => line.trim())
-    .filter(line => line && !line.startsWith('#') && !/^(needs|if): /.test(line)),
-  ['runs-on: ubuntu-latest', 'timeout-minutes: 45', 'steps:']);
+  // parallelism. Only that exact ordering pair is admitted; the job condition is pinned
+  // to `${{ !cancelled() }}` so a `${{ false }}` (or any other) condition that would switch
+  // off the receipt checks and the visible hold report still fails, as does a runner change.
+  const lines = header.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+  const needs = lines.filter(line => line.startsWith('needs:'));
+  assert.equal(needs.length, 1, 'csumb-native takes exactly one ordering dependency');
+  const dependency = needs[0].slice('needs:'.length).trim();
+  assert.match(dependency, /^[a-z0-9-]+$/);
+  assert.match(workflow, new RegExp(`^  ${dependency}:$`, 'm'), 'the ordering dependency must be a real job');
+  assert.deepEqual(lines.filter(line => !line.startsWith('needs:')),
+    ['if: ${{ !cancelled() }}', 'runs-on: ubuntu-latest', 'timeout-minutes: 45', 'steps:']);
   // Allowlist, not a denylist: any fetch, cache, artifact or audit-script step
   // added here would turn this back into an off-box processing job.
   const allowed = [
