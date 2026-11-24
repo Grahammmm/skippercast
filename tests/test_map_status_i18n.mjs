@@ -153,7 +153,7 @@ test('chlorophyll_and_cloud_status_dates_and_numbers_follow_the_language_and_zon
   assert.equal(plain(m.statusIn(m.frameLabelCopy('2026-11-01T09:30:00Z', new Date('2026-11-01T09:40:00Z'), 'Pacific/Auckland'), 'es')), 'observado 10:30 p. m. · hace 10 min');
 });
 
-test('absent, bad or English metadata leaves the producer string whole and never throws', async () => {
+test('absent, bad or English metadata leaves the producer string whole and never throws', async t => {
   const m = await load(), raw = 'Water temp unavailable: the coast report passed its age limit.';
   assert.equal(m.resolveStatusText(raw, undefined, 'es'), raw);
   assert.equal(m.resolveStatusText(raw, [], 'es'), raw);
@@ -168,6 +168,25 @@ test('absent, bad or English metadata leaves the producer string whole and never
   assert.deepEqual([badDate.text, badDate.translated], [raw, false], 'an unreadable date falls back to the raw refusal');
   const badZone = m.statusText(raw, [m.sp('map.status.common.staleNote', {date: {day: ANALYSED, tz: 'Not/AZone'}})], 'es');
   assert.deepEqual([badZone.text, badZone.translated], [raw, false]);
+
+  const cases = [
+    ['plain number', n => m.sp('map.status.sst.stale', {product: 'JPL MUR', date: '15 oct', hours: n}), 0,
+      'Temperatura del agua no disponible: el último análisis de JPL MUR, del 15 oct, superó su límite de antigüedad de 0 horas.'],
+    ['structured age', n => m.sp('map.status.common.stamp', {date: '15 oct', age: {age: n}}), 2 * HOUR,
+      'análisis 15 oct · 2 h de antigüedad'],
+    ['nested decimal', n => m.sp('legend.windStamp', {stamp: {id: 'map.status.wind.stamp', vars: {run: '20 oct', hours: {num: n, digits: 1}, valid: '20 oct'}}}), 2.5,
+      'NOAA NCEP · GFS · corrida 20 oct · 2,5 h de antigüedad · válido 20 oct'],
+  ];
+  // Interpolation and Intl can print NaN or infinity, and age clamping can disguise -Infinity as a fresh age.
+  for (const [slot, part, finite, text] of cases) {
+    await t.test(`${slot}: finite control translates`, () => {
+      assert.deepEqual(m.statusText(raw, [part(finite)], 'es'), {text, translated: true});
+    });
+    await t.test(`${slot}: nonfinite evidence preserves the full fallback`, () => {
+      assert.deepEqual([NaN, Infinity, -Infinity].map(n => m.statusText(raw, [part(n)], 'es')),
+        [unchanged, unchanged, unchanged]);
+    });
+  }
 });
 
 test('setRailNote keeps the descriptor with the note: an equal note with new parts updates it, clearing removes it, other rails stay', async () => {
