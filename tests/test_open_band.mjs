@@ -87,7 +87,15 @@ test('a narrow gap between tall covers keeps the padded camera centre inside the
     const pad = openBandPadding(HOST, [TOP, sheetAt(top)]), c = centre(pad);
     assert.ok(pad.top + pad.bottom <= 684, `sheet at ${top}: budget`);
     assert.ok(pad.top <= 130 && pad.bottom <= HOST.bottom - top, `sheet at ${top}: no more than the cover`);
-    if (top - 130 >= 2) assert.ok(c > 130 && c < top, `sheet at ${top}: centre ${c} in ${130}..${top}`);
+    assert.ok(c > 130 && c < top, `sheet at ${top}: centre ${c} in ${130}..${top}`);
+  }
+  // Catches: rounding the pads to the whole budget, which puts a 1 px gap's centre on the sheet edge (131) instead of 130.5,
+  // on an even and an odd host height. The centre must be strictly inside, with the pads still whole px and within budget.
+  for (const bottom of [844, 843, 845]) {
+    const host = {...HOST, bottom}, pad = openBandPadding(host, [TOP, toEdge({...SHEET, top: 131, bottom: 131 + 704}, bottom)]);
+    const c = (pad.top + bottom - pad.bottom) / 2;
+    assert.ok(c > 130 && c < 131, `host ${bottom}: centre ${c} must lie strictly inside the 130..131 gap`);
+    assert.ok(Number.isInteger(pad.top) && Number.isInteger(pad.bottom) && pad.top + pad.bottom <= bottom - 160, `host ${bottom}: whole px within budget`);
   }
 });
 

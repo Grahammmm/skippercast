@@ -37,10 +37,16 @@ export function openBandPadding(host: Box, covers: readonly Box[], minBand = 160
     // a 844 px host landed on 187, behind the sheet). Rule: then keep the centre on the unshrunk gap midpoint, which needs
     // top - bottom = gapTop - (height - gapBottom); with top + bottom = budget that gives top = (budget + that) / 2, clamped to 0..budget.
     // The open band stays at least `minBand` wide around the point the user centred on and the pads stay within budget.
-    const centre = (top + height - bottom) / 2;
-    if (gapOpen && !(centre > gapTop && centre < gapBottom)) {
-      top = Math.min(Math.max(Math.round((budget + gapTop - (height - gapBottom)) / 2), 0), budget);
-      bottom = budget - top;
+    // Whole-px pads of the full budget put the centre on a half pixel only when top - bottom + height is odd, so a 1 px gap
+    // (130..131 on 844 px) landed on its edge, 131. Then spend one pixel less of the budget: the centre can be 130.5.
+    const inGap = (): boolean => { const c = (top + height - bottom) / 2; return c > gapTop && c < gapBottom; };
+    if (gapOpen && !inGap()) {
+      for (const spend of [budget, budget - 1]) {
+        if (spend < 0) continue;
+        top = Math.min(Math.max(Math.round((spend + gapTop - (height - gapBottom)) / 2), 0), spend);
+        bottom = spend - top;
+        if (inGap()) break;
+      }
     }
   }
   return {top, bottom, left: 0, right: 0};
