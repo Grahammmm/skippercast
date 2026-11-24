@@ -24,6 +24,8 @@ export const MAX_STEPS = 13;
 export const STILL_MS = 0.012;
 /** § 9: paths faster than the frame's 80th percentile cell speed draw in --flow-fast. */
 export const FAST_PERCENTILE = 0.8;
+/** Relative slack on the fast test: bilinear interpolation of a uniform field drifts the sampled speed by ~2 ulp (4e-16, measured), so 1e-12 absorbs that and no real speed difference. */
+export const FAST_TOLERANCE = 1e-12;
 /** Dash and gap in px; the dash offset moves at 10 + 12 × knots px/s (fish). */
 export const DASH = [11, 43] as const;
 /** At most this many seeds, so streamlines, on any screen: 64 px seeds would trace about 2,000 on a 4K display. */
@@ -106,7 +108,7 @@ export function flowPaths(vector: ScreenVector, width: number, height: number, f
         halves.push(points);
       }
       const points = [...halves[0]!.reverse(), {x, y}, ...halves[1]!];
-      if (points.length > 5) paths.push({points, speed: seed.speed, fast: seed.speed > fast});
+      if (points.length > 5) paths.push({points, speed: seed.speed, fast: seed.speed > fast * (1 + FAST_TOLERANCE)});
     }
   }
   return paths;
