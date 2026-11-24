@@ -12,11 +12,12 @@ from skippercast.relief.inventory import InventoryError, archive_metadata
 from skippercast.relief.pmtiles_v3 import write_pmtiles
 
 
-def _archive(path, payload, *, offset=127, length=None, compression=1):
+def _archive(path, payload, *, offset=127, length=None, compression=1, zooms=(0, 0)):
     header = bytearray(127)
     header[:8] = b'PMTiles\x03'
     struct.pack_into('<QQ', header, 24, offset, len(payload) if length is None else length)
     header[97] = compression
+    header[100:102] = bytes(zooms)
     path.write_bytes(header + payload)
     return path
 
@@ -74,17 +75,24 @@ def test_zoom_metadata_requires_json_integers(tmp_path, payload, field):
         archive_metadata(path)
 
 
-@pytest.mark.parametrize(('low', 'high', 'mismatch'), [
-    (10, 12, None), (9, 12, 'minzoom'), (10, 13, 'maxzoom'),
-], ids=['writer-control', 'lower-mismatch', 'upper-mismatch'])
-def test_inventory_requires_archive_zoom_agreement(tmp_path, monkeypatch, low, high, mismatch):
+@pytest.mark.parametrize(('low', 'high', 'error'), [
+    (10, 12, None),
+    (9, 12, 'minzoom .*does not match.*header'),
+    (10, 13, 'maxzoom .*does not match.*header'),
+    (1, 0, 'zoom interval'),
+], ids=['writer-control', 'lower-mismatch', 'upper-mismatch', 'matching-but-inverted'])
+def test_inventory_requires_valid_archive_zooms(tmp_path, monkeypatch, low, high, error):
     # A rebuild can retain stale JSON zooms while the new header and receipt describe its bytes.
     bounds = (-1.0, -1.0, 1.0, 1.0)
     archive = tmp_path / package.ARCHIVE
     archive.parent.mkdir(parents=True)
-    write_pmtiles(archive, [((10, 512, 512), b'low'), ((12, 2048, 2048), b'high')],
-                  metadata={'bounds': list(bounds), 'minzoom': low, 'maxzoom': high},
-                  bounds=bounds, minzoom=10, maxzoom=12, center=(10, 0.0, 0.0))
+    metadata = {'bounds': list(bounds), 'minzoom': low, 'maxzoom': high}
+    if low > high:
+        # Checking only per-field agreement accepts this empty range and writes a manifest.
+        _archive(archive, json.dumps(metadata).encode(), zooms=(low, high))
+    else:
+        write_pmtiles(archive, [((10, 512, 512), b'low'), ((12, 2048, 2048), b'high')],
+                      metadata=metadata, bounds=bounds, minzoom=10, maxzoom=12, center=(10, 0.0, 0.0))
     selection = tmp_path / 'select/sources.json'
     selection.parent.mkdir()
     selection.write_text(json.dumps({'scope': 'public', 'sources': [
@@ -102,11 +110,11 @@ def test_inventory_requires_archive_zoom_agreement(tmp_path, monkeypatch, low, h
     out = tmp_path / 'inventory'
     out.mkdir()
     manifest = out / inventory.MANIFEST
-    if mismatch is None:
+    if error is None:
         inventory.build(ctx, out)
         doc = json.loads(manifest.read_bytes())
         assert (doc['minzoom'], doc['maxzoom']) == (10, 12)
     else:
-        with pytest.raises(InventoryError, match=rf'{mismatch} .*does not match.*header'):
+        with pytest.raises(InventoryError, match=error):
             inventory.build(ctx, out)
         assert not manifest.exists()
