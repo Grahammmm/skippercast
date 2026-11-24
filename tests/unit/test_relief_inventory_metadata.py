@@ -75,6 +75,24 @@ def test_zoom_metadata_requires_json_integers(tmp_path, payload, field):
         archive_metadata(path)
 
 
+def _inventory_ctx(tmp_path, monkeypatch):
+    selection = tmp_path / 'select/sources.json'
+    selection.parent.mkdir()
+    selection.write_text(json.dumps({'scope': 'public', 'sources': [
+        {'id': 'synthetic', 'rights_class': 'public', 'resolution_m': 10, 'attribution': 'Test'},
+    ]}))
+    monkeypatch.setattr(inventory, 'catalog_rows', lambda: {'synthetic': {}})
+    # The archive must already exist: its layer record hashes the file.
+    return SimpleNamespace(region=SimpleNamespace(dir=tmp_path, id='synthetic',
+                                                  record=lambda path: path.relative_to(tmp_path).as_posix()),
+                           upstream={
+                               'tiles.public': {'outputs': [package.layer_record(tmp_path, package.ARCHIVE)]},
+                               'digests': {'outputs': [{'path': package.DIGEST_ROOT}]},
+                               'zone.public': {'outputs': []},
+                               'select': {'outputs': [{'path': 'select/sources.json'}]},
+                           })
+
+
 @pytest.mark.parametrize(('low', 'high', 'error'), [
     (10, 12, None),
     (9, 12, 'minzoom .*does not match.*header'),
@@ -93,20 +111,7 @@ def test_inventory_requires_valid_archive_zooms(tmp_path, monkeypatch, low, high
     else:
         write_pmtiles(archive, [((10, 512, 512), b'low'), ((12, 2048, 2048), b'high')],
                       metadata=metadata, bounds=bounds, minzoom=10, maxzoom=12, center=(10, 0.0, 0.0))
-    selection = tmp_path / 'select/sources.json'
-    selection.parent.mkdir()
-    selection.write_text(json.dumps({'scope': 'public', 'sources': [
-        {'id': 'synthetic', 'rights_class': 'public', 'resolution_m': 10, 'attribution': 'Test'},
-    ]}))
-    monkeypatch.setattr(inventory, 'catalog_rows', lambda: {'synthetic': {}})
-    ctx = SimpleNamespace(region=SimpleNamespace(dir=tmp_path, id='synthetic',
-                                                record=lambda path: path.relative_to(tmp_path).as_posix()),
-                          upstream={
-                              'tiles.public': {'outputs': [package.layer_record(tmp_path, package.ARCHIVE)]},
-                              'digests': {'outputs': [{'path': package.DIGEST_ROOT}]},
-                              'zone.public': {'outputs': []},
-                              'select': {'outputs': [{'path': 'select/sources.json'}]},
-                          })
+    ctx = _inventory_ctx(tmp_path, monkeypatch)
     out = tmp_path / 'inventory'
     out.mkdir()
     manifest = out / inventory.MANIFEST
@@ -118,3 +123,59 @@ def test_inventory_requires_valid_archive_zooms(tmp_path, monkeypatch, low, high
         with pytest.raises(InventoryError, match=error):
             inventory.build(ctx, out)
         assert not manifest.exists()
+
+
+def _bounds_archive(path, declared, header=(-1.1234567, -1.0, 1.0, 1.0)):
+    write_pmtiles(path, [((0, 0, 0), b'opaque tile')], metadata={'bounds': declared, 'minzoom': 0, 'maxzoom': 0},
+                  bounds=header, minzoom=0, maxzoom=0, center=(0, 0.0, 0.0))
+
+
+@pytest.mark.parametrize('index', range(4), ids=['west', 'south', 'east', 'north'])
+def test_inventory_refuses_declared_bound_that_contradicts_header(tmp_path, monkeypatch, index):
+    # A stale JSON bound beside a corrected binary header must stop here, not after the QA stage.
+    # Each bound is checked on its own, so a check that covers only west (or compares the wrong
+    # header field, e.g. south against north) still ships a bad footprint through the other three.
+    declared = [-1.1234567, -1.0, 1.0, 1.0]
+    declared[index] -= 0.9 if index < 2 else -0.9
+    _bounds_archive(tmp_path / package.ARCHIVE, declared)
+    ctx = _inventory_ctx(tmp_path, monkeypatch)
+    out = tmp_path / 'inventory'
+    out.mkdir()
+    with pytest.raises(InventoryError, match='bound .* does not match header'):
+        inventory.build(ctx, out)
+    assert not (out / inventory.MANIFEST).exists()
+
+
+def test_inventory_refuses_stale_west_minus_two(tmp_path, monkeypatch):
+    # The observed incident: declared west -2.0 against header west -1.1234567 reached the manifest.
+    _bounds_archive(tmp_path / package.ARCHIVE, [-2.0, -1.0, 1.0, 1.0])
+    ctx = _inventory_ctx(tmp_path, monkeypatch)
+    out = tmp_path / 'inventory'
+    out.mkdir()
+    with pytest.raises(InventoryError, match='west bound -2.0 does not match header -1.1234567'):
+        inventory.build(ctx, out)
+    assert not (out / inventory.MANIFEST).exists()
+
+
+def test_inventory_keeps_declared_bounds_within_header_rounding(tmp_path, monkeypatch):
+    # The header stores e7 integers, so -1.123456743 legitimately reads back as -1.1234567 (4.3e-8 away).
+    # A zero-tolerance equality check would refuse every healthy archive; the manifest must keep the
+    # declared value, not the header's rounded one.
+    declared = [-1.123456743, -1.0, 1.0, 1.0]
+    _bounds_archive(tmp_path / package.ARCHIVE, declared)
+    ctx = _inventory_ctx(tmp_path, monkeypatch)
+    out = tmp_path / 'inventory'
+    out.mkdir()
+    inventory.build(ctx, out)
+    assert json.loads((out / inventory.MANIFEST).read_bytes())['bounds'] == declared
+
+
+def test_inventory_bounds_tolerance_edge_matches_qa(tmp_path, monkeypatch):
+    # QA's bounds_ok (relief/qa.py) allows 5.1e-8 degrees; 6e-8 would fail QA later, so refuse it here.
+    _bounds_archive(tmp_path / package.ARCHIVE, [-1.1234567 - 6e-8, -1.0, 1.0, 1.0])
+    ctx = _inventory_ctx(tmp_path, monkeypatch)
+    out = tmp_path / 'inventory'
+    out.mkdir()
+    with pytest.raises(InventoryError, match='west bound'):
+        inventory.build(ctx, out)
+    assert not (out / inventory.MANIFEST).exists()
