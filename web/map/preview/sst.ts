@@ -14,7 +14,11 @@ interface SstDoc {data_time: string; max_age_hours: number; colours: string[]; c
 export function readSst(raw: unknown): SstDoc {
   const d = raw as Partial<SstDoc> | null;
   const collection = (v: unknown): boolean => !!v && (v as {type?: unknown}).type === 'FeatureCollection' && Array.isArray((v as {features?: unknown}).features);
-  if (!d || typeof d.data_time !== 'string' || !isPositiveFiniteHours(d.max_age_hours) || !Array.isArray(d.colours) || !collection(d.cells) || !collection(d.breaks)) {
+  // The producer emits #rrggbb; keep valid #rgb shorthand too. The legend gradient needs at least two stops.
+  if (!d || typeof d.data_time !== 'string' || !isPositiveFiniteHours(d.max_age_hours) ||
+      !Array.isArray(d.colours) || d.colours.length < 2 ||
+      ![...d.colours].every(c => typeof c === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(c)) ||
+      !collection(d.cells) || !collection(d.breaks)) {
     throw new Error('analysis file is not a valid SST preview');
   }
   return d as SstDoc;
