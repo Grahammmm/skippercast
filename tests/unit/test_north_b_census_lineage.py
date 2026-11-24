@@ -35,6 +35,28 @@ def test_accepts_the_shared_native_pair_for_all_three_regions(inputs, capsys):
     assert json.loads(capsys.readouterr().out) == inputs[2]
 
 
+@pytest.mark.parametrize('document', ['census', 'proposal'])
+def test_rejects_duplicate_source_id_before_joining(inputs, capsys, document):
+    # Last-key-wins parsing can hide a conflicting identity even with exact byte pins.
+    census_path, proposed_path, proposed = inputs
+    conflicting_member = '"source_id": "fixture-other-native", "source_id":'
+    if document == 'census':
+        census = NATIVE_CENSUS.replace(b'"source_id":', conflicting_member.encode(), 1)
+        census_path.write_bytes(census)
+        for pair in proposed.values():
+            pair['source_sha256'] = hashlib.sha256(census).hexdigest()
+    proposals = json.dumps(proposed)
+    if document == 'proposal':
+        proposals = proposals.replace('"source_id":', conflicting_member, 1)
+    proposed_path.write_text(proposals, encoding='utf-8')
+
+    status = main([str(census_path), str(proposed_path)])
+    output = capsys.readouterr()
+    assert status == 1, output.out
+    assert not output.out
+    assert 'duplicate' in output.err and 'source_id' in output.err
+
+
 @pytest.mark.parametrize('field, replacement, diagnostic', [
     pytest.param('source_sha256', hashlib.sha256(NATIVE_CENSUS.replace(b'native-a', b'native-b')).hexdigest(),
                  'SHA-256 mismatch', id='same-source-id-different-revision'),

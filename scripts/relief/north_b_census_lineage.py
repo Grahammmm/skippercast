@@ -21,9 +21,18 @@ REGIONS = (
 )
 
 
+def _unique_object(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError(f'duplicate JSON member: {key!r}')
+        obj[key] = value
+    return obj
+
+
 def review(census_bytes, proposed):
     """Return the joined identities only when all three proposals match."""
-    census = json.loads(census_bytes)
+    census = json.loads(census_bytes, object_pairs_hook=_unique_object)
     source_id = census.get('source_id') if isinstance(census, dict) else None
     if not isinstance(source_id, str) or not source_id.strip():
         raise ValueError('native census requires a source_id')
@@ -46,7 +55,8 @@ def main(argv=None):
     parser.add_argument('proposals', type=Path, help='local proposed binding identities JSON')
     args = parser.parse_args(argv)
     try:
-        joined = review(args.census.read_bytes(), json.loads(args.proposals.read_bytes()))
+        proposed = json.loads(args.proposals.read_bytes(), object_pairs_hook=_unique_object)
+        joined = review(args.census.read_bytes(), proposed)
     except (OSError, ValueError) as exc:
         print(f'north-b-census-lineage: {exc}', file=sys.stderr)
         return 1
