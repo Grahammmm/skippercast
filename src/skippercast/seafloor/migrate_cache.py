@@ -30,6 +30,11 @@ def migrate_numeric_cache(reach_id, *, root=REPO, private=False, apply=False):
     folder = root/'var/seafloor'/('private-reaches' if private else 'reaches')/reach_id
     receipt = read_json(folder/'run.json')
     physical = read_json(folder/'physical.json')
+    if not (isinstance(receipt, dict) and isinstance(physical, dict)
+            and all(isinstance(receipt.get(k), dict) for k in ('inputs', 'outputs', 'ledger_summary'))
+            and all(isinstance(receipt.get(k), str) for k in ('physical_input_hash', 'input_hash'))
+            and isinstance(physical.get('input_hash'), str) and isinstance(physical.get('outputs'), dict)):
+        raise ValueError('Incomplete or inconsistent original cache identity')
     old = deepcopy(receipt['inputs'])
     old.pop('screen', None)
     old.pop('screen_implementation_sha256', None)
