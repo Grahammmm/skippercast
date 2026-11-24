@@ -45,9 +45,9 @@ def _positive_distance(value: object) -> bool:
 def summarize(out_root: Path, region_id: str) -> dict:
     """Read only stages/water.json and water/water.json under OUT/<region>.
 
-    A verified result binds the audit bytes to the supplied receipt, not the
-    polygon or a new displacement verdict. The producer sets closing distance
-    from max stated HOR_ACC and owns the displacement checks and cut exceptions.
+    A verified result binds the audit bytes to the supplied receipt and checks
+    that the saved closing distance agrees with max stated HOR_ACC. The producer
+    still owns the polygon, displacement checks and cut exceptions.
     Missing fields are never filled from receipt parameters, defaults, or other
     audit fields. A digest-bound partial audit exposes only its usable evidence.
     """
@@ -78,6 +78,9 @@ def summarize(out_root: Path, region_id: str) -> dict:
         missing.append('unavailable_tiles')
     if missing:
         result.update(status='incomplete', missing_or_invalid=missing)
+    if ('close_m' in result and 'max_stated_accuracy_m' in result
+            and result['close_m'] != result['max_stated_accuracy_m']):
+        result.update(status='incomplete', reason='close_m does not equal max(hor_acc_values_m)')
     return result
 
 
