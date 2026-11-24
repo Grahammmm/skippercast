@@ -39,8 +39,12 @@ async function rankedReefs(page: Page) {
   // synthetic reefs lie offshore in zoom-12 tiles NOAA did not serve, which the check leaves unknown and withholds, so
   // the committed index is extended with those tiles as clean water. The check itself is covered by
   // e2e/land-water.spec.ts and tests/test_land_water.mjs; served tiles keep their committed cells.
+  // A reload (the #export reload test) can cut the old page's fetch off mid-flight (ECONNRESET). That page is gone, so
+  // its request is dropped instead of failing the test; the reloaded page's own request comes through here again.
   await page.route('**/regions/morro-bay/land-water.json', async route => {
-    const response = await route.fetch(), index = await response.json(), n = 2 ** index.constants.tile_zoom;
+    const fetched = await route.fetch().then(async response => ({response, index: await response.json()}), () => null);
+    if (!fetched) return route.abort().catch(() => {});
+    const {response, index} = fetched, n = 2 ** index.constants.tile_zoom;
     for (let i = 0; i < 25; i++) {
       const lon = -121.17 + i * .007 + .001, lat = 35.431;
       const key = `${index.constants.tile_zoom}/${Math.floor((lon + 180) / 360 * n)}/${Math.floor((1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * n)}`;
