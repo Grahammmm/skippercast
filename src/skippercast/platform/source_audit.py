@@ -16,12 +16,15 @@ def _gzip_blank(body,encoding):
     otherwise look like content. Anything undecodable or larger than the sample cap is not
     judged here and keeps the raw-body result."""
     if (encoding or "").strip().lower() not in ("gzip","x-gzip"): return False
-    rest=body
+    rest=body;decoded=0
     while True:
         decoder=zlib.decompressobj(16+zlib.MAX_WBITS)
-        try: text=decoder.decompress(rest,SAMPLE_BYTES)
+        # The cap covers the whole decoded document, not each member. One byte past the
+        # remaining budget is enough to see an overrun (max_length 0 would mean unlimited).
+        try: text=decoder.decompress(rest,SAMPLE_BYTES-decoded+1)
         except zlib.error: return False
-        if not decoder.eof or text.strip(): return False
+        decoded+=len(text)
+        if decoded>SAMPLE_BYTES or not decoder.eof or text.strip(): return False
         rest=decoder.unused_data
         if not rest.strip(b"\0"): return True  # nothing left, or terminal zero padding
         if rest[:2]!=b"\x1f\x8b": return False

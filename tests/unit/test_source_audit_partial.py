@@ -146,6 +146,31 @@ class OrdinarySampling(unittest.TestCase):
                 self.assertIs(row["body_complete"], complete)
                 self.assertEqual(row["sampled_bytes"], len(body))
 
+    def test_decoded_cap_covers_the_whole_document_across_gzip_members(self):
+        # Contract: the decoded cap bounds the document, not each member, so blank-looking pages
+        # larger than the cap keep the raw-body result. Bug caught: resetting the budget per member
+        # (two 600,000-space members, or many members, then pass as blank and decode without a bound).
+        gz = [("Content-Encoding", "gzip")]
+        members = lambda *sizes: b"".join(gzip.compress(b" " * n, mtime=0) for n in sizes)
+        for name, body, blank in (
+                ("two members over the cap", members(600_000, 600_000), False),
+                ("many members over the cap", members(*[100_000] * 11), False),
+                ("members one byte over the cap", members(CAP // 2, CAP // 2 + 1), False),
+                ("members exactly at the cap", members(CAP // 2, CAP // 2), True),
+                ("one member at the cap", members(CAP), True),
+                ("members under the cap", members(300_000, 300_000), True)):
+            with self.subTest(name):
+                self.assertLess(len(body), CAP)
+                row, _ = probe(response(200, 0, gz, body=body))
+                self.assertEqual(row["sampled_bytes"], len(body))
+                self.assertIs(row["body_complete"], True)
+                if blank:
+                    self.assertEqual(row["status"], "unavailable")
+                    self.assertEqual(row["error"], "ValueError: Empty documentation response")
+                else:
+                    self.assertEqual(row["status"], "accessible")
+                    self.assertNotIn("error", row)
+
     def test_transport_refusal_is_unchanged(self):
         row, session = probe(http.TransportError("synthetic refusal"))
         self.assertEqual(row["status"], "unavailable")
