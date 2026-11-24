@@ -312,11 +312,12 @@ function positiveFails(request: Request, object: {httpEtag?: string; uploaded?: 
 export async function serveFeed(request: Request, path: string, assets: Fetcher | undefined, {ctx, build}: {ctx?: WaitUntil; build?: string} = {}): Promise<Response | null> {
   const logicalKey = feedKey(path);
   if (!logicalKey) return null;
+  const survey = /^tiles\/relief\/[a-z0-9-]+\/[a-f0-9]{64}\/survey\/[a-f0-9]{64}\.geojson\.br$/.test(logicalKey);
   const selected = bucket;
   // A non-seafloor edge-cache hit answers before any R2 read; seafloor stays resolve-first and uncached.
   // If-Match / If-Unmodified-Since need the current object's metadata, so they never use the edge cache.
   const positive = POSITIVE.some(name => request.headers.has(name));
-  const edge: {cache: Cache | null; hit?: Response} = selected && !positive && !logicalKey.startsWith('tiles/seafloor/') ? await edgeLookup(request, logicalKey, build) : {cache: null};
+  const edge: {cache: Cache | null; hit?: Response} = selected && !survey && !positive && !logicalKey.startsWith('tiles/seafloor/') ? await edgeLookup(request, logicalKey, build) : {cache: null};
   if (edge.hit) return edge.hit;
   const target = await resolver(selected)(logicalKey);
   if (target.missing) return new Response('Not found', {status: 404, headers: {'Cache-Control': 'no-store'}});
@@ -379,6 +380,13 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
         }
         object = whole;
       }
+      // These bytes are already encoded. Only successful R2 bodies get representation headers.
+      const representation: ResponseInit = {};
+      if (survey) {
+        headers.set('Content-Type', 'application/geo+json');
+        headers.set('Content-Encoding', 'br');
+        representation.encodeBody = 'manual';
+      }
       if (object.range && request.headers.has('Range')) {
         const range = object.range;
         const {offset = 0, length = object.size - offset} = 'suffix' in range
@@ -386,7 +394,7 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
         headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
         headers.set('Content-Length', String(length));
         if (fill) { const filled = fill({size: object.size, range: object.range}).catch(() => {}); if (ctx?.waitUntil) ctx.waitUntil(filled); else await filled; }
-        return new Response((object as R2ObjectBody).body, {status: 206, headers});
+        return new Response((object as R2ObjectBody).body, {status: 206, headers, ...representation});
       }
       headers.set('Content-Length', String(object.size));
       if (fill && object.size <= EDGE_CACHE_MAX_BYTES) {
@@ -394,14 +402,14 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
         await fill({size: object.size, httpEtag: object.httpEtag, body: keep});
         return new Response(reply, {status: 200, headers});
       }
-      return new Response((object as R2ObjectBody).body, {status: 200, headers});
+      return new Response((object as R2ObjectBody).body, {status: 200, headers, ...representation});
     }
   }
   if (target.generation) return new Response('Feed release object unavailable', {status: 503, headers: {'Cache-Control': 'no-store'}});
   // Only a successful archive response keeps the year-long immutable policy: every miss or error is no-store,
   // so a request during a temporary outage can never pin "Not found" for the content-named archive.
   headers.set('Cache-Control', 'no-store');
-  if (seafloor) return new Response('Not found', {status: 404, headers});
+  if (seafloor || survey) return new Response('Not found', {status: 404, headers});
   if (key.startsWith('tiles/')) {  // map tiles ship with the site until R2 is connected
     const response = assets ? await assets.fetch(new Request(new URL('/' + key, request.url))) : null;
     if (!response?.ok) return new Response('Not found', {status: 404, headers});
