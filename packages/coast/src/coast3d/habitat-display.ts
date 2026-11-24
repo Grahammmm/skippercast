@@ -7,8 +7,12 @@ export function habitatDisplay(span:number){
 }
 /** Fill only original admitted polygon rings. Holes remain empty. */
 export function habitatTriangles(coordinates:number[][][]):number[]{
+ if(!coordinates.length||coordinates.some(r=>{
+  if(r.length<4)return true;
+  const first=r[0],last=r[r.length-1];
+  return first.length!==last.length||first.some((value,i)=>value!==last[i]);
+ }))return [];
  const rings=coordinates.map(r=>r.slice(0,-1).map(c=>{const [x,z]=coastPoint(c[0],c[1]);return new Vector2(x,z);}));
- if(!rings[0]||rings[0].length<3)return [];
  const all=rings.flat(),faces=ShapeUtils.triangulateShape(rings[0],rings.slice(1)),positions:number[]=[];
  for(const face of faces)for(const i of face)positions.push(all[i].x,2.5,all[i].y);
  return positions;
