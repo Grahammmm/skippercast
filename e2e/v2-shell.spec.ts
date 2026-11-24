@@ -752,6 +752,8 @@ for (const lang of ['en', 'es']) {
 // UXFIX-05: type sizes are rem tokens, so a larger browser text size grows every text box and none of them clips or scrolls the page.
 for (const [percent, scale] of [[125, 1.25], [150, 1.5]] as const) {
   test(`UXFIX-05: root text size ${percent}% grows the text ${scale}x and nothing clips or scrolls sideways`, async ({page, pageErrors, v2}) => {
+    // The report is the local Worker's upstream read; its 20 s deadline outlasts the 15 s wait below (main red 2026-11-24).
+    await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
     await v2.open('app', AREA);
     // Measure the real brief, not the async bootstrap's empty host.
     await expect(page.locator('.ui-sheet h1, aside.app-brief h1')).toBeVisible();
