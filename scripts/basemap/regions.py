@@ -66,10 +66,20 @@ def check_bbox(box):
 def region_boxes(root=ROOT):
     """[{id, status, bbox}] of every active and preview region; drafts join when previewed."""
     boxes = []
+    seen_ids = set()
     for path in sorted(Path(root, 'regions').glob('*/region.json')):
         region = json.loads(path.read_text())
-        if region.get('status') in PUBLISHED:
-            boxes.append({'id': region['id'], 'status': region['status'], 'bbox': check_bbox(region['bounds'])})
+        if region.get('status') not in PUBLISHED:
+            continue
+        region_id = region.get('id')
+        if not isinstance(region_id, str) or not region_id:
+            raise ValueError(f'{path}: Expected a nonempty string id')
+        if region_id in seen_ids:
+            raise ValueError(f'{path}: Duplicate region id {region_id!r}')
+        if region_id != path.parent.name:
+            raise ValueError(f'{path}: Region id {region_id!r} does not match directory {path.parent.name!r}')
+        seen_ids.add(region_id)
+        boxes.append({'id': region_id, 'status': region['status'], 'bbox': check_bbox(region['bounds'])})
     if not boxes:
         raise ValueError('No active or preview region to extract')
     return boxes
