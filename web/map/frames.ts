@@ -54,13 +54,22 @@ export function forecastTime(times: readonly number[], issuedAt: number, fetched
 
 const time = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));
 
+function acquisitionTime(value: unknown): boolean {
+  if (!time(value)) return false;
+  const day = /^(\d{4}-\d{2}-\d{2})T/.exec(value)?.[1];
+  if (!day) return false;
+  // Round-trip the written day alone: applying the offset can legitimately change the UTC day.
+  const midnight = new Date(`${day}T00:00:00.000Z`);
+  return Number.isFinite(midnight.getTime()) && midnight.toISOString().slice(0, 10) === day;
+}
+
 /** A GOES time index as goes-times.json publishes it, or null when its shape is not a CloudImage. */
 export function cloudImage(value: unknown): CloudImage | null {
   if (value === null || typeof value !== 'object') return null;
   const v = value as Partial<Record<keyof CloudImage, unknown>>;
   const times = Array.isArray(v.availableTimes) ? v.availableTimes : [];
   if (v.id !== 'goes-longwave' || v.kind !== 'observation' || v.layer !== 'goes_longwave_imagery' || !time(v.observedAt) || !time(v.fetchedAt)
-    || !times.length || !times.every(time) || !times.includes(v.observedAt) || typeof v.attribution !== 'string') return null;
+    || !times.length || !times.every(acquisitionTime) || !times.includes(v.observedAt) || typeof v.attribution !== 'string') return null;
   return value as CloudImage;
 }
 

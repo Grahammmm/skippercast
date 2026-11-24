@@ -112,6 +112,19 @@ test('a GOES index is admitted only in the CloudImage shape goes-times.json publ
     assert.equal(cloudImage(image(patch)), null, JSON.stringify(patch));
   }
   for (const value of [null, [], 'goes', 1]) assert.equal(cloudImage(value), null);
+
+  const now = new Date('2028-03-01T00:20:00Z');
+  const march = '2028-03-01T00:10:00Z', leap = '2028-02-29T19:05:00-05:00';
+  const valid = image({observedAt: march, fetchedAt: now.toISOString(), availableTimes: [march, leap]});
+  const cloud = cloudImage(valid);
+  assert.deepEqual(cloudFrames(cloud, now, now, TZ), [leap, march]);
+  assert.match(cloudTiles(cloud, leap, now).tiles[0], /&time=2028-02-29T19%3A05%3A00-05%3A00$/);
+
+  // Date.parse rolls February 30 into March 1, so the first-listed invalid spelling
+  // could otherwise take the valid sibling's playback slot and reach the WMS request.
+  const invalid = cloudImage({...valid, availableTimes: ['2028-02-30T00:10:00Z', ...valid.availableTimes]});
+  assert.deepEqual(cloudFrames(invalid, now, now, TZ), [], 'an impossible acquisition makes the index ineligible for playback');
+  assert.equal(invalid, null);
 });
 
 test('the horizon is 169 whole hours by local day; a DST change day keeps every UTC hour', () => {
