@@ -38,6 +38,16 @@ function isAsset(value: unknown): value is Asset {
       (value.encoding === 'gzip' && boundedSize(value.decodedBytes)));
 }
 
+/** A terrain grid must decode to exactly the length decodeTerrain accepts. Mirrors the check in
+ * packages/coast/src/coast3d/regional.ts decodeTerrain (line 25, no exported constant): integer size in 2..1025 and
+ * byteLength === size * size * 5 (a float32 height plus one source byte per cell). Run on an isAsset-validated
+ * value; the decoded length is decodedBytes for gzip and the asset's own length for an unencoded grid. */
+function isGridAsset(value: unknown): boolean {
+  const {size, encoding, decodedBytes, bytes} = value as Asset & {size?: unknown};
+  return typeof size === 'number' && Number.isInteger(size) && size >= 2 && size <= 1025 &&
+    (encoding === 'gzip' ? decodedBytes : bytes) === size * size * 5;
+}
+
 /** Select a parsed terrain.py v1 manifest supplied with its enclosing release's
  * regionId. The caller must supply that identity from the release, not from the
  * request. The producer writes [lon, lat]; return FE16's named scene origin. */
@@ -65,13 +75,15 @@ export function selectTerrainRelease(regionId: string, release?: unknown): Terra
     return {available: false, reason: 'asset-contract'};
   }
   const assets: unknown[] = [overview];
+  const grids: unknown[] = [overview]; // Overview and tile levels are decoded as grids; imagery is not.
   for (const tile of [...tiles, ...harborTiles]) {
     if (!isRecord(tile) || !Array.isArray(tile.lods) || tile.lods.length === 0) {
       return {available: false, reason: 'asset-contract'};
     }
-    for (const lod of tile.lods) assets.push(lod);
+    for (const lod of tile.lods) { assets.push(lod); grids.push(lod); }
   }
   for (const image of imagery) assets.push(image);
   if (!assets.every(isAsset)) return {available: false, reason: 'asset-contract'};
+  if (!grids.every(isGridAsset)) return {available: false, reason: 'asset-contract'};
   return {available: true, regionId, origin, assets, nodataSourceId: 0};
 }

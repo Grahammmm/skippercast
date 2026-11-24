@@ -53,6 +53,35 @@ test('terrain-release-selector', async t => {
   assert.equal(fetch.mock.callCount(), 0);
 });
 
+// Contract: a terrain grid's decoded length must equal size*size*5 (float32 height + one source byte per cell,
+// the length decodeTerrain requires), so selection refuses before the viewer fails with "Invalid terrain shape".
+// Catches: a correctly hashed overview/tile level whose byte count cannot match its declared grid still selecting
+// as available; an over-strict check that also refuses the matching 20-byte grid or touches imagery (not a grid).
+test('terrain release refuses grid levels whose decoded bytes cannot match the declared size', async t => {
+  const fetch = t.mock.method(globalThis, 'fetch', () => { throw new Error('unexpected terrain request'); });
+  const {selectTerrainRelease} = await import('../web/map/terrain-release.ts');
+  const north = releaseFor('north', [-124.3, 42]);
+  const lod = north.tiles[0].lods[0];
+  const withOverview = patch => ({...north, overview: {...north.overview, ...patch}});
+  const withLod = patch => ({...north, tiles: [{...north.tiles[0], lods: [{...lod, ...patch}]}]});
+  const withHarborLod = patch => ({...north, harborTiles: [{...north.tiles[0], lods: [{...lod, ...patch}]}]});
+  const refused = {available: false, reason: 'asset-contract'};
+  for (const [label, build] of [['overview', withOverview], ['tile level', withLod], ['harbor tile level', withHarborLod]]) {
+    assert.equal(selectTerrainRelease('north', build({decodedBytes: 20})).available, true, `${label}: 2x2 control`);
+    assert.deepEqual(selectTerrainRelease('north', build({decodedBytes: 19})), refused, `${label}: one byte short`);
+    assert.deepEqual(selectTerrainRelease('north', build({decodedBytes: 21})), refused, `${label}: one byte long`);
+    assert.deepEqual(selectTerrainRelease('north', build({size: 3})), refused, `${label}: size not matching 20 bytes`);
+    assert.equal(selectTerrainRelease('north', build({size: 3, decodedBytes: 45})).available, true, `${label}: 3x3 control`);
+    assert.deepEqual(selectTerrainRelease('north', build({size: undefined})), refused, `${label}: missing size`);
+    assert.deepEqual(selectTerrainRelease('north', build({size: 1, decodedBytes: 5})), refused, `${label}: size below decoder minimum`);
+    assert.equal(selectTerrainRelease('north', build({encoding: undefined, decodedBytes: undefined, bytes: 20})).available, true, `${label}: unencoded control`);
+    assert.deepEqual(selectTerrainRelease('north', build({encoding: undefined, decodedBytes: undefined, bytes: 19})), refused, `${label}: unencoded one byte short`);
+  }
+  // Imagery is not a grid: the same 19-byte metadata stays selectable.
+  assert.equal(selectTerrainRelease('north', {...north, imagery: [{...north.overview, decodedBytes: 19}]}).available, true, 'imagery untouched');
+  assert.equal(fetch.mock.callCount(), 0);
+});
+
 // Catch raw-prefix validation accepting noncanonical asset paths instead of rejecting them before fetch.
 test('terrain release admits only canonical same-origin data asset URLs', async t => {
   const fetch = t.mock.method(globalThis, 'fetch', () => { throw new Error('unexpected terrain request'); });
