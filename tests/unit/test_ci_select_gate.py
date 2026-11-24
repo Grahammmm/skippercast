@@ -6,7 +6,6 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
-from textwrap import dedent
 import unittest
 
 import yaml
@@ -109,8 +108,10 @@ class WorkflowWiringTest(unittest.TestCase):
         text = (ROOT / '.github/workflows/ci.yml').read_text()
         self.workflow = yaml.safe_load(text)
         self.job = text.split('\n  survey-science:', 1)[1].split('\n  survey-tests:', 1)[0]
-        run = self.job.split('        run: ', 1)[1]
-        self.command = dedent(run[2:]) if run.startswith('|\n') else run.splitlines()[0] + '\n'
+        self.steps = self.workflow['jobs']['survey-science']['steps']
+        gate = [step for step in self.steps if step.get('name', '').startswith('Roll-up gate')]
+        self.assertEqual(len(gate), 1)
+        self.command = gate[0]['run']
 
     def test_required_job_keeps_its_contract_and_truthful_step_name(self):
         self.assertIn('needs: [changes, survey-tests, check]', self.job)
@@ -118,6 +119,42 @@ class WorkflowWiringTest(unittest.TestCase):
         self.assertIn('TESTS: ${{ needs.survey-tests.result }}', self.job)
         self.assertRegex(self.command, re.compile(r'^python3 scripts/ci_select\.py --gate$', re.M))
         self.assertNotIn('Core suite and GIS layer passed', self.job)
+
+    def test_roll_up_checks_prerequisites_before_checkout_and_reads_only_the_selector(self):
+        # SC-CI-OC2: the fail-fast step comes first, so a red prerequisite costs no checkout.
+        self.assertNotIn('uses', self.steps[0])
+        self.assertTrue(self.steps[0]['name'].startswith('Fail fast'))
+        checkout = self.steps[1]
+        self.assertTrue(checkout['uses'].startswith('actions/checkout@'))
+        # A sparse tree without the selector would turn every roll-up red (python3: no such file).
+        patterns = checkout['with']['sparse-checkout'].split()
+        self.assertIn('scripts/ci_select.py', patterns)
+        self.assertFalse(checkout['with']['sparse-checkout-cone-mode'])
+        for pattern in patterns:
+            self.assertTrue((ROOT / pattern).is_file(), pattern)
+        # The `changes` job diffs two commits with the same sparse files; keep both commits.
+        changes = self.workflow['jobs']['changes']['steps'][0]['with']
+        self.assertEqual(changes['fetch-depth'], 2)
+        for pattern in changes['sparse-checkout'].split():
+            self.assertTrue((ROOT / pattern).is_file(), pattern)
+
+    def test_fail_fast_step_only_ever_rejects_what_the_gate_rejects(self):
+        # The fail-fast step must be strictly weaker than the gate: if it rejected a result
+        # the gate accepts, a good PR would turn red before the gate could pass it.
+        with tempfile.TemporaryDirectory() as tmp:
+            step = Path(tmp) / 'fast.sh'
+            step.write_text(self.steps[0]['run'])
+            for gate, check, tests in itertools.product(RESULTS, repeat=3):
+                env = dict(os.environ, GATE=gate, CHECK=check, TESTS=tests,
+                           GITHUB_STEP_SUMMARY=str(Path(tmp) / 'summary.md'))
+                fast = subprocess.run(['bash', '-e', str(step)], cwd=tmp, env=env,
+                                      capture_output=True, text=True, check=False)
+                decisive = any(value in ('failure', 'cancelled') for value in (gate, check, tests))
+                self.assertEqual(fast.returncode, int(decisive), (gate, check, tests, fast.stderr))
+                if fast.returncode:
+                    for survey in ('true', 'false'):
+                        code, _, _ = run_gate('pull_request', env_of(gate=gate, check=check, tests=tests, survey=survey))
+                        self.assertEqual(code, 1, (gate, check, tests, survey))
 
     def test_draft_events_skip_all_ci_jobs_and_keep_other_required_names(self):
         # PyYAML's YAML 1.1 loader reads an unquoted `on` as True.

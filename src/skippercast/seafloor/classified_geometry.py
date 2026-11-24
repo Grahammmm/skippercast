@@ -145,17 +145,42 @@ def _area_claim_matches(claim, native_area):
         return False
 
 
+def _feature_rows(document, message, native=False):
+    """Return the feature list of a release input, or refuse it by name.
+
+    A damaged inventory or candidate document is a refused input, not a code
+    defect: it must raise the named ValueError, never a bare KeyError/TypeError.
+    A non-list `features` must never pass as an empty sequence.
+    """
+    if not isinstance(document, dict):
+        raise ValueError(message)
+    if native and (document.get('crs') != 'EPSG:3310' or document.get('version') != VERSION):
+        raise ValueError(message)
+    rows = document.get('features')
+    if not isinstance(rows, list):
+        raise ValueError(message)
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get('properties'), dict) \
+                or 'id' not in row['properties'] or 'geometry' not in row:
+            raise ValueError(message)
+        try:
+            hash(row['properties']['id'])
+        except TypeError as exc:
+            raise ValueError(message) from exc
+    return rows
+
+
 def verify_inventory(candidates, native_inventory):
     """Native boundaries remain private and hash-bound; no IDs or patches split."""
-    if native_inventory.get('crs') != 'EPSG:3310' or native_inventory.get('version') != VERSION:
-        raise ValueError('Unreviewed classified native geometry inventory')
-    native_rows = native_inventory['features']
+    native_rows = _feature_rows(native_inventory,
+                                'Unreviewed classified native geometry inventory', native=True)
+    candidate_rows = _feature_rows(candidates, 'Classified representation identity mismatch')
     ids = [f['properties']['id'] for f in native_rows]
-    if len(set(ids)) != len(ids) or ids != [f['properties']['id'] for f in candidates['features']]:
+    if len(set(ids)) != len(ids) or ids != [f['properties']['id'] for f in candidate_rows]:
         raise ValueError('Classified representation identity mismatch')
     originals, represented = [], []
     reports = []
-    for original, feature in zip(native_rows, candidates['features']):
+    for original, feature in zip(native_rows, candidate_rows):
         native = polygon(original['geometry'])
         p = feature['properties']
         if 'area_ha' in p and not _area_claim_matches(p['area_ha'], native.area):
