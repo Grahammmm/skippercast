@@ -95,6 +95,8 @@ class Frame:
 
 
 def aligned(first, other):
+    if first.crs is None or other.crs is None:
+        raise receipts.ReceiptError('elevation and companion raster must both declare a CRS')
     if (first.crs, first.transform, first.shape) != (other.crs, other.transform, other.shape):
         raise receipts.ReceiptError('elevation and companion raster must share one grid')
 
