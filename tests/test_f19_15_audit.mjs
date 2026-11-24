@@ -52,14 +52,15 @@ if command == 'extract':
     step = 'overview' if args[2].startswith('--bbox=') else 'detail'
     if step == 'detail':
         assert Path(args[2].removeprefix('--region=')).is_file()
-    output.write_bytes(step.encode() * 256)
+    header = b'PMTiles\\x03' if step == 'overview' else b''
+    output.write_bytes(header + step.encode() * 256)
 elif command == 'merge':
     step = command
     Path(args[2]).write_bytes(Path(args[0]).read_bytes() + Path(args[1]).read_bytes() + os.environ['RETRY'].encode())
 else:
     assert command == 'verify'
     step = command
-    assert Path(args[0]).read_bytes() == b'overview' * 256 + b'detail' * 256 + os.environ['RETRY'].encode()
+    assert Path(args[0]).read_bytes() == b'PMTiles\\x03' + b'overview' * 256 + b'detail' * 256 + os.environ['RETRY'].encode()
 print(step)
 if step == os.environ['FAIL_AT']:
     sys.exit(41)
