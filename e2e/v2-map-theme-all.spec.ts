@@ -131,10 +131,10 @@ for (const starting of ['dark', 'light'] as const) {
           // Hold both real readers before popstate. Use a per-transition request
           // boundary, so an earlier visit cannot satisfy the held-load control.
           // The app stops waiting for region.json after REGION_READ_TIMEOUT_MS and
-          // then asks for every chart file (RF0850-2 fails open), so the region is
-          // only still held if popstate to the last snapshot fits in that deadline.
-          // A slower runner voids the attempt: remount (a fresh page, so the shared
-          // region.json read is not reused) and hold again.
+          // then asks for every chart file (RF0850-2 fails open). Evidence observed
+          // inside that deadline always counts; if a slow runner left part of the
+          // evidence past it and nothing timely failed, remount (a fresh page, so
+          // the shared region.json read is not reused) and hold again.
           const fixtures = [data, reference];
           for (let attempt = 1; ; attempt++) {
             if (attempt > 1) {
@@ -162,21 +162,30 @@ for (const starting of ['dark', 'light'] as const) {
               const before = await snapshot(live), boundary = data.requests.length;
               await toggle(other(starting));
               await frameBoundary(live);
-              const after = await snapshot(live), target = await snapshot(fresh);
-              const held = Date.now() - started;
-              if (held >= REGION_READ_TIMEOUT_MS) {
-                expect(attempt, `the next region stayed held only ${REGION_READ_TIMEOUT_MS} ms; attempt ${attempt} took ${held} ms`).toBeLessThan(3);
-                console.log(`${info.project.name}/${starting}/${layers}: held-region attempt ${attempt} took ${held} ms, past the region read deadline; retrying`);
-                continue;
+              const after = await snapshot(live);
+              // `started` precedes both popstates, so anything recorded before
+              // started + REGION_READ_TIMEOUT_MS was seen with the region held.
+              const timely = (at: number) => at - started < REGION_READ_TIMEOUT_MS;
+              const afterTimely = timely(Date.now());
+              const target = await snapshot(fresh);
+              const held = Date.now() - started, errors = test.info().errors.length;
+              expect.soft(data.requests.slice(boundary).filter((_, i) => timely(data.requestedAt[boundary + i]!)), 'new requests with next region held').toEqual([]);
+              if (afterTimely) {
+                expect.soft(ids(after)).toEqual(ids(before));
+                expect.soft(after.camera).toEqual(before.camera);
+                expect.soft(after.images).toEqual(before.images);
+                expect.soft(after.duplicates).toEqual([]);
               }
-              expect.soft(data.requests.slice(boundary), 'new requests with next region held').toEqual([]);
-              expect.soft(ids(after)).toEqual(ids(before));
-              expect.soft([...ids(after)].sort()).toEqual([...ids(target)].sort());
-              expect.soft(after.camera).toEqual(before.camera);
-              expect.soft(after.images).toEqual(before.images);
-              expect.soft(after.duplicates).toEqual([]);
-              expect.soft(stalePaint(after, target), 'stale paint with next region held').toEqual([]);
-              return;
+              if (held < REGION_READ_TIMEOUT_MS) {
+                expect.soft([...ids(after)].sort()).toEqual([...ids(target)].sort());
+                expect.soft(stalePaint(after, target), 'stale paint with next region held').toEqual([]);
+                return;
+              }
+              // A timely violation stands; never retry it away.
+              if (test.info().errors.length > errors) return;
+              expect(attempt, `the next region stayed held only ${REGION_READ_TIMEOUT_MS} ms; attempt ${attempt} took ${held} ms`).toBeLessThan(3);
+              console.log(`${info.project.name}/${starting}/${layers}: held-region attempt ${attempt} took ${held} ms, past the region read deadline; retrying`);
+              continue;
             } finally { fixtures.forEach(f => f.release()); }
           }
         };
