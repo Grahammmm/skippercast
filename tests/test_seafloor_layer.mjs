@@ -17,8 +17,8 @@ import {
 } from '../web/map/seafloor.ts';
 import {clickMark} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
-import {camera} from '../web/map/stage.ts';
-import {configureStore, syncFromURL} from '../web/state.ts';
+import {camera, shownPresentation} from '../web/map/stage.ts';
+import {configureStore, presentation, syncFromURL} from '../web/state.ts';
 import {signal} from '@preact/signals';
 
 const FIXTURE = readFileSync(new URL('./fixtures/seafloor/chart.pmtiles', import.meta.url));
@@ -380,6 +380,41 @@ test('v2: expiry hides candidates before the refresh answers, and a late tile ne
   late.tileHold.release();
   await settle();
   assert.ok(late.calls.every(c => c[0] !== 'data' || c[2] === 0), 'no features after off');
+});
+
+test('v2: a rendered habitat hit reads only on Chart and strictly before publication expiry', async t => {
+  const expiresAt = '2030-01-01T00:01:00Z';
+  const rig = seafloorRig({manifest: {expires_at: expiresAt}});
+  t.after(() => { rig.layer.destroy(); presentation.value = 'chart'; });
+  await settle();
+  const hit = rig.data.features.find(f => f.properties.id === 'fixture-candidate-a');
+  assert.ok(hit, 'the Chart actually drew the admitted candidate');
+  const tap = () => rig.layer.mark(String(hit.properties.id));
+
+  presentation.value = '3d';
+  assert.equal(shownPresentation.value, '3d', 'Chart is hidden, not a terrain fallback to Chart');
+  assert.ok(rig.data.features.includes(hit), 'the hidden Chart still has the rendered feature');
+  const hidden = tap();
+
+  presentation.value = 'chart';
+  await settle();
+  assert.equal(shownPresentation.value, 'chart');
+  rig.clock = Date.parse(expiresAt) - 1;
+  const fresh = tap();
+  assert.equal(fresh?.id, 'seafloor:fixture-candidate-a');
+  assert.match(fresh.basis, /Planning only\. Not a navigation chart\./);
+
+  const pending = [...rig.timers.entries()];
+  assert.deepEqual(pending.map(([, timer]) => timer.delay), [60000]);
+  const lastPaint = rig.data;
+  // A rendered hit can arrive while the tab's refresh callback is delayed. Change only the clock;
+  // a lookup that trusts the last drawn map opens the old card even at the exact expiry boundary.
+  rig.clock = Date.parse(expiresAt);
+  assert.equal(rig.data, lastPaint, 'no intervening paint');
+  assert.equal(seafloorState.value.status, 'ready', 'nothing has withdrawn the publication yet');
+  const expired = tap();
+  assert.deepEqual([...rig.timers.entries()], pending, 'the scheduled refresh has not fired');
+  assert.deepEqual({hidden, expired}, {hidden: null, expired: null});
 });
 
 // #706: a person can open a drawn coverage cell's basis. Fixture cell 3310:fx:1 spans about -120.987 to -120.970,

@@ -55,12 +55,26 @@ class CellsTests(unittest.TestCase):
 
     def test_extra_columns_and_reordered_fields_are_accepted(self):
         control = fronts(EDGE)
+        self.assertEqual(len(control["fronts"]), 1)
+        self.assertEqual(control["observed_at"], "2026-11-03T06:00:00Z")
         order = [3, 2, 1, 0, 4, 5]
-        reordered = {**EDGE, "fields": [FIELDS[k] for k in order],
-                     "frames": [{"time": EDGE["frames"][0]["time"], "cells": [[c[k] for k in order] + ["extra"] for c in EDGE["frames"][0]["cells"]]}]}
+        reordered = with_cells(EDGE, [["extra", *(c[k] for k in order)] for c in EDGE["frames"][0]["cells"]])
+        reordered["fields"] = ["unused", *(FIELDS[k] for k in order)]
         self.assertEqual(fronts(reordered), control)
         trimmed = {**EDGE, "frames": [{"time": EDGE["frames"][0]["time"], "cells": [c[:4] for c in EDGE["frames"][0]["cells"]]}]}
         self.assertEqual(fronts(trimmed), control)
+
+    def test_duplicate_analysis_columns_refuse_instead_of_choosing_a_front(self):
+        # First-match lookup draws the edge if it picks the stepped temperature or
+        # low error first, but suppresses it if it picks the flat temperature or high error.
+        for field, alternate in (("temperature_c", 15.0), ("analysis_error_c", 2.0)):
+            for position in (0, len(FIELDS)):
+                with self.subTest(field=field, position=position):
+                    cells = [c[:position] + [alternate] + c[position:] for c in good_cells()]
+                    ambiguous = with_cells(EDGE, cells, NEWEST)
+                    ambiguous["fields"] = FIELDS[:position] + [field] + FIELDS[position:]
+                    with self.assertRaisesRegex(SstFrontError, rf"t0: duplicate required field {field}"):
+                        fronts(ambiguous)
 
     def test_time_refusal_precedes_cell_validation(self):
         for label, time, key in (("missing", MISSING, "missing_time"), ("unparseable", "yesterday-ish", "unparseable_time"),

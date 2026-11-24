@@ -13,6 +13,34 @@ test('missing coastal cells and entire missing columns remain blank',()=>{
  assert.equal(f.quads.length,2);assert.equal(f.sample(2,.5),null);assert.equal(f.sample(1.5,.5),null);
  assert.equal(surfaceField(points,{maxStep:[.5,.5]}),null);
 });
+test('complete quads support their shared edges and corners without filling neighboring gaps',()=>{
+ const far={lon:2,lat:0,values:[10,9]};
+ const f=surfaceField([...points,far])!;
+ assert.deepEqual(f.quads,[{west:0,east:1,south:0,north:1,corners:points}]);
+ assert.deepEqual(f.sample(.5,.25),[1,1.5]);
+ assert.equal(f.sample(1.25,.5),null,'a represented far column with a missing corner does not support its interior');
+ assert.equal(f.sample(1+1e-6,.5),null,'a point off the seam is not snapped back onto it');
+ assert.equal(f.sample(1,1.001),null,'seam fallback does not extend the domain');
+
+ const full=surfaceField([...points,far,{lon:2,lat:1,values:[14,11]}])!;
+ assert.equal(full.quads.length,2);
+ assert.deepEqual(full.sample(1,.5),[2,2]);
+ assert.deepEqual(full.sample(1.5,.5),[7,6]);
+ const roundoff=2**-30;
+ assert.deepEqual(full.sample(1+roundoff,.5),[2+10*roundoff,2+8*roundoff],'a complete ordinary owner keeps its original weights');
+
+ // Flooring to the east quad used to hide the painted west quad's edge.
+ assert.deepEqual(f.sample(1,.5),[2,2]);
+ assert.deepEqual(f.sample(1+roundoff,.5),[2,2]);
+ assert.deepEqual(f.sample(1,0),[2,1]);
+ assert.deepEqual(f.sample(1,1),[2,3]);
+
+ const diagonal=surfaceField([...points,far,{lon:0,lat:2,values:[20,20]},{lon:2,lat:2,values:[30,30]}])!;
+ assert.deepEqual(diagonal.quads,f.quads);
+ assert.deepEqual(diagonal.sample(.5,1),[1,3]);
+ assert.deepEqual(diagonal.sample(1,1),[2,3],'at an internal corner the only complete quad can be diagonal to the owner');
+ assert.equal(diagonal.sample(1,1.25),null,'a line between two incomplete quads remains blank');
+});
 test('rejects duplicate, nonfinite and irregular source grids',()=>{
  assert.equal(surfaceField([...points,points[0]]),null);
  assert.equal(surfaceField(points.map((p,i)=>i===0?{...p,values:[NaN,1]}:p)),null);

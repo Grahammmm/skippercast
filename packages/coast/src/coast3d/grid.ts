@@ -12,7 +12,9 @@ export function gridTriangles(grid:Grid):Uint32Array {
 export function nearestDepth(grid:Grid,x:number,z:number):number|null{
  const gx=(x-grid.x)/grid.dx,gz=(z-grid.z)/grid.dz;
  if(gx<0||gz<0||gx>grid.size-1||gz>grid.size-1)return null;
- const value=grid.values[Math.round(gz)*grid.size+Math.round(gx)]??NaN;return Number.isFinite(value)?value:null;
+ const i=Math.round(gz)*grid.size+Math.round(gx);
+ if(grid.sources&&(grid.sources[i]??0)===0)return null;
+ const value=grid.values[i]??NaN;return Number.isFinite(value)?value:null;
 }
 export const ORIGIN:[number,number]=[-120.98,35.43];
 const R=6378137;
