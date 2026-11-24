@@ -47,10 +47,16 @@ def _raster(opacity, resampling="linear", fade=True):
 def fragment(tokens):
     """Use token values for paint, and stable MapLibre IDs/expressions for structure."""
     stack = tokens["stacking"]
+    order = {}
+    for row in stack["z_order"]:
+        slot = row["id"]
+        if slot in order:
+            raise ValueError(f"duplicate stacking slot: {slot}")
+        order[slot] = row["z"]
+
     layers = tokens["layers"]
     common = tokens["common"]
     font = [common["font"]] if isinstance(common["font"], str) else common["font"]
-    order = {row["id"]: row["z"] for row in stack["z_order"]}
     rows = []
 
     def add(group, layer, suffix, name, kind, source=None, *, paint=None, layout=None, meta=None, **extra):

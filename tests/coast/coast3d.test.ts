@@ -13,6 +13,10 @@ test('3D mesh never bridges different survey identities',()=>{
 });
 test('depth inspection returns a nearest display sample, never an invented gap depth',()=>{
  const g=grid([10,20,30,NaN]);assert.equal(nearestDepth(g,108,208),null);assert.equal(nearestDepth(g,100,200),10);assert.equal(nearestDepth(g,109,208),null);
+ // Finite heights at unsupported finer nodes must not displace an overview reading.
+ const masked=grid([5,0,30,40],[0,1]);
+ assert.deepEqual({masked:nearestDepth(masked,101,201),valid:nearestDepth(masked,107,201),absent:nearestDepth(masked,101,207)},
+  {masked:null,valid:0,absent:null});
 });
 test('local metre projection round trips marine coordinates',()=>{
  for(const [lon,lat] of [[-121.09,35.49],[-120.85,35.374]]){const [x,z]=coastPoint(lon,lat),[l,p]=coastLonLat(x,z);assert.ok(Math.abs(l-lon)<1e-9&&Math.abs(p-lat)<1e-9);}

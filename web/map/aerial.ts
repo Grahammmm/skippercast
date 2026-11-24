@@ -154,8 +154,9 @@ export function createAerial({engine, offer, sharp}: AerialOptions): {destroy():
     // The full image laid over the preview: once the map settles, its tiles are in, and the preview goes.
     if (stage === 'both') {
       const off = e.view?.on('idle', () => {
+        if (shown?.overlay !== overlay) return;
         off?.();
-        if (shown?.overlay !== overlay || unavailable.peek().includes(REGISTRY_ID)) return;
+        if (unavailable.peek().includes(REGISTRY_ID)) return;
         put(a, e, format, 'full');
         try { performance.mark('skippercast-aerial-sharp'); } catch { /* no timing API */ }
       });
@@ -168,8 +169,15 @@ export function createAerial({engine, offer, sharp}: AerialOptions): {destroy():
     effect(() => { if (sharp?.()) sharpened.value = true; }),
     effect(() => {
       const e = engine.value, a = drawn.value;
-      if (!e) return;
-      if (!a) { if (shown) { unwatch(); e.setOverlay(REGISTRY_ID, null, ENC_LAYER); shown = null; softStage.value = false; } return; }
+      if (shown && (shown.e !== e || !a)) {
+        const previous = shown.e;
+        // Invalidate a queued idle callback before removing the draw from its owner.
+        shown = null;
+        unwatch(); unwatch = () => {};
+        previous.setOverlay(REGISTRY_ID, null, ENC_LAYER);
+        softStage.value = false;
+      }
+      if (!e || !a) return;
       if (shown?.a === a && shown.e === e) return;
       put(a, e, undefined, !sharpened.peek() && previewTiles() ? 'preview' : 'full');
     }),

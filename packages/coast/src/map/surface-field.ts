@@ -10,6 +10,7 @@ export type SurfaceField = {
  sample:(lon:number,lat:number)=>number[]|null;
 };
 const median=(a:number[])=>a.sort((x,y)=>x-y)[Math.floor(a.length/2)];
+const GRID_EPSILON=1e-8; // In grid steps, not degrees or source registration tolerance.
 function spacing(values:number[]){const axis=[...new Set(values.map(v=>Math.round(v*1e5)/1e5))].sort((a,b)=>a-b);const gaps=axis.slice(1).map((v,i)=>v-axis[i]).filter(d=>d>1e-5);return gaps.length?median(gaps):0;}
 export function surfaceField(points:FieldPoint[],opts:{step?:[number,number];maxStep?:[number,number]}={}):SurfaceField|null{
  if(points.length<4||points.length>10_000)return null;
@@ -30,8 +31,23 @@ export function surfaceField(points:FieldPoint[],opts:{step?:[number,number];max
  for(let y=0;y<height-1;y++)for(let x=0;x<width-1;x++){const c=corners(x,y);if(c.every(Boolean))quads.push({west:west+x*dx,east:west+(x+1)*dx,south:south+y*dy,north:south+(y+1)*dy,corners:c as FieldPoint[]});}
  if(!quads.length)return null;
  return {bounds:[west,south,west+(width-1)*dx,south+(height-1)*dy],step:[dx,dy],dimensions,quads,sample(lon,lat){
-  const gx=(lon-west)/dx,gy=(lat-south)/dy;if(gx< -1e-8||gy< -1e-8||gx>width-1+1e-8||gy>height-1+1e-8)return null;
-  const x=Math.min(width-2,Math.max(0,Math.floor(gx))),y=Math.min(height-2,Math.max(0,Math.floor(gy))),c=corners(x,y);if(c.some(p=>!p))return null;
+  let gx=(lon-west)/dx,gy=(lat-south)/dy;if(gx< -GRID_EPSILON||gy< -GRID_EPSILON||gx>width-1+GRID_EPSILON||gy>height-1+GRID_EPSILON)return null;
+  let x=Math.min(width-2,Math.max(0,Math.floor(gx))),y=Math.min(height-2,Math.max(0,Math.floor(gy))),c=corners(x,y);
+  if(c.some(p=>!p)){
+   // The ordinary owner is incomplete. Only an internal grid line can
+   // belong to another quad; pin that axis to the boundary before blending.
+   const ix=Math.round(gx),iy=Math.round(gy);
+   const sharedX=ix>0&&ix<width-1&&Math.abs(gx-ix)<=GRID_EPSILON;
+   const sharedY=iy>0&&iy<height-1&&Math.abs(gy-iy)<=GRID_EPSILON;
+   if(!sharedX&&!sharedY)return null;
+   const otherX=sharedX?(x===ix?ix-1:ix):x,otherY=sharedY?(y===iy?iy-1:iy):y;
+   if(sharedX){const westOrEast=corners(otherX,y);if(westOrEast.every(Boolean)){x=otherX;c=westOrEast;}}
+   if(c.some(p=>!p)&&sharedY){const southOrNorth=corners(x,otherY);if(southOrNorth.every(Boolean)){y=otherY;c=southOrNorth;}}
+   if(c.some(p=>!p)&&sharedX&&sharedY){x=otherX;y=otherY;c=corners(x,y);}
+   if(c.some(p=>!p))return null;
+   if(sharedX)gx=ix;
+   if(sharedY)gy=iy;
+  }
   const tx=Math.max(0,Math.min(1,gx-x)),ty=Math.max(0,Math.min(1,gy-y)),weights=[(1-tx)*(1-ty),tx*(1-ty),tx*ty,(1-tx)*ty];
   return Array.from({length:dimensions},(_,i)=>c.reduce((n,p,j)=>n+p!.values[i]*weights[j],0));
  }};
