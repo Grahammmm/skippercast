@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter, defaultdict
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import UTC, datetime
 import json
 from pathlib import Path
 
@@ -22,7 +22,7 @@ def _clock(value: object) -> datetime:
     moment = datetime.fromisoformat(value)
     if moment.utcoffset() is None:
         raise ValueError('timestamp needs an explicit UTC offset')
-    return moment
+    return moment.astimezone(UTC)
 
 
 def summarize(paths: Iterable[Path]) -> dict:
@@ -59,7 +59,7 @@ def summarize(paths: Iterable[Path]) -> dict:
             continue
         try:
             started, ended = _clock(doc.get('started')), _clock(doc.get('ended'))
-        except ValueError:
+        except (ValueError, OverflowError):
             ignored['invalid_clock'] += 1
             continue
         elapsed = (ended - started).total_seconds()
