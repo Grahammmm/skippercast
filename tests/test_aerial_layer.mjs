@@ -17,7 +17,7 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {mapSourceHosts, naipSource} from '../packages/coast/src/map-sources.ts';
 import {
-  AERIAL_CATALOG_ID, AERIAL_DEFAULT_OPACITY, AERIAL_DEFAULT_SATURATION, AERIAL_OPACITY, AERIAL_SATURATION, IMAGERY_HEAD_START_MS, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, createAerial, createImageryStartup, flownText,
+  AERIAL_CATALOG_ID, AERIAL_DEFAULT_OPACITY, AERIAL_DEFAULT_SATURATION, AERIAL_OPACITY, AERIAL_SATURATION, IMAGERY_HEAD_START_MS, aerialAttribution, aerialBase, aerialId, aerialOffer, aerialOverlay, aerialSoft, createAerial, createImageryStartup, flownText,
 } from '../web/map/aerial.ts';
 import {ENC_LAYER, chartStyle, markUnavailable, unavailable} from '../web/map/chart.ts';
 import {createEngine} from '../web/map/engine.ts';
@@ -178,6 +178,42 @@ test('a tile error marks only Aerial unavailable, and choosing it again retries'
 const formatOf = overlay => overlay && new URL(Object.values(overlay.sources)[0].tiles[0].replace('{bbox-epsg-3857}', '0,0,1,1')).searchParams.get('format');
 const sourceIds = overlay => Object.keys(overlay?.sources ?? {});
 
+test('a detached Chart drops its aerial overlay and a queued idle cannot put it back', t => {
+  browser(`${PAGE}?region=morro-bay&base=aerial`);
+  const first = engine(), next = engine(), live = signal(first), sharp = signal(false);
+  let queuedIdle;
+  const off = t.mock.fn();
+  first.view = {on(type, listener) { assert.equal(type, 'idle'); queuedIdle = listener; return off; }};
+  const a = createAerial({engine: live, offer: () => MORRO, sharp: () => sharp.value});
+  t.after(() => a.destroy());
+  const id = aerialId(MORRO);
+  assert.deepEqual(sourceIds(first.overlay), [`${id}:preview`]);
+  sharp.value = true;
+  assert.deepEqual(sourceIds(first.overlay), [`${id}:preview`, id]);
+  assert.equal(aerialSoft.value, true);
+
+  // MapLibre may already have captured the idle listener when the current engine is lost.
+  const before = !!first.overlay;
+  live.value = null;
+  const afterNull = !!first.overlay, softAfterNull = aerialSoft.value, offAfterNull = off.mock.callCount();
+  queuedIdle();
+  const callsAfterQueuedIdle = first.calls;
+  live.value = next;
+  assert.deepEqual({before, afterNull, oldAfterB: !!first.overlay, newAfterB: !!next.overlay},
+    {before: true, afterNull: false, oldAfterB: false, newAfterB: true});
+  assert.equal(softAfterNull, false, 'no detached preview keeps the Chart busy');
+  assert.equal(offAfterNull, 1, 'unsubscribed at engine loss, not at the next attach');
+  assert.equal(callsAfterQueuedIdle, 3, 'A only receives preview, both, then removal');
+  assert.deepEqual(sourceIds(next.overlay), [id], 'the already sharpened watcher starts B at full size');
+  assert.equal(formatOf(next.overlay), 'jpgpng');
+  assert.equal(next.before, ENC_LAYER);
+  queuedIdle();
+  assert.equal(first.calls, 3, 'queued delivery after B attaches still cannot redraw A');
+  assert.equal(next.calls, 1, 'A cannot redraw or clear B');
+  assert.equal(off.mock.callCount(), 1, 'queued delivery leaves subscriptions alone');
+  assert.equal(aerialSoft.value, false);
+});
+
 test('a failed jpgpng draw is retried once as png32; a failed png32 draw stays unavailable; a new draw starts at jpgpng', t => {
   t.mock.method(console, 'warn', () => {});
   browser(`${PAGE}?region=morro-bay&base=aerial`);
@@ -227,8 +263,11 @@ test('a failed jpgpng draw is retried once as png32; a failed png32 draw stays u
   // Another engine: the retry already used on the old one does not carry over.
   markUnavailable('aerial');
   assert.equal(formatOf(e.overlay), 'png32');
+  const beforeSwap = e.calls;
   const next = engine();
   live.value = next;
+  assert.equal(e.calls, beforeSwap + 1, 'a direct swap also clears only the previous draw');
+  assert.equal(e.overlay, null);
   assert.equal(next.calls, 1);
   assert.equal(formatOf(next.overlay), 'jpgpng');
   assert.ok(!unavailable.value.includes('aerial'));
