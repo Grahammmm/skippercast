@@ -20,17 +20,32 @@ CODES = MappingProxyType({
 _NAME = {code: name for name, code in CODES.items()}
 _CLASS = {0: 'nodata', 1: 'measured', 2: 'filled', 3: 'verified', 4: 'unresolved', 5: 'masked'}
 
+def _known_code(code):
+    """True only for a hashable, non-boolean value that is one of the CODES values."""
+    if isinstance(code, bool): return False
+    try: return code in _NAME
+    except TypeError: return False  # unhashable (a list or dict from a receipt)
+
 def CLASS_OF(code):
     """Class of a provenance code by its tens digit; ValueError for a code not in CODES."""
-    if isinstance(code, bool) or code not in _NAME: raise ValueError(f'unknown provenance code: {code!r}')
+    if not _known_code(code): raise ValueError(f'unknown provenance code: {code!r}')
     return _CLASS[code // 10]
 
 def REASON_OF(code):
-    """The code name without its class prefix: 41 -> 'conflict', 20 -> 'hole', 10 -> 'measured', 0 -> 'nodata'."""
-    return _NAME[code].removeprefix(CLASS_OF(code) + '-')
+    """The code name without its class prefix: 41 -> 'conflict', 20 -> 'hole', 10 -> 'measured', 0 -> 'nodata'.
+    ValueError for a code not in CODES (named by CLASS_OF, never a bare KeyError)."""
+    cls = CLASS_OF(code)  # validates first: ValueError, not a KeyError/TypeError from the name lookup
+    return _NAME[code].removeprefix(cls + '-')
 
 # Thresholds (DESIGN §5); THRESHOLDS bundles them read-only for the EC tools.
-def hole_max_cells(cell_m): return min(9, int(64 // (cell_m * cell_m)))
+def hole_max_cells(cell_m):
+    """Largest hole (cells) the filler may fill at this cell size; ValueError unless cell_m is a positive finite number."""
+    try: ok = not isinstance(cell_m, bool) and cell_m > 0 and cell_m != math.inf
+    except TypeError: ok = False  # not a real number
+    if not ok: raise ValueError('cell size must be a positive finite number')
+    area = cell_m * cell_m
+    try: return min(9, int(64 // area))
+    except (ZeroDivisionError, OverflowError): return 9  # a cell so small its square underflows: any hole fits the cap
 def hole_ring_max_range_m(shallowest_m): return max(2.0, 0.10 * abs(shallowest_m))
 def outlier_min_m(ring_median_m): return max(3.0, 0.20 * abs(ring_median_m))
 OUTLIER_MAX_CELLS = 2
