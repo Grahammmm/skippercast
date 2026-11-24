@@ -42,6 +42,13 @@ def _read_collection(path: Path, region: str, role: str):
         if not isinstance(geometry, dict) or geometry.get("type") not in ("Polygon", "MultiPolygon"):
             raise ValueError(f"{label}: expected Polygon or MultiPolygon")
         try:
+            coordinates = geometry["coordinates"]
+            parts = [coordinates] if geometry["type"] == "Polygon" else coordinates
+            # shape() can close rings silently; inspect the saved positions first.
+            for rings in parts:
+                for ring in rings:
+                    if ring and ring[0] != ring[-1]:
+                        raise ValueError(f"{label}: polygon ring is not closed")
             polygon = shape(geometry)
         except (KeyError, TypeError, IndexError, ShapelyError) as exc:
             raise ValueError(f"{label}: malformed polygon") from exc
