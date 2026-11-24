@@ -132,7 +132,7 @@ def ndbc(body, station, spectral=False):
         row = {"time": t}
         for k, v in zip(keys[5:], values[5:]):
             row[k] = None if v in missing else v if k in ("SwD", "WWD", "STEEPNESS") else numeric(v)
-            if k in ("WVHT", "DPD", "APD", "SwH", "SwP", "WWH", "WWP", "WTMP", "ATMP", "DEWP") and row[k] == 99:
+            if k in ("WVHT", "DPD", "APD", "SwH", "SwP", "WWH", "WWP", "WTMP", "ATMP", "DEWP", "WSPD", "GST") and row[k] == 99:
                 row[k] = None
         rows.append(row)
         if len(rows) == 144:

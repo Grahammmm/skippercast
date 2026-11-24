@@ -167,6 +167,28 @@ class NdbcUnitsTests(unittest.TestCase):
         self.assertEqual(obs["WDIR"], 99)  # 99 is a real direction, not a fill
         self.assertEqual(obs["ATMP"], 15.0)
 
+    def test_wind_speed_and_gust_fill_is_missing_not_99_ms(self):
+        # Contract: a missing wind reading never reads as a value. Bug caught: the 99 fill list omits
+        # WSPD/GST, so a 99.0 cell is published as a 99 m/s (192 kt) wind.
+        for fill in ("99.0", "99", "99.00"):
+            row = list(ROW)
+            row[KEYS.index("WSPD")] = row[KEYS.index("GST")] = fill
+            obs = parsers.ndbc(table(row=row), "46028")["observations"][0]
+            self.assertIsNone(obs["WSPD"], fill)  # catches a fix applied to only one of the two columns
+            self.assertIsNone(obs["GST"], fill)
+            # Catches a fix that also blanks unrelated real columns.
+            self.assertEqual((obs["WVHT"], obs["ATMP"], obs["WDIR"]), (1.2, 15.0, 180))
+        # Healthy control: real wind is kept. A 99 WDIR stays a real direction: catches a fill rule
+        # widened to every column instead of the wind columns.
+        row = list(ROW)
+        row[KEYS.index("WSPD")], row[KEYS.index("GST")], row[KEYS.index("WDIR")] = "7.5", "9.0", "99"
+        obs = parsers.ndbc(table(row=row), "46028")["observations"][0]
+        self.assertEqual((obs["WSPD"], obs["GST"], obs["WDIR"]), (7.5, 9.0, 99))
+        # Catches MM handling on GST regressing when the wind fill rule is added.
+        row = list(ROW)
+        row[KEYS.index("GST")] = "MM"
+        self.assertIsNone(parsers.ndbc(table(row=row), "46028")["observations"][0]["GST"])
+
 
 if __name__ == "__main__":
     unittest.main()
