@@ -48,9 +48,12 @@ def source_rights(row, *, use="noncommercial", today=None):
         adapter_review = row.get('adapter_review', {})
         if not isinstance(adapter_review, dict):
             raise ValueError('Source adapter_review must be an object')
+        publisher = row.get('publisher', 'Original USGS / NOAA survey')
+        if not isinstance(publisher, str):
+            raise ValueError('Source publisher must be a string')
         return {'source_id': row['id'], 'license': row['license'],
                 'source_url': row['url'], 'policy_url': adapter_review.get('rights_source_url', ''),
-                'attribution': row.get('publisher', 'Original USGS / NOAA survey'),
+                'attribution': publisher,
                 'notice': 'Original US government data; retain source attribution and survey limitations.'}
     if use != 'noncommercial':
         raise ValueError('For-profit publication requires express producer permission')
@@ -114,7 +117,8 @@ def deployment_use(root):
         raise ValueError('Deployment policy must be a JSON object')
     use = policy.get('source_use')
     monetization = policy.get('monetization')
-    if use not in {'noncommercial', 'for-profit'} or monetization not in {'none', 'paid'}:
+    if (not isinstance(use, str) or use not in {'noncommercial', 'for-profit'}
+            or not isinstance(monetization, str) or monetization not in {'none', 'paid'}):
         raise ValueError('Deployment requires explicit source_use and monetization')
     if monetization == 'paid' and use != 'for-profit':
         raise ValueError('Paid deployment cannot use the noncommercial source profile')

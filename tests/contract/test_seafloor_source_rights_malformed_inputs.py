@@ -74,6 +74,10 @@ class MalformedSourceRowTests(unittest.TestCase):
             ('rights_review list', dict(CSUMB, rights_review=[]), UNQUALIFIED),
             ('rights_review None', dict(CSUMB, rights_review=None), UNQUALIFIED),
             ('rights_review string', dict(CSUMB, rights_review='reviewed'), UNQUALIFIED),
+            # numeric/None/list publisher on the US-government path must not become attribution
+            ('usgs publisher int', dict(USGS, publisher=7), 'publisher must be a string'),
+            ('usgs publisher None', dict(USGS, publisher=None), 'publisher must be a string'),
+            ('usgs publisher list', dict(USGS, publisher=['USGS']), 'publisher must be a string'),
             ('usgs adapter_review None', dict(USGS, adapter_review=None), 'adapter_review must be an object'),
             ('usgs adapter_review list', dict(USGS, adapter_review=[]), 'adapter_review must be an object'),
             ('usgs without url', without(USGS, 'url'), 'requires a string id and url'),
@@ -156,6 +160,21 @@ class DeploymentPolicyShapeTests(unittest.TestCase):
                 ('empty', '', 'Deployment policy is not valid JSON')):
             with self.subTest(label):
                 self.assertIn(reason, refusal(self.policy_use, text))
+
+    def test_unhashable_policy_values_raise_a_named_value_error(self):
+        # Bug caught: a list/object source_use or monetization hits the `in {set}` check and
+        # escapes as a bare TypeError (unhashable) instead of the named deployment refusal.
+        for label, policy in (
+                ('source_use list', {'source_use': [], 'monetization': 'none'}),
+                ('source_use object', {'source_use': {}, 'monetization': 'none'}),
+                ('monetization list', {'source_use': 'noncommercial', 'monetization': []}),
+                ('monetization object', {'source_use': 'noncommercial', 'monetization': {'a': 1}}),
+                ('both lists', {'source_use': ['x'], 'monetization': ['y']}),
+                ('source_use number', {'source_use': 1, 'monetization': 'none'}),
+                ('monetization null', {'source_use': 'noncommercial', 'monetization': None})):
+            with self.subTest(label):
+                self.assertIn('requires explicit source_use and monetization',
+                              refusal(self.policy_use, json.dumps(policy)))
 
     def test_object_policy_without_fields_keeps_its_existing_refusal(self):
         # Bug caught: the object check replaces the explicit source_use/monetization requirement.
