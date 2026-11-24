@@ -30,15 +30,19 @@ export function sshCells(frames: SshFrames, validAt: string): SshCells {
     return {state: 'none', reason: 'bad-grid'};
   }
 
-  const cells = frame.cells.filter(({lat, lon, sshCm}) =>
-    Number.isFinite(lat) && Number.isFinite(lon) && Number.isFinite(sshCm));
+  const cells: {s: number; n: number; w: number; e: number; sshCm: number}[] = [];
+  for (const {lat, lon, sshCm} of frame.cells) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(sshCm)) continue;
+    const s = lat - dLat / 2, n = lat + dLat / 2;
+    const w = lon - dLon / 2, e = lon + dLon / 2;
+    if (s < -90 || n > 90 || w < -180 || e > 180) continue;
+    cells.push({s, n, w, e, sshCm});
+  }
   const scale = sshScale(cells.map(cell => cell.sshCm));
   if (!scale) return {state: 'none', reason: 'no-cells'};
 
   const {limitCm, ticks} = scale;
-  const features = cells.map(({lat, lon, sshCm}): SshCellFeature => {
-    const s = lat - dLat / 2, n = lat + dLat / 2;
-    const w = lon - dLon / 2, e = lon + dLon / 2;
+  const features = cells.map(({s, n, w, e, sshCm}): SshCellFeature => {
     return {
       type: 'Feature',
       geometry: {type: 'Polygon', coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]]},
