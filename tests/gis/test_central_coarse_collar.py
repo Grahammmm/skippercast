@@ -14,12 +14,16 @@ TRANSFORM = rio.Affine(20, 0, 1000, 0, -20, 2000)
 SHAPE = (4, 5)
 
 
-def _inputs(tmp_path, samples, wet, *, mask_transform=TRANSFORM):
+def _inputs(tmp_path, samples, wet, *, mask_transform=TRANSFORM, validity=None, nodata=None):
     coarse = tmp_path / 'coarse.tif'
     mask = tmp_path / 'wet.tif'
     write_coarse(coarse, samples, TRANSFORM)
+    if validity is not None:
+        with rio.Env(GDAL_TIFF_INTERNAL_MASK=True), rio.open(coarse, 'r+') as dst:
+            dst.nodata = nodata
+            dst.write_mask(validity)
     with rio.open(mask, 'w', driver='GTiff', count=1, dtype='uint8', crs='EPSG:3310',
-                  transform=mask_transform, height=SHAPE[0], width=SHAPE[1]) as dst:
+                  transform=mask_transform, height=wet.shape[0], width=wet.shape[1]) as dst:
         dst.write(wet, 1)
     return ['--coarse', str(coarse), '--wet-mask', str(mask)]
 
@@ -56,6 +60,41 @@ def test_dry_collar_hole_is_not_a_gap(tmp_path, capsys):
         'kind': 'missing_estimated_grid_input',
         'outer_collar': {'cells': 0, 'area_m2': 0},
         'interior': {'cells': 0, 'area_m2': 0},
+    }
+
+
+@pytest.mark.parametrize(('sample', 'collar', 'interior'), [
+    pytest.param(-9999, 8, 1, id='finite-nodata-marked-valid'),
+    pytest.param(-120, 0, 0, id='valid-finite-elevation'),
+])
+def test_internal_validity_mask_does_not_hide_band_nodata(tmp_path, capsys, sample, collar, interior):
+    """Trusting only the GDAL mask and finiteness undercounts a finite band sentinel."""
+    shape = (3, 3)
+    args = _inputs(tmp_path, np.full(shape, sample, dtype='float32'), np.ones(shape, dtype='uint8'),
+                   validity=np.ones(shape, dtype=bool), nodata=-9999)
+
+    assert main(args) == 0
+    assert json.loads(capsys.readouterr().out) == {
+        'kind': 'missing_estimated_grid_input',
+        'outer_collar': {'cells': collar, 'area_m2': collar * 400},
+        'interior': {'cells': interior, 'area_m2': interior * 400},
+    }
+
+
+def test_internal_validity_mask_preserves_dry_and_masked_cells(tmp_path, capsys):
+    """Catch counting dry nodata or replacing GDAL validity with the nodata comparison."""
+    samples = np.full((3, 3), -120, dtype='float32')
+    wet = np.ones(samples.shape, dtype='uint8')
+    validity = np.ones(samples.shape, dtype=bool)
+    samples[0, (0, 2)] = -9999  # Dry and wet sentinels flank a valid wet elevation.
+    wet[0, 0] = 0
+    validity[1, 1] = False  # Finite non-sentinel, but invalid per GDAL.
+
+    assert main(_inputs(tmp_path, samples, wet, validity=validity, nodata=-9999)) == 0
+    assert json.loads(capsys.readouterr().out) == {
+        'kind': 'missing_estimated_grid_input',
+        'outer_collar': {'cells': 1, 'area_m2': 400},
+        'interior': {'cells': 1, 'area_m2': 400},
     }
 
 
