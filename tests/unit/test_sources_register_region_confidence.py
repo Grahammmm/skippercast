@@ -5,7 +5,7 @@ import re
 import pytest
 
 from scripts import build_sources_register as register
-from tests.unit.test_sources_register import add_contours, add_relief_pointer, make_root, region, row
+from tests.unit.test_sources_register import BOUND_SOURCE, add_contours, add_relief_pointer, make_root, region, row
 
 
 @pytest.fixture
@@ -48,6 +48,22 @@ def pointer_tree(tmp_path):
 def _region_depth_lines(page, region_id):
     entry, = re.findall(rf'<h4 id="region-{region_id}">[^<]*</h4>(.*?)(?=<h[34]\b)', page, re.S)
     return re.findall(r'<p>(Depth detail: [^<]*)</p>', entry)
+
+
+def test_public_region_fragments_survive_without_listable_credits(tmp_path):
+    """Skipping empty layers strands public links; globbing configs or crediting held rows leaks details."""
+    root = make_root(tmp_path, [row(BOUND_SOURCE, 'Withheld source', display='private')], [
+        region('empty', 'Empty Bay'),
+        region('filtered', 'Filtered Bay', bound=True),
+        region('candidate', 'Candidate Bay', status='draft', bound=True),
+    ])
+    _, page, _ = register.build(root)
+    for ident, name in [('empty', 'Empty Bay'), ('filtered', 'Filtered Bay')]:
+        assert page.count(f'id="region-{ident}"') == 1
+        entry, = re.findall(rf'<h4 id="region-{ident}">{name}</h4>(.*?)(?=<h[34]\b)', page, re.S)
+        assert entry.strip() == '<p>No sources are listed for this region.</p>'
+    for hidden in ('region-candidate', 'Candidate Bay', 'Withheld source', BOUND_SOURCE):
+        assert hidden not in page
 
 
 def test_c1_depth_detail_is_region_local_and_uses_confidence_words_only(pointer_tree):
