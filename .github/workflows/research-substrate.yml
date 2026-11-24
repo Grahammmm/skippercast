@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: research-substrate-${{ github.ref }}
+  group: research-substrate
   cancel-in-progress: false
 
 jobs:
