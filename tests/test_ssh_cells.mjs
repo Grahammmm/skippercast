@@ -66,6 +66,32 @@ test('C2: rejected cells neither draw nor widen the scale', () => {
   assert.deepEqual(sshCells(frames, hour), ready(sameInstant, 10, [-10, -5, 0, 5, 10], [feature(-6, 0.2, ring)]));
 });
 
+test('C2: cell extents, not centers, determine geometry and scale eligibility', () => {
+  const regional = {lat: 35.25, lon: -120, sshCm: -6};
+  const northeast = {lat: 89.5, lon: 179.5, sshCm: 10};
+  const southwest = {lat: -89.5, lon: -179.5, sshCm: 0};
+  const render = cells => sshCells({...feed([{validAt: hour, cells}]), resolution: [1, 1]}, hour);
+  const expected = ready(hour, 10, [-10, -5, 0, 5, 10], [
+    feature(-6, 0.2, [[-120.5, 34.75], [-119.5, 34.75], [-119.5, 35.75], [-120.5, 35.75], [-120.5, 34.75]]),
+    feature(10, 1, [[179, 89], [180, 89], [180, 90], [179, 90], [179, 89]]),
+    feature(0, 0.5, [[-180, -90], [-179, -90], [-179, -89], [-180, -89], [-180, -90]]),
+  ]);
+  assert.deepEqual(render([regional, northeast, southwest]), expected);
+
+  // A center-only check admits these cells; filtering after scaling still widens the key.
+  const crossing = [
+    {...northeast, lat: 89.75, sshCm: 200},
+    {...southwest, lat: -89.75, sshCm: -200},
+    {...northeast, lon: 179.75, sshCm: 200},
+    {...southwest, lon: -179.75, sshCm: -200},
+  ];
+  for (const outside of crossing) {
+    assert.deepEqual(render([regional, outside, northeast, southwest]), expected,
+      `center ${outside.lat}, ${outside.lon}`);
+  }
+  assert.deepEqual(render(crossing), {state: 'none', reason: 'no-cells'});
+});
+
 test('C3: closed lon/lat squares preserve cell order, overlaps and gaps without mutating input', () => {
   const cells = Object.freeze([
     Object.freeze({...cell, sshCm: 5}),
