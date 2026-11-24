@@ -43,7 +43,7 @@ function moment(locale: string, tz: string, at: string | number, form: 'hour' | 
 }
 
 function finite(n: number): number {
-  if (!Number.isFinite(n)) throw new RangeError('Nonfinite status value');
+  if (!Number.isFinite(n)) throw new RangeError('nonfinite-status-value');
   return n;
 }
 
