@@ -80,7 +80,13 @@ def _observed_fraction(frames_meta: list[dict[str, Any]], newest: datetime) -> f
         if isinstance(frame, dict) and observation_time(frame.get("time")) == newest:
             total = frame.get("total_cells")
             if isinstance(total, int) and not isinstance(total, bool) and total > 0:
-                return round(frame["valid_cells"] / total, 3)
+                valid = frame["valid_cells"]
+                # The Chart refuses a document whose fraction is outside [0, 1]; fail at build time instead.
+                if isinstance(valid, int) and not isinstance(valid, bool) and not 0 <= valid <= total:
+                    raise ChlEdgeFeedError(
+                        f"newest frame coverage counts contradict each other: valid_cells {valid}, "
+                        f"total_cells {total}")
+                return round(valid / total, 3)
             break
     return None
 
