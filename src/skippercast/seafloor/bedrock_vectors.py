@@ -6,6 +6,7 @@ in the same projected metre CRS as normalized positive-down depth. This module
 does not read/download files, infer rugosity, rank fish habitat or publish.
 """
 from dataclasses import dataclass
+import decimal
 import math
 import numbers
 
@@ -104,7 +105,9 @@ def assemble_components(batches, *, existing=None, min_area_m2=1000):
     must be assembled together before the minimum connected-component test.
     """
     # bool is an int subclass, so it must be refused before the numeric test.
-    if isinstance(min_area_m2, bool) or not isinstance(min_area_m2, numbers.Real):
+    # Decimal is a valid exact numeric threshold but is not a numbers.Real.
+    if (isinstance(min_area_m2, bool)
+            or not isinstance(min_area_m2, (numbers.Real, decimal.Decimal))):
         raise ValueError('Require the minimum component area as a real number of m2')
     if not math.isfinite(min_area_m2) or min_area_m2 <= 0:
         raise ValueError('Require a positive finite native component area')

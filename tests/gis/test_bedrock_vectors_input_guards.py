@@ -5,6 +5,8 @@ Contract: a caller bug in the argument types is refused by name with ValueError
 while healthy inputs and every numeric result stay as before.
 """
 import unittest
+from decimal import Decimal
+from fractions import Fraction
 
 from affine import Affine
 import numpy as np
@@ -43,6 +45,14 @@ class AssembleComponentsGuards(unittest.TestCase):
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'component area'):
                 assemble_components([self.batch], min_area_m2=value)
 
+    def test_decimal_minimum_area_accepted_but_nonfinite_or_nonpositive_refused(self):
+        # Bug caught: the numeric guard keyed on numbers.Real alone rejects a
+        # valid Decimal threshold; accepting Decimal must not let NaN/inf/sNaN/<=0 through.
+        for value in (Decimal('NaN'), Decimal('sNaN'), Decimal('Infinity'),
+                      Decimal('0'), Decimal('-5')):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'component area'):
+                assemble_components([self.batch], min_area_m2=value)
+
     def test_minimum_area_refused_even_for_empty_batches(self):
         # Bug caught: the early `return []` for no batches hiding a bad area.
         with self.assertRaisesRegex(ValueError, 'real number'):
@@ -72,10 +82,12 @@ class AssembleComponentsGuards(unittest.TestCase):
     def test_healthy_assembly_and_generators_unchanged(self):
         # Control: the guards must not refuse real numbers (int, float, numpy) or
         # a generator of batches, and the 1600 m2 component count is unchanged.
-        for value in (1000, 1000.0, np.float64(1000), np.int64(1000)):
+        for value in (1000, 1000.0, np.float64(1000), np.int64(1000),
+                      Decimal('1000'), Fraction(1000)):
             with self.subTest(value=value):
                 rows = assemble_components([self.batch], min_area_m2=value)
                 self.assertEqual([(k, g.area) for k, g in rows], [('a', 1600)])
+        self.assertEqual(assemble_components([self.batch], min_area_m2=Decimal('2000')), [])
         self.assertEqual(len(assemble_components(iter([self.batch]))), 1)
         self.assertEqual(len(assemble_components([self.batch])), 1)  # 1000 m2 default
         self.assertEqual(assemble_components([self.batch], min_area_m2=2000), [])
