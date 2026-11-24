@@ -153,3 +153,56 @@ def test_c4_detector_output_round_trips():
     doc = eddies_tile(_FRAME, [feature])
     assert doc == expected
     assert read_eddies_tile(doc) == expected
+
+
+def _ring(points: int) -> list[list[float]]:
+    """A closed ring with exactly ``points`` points (first == last)."""
+    ring = [[-123.0 + i * 1e-5, 36.0] for i in range(points - 2)]
+    return [*ring, [ring[-1][0], 36.1], ring[0]]
+
+
+def _ring_feature(points: int) -> EddyFeature:
+    return {"outline": _ring(points), "sense": "cw", "diameter_km": 10.0, "ow_min": -0.5}
+
+
+def test_c3_c4_eddy_count_matches_browser_limit_in_writer_and_reader():
+    """C3/C4: The Chart's parser refuses more than 200 eddies, so neither API may emit or accept 201.
+
+    Catches an off-by-one (`>= 200`) or a missing count cap, which would publish a tile that draws nothing.
+    """
+    at_limit = [_feature(-123.0 + i * 0.001) for i in range(200)]
+    assert len(eddies_tile(_FRAME, at_limit)["features"]) == 200
+    assert len(read_eddies_tile({"frame_time": _STAMP, "features": at_limit})["features"]) == 200
+    over = [*at_limit, _feature(-100.0)]
+    with pytest.raises(EddyTileError) as encode_exc:
+        eddies_tile(_FRAME, over)
+    with pytest.raises(EddyTileError) as read_exc:
+        read_eddies_tile({"frame_time": _STAMP, "features": over})
+    assert str(encode_exc.value).startswith("features ")
+    assert str(read_exc.value).startswith("features ")
+
+
+def test_c3_c4_writer_counts_a_one_shot_iterable_of_features():
+    """C3: The writer takes any iterable; a generator of 201 must be refused as a list of 201 is."""
+    with pytest.raises(EddyTileError) as exc:
+        eddies_tile(_FRAME, (_feature(-123.0 + i * 0.001) for i in range(201)))
+    assert str(exc.value).startswith("features ")
+    assert len(eddies_tile(_FRAME, (_feature(-123.0 + i * 0.001) for i in range(200)))["features"]) == 200
+
+
+def test_c3_c4_outline_length_matches_browser_limit_in_writer_and_reader():
+    """C3/C4: The Chart's parser refuses an outline over 2000 points; exactly 2000 passes.
+
+    Catches a missing outline cap, an off-by-one, or a cap applied to the wrong feature index.
+    """
+    at_limit = [_ring_feature(2000)]
+    assert len(eddies_tile(_FRAME, at_limit)["features"][0]["outline"]) == 2000
+    assert len(read_eddies_tile({"frame_time": _STAMP, "features": at_limit})["features"][0]["outline"]) == 2000
+    for size in (2001, 2002):
+        over = [_feature(), _ring_feature(size)]
+        with pytest.raises(EddyTileError) as encode_exc:
+            eddies_tile(_FRAME, over)
+        with pytest.raises(EddyTileError) as read_exc:
+            read_eddies_tile({"frame_time": _STAMP, "features": over})
+        assert str(encode_exc.value).startswith("features[1].outline")
+        assert str(read_exc.value).startswith("features[1].outline")

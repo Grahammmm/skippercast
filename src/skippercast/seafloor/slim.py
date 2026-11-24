@@ -8,11 +8,14 @@ The browser uses the slim file only while its own boundary data hash to the expo
 and every reef carries a verdict; otherwise it loads the full export and runs the outline check (web/ranking.ts).
 The property list is slim_fields.json, shared with tests/test_reef_slim.mjs.
 """
+import contextlib
 import gzip
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import uuid
 
 # Content-addressed name (habitat-slim-<first 16 hex of its sha256>.geojson.gz): a new file never overwrites the one a live
 # manifest names, so it can be uploaded and read back before the manifest switches to it (publish.py publish_bundle).
@@ -46,9 +49,10 @@ def slim_features(export_features):
 def write_slim(folder, *, region, expires_at, export_sha256, protected, export_features):
     """Write the slim file into `folder`; return its manifest fields (empty when there are no verdicts to carry)."""
     folder = Path(folder)
-    def clear_stale():   # a build without verdicts must not leave an earlier build's file
+    def clear_stale(keep=None):   # a build without verdicts must not leave an earlier build's file
         for stale in folder.glob('habitat-slim*.geojson.gz'):
-            stale.unlink()
+            if stale != keep:
+                stale.unlink()
     if not protected or not export_features:
         clear_stale()
         return {}
@@ -59,7 +63,18 @@ def write_slim(folder, *, region, expires_at, export_sha256, protected, export_f
     if len(packed) > SLIM_MAX_BYTES:
         raise ValueError(f'Slim reef file is {len(packed)} bytes, over its {SLIM_MAX_BYTES} byte budget (slim.py SLIM_MAX_BYTES)')
     sha = hashlib.sha256(packed).hexdigest()
-    clear_stale()   # only once the replacement validated: a refused build keeps the previous files
-    (folder/slim_file(sha)).write_bytes(packed)
+    target = folder/slim_file(sha)
+    # Install the replacement first: write a temp name in the same folder (it does not match the slim glob, so it is never
+    # taken for a stale file), then an atomic os.replace. A write or install error removes the temp file and leaves every
+    # previous slim file untouched.
+    temp = folder/f'.habitat-slim-{uuid.uuid4().hex}.tmp'
+    try:
+        temp.write_bytes(packed)
+        os.replace(temp, target)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            temp.unlink()
+        raise
+    clear_stale(keep=target)   # only once the replacement is installed: a refused or failed build keeps the previous files
     return {'slim_file': slim_file(sha), 'slim_sha256': sha, 'slim_bytes': len(packed),
             'slim_decoded_bytes': len(raw)}

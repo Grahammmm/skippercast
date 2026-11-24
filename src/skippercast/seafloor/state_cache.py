@@ -78,6 +78,14 @@ def _preflight_restore(base, name, entries):
             raise ValueError('Private restore escapes its root')
 
 
+def _unique_object(pairs):
+    # Plain json.loads keeps the last duplicate key, so a damaged inventory could drop a hold.
+    keys = [key for key, _ in pairs]
+    if len(set(keys)) != len(keys):
+        raise ValueError('Invalid private state inventory')
+    return dict(pairs)
+
+
 def restore(s3, bucket, root, name, *, include_cache=True):
     name = scope_name(name)
     try:
@@ -90,7 +98,7 @@ def restore(s3, bucket, root, name, *, include_cache=True):
     if len(raw) > 5_000_000:
         raise ValueError('Oversized state inventory')
     try:
-        data = json.loads(raw)
+        data = json.loads(raw, object_pairs_hook=_unique_object)
     except ValueError:  # JSONDecodeError and UnicodeDecodeError are both ValueError
         raise ValueError('Invalid private state inventory') from None
     if not isinstance(data, dict):

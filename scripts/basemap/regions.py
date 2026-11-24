@@ -35,6 +35,7 @@ OVERVIEW_MAXZOOM, DETAIL_MAXZOOM, PAD = 10, 14, 0.5
 BUILDS = 'https://build-metadata.protomaps.dev/builds.json'
 SOURCE = 'https://build.protomaps.com/{build}.pmtiles'
 PREFIX = 'tiles/basemap'
+PMTILES_V3_MAGIC = b'PMTiles\x03'  # the first eight bytes of every PMTiles v3 archive
 BUILD_PATTERN = r'\d{8}'  # a Protomaps daily build, YYYYMMDD
 ATTRIBUTION = '© OpenStreetMap contributors, © Protomaps'
 MAX_LISTING_BYTES = 1 << 20  # 12 KB today
@@ -222,6 +223,18 @@ def listing():
     return json.loads(body)
 
 
+def _require_pmtiles_v3(archive):
+    """Refuse a file that does not open as a PMTiles v3 archive (magic `PMTiles` plus version byte 3) so no pointer certifies it."""
+    try:
+        with open(archive, 'rb') as handle:
+            head = handle.read(len(PMTILES_V3_MAGIC))
+    except OSError:
+        return  # a missing or unreadable file keeps manifest()'s own refusal
+    if head != PMTILES_V3_MAGIC:
+        raise SystemExit(f'{Path(archive).name} is not a PMTiles v3 archive (it must start with the bytes PMTiles\\x03); '
+                         'no pointer written.')
+
+
 def _seconds(text):
     try:
         if 0 <= float(text) <= 86400:  # nan and ±inf fail one side
@@ -265,6 +278,7 @@ def main(argv=None):
     planned = _read_object(args.dir / 'plan.json', 'plan')
     archive = args.dir / planned['key'].rsplit('/', 1)[1]
     if args.command == 'manifest':
+        _require_pmtiles_v3(archive)
         m = manifest(planned, archive, args.seconds)
         (args.dir / 'manifest.json').write_text(json.dumps(m, indent=2))
         print(f"{m['key']}: {m['bytes']:,} bytes ({m['bytes'] / 2**20:.1f} MiB) in {m['build_seconds']} s "

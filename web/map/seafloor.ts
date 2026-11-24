@@ -435,15 +435,18 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     if (key !== archiveKey) drop();
     manifest = gate.manifest;
     pub = {screened, rights: publicationRights(manifest)};
+    let head: ArchiveHeader;
     try {
       archive ??= o.open(new URL(archiveURL(id), page()).href);
       archiveKey = key;
-      header = await archive.getHeader();
+      // Read into a local: a header from a request that was superseded while it was in flight must not touch `header`.
+      head = await archive.getHeader();
     } catch {
       if (request === enabling) fail('unavailable', 'Seafloor layer unavailable · try again later', false);
       return;
     }
     if (request !== enabling) return;
+    header = head;
     attempt = 0; state = 'ready';
     if (!current()) return;
     schedule(Math.min(Date.parse(manifest.expires_at) - now(), MAX_DELAY));

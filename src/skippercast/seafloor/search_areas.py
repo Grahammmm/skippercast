@@ -10,6 +10,14 @@ from skippercast.platform.contracts import REPO, read_json
 PROFILE = 'measured-rough-search-v1'
 
 
+def _finite(value):
+    """True only for a finite number; an integer too large for a float is not finite."""
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
 def assessment(properties, rules=None):
     if not isinstance(properties, dict):
         return None
@@ -21,14 +29,14 @@ def assessment(properties, rules=None):
     if (p.get('terrain') != 'unknown'
             or p.get('rule_version') != rules['rule_version']
             or not isinstance(support, (int, float)) or isinstance(support, bool)
-            or not math.isfinite(support)
+            or not _finite(support)
             or not 0 <= support < rules['metric_minimum_support_fraction']
             or not isinstance(fit, dict) or not fit
             or not set(fit) <= set(rules['species'])
             or any(value != 'unknown' for value in fit.values())
             or not isinstance(p.get('source_ids'), list) or not p['source_ids']
             or not all(isinstance(s, str) and s for s in p['source_ids'])
-            or any(type(v) not in (int, float) or not math.isfinite(v) for v in (lo, hi))
+            or any(type(v) not in (int, float) or not _finite(v) for v in (lo, hi))
             or not 25 <= lo <= hi <= 300 + 1e-6):
         return None
     targets = sorted(key for key in fit if
