@@ -102,3 +102,31 @@ def test_derived_grid_field_missing_from_receipt_is_named(field):
     review = {**RECEIPT, **DERIVED}
     with pytest.raises(ValueError, match='^Derived grid differs from reviewed '+field+'$'):
         normalized.verify_review(receipt, review, 'unused')
+
+
+DERIVED_FIELDS = ('grid_spacing_m', 'native_sampling', 'preparation_receipt_sha256')
+
+
+@pytest.mark.parametrize('field', DERIVED_FIELDS)
+def test_derived_grid_field_missing_from_review_is_named(field):
+    # Bug caught: a review missing the field was compared through .get(), so a
+    # receipt value of None equalled the review default and was accepted.
+    receipt = {**RECEIPT, **{**DERIVED, field: None}}
+    review = {**RECEIPT, **_without(DERIVED, field)}
+    with pytest.raises(ValueError, match='^Derived grid differs from reviewed '+field+'$'):
+        normalized.verify_review(receipt, review, 'unused')
+
+
+@pytest.mark.parametrize('field', DERIVED_FIELDS)
+def test_derived_grid_field_missing_from_both_sides_is_named(field):
+    # Bug caught: two absent values compared as equal on the derived-grid path.
+    receipt = {**RECEIPT, **_without(DERIVED, field)}
+    review = {**RECEIPT, **_without(DERIVED, field)}
+    with pytest.raises(ValueError, match='^Derived grid differs from reviewed '+field+'$'):
+        normalized.verify_review(receipt, review, 'unused')
+
+
+def test_derived_grid_matching_null_values_pass():
+    # Unaffected control: a null present on both sides is a real, equal value.
+    derived = {**DERIVED, 'grid_spacing_m': None}
+    assert normalized.verify_review({**RECEIPT, **derived}, {**RECEIPT, **derived}, 'unused') is None
