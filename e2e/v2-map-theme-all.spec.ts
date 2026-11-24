@@ -118,82 +118,79 @@ for (const starting of ['dark', 'light'] as const) {
           await live.emulateMedia({colorScheme: theme});
           await live.waitForFunction(expected => (document.documentElement.dataset.theme ?? 'dark') === expected, theme);
         };
-        const url = server.origin + link(FIRST, layers, base, camera, profile);
-        const mount = async () => {
-          await live.emulateMedia({colorScheme: starting});
-          await Promise.all([live, fresh].map(page => page.goto(url)));
-          await Promise.all([live, fresh].map(page => page.waitForFunction(() => window.d3Chart?.isStyleLoaded() && window.d3Chart?.areTilesLoaded(), null, {timeout: 10_000})));
-          if (profile === 'boat') await Promise.all([live, fresh].map(page => enableFleet(page, phone)));
-          await Promise.all([live, fresh].map(settled));
-          await Promise.all([live, fresh].map(page => page.waitForLoadState('networkidle')));
-        };
         const duringRegionLoad = async () => {
           // Hold both real readers before popstate. Use a per-transition request
           // boundary, so an earlier visit cannot satisfy the held-load control.
-          // The app stops waiting for region.json after REGION_READ_TIMEOUT_MS and
-          // then asks for every chart file (RF0850-2 fails open). Evidence observed
-          // inside that deadline always counts; if a slow runner left part of the
-          // evidence past it and nothing timely failed, remount (a fresh page, so
-          // the shared region.json read is not reused) and hold again.
           const fixtures = [data, reference];
-          for (let attempt = 1; ; attempt++) {
-            if (attempt > 1) {
-              test.info().setTimeout(test.info().timeout + 60_000);
-              await mount();
+          const seen = fixtures.map(f => f.seen.length);
+          fixtures.forEach(f => f.hold());
+          try {
+            await toggle(starting);
+            await Promise.all([live, fresh].map(page => page.evaluate(({region, deadline}) => {
+              // The app gives up on region.json after REGION_READ_TIMEOUT_MS and
+              // then fails open (RF0850-2), so a slow runner used to see NEXT chart
+              // files mid-hold. Hold that deadline with region.json: its timers fire
+              // only after release, and the app's own deadline is left unchanged.
+              const held = window as Window & {d3Held?: {on: boolean; armed: number}};
+              const state = held.d3Held = {on: true, armed: 0};
+              const set = window.setTimeout, clear = window.clearTimeout, cancel = new Map<number, () => void>();
+              window.setTimeout = ((handler: TimerHandler, ms?: number, ...args: unknown[]) => {
+                if (ms !== deadline || typeof handler !== 'function' || !state.on) return set(handler, ms, ...args);
+                state.armed++;
+                let active = true;
+                const fire = () => { if (active) { if (state.on) set(fire, 50); else handler(...args); } };
+                const id = set(fire, ms);
+                cancel.set(id, () => { active = false; });
+                return id;
+              }) as typeof window.setTimeout;
+              window.clearTimeout = ((id?: number) => { if (id !== undefined) cancel.get(id)?.(); clear(id); }) as typeof window.clearTimeout;
+              const url = new URL(location.href);
+              url.searchParams.set('region', region);
+              history.pushState({}, '', url);
+              dispatchEvent(new PopStateEvent('popstate'));
+            }, {region: NEXT, deadline: REGION_READ_TIMEOUT_MS})));
+            await expect.poll(() => fixtures.every((f, i) => f.seen.slice(seen[i]).includes(`/regions/${NEXT}/region.json`))).toBe(true);
+            // Prove the app's region read deadline is the timer being held.
+            for (const page of [live, fresh]) {
+              expect(await page.evaluate(() => (window as Window & {d3Held?: {armed: number}}).d3Held?.armed), 'held region read deadline').toBeGreaterThan(0);
             }
-            const seen = fixtures.map(f => f.seen.length);
-            fixtures.forEach(f => f.hold());
-            try {
-              await toggle(starting);
-              const started = Date.now();
-              await Promise.all([live, fresh].map(page => page.evaluate(region => {
-                const url = new URL(location.href);
-                url.searchParams.set('region', region);
-                history.pushState({}, '', url);
-                dispatchEvent(new PopStateEvent('popstate'));
-              }, NEXT)));
-              await expect.poll(() => fixtures.every((f, i) => f.seen.slice(seen[i]).includes(`/regions/${NEXT}/region.json`))).toBe(true);
-              await expect.poll(async () => {
-                const count = data.requests.length;
-                await live.waitForFunction(() => window.d3Chart?.loaded());
-                await frameBoundary(live);
-                return data.requests.length - count;
-              }).toBe(0);
-              const before = await snapshot(live), boundary = data.requests.length;
-              await toggle(other(starting));
+            await expect.poll(async () => {
+              const count = data.requests.length;
+              await live.waitForFunction(() => window.d3Chart?.loaded());
               await frameBoundary(live);
-              const after = await snapshot(live);
-              // `started` precedes both popstates, so anything recorded before
-              // started + REGION_READ_TIMEOUT_MS was seen with the region held.
-              const timely = (at: number) => at - started < REGION_READ_TIMEOUT_MS;
-              const afterTimely = timely(Date.now());
-              const target = await snapshot(fresh);
-              const held = Date.now() - started, errors = test.info().errors.length;
-              expect.soft(data.requests.slice(boundary).filter((_, i) => timely(data.requestedAt[boundary + i]!)), 'new requests with next region held').toEqual([]);
-              if (afterTimely) {
-                expect.soft(ids(after)).toEqual(ids(before));
-                expect.soft(after.camera).toEqual(before.camera);
-                expect.soft(after.images).toEqual(before.images);
-                expect.soft(after.duplicates).toEqual([]);
-              }
-              if (held < REGION_READ_TIMEOUT_MS) {
-                expect.soft([...ids(after)].sort()).toEqual([...ids(target)].sort());
-                expect.soft(stalePaint(after, target), 'stale paint with next region held').toEqual([]);
-                return;
-              }
-              // A timely violation stands; never retry it away.
-              if (test.info().errors.length > errors) return;
-              expect(attempt, `the next region stayed held only ${REGION_READ_TIMEOUT_MS} ms; attempt ${attempt} took ${held} ms`).toBeLessThan(3);
-              console.log(`${info.project.name}/${starting}/${layers}: held-region attempt ${attempt} took ${held} ms, past the region read deadline; retrying`);
-              continue;
-            } finally { fixtures.forEach(f => f.release()); }
+              return data.requests.length - count;
+            }).toBe(0);
+            const before = await snapshot(live), boundary = data.requests.length;
+            await toggle(other(starting));
+            await frameBoundary(live);
+            const after = await snapshot(live), target = await snapshot(fresh);
+            expect.soft(data.requests.slice(boundary), 'new requests with next region held').toEqual([]);
+            expect.soft(ids(after)).toEqual(ids(before));
+            expect.soft([...ids(after)].sort()).toEqual([...ids(target)].sort());
+            expect.soft(after.camera).toEqual(before.camera);
+            expect.soft(after.images).toEqual(before.images);
+            expect.soft(after.duplicates).toEqual([]);
+            expect.soft(stalePaint(after, target), 'stale paint with next region held').toEqual([]);
+          } finally {
+            fixtures.forEach(f => f.release());
+            await Promise.all([live, fresh].map(page => page.evaluate(() => {
+              const held = (window as Window & {d3Held?: {on: boolean}}).d3Held;
+              if (held) held.on = false;
+            }).catch(() => {})));
           }
         };
 
         const loadBoundary = data.requests.length;
         const swell = layers.startsWith('swell,');
         for (const fixture of [data, reference]) fixture.nearshore(swell);
-        await mount();
+        await live.emulateMedia({colorScheme: starting});
+        const url = server.origin + link(FIRST, layers, base, camera, profile);
+        await Promise.all([live, fresh].map(page => page.goto(url)));
+        await Promise.all([live, fresh].map(page => page.waitForFunction(() => window.d3Chart?.isStyleLoaded() && window.d3Chart?.areTilesLoaded(), null, {timeout: 10_000})));
+        if (profile === 'boat') await Promise.all([live, fresh].map(page => enableFleet(page, phone)));
+
+        await Promise.all([live, fresh].map(settled));
+        await Promise.all([live, fresh].map(page => page.waitForLoadState('networkidle')));
         const positive = profile === 'shore' ? ['shore-runs', 'shore-access']
           : base === 'chart' ? ['stations'] : layers === choices[0] ? ['depth-contours']
           : swell ? ['swell-nearshore'] : [];

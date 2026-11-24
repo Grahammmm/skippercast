@@ -91,8 +91,7 @@ const genericRegion = (id: string) => ({schema_version: 1, id, name: `Synthetic 
   basemap: {default: 'night'}});
 
 export async function bindThemeFixture(context: BrowserContext, origin: string, starting: Theme, stale = false) {
-  // requestedAt[i] is the Node clock time requests[i] was recorded.
-  const requests: string[] = [], requestedAt: number[] = [], seen: string[] = [];
+  const requests: string[] = [], seen: string[] = [];
   const oceans = new Map([FIRST, NEXT].map(id => [id, ocean(id)]));
   const tiles = await readFile(new URL('../tests/fixtures/basemap/tiny.pmtiles', import.meta.url));
   const seafloor = await readFile(new URL('../tests/fixtures/seafloor/chart.pmtiles', import.meta.url));
@@ -113,7 +112,7 @@ export async function bindThemeFixture(context: BrowserContext, origin: string, 
     const req = route.request(), url = new URL(req.url()), path = url.pathname;
     seen.push(path);
     // Count attempted I/O, including fixture hits, off-origin attempts and partial-content transport.
-    if (req.headers().range || !/^(?:\/map$|\/(?:assets|fonts|glyphs)\/)/.test(path) || req.resourceType() === 'image') { requests.push(path); requestedAt.push(Date.now()); }
+    if (req.headers().range || !/^(?:\/map$|\/(?:assets|fonts|glyphs)\/)/.test(path) || req.resourceType() === 'image') requests.push(path);
     if (url.origin !== origin) {
       if (req.resourceType() === 'image' || url.hostname === 'nowcoast.noaa.gov' || url.searchParams.get('request') === 'GetMap') {
         return route.fulfill({body: pixel, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}});
@@ -220,7 +219,7 @@ export async function bindThemeFixture(context: BrowserContext, origin: string, 
     if (path === '/map' || /^\/(assets|fonts|glyphs)\//.test(path)) return route.continue();
     return route.fulfill({status: 404, json: {error: 'No synthetic fixture'}});
   });
-  return {requests, requestedAt, seen, nearshore: (enabled: boolean) => { nearshore = enabled; },
+  return {requests, seen, nearshore: (enabled: boolean) => { nearshore = enabled; },
     hold: () => { regionHold = new Promise<void>(resolve => { release = resolve; }); },
     release: () => { release?.(); regionHold = undefined; }};
 }
