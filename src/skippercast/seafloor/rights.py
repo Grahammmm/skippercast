@@ -32,18 +32,35 @@ def _sc53_archive_locator(url):
             and all(segment not in {'', '.', '..'} for segment in locator.path.split('/')[1:]))
 
 
+def _require_id_and_url(row):
+    if not all(isinstance(row.get(key), str) and row[key] for key in ('id', 'url')):
+        raise ValueError('Source row requires a string id and url')
+
+
 def source_rights(row, *, use="noncommercial", today=None):
     """Return exportable terms only for a reviewed, original producer source."""
     if use not in {'noncommercial', 'for-profit'}:
         raise ValueError('Unknown deployment source-use profile')
+    if not isinstance(row, dict):
+        raise ValueError('Source row must be an object')
     if row.get('license') == 'public-domain-us-gov':
+        _require_id_and_url(row)
+        adapter_review = row.get('adapter_review', {})
+        if not isinstance(adapter_review, dict):
+            raise ValueError('Source adapter_review must be an object')
+        publisher = row.get('publisher', 'Original USGS / NOAA survey')
+        if not isinstance(publisher, str):
+            raise ValueError('Source publisher must be a string')
         return {'source_id': row['id'], 'license': row['license'],
-                'source_url': row['url'], 'policy_url': row.get('adapter_review', {}).get('rights_source_url', ''),
-                'attribution': row.get('publisher', 'Original USGS / NOAA survey'),
+                'source_url': row['url'], 'policy_url': adapter_review.get('rights_source_url', ''),
+                'attribution': publisher,
                 'notice': 'Original US government data; retain source attribution and survey limitations.'}
     if use != 'noncommercial':
         raise ValueError('For-profit publication requires express producer permission')
     review = row.get('rights_review', {})
+    publisher = row.get('publisher', '')
+    if not isinstance(review, dict) or not isinstance(publisher, str):
+        raise ValueError('Source publication rights are unqualified or conflict with producer review')
     if (row.get('license') != CSUMB_LICENSE
             or review.get('policy_url') != CSUMB_POLICY
             or review.get('source_sha256') != row.get('sha256')
@@ -55,8 +72,9 @@ def source_rights(row, *, use="noncommercial", today=None):
             or not (isinstance(row.get('url'), str)
                     and (_sc53_archive_locator(row['url'])
                          or row['url'] in CSUMB_EXACT_ARCHIVES))
-            or not ('CSUMB' in row.get('publisher', '') or 'CSU Monterey Bay' in row.get('publisher', ''))):
+            or not ('CSUMB' in publisher or 'CSU Monterey Bay' in publisher)):
         raise ValueError('Source publication rights are unqualified or conflict with producer review')
+    _require_id_and_url(row)
     try:
         checked = date.fromisoformat(review['reviewed_on'])
     except (KeyError, ValueError, TypeError) as error:
@@ -71,7 +89,12 @@ def source_rights(row, *, use="noncommercial", today=None):
 
 def feature_rights(source_ids, sources, *, use="noncommercial"):
     """Every contributor must resolve, including interpreted substrate sources."""
+    # Iterables (including one-shot generators) stay accepted; consume exactly once.
+    if isinstance(source_ids, (str, bytes, dict)) or not hasattr(source_ids, '__iter__'):
+        raise ValueError('Feature source ids must be a list, tuple or set of strings')
     source_ids = list(source_ids)
+    if not all(isinstance(ident, str) for ident in source_ids):
+        raise ValueError('Feature source ids must be a list, tuple or set of strings')
     if not source_ids or any(ident not in sources for ident in source_ids):
         raise ValueError('Feature source attribution is incomplete')
     return [source_rights(sources[ident], use=use) for ident in sorted(set(source_ids))]
@@ -86,10 +109,16 @@ def deployment_use(root):
     if not path.exists():
         # Missing deployment policy is never permission to release restricted data.
         return 'for-profit'
-    policy = json.loads(path.read_text())
+    try:
+        policy = json.loads(path.read_text())
+    except ValueError as error:
+        raise ValueError('Deployment policy is not valid JSON') from error
+    if not isinstance(policy, dict):
+        raise ValueError('Deployment policy must be a JSON object')
     use = policy.get('source_use')
     monetization = policy.get('monetization')
-    if use not in {'noncommercial', 'for-profit'} or monetization not in {'none', 'paid'}:
+    if (not isinstance(use, str) or use not in {'noncommercial', 'for-profit'}
+            or not isinstance(monetization, str) or monetization not in {'none', 'paid'}):
         raise ValueError('Deployment requires explicit source_use and monetization')
     if monetization == 'paid' and use != 'for-profit':
         raise ValueError('Paid deployment cannot use the noncommercial source profile')
