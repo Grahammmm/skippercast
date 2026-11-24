@@ -54,19 +54,31 @@ def raster_identity(path):
     return {'version': VERSION, 'sha256': digest.hexdigest()}
 
 
+_MISSING = object()
+
+
+def _differs(receipt, review, field):
+    """A field absent from either side counts as a difference, never as equal."""
+    left = receipt.get(field, _MISSING)
+    right = review.get(field, _MISSING)
+    return left is _MISSING or right is _MISSING or left != right
+
+
 def verify_review(receipt, review, path):
     for field in ('source_sha256', 'requested_bounds_wgs84', 'native_resolution_m',
                   'vertical_datum', 'valid_pixels_in_requested_bounds',
                   'nominal_0_300ft_pixels_in_requested_bounds'):
-        if receipt[field] != review[field]:
+        if _differs(receipt, review, field):
             raise ValueError('Normalized source differs from reviewed '+field)
     if receipt.get('adapter_version') == 'measured-multibeam-grid-v1':
         for field in ('grid_spacing_m', 'native_sampling', 'preparation_receipt_sha256'):
-            if receipt[field] != review.get(field):
+            if field not in receipt or receipt[field] != review.get(field):
                 raise ValueError('Derived grid differs from reviewed '+field)
     identity = review.get('raster_identity')
     if identity is not None:
+        if not isinstance(identity, dict):
+            raise ValueError('Reviewed raster identity is malformed')
         if identity.get('version') != VERSION or raster_identity(path) != identity:
             raise ValueError('Normalized scientific raster differs from reviewed content')
-    elif receipt['cog_sha256'] != review['cog_sha256']:
+    elif _differs(receipt, review, 'cog_sha256'):
         raise ValueError('Normalized source differs from reviewed manifest; content review required')
