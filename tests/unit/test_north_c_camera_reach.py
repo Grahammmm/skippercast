@@ -106,3 +106,30 @@ def test_release_bound_short_of_oregon_is_refused(configs):
     assert result.returncode == 1
     assert 'release bounds must end at the Oregon anchor (42.0 N)' in result.stderr
     assert not result.stdout
+
+
+@pytest.mark.parametrize(('region_id', 'center', 'eligible'), [
+    ('crescent-city', [-124.185, 42.05], False),
+    ('trinidad-klamath', [-124.144, 41.6], False),
+    ('crescent-city', [-124.75, 42.0], True),
+], ids=['beyond-oregon', 'in-neighbor-but-not-own-release', 'inclusive-corner'])
+def test_preview_center_must_be_in_its_own_release(configs, region_id, center, eligible):
+    """Catches accepting a world-valid center that wins (or hides behind another winner)."""
+    path = configs / 'regions' / region_id / 'render.json'
+    render = json.loads(path.read_text(encoding='utf-8'))
+    recipe = render['previews'][0]
+    recipe['center'] = center
+    path.write_text(json.dumps(render), encoding='utf-8')
+
+    result = _run(configs)
+    if eligible:
+        assert result.returncode == 0, result.stderr
+        preview = json.loads(result.stdout)['preview']
+        assert preview['northernmost_center'] == {
+            'region_id': region_id, 'preview_id': recipe['id'], 'center_lon_lat': center,
+        }
+        assert preview['latitude_separation_deg'] == 0
+    else:
+        assert result.returncode == 1, result.stdout
+        assert f"{region_id}/render.json: preview {recipe['id']} center is outside region bounds" in result.stderr
+        assert not result.stdout
