@@ -80,7 +80,9 @@ def binding_digest(row):
 
 
 def feature_evidence(row):
-    if not row.get('terrain_support'):
+    # Only an absent or null binding means unbound; a falsey non-object ('', [], 0,
+    # False) is malformed and is refused by name like any other wrong shape.
+    if row.get('terrain_support') is None:
         return None
     binding = _binding_object(row['terrain_support'])
     _require_keys(binding, EVIDENCE_KEYS)

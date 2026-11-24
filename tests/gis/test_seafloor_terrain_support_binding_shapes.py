@@ -75,14 +75,15 @@ class MalformedBindingTests(unittest.TestCase):
 
     def test_non_object_binding_is_refused_by_name(self):
         # Bug caught: a string/list binding leaks TypeError: string indices must be integers.
-        for bad in ('csumb-native-rough-v1', ['profile'], 7, True, ''):
+        for bad in ('csumb-native-rough-v1', ['profile'], 7, True, '', [], 0, False):
             row = dict(make_row(), terrain_support=bad)
             with self.subTest(binding=bad):
                 with self.assertRaisesRegex(ValueError, MALFORMED):
                     support.validate_binding(row)
                 with self.assertRaisesRegex(ValueError, MALFORMED):
                     support.binding_digest(row)
-        for bad in ('csumb-native-rough-v1', ['profile'], 7, True):
+        # Falsey non-objects are malformed too; only absent or null means unbound.
+        for bad in ('csumb-native-rough-v1', ['profile'], 7, True, '', [], 0, False):
             with self.subTest(feature_evidence=bad), self.assertRaisesRegex(ValueError, MALFORMED):
                 support.feature_evidence(dict(make_row(), terrain_support=bad))
 
