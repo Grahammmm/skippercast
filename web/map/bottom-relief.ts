@@ -1,5 +1,5 @@
 // MB-08: chart-only research depth shading. E2E-17 verifies each returned tile.
-import {computed, effect} from '@preact/signals';
+import {computed, effect, signal as cell} from '@preact/signals';
 import type {AddProtocolAction, LayerSpecification} from 'maplibre-gl';
 import {PMTiles, TileType} from 'pmtiles';
 import {waypointPlacement} from '../waypoint-placement.ts';
@@ -80,7 +80,8 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
     const path = `catalog/relief/${encodeURIComponent(o.region)}.json`;
     const response = await fetchFn(new URL(path, page), {signal, redirect: 'error'});
     if (!response.ok) throw new Error(`Relief pointer unavailable (HTTP ${response.status})`);
-    const selected = resolveRelief(o.region, await response.json());
+    const pointer = await response.json();
+    const selected = resolveRelief(o.region, pointer);
     if (selected.status !== 'ready') throw new Error(`Relief unavailable: ${selected.reason}`);
     signal.throwIfAborted();
     const a = selected.archive;
@@ -143,28 +144,70 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       return {data: tile.data};
     });
 
-    // Do not read a pointer field or infer a footprint from a blank raster tile.
-    const detail = o.surveyDetail === undefined ? null : decodeSurveyDetail(o.region, o.surveyDetail, new Set(a.sources.map(s => s.id)));
-    const hasDetail = detail?.type === 'FeatureCollection' && !!detail.features.length &&
-      !!surveyHatchPattern(pattern, readPalette(), isLight()).length;
-    const control = hasDetail && !o.surveyView ? document.createElement('div') : null;
-    let detailOn = false, detailIds: string[] = [];
+    const b = pointer.survey_detail;
+    const rep = (r: unknown, max: number): r is {bytes: number; sha256: string} => {
+      if (!r || typeof r !== 'object') return false;
+      const {bytes, sha256} = r as {bytes: number; sha256: unknown};
+      return Object.keys(r).sort().join() === 'bytes,sha256' && Number.isSafeInteger(bytes) && bytes > 0 && bytes <= max &&
+        typeof sha256 === 'string' && /^[a-f0-9]{64}$/.test(sha256);
+    };
+    const binding = pointer.status === 'reviewed' && b && Object.keys(b).sort().join() === 'decoded,wire' &&
+      rep(b.wire, 5 * 1024 * 1024) && rep(b.decoded, 16 * 1024 * 1024) ? b as {wire: {bytes:number; sha256:string}; decoded: {bytes:number; sha256:string}} : null;
+    async function verifiedSurvey(): Promise<unknown> {
+      if (!binding) return undefined;
+      try {
+        const response = await fetchFn(new URL(`feeds/tiles/relief/${o.region}/${a.envelope_sha256}/survey/${binding.wire.sha256}.geojson.br`, page),
+          {signal, redirect: 'error'});
+        if (!response.ok || !response.body || response.headers.get('Content-Encoding') !== 'br' ||
+            response.headers.get('Content-Length') !== String(binding.wire.bytes)) {
+          void response.body?.cancel(); return undefined;
+        }
+        const stream = response.body.getReader(), bytes = new Uint8Array(binding.decoded.bytes);
+        let size = 0;
+        try {
+          while (true) {
+            const {done, value} = await stream.read();
+            if (done) break;
+            if (size + value.length > bytes.length) { await stream.cancel(); return undefined; }
+            bytes.set(value, size); size += value.length;
+          }
+        } finally { stream.releaseLock(); }
+        if (size !== bytes.length) return undefined;
+        const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
+          n => n.toString(16).padStart(2, '0')).join('');
+        signal.throwIfAborted();
+        if (digest !== binding.decoded.sha256) return undefined;
+        return JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(bytes));
+      } catch { return undefined; }
+    }
+    const decode = (raw: unknown) => raw === undefined ? null : decodeSurveyDetail(o.region, raw, new Set(a.sources.map(s => s.id)));
+    const detail = cell(decode(o.surveyDetail));
+    const available = () => !!detail.peek()?.features.length && !!surveyHatchPattern(pattern, readPalette(), isLight()).length;
+    let pending = false, refused = false, detailOn = false, detailIds: string[] = [];
+    const control = available() && !o.surveyView ? document.createElement('div') : null;
     const setDetail = () => { for (const id of detailIds) o.engine.setVisible(id, detailOn); };
     const updateView = () => {
-      if (!o.surveyView || !hasDetail || signal.aborted) return;
-      // MB-09 already encodes source certification and the shallow-water rules
-      // in tier. A compiled grid is estimated but can also be keyed as compiled.
-      const classes = new Set(o.engine.renderedValues(hit, 'tier'));
-      for (const grid of o.engine.renderedValues(hit, 'grid_tier')) classes.add(grid);
+      if (!o.surveyView || signal.aborted) return;
+      if (!available() && (!binding || refused)) { o.surveyView(null); return; }
+      const classes = new Set(available() ? o.engine.renderedValues(hit, 'tier') : []);
+      if (available()) for (const grid of o.engine.renderedValues(hit, 'grid_tier')) classes.add(grid);
       o.surveyView({classes, shown: detailOn, toggle});
     };
     function toggle() {
-      if (signal.aborted) return;
-      detailOn = !detailOn;
-      setDetail();
-      updateView();
+      if (signal.aborted || pending || refused) return;
+      if (available()) { detailOn = !detailOn; setDetail(); updateView(); return; }
+      if (!binding) return;
+      pending = true;
+      void verifiedSurvey().then(raw => {
+        if (signal.aborted) return;
+        pending = false;
+        const parsed = decode(raw);
+        refused = !parsed?.features.length;
+        if (parsed?.features.length) { detailOn = true; detail.value = parsed; }
+        updateView();
+      });
     }
-    if (hasDetail && o.surveyView) disposeSurvey = o.engine.view.on('idle', updateView);
+    if ((available() || binding) && o.surveyView) disposeSurvey = o.engine.view.on('idle', updateView);
     if (control) {
       control.className = 'maplibregl-ctrl';
       const button = document.createElement('button');
@@ -183,6 +226,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
         paint: {'raster-resampling': 'linear', 'raster-fade-duration': 0, 'raster-opacity': 1,
           'raster-saturation': seafloor ? -0.8 : field ? fieldDesaturation() : 0, 'raster-brightness-min': seafloor && light ? 0.30 : 0,
           'raster-brightness-max': seafloor && !light ? 0.75 : 1}}];
+      const hasDetail = available();
       const detailLayers = hasDetail ? surveyDetailLayers(survey, survey, pattern, p, light) : [];
       if (hasDetail) layers.push(...detailLayers, {id: hit, type: 'fill', source: survey, paint: {'fill-opacity': 0}});
       layers.push(...land.map(l => ({...l, id: `${source}-${l.id}`} as LayerSpecification)),
@@ -196,6 +240,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
     disposePaint = effect(() => {
       if (signal.aborted) return;
       const seafloor = seafloorOn.value, field = fieldOn.value;
+      const current = detail.value, hasDetail = available();
       const {layers, detailLayers} = buildLayers(readPalette(), isLight(), seafloor, field);
       detailIds = detailLayers.slice(1).map(l => l.id); // The hatch stays visible.
       drawn = true;
@@ -204,7 +249,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       // No source or attribution text on the map (G 2026-11-18); credits live on the sources page.
       o.engine.setOverlay(BOTTOM_RELIEF, {stopOnError: true, sources: {[source]: {type: 'raster', tileSize: 256,
         tiles: [`${SCHEME}://${token}/{z}/{x}/{y}`], minzoom: a.minzoom, maxzoom: a.maxzoom, bounds: [...a.bounds]},
-        ...hasDetail && detail ? {[survey]: {type: 'geojson', data: detail}} : {}}, layers,
+        ...hasDetail && current ? {[survey]: {type: 'geojson', data: current}} : {}}, layers,
         themePaint: p => paintEdits(buildLayers(p, isLight(), seafloor, field).layers),
         ...control ? {control} : {},
         ...hasDetail ? {themePatterns: p => surveyHatchPattern(pattern, p, isLight()),

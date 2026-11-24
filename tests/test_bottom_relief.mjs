@@ -26,7 +26,7 @@ const pointer = region => ({region, status: 'reviewed', private: false, sha256: 
   native_support_by_zoom: {10: {tiles: 1, limit_m: 91.44, sources: []}}});
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-function chart(t) {
+function chart(t, surveyView) {
   const root = {dataset: {}};
   const old = Object.fromEntries(['document', 'getComputedStyle', 'MutationObserver'].map(k => [k, globalThis[k]]));
   let themeChanged;
@@ -39,12 +39,13 @@ function chart(t) {
   const seafloor = signal(false), field = signal(false);
   let overlay, before, protocol, breakRange = false;
   const engine = {
+    view: {on: () => () => {}},
     setOverlay(owner, next, anchor) { assert.equal(owner, 'bottom-relief'); overlay = next; before = anchor; },
     setRasterOpacity(id, opacity) { assert.equal(id, overlay.layers[0].id); overlay.layers[0].paint['raster-opacity'] = opacity; },
   };
   const library = {addProtocol(_, action) { protocol = action; }};
   const start = (region, reply = pointer(region)) => {
-    const handle = attachBottomRelief({engine, region, library, page: 'https://chart.test/map',
+    const handle = attachBottomRelief({engine, region, library, surveyView, page: 'https://chart.test/map',
       seafloorOn: () => seafloor.value, fieldOn: () => field.value, unavailable: e => errors.push(e.message),
       ready: look => { readies.push(region); looks.push(look); },
       async fetchFn(raw, init) {
@@ -54,6 +55,7 @@ function chart(t) {
         if (url.pathname === digestPath + 'root.json') return new Response(digestRoot);
         if (url.pathname === digestPath + chunkPath) return new Response(chunk);
         if (url.pathname === `/catalog/relief/${region}.json`) { const body = await reply; return body instanceof Response ? body : Response.json(body); }
+        if (url.pathname.includes('/survey/')) return new Response('not a bound response');
         if (breakRange) return new Response(bytes); // full response must never be mistaken for a range
         const [, start, end] = /^bytes=(\d+)-(\d+)$/.exec(init.headers.Range).map(Number);
         return new Response(bytes.subarray(start, end + 1), {status: 206,
@@ -199,5 +201,27 @@ test('ready reports the pointer look: legacy without style, the baked digest wit
   await tick();
   assert.deepEqual(c.readies, ['legacy', 'styled', 'malformed']);
   assert.deepEqual(c.looks, ['deep-fixed-v1', 'd'.repeat(64), null]);
+  assert.deepEqual(c.errors, []);
+});
+
+// Never fetch optional detail until requested. Bad delivery must remove only the
+// survey control, not the underlying relief or the region's ability to read tiles.
+test('reviewed survey opt-in is lazy and a bad delivery preserves relief', async t => {
+  let view;
+  const c = chart(t, next => { view = next; });
+  const p = pointer('north');
+  p.survey_detail = {wire: {bytes: 15, sha256: 'a'.repeat(64)}, decoded: {bytes: 27, sha256: 'd'.repeat(64)}};
+  c.start('north', p);
+  await tick();
+  assert.deepEqual(c.fetches.map(([url]) => url), ['/catalog/relief/north.json']);
+  assert.ok(view, 'missing opt-in');
+  const template = c.template;
+  view.toggle(); view.toggle();
+  await tick();
+  assert.equal(view, null);
+  assert.deepEqual(c.fetches.map(([url]) => url), ['/catalog/relief/north.json',
+    `/feeds/tiles/relief/north/${p.envelope_sha256}/survey/${p.survey_detail.wire.sha256}.geojson.br`]);
+  assert.equal(c.template, template);
+  assert.deepEqual(Buffer.from((await c.tile(template)).data), bytes.subarray(payloadOffset));
   assert.deepEqual(c.errors, []);
 });
