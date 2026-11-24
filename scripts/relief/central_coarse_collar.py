@@ -36,8 +36,13 @@ def measure(coarse_path: Path, wet_mask_path: Path) -> dict:
         if np.ma.getmaskarray(mask).any() or not np.isin(mask.data, (0, 1)).all():
             raise ValueError('wet mask must contain only valid 0 (dry) and 1 (wet) cells')
         samples = coarse.read(1, masked=True)
+        nodata = coarse.nodatavals[0]
 
-    missing = (mask.data == 1) & (np.ma.getmaskarray(samples) | ~np.isfinite(samples.data))
+    invalid = np.ma.getmaskarray(samples) | ~np.isfinite(samples.data)
+    # An explicit GDAL validity mask can override the band's nodata mask.
+    if nodata is not None and np.isfinite(nodata):
+        invalid |= samples.data == nodata
+    missing = (mask.data == 1) & invalid
     interior = int(np.count_nonzero(missing[1:-1, 1:-1]))
     collar = int(np.count_nonzero(missing)) - interior
     return {

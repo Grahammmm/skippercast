@@ -22,9 +22,15 @@ export const utc = (iso: string): string => {
 export const isPositiveFiniteHours = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value > 0;
 
-/** Usable when the time parses, is not in the future (5 min of clock slack) and is within `limitHours`. */
-export const freshWithin = (iso: unknown, limitHours: number, now: Date): iso is string =>
-  typeof iso === 'string' && Number.isFinite(Date.parse(iso)) && hoursOld(iso, now) >= -5 / 60 && hoursOld(iso, now) <= limitHours;
+// Require a zone on a clock time; Date.parse otherwise uses the device's zone for local date-times.
+const zonedTime = /^(?:\d{4}|[+-]\d{6})-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)? *(?:Z|UTC|[+-]\d{2}:?\d{2}) *$/i;
+
+/** Usable when a zoned time parses and is within `limitHours` (with 5 min of future clock slack). */
+export const freshWithin = (iso: unknown, limitHours: number, now: Date): iso is string => {
+  if (typeof iso !== 'string' || !zonedTime.test(iso)) return false;
+  const age = hoursOld(iso, now);
+  return age >= -5 / 60 && age <= limitHours;
+};
 
 /**
  * Re-checks `check` every minute while a layer is on: when the data has aged out, `expire` removes it and the

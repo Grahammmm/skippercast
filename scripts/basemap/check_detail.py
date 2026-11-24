@@ -94,7 +94,7 @@ def _shape(planned, detail):
 
 
 def check_manifest(path):
-    """Read a saved pointer and report which detail boxes contain each indexed region."""
+    """Require overview coverage and report which detail boxes contain each indexed region."""
     try:
         manifest = _load(path)
     except UnicodeDecodeError as error:
@@ -124,9 +124,16 @@ def check_manifest(path):
                 or not (bbox[0] < bbox[2] and bbox[1] < bbox[3])):
             raise ValueError(f'{path.name}: {field} must be an array of four finite, ordered numbers')
 
+    try:
+        w, s, e, n = regions.check_bbox(overview['bbox'])
+    except (ValueError, OverflowError) as error:
+        raise ValueError(f'{path.name}: overview.bbox must have finite, ordered coordinates within bounds') from error
+
     coverage = {}
     for region in regions.region_boxes():
         west, south, east, north = region['bbox']
+        if not (w <= west and s <= south and e >= east and n >= north):
+            raise ValueError(f"{path.name}: overview.bbox does not contain indexed region {region['id']}")
         coverage[region['id']] = [box['id'] for box in boxes
                                   if box['bbox'][0] <= west and box['bbox'][1] <= south
                                   and box['bbox'][2] >= east and box['bbox'][3] >= north]

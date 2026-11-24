@@ -12,6 +12,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import sys
+from typing import NamedTuple
 
 # Prefer the tools checkout over a foreign editable install, as region.py does.
 source_root = Path(__file__).resolve().parents[2] / 'src'
@@ -26,6 +27,26 @@ CATALOGS = {'catalog/relief': '.json', 'catalog/depth-contours': '.geojson'}
 COLUMNS = 'commit\tdate\tgeneration\tenvelope_sha256\tstyle.built_with\tcontours_sha256\tstatus\trollback'
 
 
+class PointerVersion(NamedTuple):
+    commit: str
+    generation: str | None
+    status: str
+
+
+def full_history(repo: Path) -> GitCli:
+    git = GitCli(repo)
+    if git.run(['git', 'rev-parse', '--show-prefix']) != b'\n':
+        raise RollbackError('--repo must point to the root of the clone')
+    if git.run(['git', 'rev-parse', '--is-shallow-repository']) == b'true\n':
+        raise RollbackError('--repo must contain full history (not a shallow clone)')
+    # Reading a promised blob can otherwise initiate a fetch and write objects.
+    keys = git.run(['git', 'config', '--null', '--name-only', '--list']).split(b'\0')
+    if b'extensions.partialclone' in keys or any(
+            key.startswith(b'remote.') and key.endswith(b'.promisor') for key in keys):
+        raise RollbackError('--repo must contain full history (not a partial clone)')
+    return git
+
+
 def catalog_regions(git: GitCli) -> list[str]:
     changes = git.run(['git', 'log', '--first-parent', '--diff-merges=first-parent',
                        '--format=', '--name-only', '-z', '--no-renames', 'HEAD', '--', *CATALOGS])
@@ -38,17 +59,29 @@ def catalog_regions(git: GitCli) -> list[str]:
     return sorted(regions)
 
 
-def pointer_columns(data: bytes | None, schema: dict) -> tuple[str, str, str, str]:
+def pointer_columns(data: bytes | None, schema: dict, *, region: str | None = None) -> tuple[str, str, str, str]:
     if data is None:
         return '-', '-', '-', 'absent'
     try:
         pointer = package.decode_document(data)
         package.validate_schema(pointer, schema)
+        if region is not None and pointer['region'] != region:
+            raise ValueError(f'pointer region does not match {region!r}')
     except ValueError as exc:
         # Quote the diagnostic so malformed historical text cannot split the table.
         return '-', '-', '-', f'invalid: {json.dumps(str(exc))}'
     return (pointer['generation'], pointer['envelope_sha256'][:12],
             pointer.get('style', {}).get('built_with', '-'), 'reviewed')
+
+
+def pointer_versions(git: GitCli, region: str, schema: dict) -> list[PointerVersion]:
+    """First-parent pointer changes, newest first, including absent and invalid states."""
+    path, _ = _region_paths(region)
+    rows = []
+    for commit in git.log_paths((path,)):
+        generation, _, _, status = pointer_columns(git.show(commit, path), schema, region=region)
+        rows.append(PointerVersion(commit, generation if status == 'reviewed' else None, status))
+    return rows
 
 
 def region_lines(git: GitCli, region: str, schema: dict) -> list[str]:
@@ -77,12 +110,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--repo', required=True, type=Path, help='root of a full clone')
     parser.add_argument('regions', metavar='REGION', nargs='*')
     args = parser.parse_args(argv)
-    git = GitCli(args.repo)
     try:
-        if git.run(['git', 'rev-parse', '--show-prefix']) != b'\n':
-            raise RollbackError('--repo must point to the root of the clone')
-        if git.run(['git', 'rev-parse', '--is-shallow-repository']) == b'true\n':
-            raise RollbackError('--repo must contain full history (not a shallow clone)')
+        git = full_history(args.repo)
         regions = list(dict.fromkeys(args.regions)) or catalog_regions(git)
         schema = package.pointer_schema()
         lines = [line for region in regions for line in region_lines(git, region, schema)]

@@ -3,6 +3,7 @@
 Used before a relief tile is embedded in a preview: a signature/IHDR prefix is not an image.
 Checks chunk framing and CRCs, chunk order, then inflates the IDAT stream and requires exactly
 the scanline bytes the header implies (valid filter bytes, no truncation, no trailing data).
+Indexed pixels must decode to entries present in PLTE.
 """
 import struct
 from zlib import crc32, decompressobj, error as ZlibError
@@ -42,7 +43,48 @@ def _scanlines(width, height, depth, color, interlace):
     for x0, y0, dx, dy in passes:
         w, h = -(-(width - x0) // dx), -(-(height - y0) // dy)
         if w > 0 and h > 0:
-            yield h, 1 + -(-w * bits // 8)
+            yield w, h, 1 + -(-w * bits // 8)
+
+
+def _paeth(left, up, upper_left):
+    p = left + up - upper_left
+    a, b, c = abs(p - left), abs(p - up), abs(p - upper_left)
+    if a <= b and a <= c:
+        return left
+    return up if b <= c else upper_left
+
+
+def _unfilter_indexed(filtered, tag, previous):
+    if tag == 0:
+        return filtered
+    # PNG filters work on bytes, not samples. For indexed color the byte
+    # distance to the left neighbor is one even when samples are packed.
+    row = bytearray(filtered)
+    for i, residual in enumerate(filtered):
+        left = row[i - 1] if i else 0
+        up = previous[i]
+        if tag == 1:
+            predictor = left
+        elif tag == 2:
+            predictor = up
+        elif tag == 3:
+            predictor = (left + up) // 2
+        else:  # Paeth (tag 4)
+            predictor = _paeth(left, up, previous[i - 1] if i else 0)
+        row[i] = (residual + predictor) & 0xff
+    return row
+
+
+def _check_palette_indices(row, width, depth, entries):
+    if depth == 8:
+        highest = max(row)
+    else:
+        mask = (1 << depth) - 1
+        # Walk only the declared pixels, MSB first, not the low padding bits.
+        highest = max((row[bit // 8] >> (8 - depth - bit % 8)) & mask
+                      for bit in range(0, width * depth, depth))
+    if highest >= entries:
+        raise ValueError('PNG palette index out of range')
 
 
 def _check_ancillary_structure(chunks, kinds, first_idat, color, depth):
@@ -72,6 +114,7 @@ def _check_ancillary_structure(chunks, kinds, first_idat, color, depth):
         if color in (4, 6) or (color == 0 and size != 2) or (color == 2 and size != 6) \
                 or (color == 3 and not 0 < size <= len(palette) // 3):
             raise ValueError('PNG tRNS chunk is invalid')
+    return len(palette) // 3 if color == 3 and palette is not None else None
 
 
 def validate_png(data, width, height):
@@ -94,9 +137,9 @@ def validate_png(data, width, height):
         idat = [i for i, kind in enumerate(kinds) if kind == b'IDAT']
         if not idat or idat != list(range(idat[0], idat[0] + len(idat))):
             raise ValueError('PNG needs one contiguous IDAT run')
-        _check_ancillary_structure(chunks, kinds, idat[0], color, depth)
+        entries = _check_ancillary_structure(chunks, kinds, idat[0], color, depth)
         rows = list(_scanlines(w, h, depth, color, interlace))
-        expected = sum(count * size for count, size in rows)
+        expected = sum(count * size for _, count, size in rows)
         inflater = decompressobj()
         raw = inflater.decompress(b''.join(chunks[i][1] for i in idat), expected + 1)
         if not inflater.eof or inflater.unconsumed_tail or inflater.unused_data or len(raw) != expected:
@@ -104,8 +147,14 @@ def validate_png(data, width, height):
     except (struct.error, ZlibError) as exc:
         raise ValueError(f'PNG is not decodable: {exc}') from exc
     pos = 0
-    for count, size in rows:
+    for pass_width, count, size in rows:
+        # The first row of each Adam7 pass has no predecessor.
+        previous = bytes(size - 1) if entries is not None else b''
         for _ in range(count):
-            if raw[pos] > 4:
+            tag = raw[pos]
+            if tag > 4:
                 raise ValueError('PNG scanline has an invalid filter type')
+            if entries is not None:
+                previous = _unfilter_indexed(raw[pos + 1:pos + size], tag, previous)
+                _check_palette_indices(previous, pass_width, depth, entries)
             pos += size
