@@ -40,12 +40,12 @@ def REASON_OF(code):
 # Thresholds (DESIGN §5); THRESHOLDS bundles them read-only for the EC tools.
 def hole_max_cells(cell_m):
     """Largest hole (cells) the filler may fill at this cell size; ValueError unless cell_m is a positive finite number."""
-    try: ok = not isinstance(cell_m, bool) and cell_m > 0 and cell_m != math.inf
-    except TypeError: ok = False  # not a real number
+    try: ok = not isinstance(cell_m, bool) and cell_m == cell_m and cell_m > 0 and cell_m != math.inf  # x == x: not NaN
+    except (TypeError, ArithmeticError): ok = False  # not a real number, or a Decimal signalling NaN
     if not ok: raise ValueError('cell size must be a positive finite number')
     area = cell_m * cell_m
     try: return min(9, int(64 // area))
-    except (ZeroDivisionError, OverflowError): return 9  # a cell so small its square underflows: any hole fits the cap
+    except ArithmeticError: return 9  # square underflows to 0, or a Decimal quotient too wide to represent: any hole fits the cap
 def hole_ring_max_range_m(shallowest_m): return max(2.0, 0.10 * abs(shallowest_m))
 def outlier_min_m(ring_median_m): return max(3.0, 0.20 * abs(ring_median_m))
 OUTLIER_MAX_CELLS = 2

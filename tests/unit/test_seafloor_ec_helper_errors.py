@@ -2,6 +2,7 @@
 CODES (unknown, unhashable or boolean) and hole_max_cells raises ValueError for a cell size that is not a positive
 finite number; every known code and every valid cell size keeps today's value."""
 import math
+from decimal import Decimal
 import pytest
 from skippercast.platform import seafloor_ec as ec
 
@@ -37,7 +38,9 @@ def test_reason_of_refuses_by_name(code):
 
 
 @pytest.mark.parametrize('cell, expected', [(2.0, 9), (2, 9), (0.5, 9), (8.0, 1), (4.0, 4), (10.0, 0), (1e-200, 9),
-                                            (1e-160, 9), (10 ** 400, 0)])
+                                            (1e-160, 9), (10 ** 400, 0),
+                                            (Decimal('2'), 9), (Decimal('8'), 1), (Decimal('1e-200'), 9),
+                                            (Decimal('1e-5'), 9)])
 def test_hole_max_cells_valid_sizes_unchanged(cell, expected):
     # Bug caught: the guard rejects or alters a valid size (2.0 m -> 9 is the control; 64 // area below the cap;
     # integers, a huge integer and a cell whose square underflows must not crash either).
@@ -45,9 +48,11 @@ def test_hole_max_cells_valid_sizes_unchanged(cell, expected):
 
 
 @pytest.mark.parametrize('cell', [0, 0.0, -0.0, -1.0, -1, -1e-9, math.nan, math.inf, -math.inf, True, False,
-                                  '2', None, [2.0], 2j], ids=repr)
+                                  '2', None, [2.0], 2j, Decimal('NaN'), Decimal('sNaN'), Decimal('Infinity'),
+                                  Decimal('-Infinity'), Decimal('0'), Decimal('-1')], ids=repr)
 def test_hole_max_cells_refuses_bad_sizes(cell):
     # Bug caught: 0 divides by zero, a negative size silently returns the cap (-1.0 -> 9), NaN dies with a
-    # float-conversion error, True is read as a 1 m cell, and a non-number escapes as TypeError.
+    # float-conversion error, True is read as a 1 m cell, a non-number escapes as TypeError, and a Decimal NaN
+    # raises decimal.InvalidOperation from the comparison itself.
     with pytest.raises(ValueError, match='^cell size must be a positive finite number$'):
         ec.hole_max_cells(cell)
