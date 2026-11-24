@@ -15,15 +15,45 @@ ROUGH_CODES = (-1, -31, -101, -201)
 SMOOTH_CODES = (0, -30, -100, -200)
 
 
+BINDING_KEYS = ('depth_source_id', 'source_sha256', 'depth_archive_member', 'depth_cog_sha256',
+                'profile', 'rough_codes', 'smooth_codes', 'reviewed_on', 'evidence',
+                'archive_member')
+EVIDENCE_KEYS = ('profile', 'source_sha256', 'archive_member', 'metadata_sha256', 'evidence')
+
+
+def _malformed(what):
+    return ValueError(f'Terrain support binding is malformed: {what}')
+
+
+def _binding_object(binding):
+    if not isinstance(binding, dict):
+        raise _malformed(f'binding must be an object, not {type(binding).__name__}')
+    return binding
+
+
+def _require_keys(binding, keys):
+    missing = [key for key in keys if key not in binding]
+    if missing:
+        raise _malformed('missing ' + ', '.join(missing))
+
+
 def validate_binding(row):
     binding = row.get('terrain_support')
     if binding is None:
         return
+    # Shape first, so a malformed binding is refused by name; every later
+    # refusal keeps its message because well-formed bindings pass through.
+    _require_keys(_binding_object(binding), BINDING_KEYS)
+    if not isinstance(binding['reviewed_on'], str):
+        raise _malformed('reviewed_on must be a string')
+    review = row.get('adapter_review', {})
+    if not isinstance(review, dict):
+        raise _malformed('adapter_review must be an object')
     if (row['kind'] != 'bathymetry' or row['format'] != 'arcgrid'
             or binding['depth_source_id'] != row['id']
             or binding['source_sha256'] != row['sha256']
             or binding['depth_archive_member'] != row['archive_member']
-            or binding['depth_cog_sha256'] != row.get('adapter_review', {}).get('cog_sha256')):
+            or binding['depth_cog_sha256'] != review.get('cog_sha256')):
         raise ValueError('Terrain support must bind the exact reviewed native depth product')
     if (binding['profile'] != 'csumb-native-rough-v1'
             or binding['rough_codes'] != list(ROUGH_CODES)
@@ -45,13 +75,17 @@ def validate_binding(row):
 
 
 def binding_digest(row):
-    return hashlib.sha256(json.dumps(row['terrain_support'], sort_keys=True).encode()).hexdigest()
+    binding = _binding_object(row.get('terrain_support'))
+    return hashlib.sha256(json.dumps(binding, sort_keys=True).encode()).hexdigest()
 
 
 def feature_evidence(row):
-    if not row.get('terrain_support'):
+    # Only an absent or null binding means unbound; a falsey non-object ('', [], 0,
+    # False) is malformed and is refused by name like any other wrong shape.
+    if row.get('terrain_support') is None:
         return None
-    binding = row['terrain_support']
+    binding = _binding_object(row['terrain_support'])
+    _require_keys(binding, EVIDENCE_KEYS)
     return {'profile': binding['profile'], 'binding_sha256': binding_digest(row),
             'depth_source_id': row['id'], 'source_sha256': binding['source_sha256'],
             'archive_member': binding['archive_member'], 'metadata_sha256': binding['metadata_sha256'],
