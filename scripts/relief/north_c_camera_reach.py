@@ -28,14 +28,19 @@ def camera_reach(root: Path) -> dict:
         region = _read(directory / 'region.json')
         if region.get('id') != region_id:
             raise ValueError(f'{region_id}/region.json: region id mismatch')
-        release_regions[region_id] = {'name': region['name'], 'bounds_wsen': bbox(region['bounds'])}
+        bounds = bbox(region['bounds'])
+        release_regions[region_id] = {'name': region['name'], 'bounds_wsen': bounds}
 
         render = _read(directory / 'render.json')
         validate_schema(render, schema)
         if render['region'] != region_id:
             raise ValueError(f'{region_id}/render.json: region id mismatch')
-        centers.extend({'region_id': region_id, 'preview_id': row['id'], 'center_lon_lat': row['center']}
-                       for row in render['previews'])
+        west, south, east, north = bounds
+        for row in render['previews']:
+            lon, lat = row['center']
+            if not (west <= lon <= east and south <= lat <= north):
+                raise ValueError(f"{region_id}/render.json: preview {row['id']} center is outside region bounds")
+            centers.append({'region_id': region_id, 'preview_id': row['id'], 'center_lon_lat': row['center']})
 
     if (release_regions['crescent-city']['bounds_wsen'][3] != OREGON_LATITUDE
             or release_regions['trinidad-klamath']['bounds_wsen'][3] >= OREGON_LATITUDE):
