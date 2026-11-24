@@ -138,6 +138,34 @@ def test_c3_pool_newest_and_apply_regional_coverage(total, fraction, withheld):
     )
 
 
+@pytest.mark.parametrize("valid, total", [
+    pytest.param(12, 10, id="valid-above-total"),
+    pytest.param(-3, 10, id="negative-valid"),
+])
+def test_c3_refuse_contradictory_coverage_counts(valid, total):
+    """C3: A count pair outside 0 <= valid <= total must fail the build, not publish a fraction the Chart refuses."""
+    meta = [{"time": EPOCH, "valid_cells": valid, "total_cells": total}]
+    with pytest.raises(ChlEdgeFeedError, match=f"valid_cells {valid}, total_cells {total}") as exc:
+        _publish([("west", _tile(_step_field(range(5))))], meta)
+    assert exc.type is ChlEdgeFeedError
+
+
+@pytest.mark.parametrize("valid", [0, 6, 10])
+def test_c3_coverage_counts_on_the_boundary_publish_in_unit_range(valid):
+    """C3: Control; a healthy 6/10 stays 0.6, and 0 or all valid cells (an off-by-one bound) still publish."""
+    meta = [{"time": EPOCH, "valid_cells": valid, "total_cells": 10}]
+    doc = _publish([("west", _tile(_step_field(range(5))))], meta)
+    assert doc["observed_fraction"] == valid / 10
+    assert 0 <= doc["observed_fraction"] <= 1
+
+
+def test_c3_older_frame_counts_do_not_fail_the_newest_observation():
+    """C3: Only the newest frame's counts are checked; a bad older manifest entry must not fail a good feed."""
+    meta = [{"time": EPOCH - 7200, "valid_cells": 12, "total_cells": 10},
+            {"time": EPOCH, "valid_cells": 6, "total_cells": 10}]
+    assert _publish([("west", _tile(_step_field(range(5))))], meta)["observed_fraction"] == 0.6
+
+
 def test_c3_no_usable_frame():
     """C3: Old data and manifest metadata alone must not create an observation."""
     older = EPOCH - 48 * 3600
