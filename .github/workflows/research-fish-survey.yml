@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: research-fish-survey-${{ github.ref }}
+  group: research-fish-survey
   cancel-in-progress: false
 
 jobs:
