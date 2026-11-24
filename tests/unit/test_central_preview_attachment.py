@@ -24,9 +24,8 @@ def _digest(path):
     return sha256(path.read_bytes()).hexdigest()
 
 
-def _synthetic_envelope(tmp_path, region):
+def _synthetic_envelope(tmp_path, region, *, generation='a' * 64):
     root = tmp_path / 'artifacts' / region
-    generation = 'a' * 64
     layers = []
     for relative in (package.DIGEST_ROOT, package.ARCHIVE):
         path = root / relative
@@ -107,6 +106,34 @@ def test_binds_exact_selected_bytes(inputs, capsys):
     assert output['evidence_sha256'] == _digest(evidence)
     assert b64decode(output['evidence_base64'], validate=True) == evidence.read_bytes()
     assert 'not historical capture provenance' in output['scope']
+
+
+def test_envelope_pin_distinguishes_releases_with_the_same_current_recipe(inputs, capsys, monkeypatch):
+    # Checking only the recipe pin and region silently accepts a different release.
+    selected, evidence, _ = inputs
+    other = _synthetic_envelope(evidence.parent, REGION, generation='b' * 64)
+    selected_pin, other_pin = _digest(selected), _digest(other)
+    assert selected_pin != other_pin
+    raw = evidence.read_bytes() + b' \t'
+    evidence.write_bytes(raw)
+    evidence_pin = _digest(evidence)
+
+    for path, pin in ((selected, selected_pin), (other, other_pin)):
+        args = _args(path, evidence, evidence_pin) + ['--expected-envelope-sha256', pin]
+        assert central_preview_attachment.main(args) == 0
+        output = json.loads(capsys.readouterr().out)
+        assert output['envelope_sha256'] == pin
+        assert output['evidence_sha256'] == evidence_pin
+        assert b64decode(output['evidence_base64'], validate=True) == raw
+
+    def unexpected_producer(*args, **kwargs):
+        pytest.fail('rejected envelope pins must not run the recipe producer')
+
+    monkeypatch.setattr(central_preview_attachment.subprocess, 'run', unexpected_producer)
+    args = _args(other, evidence, evidence_pin) + ['--expected-envelope-sha256']
+    _refuses(args + [selected_pin], capsys, 'envelope SHA-256 does not match the explicit pin')
+    for malformed in ('', other_pin.upper(), other_pin[:-1], other_pin + '\n', 'g' * 64):
+        _refuses(args + [malformed], capsys, 'expected envelope SHA-256 must be 64 lowercase hex digits')
 
 
 def test_rejects_stale_recipe_after_one_byte_config_change(inputs, capsys):

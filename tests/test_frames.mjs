@@ -94,12 +94,37 @@ test('clouds: listed frames inside 90 minutes on today only; the window is appli
   assert.deepEqual(cloudFrames(null, NOW, NOW, TZ), []);
 });
 
+test('clouds: equivalent timestamps take one playback slot and keep the first listed spelling', () => {
+  const now = new Date('2026-10-01T12:20:00Z');
+  const first = '2026-10-01T05:00:00-07:00', alias = '2026-10-01T12:00:00Z';
+  const earlier = '2026-10-01T11:55:00Z', later = '2026-10-01T12:15:00Z';
+  const cloud = image({observedAt: later, fetchedAt: now.toISOString(), availableTimes: [later, first, alias, earlier, '2026-10-01T10:45:00Z']});
+  // Deduplicating raw strings spends two of the loop's limited slots on the same acquisition.
+  const frames = cloudFrames(cloud, now, now, TZ);
+  assert.deepEqual(frames, [earlier, first, later]);
+  assert.match(cloudTiles(cloud, frames[1], now).tiles[0], /&time=2026-10-01T05%3A00%3A00-07%3A00$/);
+  assert.equal(cloudTiles(cloud, '2026-10-01T12:00:00.000Z', now), null, 'even an equivalent unlisted spelling is refused');
+});
+
 test('a GOES index is admitted only in the CloudImage shape goes-times.json publishes', () => {
   assert.equal(cloudImage(image())?.observedAt, '2026-10-02T02:53:00.000Z');
   for (const patch of [{id: 'goes-visible'}, {kind: 'forecast'}, {layer: 'other'}, {observedAt: 'latest'}, {observedAt: '2026-10-02T02:54:00Z'}, {availableTimes: []}, {availableTimes: ['current']}, {attribution: 1}, {fetchedAt: null}]) {
     assert.equal(cloudImage(image(patch)), null, JSON.stringify(patch));
   }
   for (const value of [null, [], 'goes', 1]) assert.equal(cloudImage(value), null);
+
+  const now = new Date('2028-03-01T00:20:00Z');
+  const march = '2028-03-01T00:10:00Z', leap = '2028-02-29T19:05:00-05:00';
+  const valid = image({observedAt: march, fetchedAt: now.toISOString(), availableTimes: [march, leap]});
+  const cloud = cloudImage(valid);
+  assert.deepEqual(cloudFrames(cloud, now, now, TZ), [leap, march]);
+  assert.match(cloudTiles(cloud, leap, now).tiles[0], /&time=2028-02-29T19%3A05%3A00-05%3A00$/);
+
+  // Date.parse rolls February 30 into March 1, so the first-listed invalid spelling
+  // could otherwise take the valid sibling's playback slot and reach the WMS request.
+  const invalid = cloudImage({...valid, availableTimes: ['2028-02-30T00:10:00Z', ...valid.availableTimes]});
+  assert.deepEqual(cloudFrames(invalid, now, now, TZ), [], 'an impossible acquisition makes the index ineligible for playback');
+  assert.equal(invalid, null);
 });
 
 test('the horizon is 169 whole hours by local day; a DST change day keeps every UTC hour', () => {

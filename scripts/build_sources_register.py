@@ -390,10 +390,12 @@ def render(data):
             ids = [i for i in members if show(i)]
             if ids:
                 layers[layer] = ids if layer in (DEPTH_SHADING, DEPTH_CONTOURS) else _by_name(ids, sources)
-        if not layers:
-            continue
         label = region['name'] + (f" ({region['status']} region)" if region['status'] != 'active' else '')
         out.append(f"{h}<h4 id=\"region-{_esc(region['id'])}\">{_esc(label)}</h4>")
+        if not layers:
+            # Regions collected only through depth inputs always have listable credits.
+            out.append(f'{h}<p>No sources are listed for this region.</p>')
+            continue
         if 'depth_detail' in region:
             out.append(f"{h}<p>Depth detail: {_esc(region['depth_detail'])}</p>")
         for layer, ids in layers.items():

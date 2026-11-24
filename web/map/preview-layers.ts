@@ -159,7 +159,7 @@ export function createPreviewLayers(o: {
     const abort = new AbortController(), item = {engine, abort, handle: null as PreviewHandle | null, failed: false};
     live.set(id, item);
     o.failures?.clear(PREVIEW_OWNERS[id]);
-    const report = (status: PreviewStatus): void => { if (live.get(id) === item) setStatus(id, status); };
+    const report = (status: PreviewStatus): void => { if (live.get(id) === item && !item.failed) setStatus(id, status); };
     report({state: 'loading', text: 'Loading…'});
     try {
       const attach = await loaders[id]();

@@ -14,6 +14,7 @@
 // DEFERRED: not mountable offline — aerial (aerial.ts, web/app/MapStage.tsx).
 import process from 'node:process';
 import {expect, test} from '@playwright/test';
+import {REGION_READ_TIMEOUT_MS} from '../web/app/region-info.ts';
 import {bindThemeFixture, FIRST, NEXT, NOW, serveThemeApp, snapshot, type Theme} from './theme-d3-fixture.ts';
 import {buildMarksProbe, marksManifest, qualifyMarksInputs, serveMarksArm, type MarksArm} from './theme-d3-marks.ts';
 
@@ -125,13 +126,34 @@ for (const starting of ['dark', 'light'] as const) {
           fixtures.forEach(f => f.hold());
           try {
             await toggle(starting);
-            await Promise.all([live, fresh].map(page => page.evaluate(region => {
+            await Promise.all([live, fresh].map(page => page.evaluate(({region, deadline}) => {
+              // The app gives up on region.json after REGION_READ_TIMEOUT_MS and
+              // then fails open (RF0850-2), so a slow runner used to see NEXT chart
+              // files mid-hold. Hold that deadline with region.json: its timers fire
+              // only after release, and the app's own deadline is left unchanged.
+              const held = window as Window & {d3Held?: {on: boolean; armed: number}};
+              const state = held.d3Held = {on: true, armed: 0};
+              const set = window.setTimeout, clear = window.clearTimeout, cancel = new Map<number, () => void>();
+              window.setTimeout = ((handler: TimerHandler, ms?: number, ...args: unknown[]) => {
+                if (ms !== deadline || typeof handler !== 'function' || !state.on) return set(handler, ms, ...args);
+                state.armed++;
+                let active = true;
+                const fire = () => { if (active) { if (state.on) set(fire, 50); else handler(...args); } };
+                const id = set(fire, ms);
+                cancel.set(id, () => { active = false; });
+                return id;
+              }) as typeof window.setTimeout;
+              window.clearTimeout = ((id?: number) => { if (id !== undefined) cancel.get(id)?.(); clear(id); }) as typeof window.clearTimeout;
               const url = new URL(location.href);
               url.searchParams.set('region', region);
               history.pushState({}, '', url);
               dispatchEvent(new PopStateEvent('popstate'));
-            }, NEXT)));
+            }, {region: NEXT, deadline: REGION_READ_TIMEOUT_MS})));
             await expect.poll(() => fixtures.every((f, i) => f.seen.slice(seen[i]).includes(`/regions/${NEXT}/region.json`))).toBe(true);
+            // Prove the app's region read deadline is the timer being held.
+            for (const page of [live, fresh]) {
+              expect(await page.evaluate(() => (window as Window & {d3Held?: {armed: number}}).d3Held?.armed), 'held region read deadline').toBeGreaterThan(0);
+            }
             await expect.poll(async () => {
               const count = data.requests.length;
               await live.waitForFunction(() => window.d3Chart?.loaded());
@@ -149,7 +171,13 @@ for (const starting of ['dark', 'light'] as const) {
             expect.soft(after.images).toEqual(before.images);
             expect.soft(after.duplicates).toEqual([]);
             expect.soft(stalePaint(after, target), 'stale paint with next region held').toEqual([]);
-          } finally { fixtures.forEach(f => f.release()); }
+          } finally {
+            fixtures.forEach(f => f.release());
+            await Promise.all([live, fresh].map(page => page.evaluate(() => {
+              const held = (window as Window & {d3Held?: {on: boolean}}).d3Held;
+              if (held) held.on = false;
+            }).catch(() => {})));
+          }
         };
 
         const loadBoundary = data.requests.length;

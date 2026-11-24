@@ -85,6 +85,23 @@ test('malformed feature shapes, dates and safety fields are refused with specifi
   }
 });
 
+// Appending every valid row or keeping the first/last would leave an ambiguous
+// feature in the confidence painter. A malformed row must not claim an identity.
+test('HAB-1 refuses all decoded rows sharing a feature ID', () => {
+  const measured = feature('rock', 'measured');
+  const predicted = feature('rock', 'predicted', {id: measured.id});
+  predicted.id = measured.id;
+  const unique = feature('kelp', 'historical');
+  const malformed = {...unique, properties: {...unique.properties, source_id: 'unlisted'}};
+  const {collection, refused} = decodeHabitatContext(document([measured, malformed, unique, predicted]));
+
+  assert.deepEqual(collection.features.map(f => f.id), [unique.id]);
+  assert.deepEqual(refused.map(row => row.index), [0, 1, 3]);
+  assert.match(refused[0].reason, /duplicate feature id/i);
+  assert.match(refused[1].reason, /source_id/);
+  assert.match(refused[2].reason, /duplicate feature id/i);
+});
+
 // A different layer/version or projected data must not be treated as an empty,
 // valid seafloor result; downstream can distinguish refusal from no coverage.
 test('HAB-1 envelope errors are distinct from a valid empty collection', () => {

@@ -67,22 +67,31 @@ export function createReach({engine, palette = () => readPalette(), host}: Reach
   });
   const launches = effect(() => { const id = region.value; if (id && profile.value === 'kayak' && typeof location !== 'undefined') void loadLaunchPoints(id); });
   const data = computed(() => { void reachRange.value; return reachFeatures(origin.value, reachFor(profile.value)); });
-  let drawn = false, drawnOn: Engine | null = null, stopIdle: (() => void) | null = null;
+  let drawnOn: Engine | null = null;
+  const withdraw = () => {
+    const previous = drawnOn;
+    drawnOn = null;
+    previous?.setOverlay(REGISTRY_ID, null);
+  };
   // The host's `data-reach-drawn` reports how many ring features MapLibre drew in view at the last idle.
   const watch = effect(() => {
     const e = engine.value;
-    stopIdle?.(); stopIdle = null;
-    if (e && host) stopIdle = e.view.on('idle', () => { host.dataset.reachDrawn = String(drawn ? e.rendered(REACH_LINE) : 0); });
+    if (!e || !host) return;
+    let active = true;
+    const stopIdle = e.view.on('idle', () => {
+      if (active) host.dataset.reachDrawn = String(drawnOn === e ? e.rendered(REACH_LINE) : 0);
+    });
+    return () => { active = false; stopIdle(); };
   });
   const dispose = effect(() => {
     const e = engine.value, d = data.value;
     if (host) host.dataset.reach = d.features.length ? String(d.features[0]!.properties.nm) : '';
-    if (!e) return;
-    if (!d.features.length) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
+    if (e !== drawnOn || !d.features.length) withdraw();
+    if (!e || !d.features.length) return;
     // § 9 draw order: above the fields and the fleet layers, under the marks, so a mark stays on top and clickable.
-    if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, reachOverlay(palette(), d), MARK_PICK);
+    if (e !== drawnOn) e.setOverlay(REGISTRY_ID, reachOverlay(palette(), d), MARK_PICK);
     e.setData(REACH_SOURCE, d);
-    drawn = true; drawnOn = e;
+    drawnOn = e;
   });
-  return {destroy() { dispose(); watch(); launches(); stopIdle?.(); if (host) { delete host.dataset.reach; delete host.dataset.reachDrawn; } }};
+  return {destroy() { dispose(); watch(); launches(); withdraw(); if (host) { delete host.dataset.reach; delete host.dataset.reachDrawn; } }};
 }

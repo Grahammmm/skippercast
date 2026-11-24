@@ -75,6 +75,19 @@ def test_hex_case_does_not_change_pin_identity(tmp_path, capsys):
     }
 
 
+def test_cli_refuses_identical_records_with_an_empty_input_path(tmp_path):
+    # Two copies of an unusable binding must not look like a safe, unchanged retry.
+    doc = record(tmp_path, inputs={'coarse': {'path': '', 'sha256': 'a' * 64}})
+    result = subprocess.run(
+        [sys.executable, str(ROOT / 'scripts/relief/central_input_compare.py'),
+         write(tmp_path / 'before.json', doc), write(tmp_path / 'after.json', doc)],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 2, result.stdout
+    assert result.stdout == ''
+    assert 'coarse: path must not be empty' in result.stderr
+
+
 @pytest.mark.parametrize(('fields', 'reason'), [
     ({'region': 'north'}, 'different regions'),
     ({'schema': 'sc-run-inputs/2'}, 'expected a sc-run-inputs/1 record'),

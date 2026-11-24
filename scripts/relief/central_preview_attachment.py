@@ -19,12 +19,15 @@ from skippercast.relief import envelope, package, receipts
 
 
 def bind_attachment(region: str, envelope_path: Path, evidence_path: Path,
-                    *, scratch_root: Path, expected_evidence_sha256: str) -> dict[str, str]:
-    """Verify the selected artifacts and bind only explicitly pinned evidence bytes."""
+                    *, scratch_root: Path, expected_evidence_sha256: str,
+                    expected_envelope_sha256: str | None = None) -> dict[str, str]:
+    """Verify artifacts and enforce the evidence pin and any supplied envelope pin."""
     if region not in REGIONS:
         raise package.ReleaseError('expected a Central Coast region')
     if not package.is_sha256(expected_evidence_sha256):
         raise package.ReleaseError('expected evidence SHA-256 must be 64 lowercase hex digits')
+    if expected_envelope_sha256 is not None and not package.is_sha256(expected_envelope_sha256):
+        raise package.ReleaseError('expected envelope SHA-256 must be 64 lowercase hex digits')
     # The verifier follows region-relative layer, release, and QA references.
     paths = (envelope_path, evidence_path)
     if len(envelope_path.parents) >= 3:
@@ -38,6 +41,8 @@ def bind_attachment(region: str, envelope_path: Path, evidence_path: Path,
         raise package.ReleaseError('envelope and evidence must be inside the scratch directory')
 
     verified = envelope.verify_artifacts(envelope_path)
+    if expected_envelope_sha256 is not None and verified.envelope_sha256 != expected_envelope_sha256:
+        raise package.ReleaseError('envelope SHA-256 does not match the explicit pin')
     if verified.release['region'] != region:
         raise package.ReleaseError('selected envelope belongs to another region')
 
@@ -83,11 +88,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--envelope', required=True, type=Path)
     parser.add_argument('--evidence', required=True, type=Path)
     parser.add_argument('--expected-evidence-sha256', required=True)
+    parser.add_argument('--expected-envelope-sha256', help='require this verified envelope SHA-256')
     args = parser.parse_args(argv)
     try:
         attachment = bind_attachment(args.region, args.envelope, args.evidence,
                                      scratch_root=args.scratch_root,
-                                     expected_evidence_sha256=args.expected_evidence_sha256)
+                                     expected_evidence_sha256=args.expected_evidence_sha256,
+                                     expected_envelope_sha256=args.expected_envelope_sha256)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     print(json.dumps(attachment, sort_keys=True))

@@ -71,6 +71,16 @@ test('C1: lenient parsing must not turn malformed samples into observations', ()
   assert.deepEqual(pastSampleFor(['2026-11-19T07:00:00', LA_LAST], DAY, LA), LA_LAST);
 });
 
+test('C2: hour 24 cannot supply coverage or displace canonical midnight', () => {
+  const alias = '2026-11-22T24:00:00Z';
+  const midnight = '2026-11-23T00:00:00Z';
+  const day = '2026-11-23';
+  // Date.parse normalizes the alias to the same instant, so it would win a first-entry tie.
+  assert.deepEqual(pastDayCoverage([alias], [day], 'UTC'), {[day]: false});
+  assert.deepEqual(pastSampleFor([alias], day, 'UTC'), null);
+  assert.deepEqual(pastSampleFor([alias, midnight], day, 'UTC'), midnight);
+});
+
 test('C2: preserve every requested key, including gaps and malformed property names', () => {
   const days = Object.freeze([DAY, '2026-11-19', '2026-11-20', '2026-02-30', '__proto__', DAY]);
   assert.deepEqual(pastDayCoverage(samples, days, LA), {

@@ -54,13 +54,22 @@ export function forecastTime(times: readonly number[], issuedAt: number, fetched
 
 const time = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));
 
+function acquisitionTime(value: unknown): boolean {
+  if (!time(value)) return false;
+  const day = /^(\d{4}-\d{2}-\d{2})T/.exec(value)?.[1];
+  if (!day) return false;
+  // Round-trip the written day alone: applying the offset can legitimately change the UTC day.
+  const midnight = new Date(`${day}T00:00:00.000Z`);
+  return Number.isFinite(midnight.getTime()) && midnight.toISOString().slice(0, 10) === day;
+}
+
 /** A GOES time index as goes-times.json publishes it, or null when its shape is not a CloudImage. */
 export function cloudImage(value: unknown): CloudImage | null {
   if (value === null || typeof value !== 'object') return null;
   const v = value as Partial<Record<keyof CloudImage, unknown>>;
   const times = Array.isArray(v.availableTimes) ? v.availableTimes : [];
   if (v.id !== 'goes-longwave' || v.kind !== 'observation' || v.layer !== 'goes_longwave_imagery' || !time(v.observedAt) || !time(v.fetchedAt)
-    || !times.length || !times.every(time) || !times.includes(v.observedAt) || typeof v.attribution !== 'string') return null;
+    || !times.length || !times.every(acquisitionTime) || !times.includes(v.observedAt) || typeof v.attribution !== 'string') return null;
   return value as CloudImage;
 }
 
@@ -68,10 +77,17 @@ export function cloudImage(value: unknown): CloudImage | null {
  * The acquisition times a cloud loop may show for the dock's `selected` hour at `now`, oldest
  * first: none unless `selected` falls on today's local day in `tz`, and only times that pass
  * cloudSource's own gate (at most 90 minutes old, at most 5 minutes ahead, listed).
+ * Keep the first admitted spelling of each acquisition for the exact WMS request.
  */
 export function cloudFrames(cloud: CloudImage | null, selected: Date, now: Date, tz: string): string[] {
   if (!cloud || localParts(selected, tz).day !== localParts(now, tz).day) return [];
-  return [...new Set(cloud.availableTimes)].filter(at => cloudTiles(cloud, at, now) !== null).sort((a, b) => Date.parse(a) - Date.parse(b));
+  const frames = new Map<number, string>();
+  for (const at of cloud.availableTimes) {
+    if (cloudTiles(cloud, at, now) === null) continue;
+    const epoch = Date.parse(at);
+    if (!frames.has(epoch)) frames.set(epoch, at);
+  }
+  return [...frames].sort(([a], [b]) => a - b).map(([, at]) => at);
 }
 
 /** The WMS raster source pinned to acquisition time `at`, or null outside the gate (packages/coast `cloudSource`). */

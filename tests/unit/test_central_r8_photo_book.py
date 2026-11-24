@@ -1,7 +1,9 @@
 """Browser-free checks of the real photo-book CLI on a disposable envelope."""
-from base64 import b64decode
+from base64 import b64decode, b64encode
+from hashlib import sha256
 from html.parser import HTMLParser
 from pathlib import Path
+import re
 import struct
 import subprocess
 import sys
@@ -89,6 +91,7 @@ class Gallery(HTMLParser):
     def __init__(self, html):
         super().__init__()
         self.tags, self.images, self.captions, self.text = [], [], [], []
+        self.policies = []
         self.caption = False
         self.feed(html)
 
@@ -96,6 +99,8 @@ class Gallery(HTMLParser):
         self.tags.append(tag)
         if tag == 'img':
             self.images.append(dict(attrs))
+        if tag == 'meta' and dict(attrs).get('http-equiv') == 'Content-Security-Policy':
+            self.policies.append(dict(attrs)['content'])
         if tag == 'figcaption':
             self.caption = True
 
@@ -123,7 +128,19 @@ def test_gallery_pairs_exact_pngs_with_labels_and_escapes_source_text(snapshot):
         assert image['alt'] == caption
         assert image['src'].startswith('data:image/png;base64,')
         assert b64decode(image['src'].split(',', 1)[1], validate=True) == pictures[caption]
-    assert set(gallery.tags) <= {'html', 'meta', 'title', 'h1', 'p', 'br', 'h2', 'ul', 'li', 'figure', 'figcaption', 'img'}
+    # An absent or CSP-blocked stylesheet leaves the 1200px PNG at its intrinsic width on phones.
+    styles = re.findall(r'<style>(.*?)</style>', result.stdout, re.DOTALL)
+    assert len(styles) == 1, 'expected a stylesheet to constrain wide captures'
+    css = styles[0]
+    assert css.split() == (
+        'body { overflow-wrap: anywhere; } '
+        'figure { margin-inline: 0; min-inline-size: 0; } '
+        'figure img { max-inline-size: 100%; block-size: auto; }'
+    ).split()
+    style_hash = b64encode(sha256(css.encode('utf-8')).digest()).decode('ascii')
+    assert gallery.policies == [f"default-src 'none'; img-src data:; style-src 'sha256-{style_hash}'; base-uri 'none'"]
+    assert set(gallery.tags) <= {'html', 'meta', 'style', 'title', 'h1', 'p', 'br', 'h2', 'ul', 'li', 'figure',
+                                 'figcaption', 'img'}
     assert ' '.join(f'{SOURCE} — {ATTRIBUTION}'.splitlines()) in gallery.text
     assert f'Region: {REGION}' in gallery.text
     assert f'Generation: {GEN}' in gallery.text

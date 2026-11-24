@@ -48,7 +48,7 @@ class InventoryError(receipts.ReceiptError):
 
 
 def archive_metadata(path):
-    """The JSON metadata of a PMTiles v3 archive, with zooms checked against its header."""
+    """Read PMTiles v3 JSON metadata and verify its zoom interval against the header."""
     with path.open('rb') as stream:
         header = stream.read(127)
         if len(header) != 127 or header[:8] != b'PMTiles\x03':
@@ -76,6 +76,8 @@ def archive_metadata(path):
             raise InventoryError(f'PMTiles metadata {field} must be an integer')
         if zoom != header_zoom:
             raise InventoryError(f'PMTiles metadata {field} {zoom} does not match header {header_zoom}')
+    if metadata['minzoom'] > metadata['maxzoom']:
+        raise InventoryError('PMTiles zoom interval is inverted: minzoom exceeds maxzoom')
     return metadata
 
 

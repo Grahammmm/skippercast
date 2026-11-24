@@ -70,6 +70,45 @@ class InputTests(unittest.TestCase):
         fetch.assert_called_once_with()
         self.assertEqual(json.loads(self.plan.read_text())['build'], '20261008')
 
+    def write_region(self, directory, **descriptor):
+        path = self.dir / 'regions' / directory / 'region.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(descriptor))
+        return path
+
+    def test_plan_preserves_matching_active_and_preview_order_and_excludes_draft(self):
+        # Create the preview first; plan order follows directory names, not creation order.
+        self.write_region('fixture-b', id='fixture-b', status='preview', bounds=[2, 3, 4, 5])
+        self.write_region('fixture-a', id='fixture-a', status='active', bounds=[0, 1, 2, 3])
+        self.write_region('fixture-draft', id='fixture-a', status='draft')
+
+        planned = regions.plan('20261008', LISTING, root=self.dir)
+
+        self.assertEqual(planned['regions'], [
+            {'id': 'fixture-a', 'status': 'active', 'bbox': [0, 1, 2, 3]},
+            {'id': 'fixture-b', 'status': 'preview', 'bbox': [2, 3, 4, 5]},
+        ])
+        detail = regions.detail_region(planned['regions'])
+        self.assertEqual(detail['properties']['regions'], ['fixture-a', 'fixture-b'])
+        self.assertEqual([polygon[0][0] for polygon in detail['geometry']['coordinates']], [[0, 1], [2, 3]])
+
+    def test_plan_refuses_ambiguous_ids_before_using_their_bounds(self):
+        self.write_region('fixture-a', id='fixture-a', status='active', bounds=[0, 1, 2, 3])
+        # A partial copy may keep A's id but contain B's valid bounds; it must not add a second A.
+        for fields, reason in (
+            ({'id': 'fixture-a', 'bounds': [2, 3, 4, 5]}, "Duplicate region id 'fixture-a'"),
+            ({'id': 'other', 'bounds': []}, "does not match directory 'fixture-b'"),
+            ({'id': ''}, 'nonempty string id'),
+            ({}, 'nonempty string id'),
+            ({'id': 42}, 'nonempty string id'),
+        ):
+            with self.subTest(descriptor=fields):
+                path = self.write_region('fixture-b', status='preview', **fields)
+                with self.assertRaises(ValueError) as rejected:
+                    regions.plan('20261008', LISTING, root=self.dir)
+                self.assertIn(str(path), str(rejected.exception))
+                self.assertIn(reason, str(rejected.exception))
+
     def test_unreadable_plan_is_named(self):
         for content in (None, '{"build": "2026', '[]', '"plan"', b'\xff\xfe'):
             with self.subTest(content=content):

@@ -1,4 +1,5 @@
 """C1–C3: exercise the file boundary and the exact XYZ tile decision."""
+from hashlib import sha256
 from math import pi
 
 import numpy as np
@@ -146,6 +147,7 @@ def tiff(path, raw=None, *, tags=None, valid_mask=None, scales=None, offsets=Non
     pytest.param({'tags': {'sc_fine_proof': '1', 'zoom': '15'}, 'transform': lattice(15, 2, 3)},
                  'zoom tag', id='C2: z15 refused even with its own lattice'),
     pytest.param({'crs': 'EPSG:4326'}, 'CRS', id='C2: wrong CRS'),
+    pytest.param({'crs': 'EPSG:3395'}, 'CRS', id='C2: same lattice numbers in a different projected CRS'),
     pytest.param({'width': 255}, 'dimensions', id='C2: partial tile width'),
     pytest.param({'height': 257}, 'dimensions', id='C2: partial tile height'),
     pytest.param({'transform': lattice(16, 65536, 3)}, 'XYZ rectangle', id='C2: lattice origin outside world'),
@@ -187,14 +189,22 @@ def test_reader_refuses_non_geotiff(tmp_path, case):
         refused('raster read failed', read, path)
 
 
-@pytest.mark.parametrize('zoom', [pytest.param(16, id='C2: tolerate sub-micrometre affine noise')])
-def test_reader_recovers_grid_from_canonical_pitch(tmp_path, zoom):
+@pytest.mark.parametrize('encoding, raster_type', [
+    pytest.param({}, 'Area', id='C2: classic GeoTIFF'),
+    pytest.param({'BIGTIFF': 'YES', 'ENDIANNESS': 'BIG', 'GEOTIFF_VERSION': '1.1'}, 'Point',
+                 id='C2: big-endian BigTIFF with pixel-centre tiepoints'),
+])
+def test_reader_recovers_grid_from_canonical_pitch(tmp_path, encoding, raster_type):
+    zoom = 16
     path = tmp_path / 'proof.tif'
     t = lattice(zoom, 12223, 23781)
     moved = type(t)(t.a + 0.9e-6, 0, t.c + 0.9e-6, 0, t.e - 0.9e-6, t.f - 0.9e-6)
     # With small pixel-size noise, dividing the origin by file resolution
     # instead of the canonical pitch can yield the wrong tile index.
-    tiff(path, transform=moved)
+    # A reader that assumes little-endian TIFF or treats centre tiepoints as
+    # corners would refuse the second encoding of this same lattice.
+    tiff(path, transform=moved, tags={'sc_fine_proof': '1', 'zoom': str(zoom), 'AREA_OR_POINT': raster_type},
+         **encoding)
     proof = read(path)
     assert (proof.zoom, proof.x0, proof.y0, proof.x1, proof.y1) == (16, 12223, 23781, 12223, 23781)
 
@@ -245,21 +255,45 @@ def test_reader_rejects_mask_disagreement(tmp_path, missing):
     refused('mask disagrees', read, path)
 
 
-@pytest.mark.parametrize('band', [pytest.param(3, id='C2: validate even the last band mask')])
-def test_reader_checks_each_band_mask(tmp_path, band):
+def test_reader_refuses_proof_that_needs_pam_metadata(tmp_path):
+    path = tmp_path / 'proof.tif'
+    tiff(path, tags={'zoom': '16'})
+    pin = sha256(path.read_bytes()).digest()
+    refused('sc_fine_proof', read, path)
+
+    # Default GDAL opens let a PAM sidecar supply the missing version tag,
+    # certifying a tile that the exact same TIFF bytes cannot prove alone.
+    path.with_suffix('.tif.aux.xml').write_text(
+        '<PAMDataset><Metadata><MDI key="sc_fine_proof">1</MDI></Metadata></PAMDataset>',
+        encoding='utf-8',
+    )
+    assert sha256(path.read_bytes()).digest() == pin
+    with rasterio.Env(GDAL_PAM_ENABLED='YES'), rasterio.open(path) as ds:
+        assert ds.tags()['sc_fine_proof'] == '1'
+    refused('sc_fine_proof', read, path)
+
+
+def test_reader_ignores_disagreeing_external_mask(tmp_path):
     path = tmp_path / 'proof.tif'
     tiff(path)
-    # GDAL's per-band mask layout: only spacing disagrees, so checking the
-    # class mask or the combined dataset mask would miss the defect.
-    mask = np.full((3, 256, 256), 255, dtype='uint8')
-    mask[band - 1, 0, 0] = 0
-    with rasterio.open(path.with_suffix('.tif.msk'), 'w', driver='GTiff', width=256, height=256,
-                       count=3, dtype='uint8', crs='EPSG:3857', transform=lattice(16, 2, 3)) as ds:
-        ds.write(mask)
-        ds.update_tags(INTERNAL_MASK_FLAGS_1='0', INTERNAL_MASK_FLAGS_2='0', INTERNAL_MASK_FLAGS_3='0')
+    pin = sha256(path.read_bytes()).digest()
+    before = read(path)
+    assert before.certified(16, 2, 3)
+
+    # A stale mask in the destination QA root must not veto a certified tile.
+    mask = np.full((256, 256), 255, dtype='uint8')
+    mask[0, 0] = 0
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=False), rasterio.open(path, 'r+') as ds:
+        ds.write_mask(mask)
+    assert path.with_suffix('.tif.msk').is_file()
+    assert sha256(path.read_bytes()).digest() == pin
     with rasterio.open(path) as ds:
-        np.testing.assert_array_equal(ds.read_masks(), mask)
-    refused(f'band {band} mask disagrees', read, path)
+        np.testing.assert_array_equal(ds.read_masks(3), mask)
+    after = read(path)
+    assert (after.zoom, after.x0, after.y0, after.x1, after.y1) == (16, 2, 3, 2, 3)
+    assert after.certified(16, 2, 3)
+    for name in ('cls', 'elev', 'spacing', 'proven'):
+        np.testing.assert_array_equal(getattr(after, name), getattr(before, name))
 
 
 @pytest.mark.parametrize('zoom', [pytest.param(17, id='C3: tile-local all-pixel decision')])

@@ -315,14 +315,27 @@ test('currents_any_source_error_uses_tint_owner', async t => {
 test('retry_clears_exact_owner_only', async t => {
   t.mock.method(console, 'error', () => {});
   fresh(); asSession(admin);
-  const {n, fetchFn} = sstFetch(), s = stack(t, {fetchFn});
+  const {n, fetchFn} = sstFetch(), reports = [];
+  let destroyed = 0;
+  const s = stack(t, {fetchFn, loaders: {...P.PREVIEW_LOADERS, sst: async () => {
+    const attach = await P.PREVIEW_LOADERS.sst();
+    return async ctx => {
+      reports.push(ctx.report);
+      const handle = await attach(ctx);
+      return handle && {destroy() { destroyed++; handle.destroy(); }};
+    };
+  }}});
   P.togglePreview('sst', true); await tick();
+  assert.equal(P.previewStatus.value.sst.state, 'ready');
   s.failed.value = ['basemap', ...s.failed.value];
   s.sourceError(SST_BREAKS);
   assert.deepEqual(s.failed.value, ['basemap', SST_CELLS]);
   assert.equal(P.previewStatus.value.sst.state, 'unavailable');
-  await tick();
-  assert.equal(P.previewStatus.value.sst.state, 'unavailable', 'the failure persists until the person retries');
+  assert.equal(destroyed, 1);
+  // The failed item is still switched on, so an identity-only guard would accept its old callback.
+  const lateReady = () => reports[0]({state: 'ready', text: 'late ready'});
+  lateReady();
+  assert.equal(P.previewStatus.value.sst.state, 'unavailable', 'a late ready report cannot revive a failed preview');
   s.cleared.length = 0;
   P.togglePreview('sst', false); await tick();
   assert.equal(P.previewStatus.value.sst, undefined);
@@ -331,7 +344,11 @@ test('retry_clears_exact_owner_only', async t => {
   assert.deepEqual(s.cleared, [SST_CELLS], 'only the real owner marker is cleared');
   assert.deepEqual(s.failed.value, ['basemap'], 'an unrelated failure is kept');
   assert.equal(n.count, 2, 'one attach per switch-on');
-  assert.equal(P.previewStatus.value.sst.state, 'ready', 'ready comes from the loader');
+  assert.equal(P.previewStatus.value.sst.state, 'ready', 'ready comes from the fresh loader');
+  const retried = P.previewStatus.value.sst;
+  lateReady();
+  assert.equal(P.previewStatus.value.sst, retried, 'the old callback cannot replace the fresh status');
+  assert.equal(destroyed, 1, 'switching off and retrying do not tear down the failed handle again');
   assert.equal(s.map.layers.size, 3);
   s.sourceError(SST_BREAKS);
   assert.equal(P.previewStatus.value.sst.state, 'unavailable', 'a fresh source error is handled again');

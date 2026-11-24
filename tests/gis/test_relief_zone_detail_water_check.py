@@ -14,7 +14,7 @@ WATER = box(-120.004, 36.996, -119.996, 37.004)
 def _save(path, geometries, *, region=REGION, tier=None):
     # Deliberately omit source metadata: this is a geometry check, not source validation.
     value = dict(type="FeatureCollection", region=region, navigation="NOT FOR NAVIGATION",
-                 features=[dict(type="Feature", geometry=mapping(geom),
+                 features=[dict(type="Feature", geometry=geom if isinstance(geom, dict) else mapping(geom),
                                 properties={} if tier is None else {"tier": tier}) for geom in geometries])
     path.write_text(json.dumps(value), encoding="utf-8")
     return path
@@ -113,6 +113,35 @@ def test_invalid_zone_is_not_repaired_or_silently_dropped(tmp_path, capsys):
     output = capsys.readouterr()
     assert not output.out
     assert "zone feature 1: expected valid" in output.err
+
+
+@pytest.mark.parametrize("geometry_type", ["Polygon", "MultiPolygon"])
+@pytest.mark.parametrize("open_ring", [None, 0, 1], ids=["closed", "open-exterior", "open-hole"])
+def test_detail_rings_must_be_closed_on_disk(tmp_path, capsys, geometry_type, open_ring):
+    # Shapely closes open triangles during shape(), so checking only the
+    # resulting polygon's validity would accept geometry not written to disk.
+    exterior = [[-120.003, 36.997], [-119.997, 36.997], [-120, 37.003]]
+    hole = [[-120.001, 36.998], [-120, 37], [-119.999, 36.998]]
+    rings = [ring if i == open_ring else [*ring, ring[0]] for i, ring in enumerate((exterior, hole))]
+    coordinates = rings
+    if geometry_type == "MultiPolygon":
+        sibling = box(-120.003, 37.002, -120.002, 37.003)
+        coordinates = [mapping(sibling)["coordinates"], rings]
+    zone = _save(tmp_path / "zone.geojson", [WATER])
+    detail = _save(tmp_path / "detail.geojson", [dict(type=geometry_type, coordinates=coordinates)], tier="none")
+    before = detail.read_bytes()
+
+    if open_ring is None:
+        code, report = _check(zone, detail, capsys)
+        assert (code, report["status"], report["outside_area_m2"]) == (0, "within_tolerance", 0.0)
+    else:
+        with pytest.raises(SystemExit) as error:
+            main(["--region", REGION, "--zone", str(zone), "--detail", str(detail)])
+        assert error.value.code == 2
+        output = capsys.readouterr()
+        assert not output.out
+        assert "detail feature 0: polygon ring is not closed" in output.err
+    assert detail.read_bytes() == before
 
 
 def test_unknown_detail_tier_does_not_create_a_class(tmp_path, capsys):

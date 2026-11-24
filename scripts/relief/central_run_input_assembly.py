@@ -79,6 +79,8 @@ def assemble(args):
         if problem := run_region.input_problem(cfg, role, path, pin):
             raise ValueError(f'{role}: {problem}')
         inputs[role] = {'path': path, 'sha256': pin}
+    if 'coarse' in pins and os.path.samefile(options.coarse, options.water):
+        raise ValueError('coarse and water must refer to distinct files')
     if 'census' in pins:
         data = Path(options.census).read_bytes()
         # Check the exact bytes we interpret, not only the earlier file read.
