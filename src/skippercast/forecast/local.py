@@ -55,21 +55,45 @@ def run_sampler(root, kind, query, now=None):
     env = {**os.environ, **({'SKIPPERCAST_NOW': str(int(now))} if now is not None else {})}
     result = subprocess.run(['node', str(REPO / 'scripts/model_api.mjs'), str(root), kind, query],
                             capture_output=True, text=True, timeout=120, env=env)
-    data = json.loads(result.stdout or '{}')
-    if result.returncode != 0 or (isinstance(data, dict) and data.get('error')):
+    try:
+        data = json.loads(result.stdout or '{}')
+    except ValueError:
+        # Not JSON: take the same reason ladder, so a node banner on stdout never hides the crash reason.
+        data = None
+        unreadable = True
+    else:
+        unreadable = False
+    if unreadable or result.returncode != 0 or (isinstance(data, dict) and data.get('error')):
         reason = data.get('reason') if isinstance(data, dict) else None
         if not (isinstance(reason, str) and reason.strip()):
             reason = (result.stderr or '').strip()[-300:] if isinstance(result.stderr, str) else ''
         if not reason:
             reason = (f'process exited with status {result.returncode}' if result.returncode != 0
-                      else 'sampler reported an error')
+                      else 'sampler output was not JSON' if unreadable else 'sampler reported an error')
         raise ValueError('Forecast sampler: ' + reason)
     return data
 
 
+def _coordinates(label, value):
+    """Parse one comma-separated coordinate list; every entry must be a finite number."""
+    numbers = []
+    for part in str(value).split(','):
+        try:
+            number = float(part)
+        except ValueError:
+            number = math.nan
+        if not math.isfinite(number):
+            raise ValueError(f'Forecast sampler: {label} entry {part.strip()!r} is not a number')
+        numbers.append(number)
+    return numbers
+
+
 def sample(model, params, client=None):
     """Open-Meteo-shaped response for one model from SkipperCast tiles."""
-    points = list(zip(map(float, str(params['latitude']).split(',')), map(float, str(params['longitude']).split(','))))
+    lats, lons = _coordinates('latitude', params['latitude']), _coordinates('longitude', params['longitude'])
+    if len(lats) != len(lons):
+        raise ValueError(f'Forecast sampler: latitude and longitude lists differ in length ({len(lats)} vs {len(lons)})')
+    points = list(zip(lats, lons))
     query = urlencode({**params, 'models': model})
     root = local_root()
     if root:
