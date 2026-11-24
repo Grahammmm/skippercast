@@ -1,6 +1,7 @@
 """A partial HTTP documentation response (206) is accessible but never a complete document."""
 
 import copy
+import gzip
 import hashlib
 import unittest
 from unittest import mock
@@ -97,6 +98,53 @@ class OrdinarySampling(unittest.TestCase):
                 self.assertEqual(row["status"], "unavailable")
                 self.assertEqual(row["error"], "ValueError: Empty documentation response")
                 self.assertIsNot(row["body_complete"], True)
+
+    def test_complete_gzip_is_judged_on_the_decoded_document(self):
+        # Contract: "empty" is a property of the document, not of the transport bytes. An empty
+        # document is 20 gzip bytes, so a check on the raw body credits an unreachable source.
+        # Bug caught: judging len/strip of the compressed body only (gzip framing is never blank).
+        gz = {"Content-Encoding": "gzip"}
+        empty = gzip.compress(b"", mtime=0)
+        self.assertEqual(len(empty), 20)
+        for name, body in (("empty", empty), ("whitespace only", gzip.compress(b"  \n", mtime=0)),
+                           ("two empty members", empty + empty)):
+            for label in ("gzip", "X-GZIP", " Gzip "):
+                with self.subTest(name=name, encoding=label):
+                    row, _ = probe(response(200, 0, [("Content-Encoding", label)], body=body))
+                    self.assertEqual(row["status"], "unavailable")
+                    self.assertEqual(row["error"], "ValueError: Empty documentation response")
+                    self.assertEqual(row["sampled_bytes"], len(body))
+        # Control, bug caught: treating every gzip body as empty (an over-correction that hides
+        # reachable sources). Receipt fields still describe the transport bytes, as before.
+        for name, body in (("document", gzip.compress(b"Synthetic documentation", mtime=0)),
+                           ("empty then document", empty + gzip.compress(b"Synthetic documentation", mtime=0))):
+            with self.subTest(name=name):
+                r = response(200, 0, gz.items(), body=body)
+                row, _ = probe(r)
+                self.assertEqual(row["status"], "accessible")
+                self.assertNotIn("error", row)
+                self.assertIs(row["body_complete"], True)
+                self.assertEqual(row["sampled_bytes"], len(body))
+                self.assertEqual(row["sha256"], r.receipt.sha256)
+
+    def test_gzip_header_alone_never_triggers_decoding(self):
+        # Bug caught: decoding by magic bytes or without Content-Encoding, or decoding a 206 fragment
+        # or an over-cap sample (cut mid-stream, so its decoded text is unknown): those keep today's result.
+        empty = gzip.compress(b"", mtime=0)
+        cases = {
+            "no Content-Encoding": (200, [], empty, True),
+            "identity encoding": (200, [("Content-Encoding", "identity")], empty, True),
+            "206 fragment": (206, [("Content-Encoding", "gzip"), ("Content-Range", "bytes 0-19/100")], empty, False),
+            "over-cap sample": (200, [("Content-Encoding", "gzip")], empty + b"\0" * CAP, False),
+            "corrupt gzip": (200, [("Content-Encoding", "gzip")], b"x" * 20, True),
+            "cut gzip": (200, [("Content-Encoding", "gzip")], gzip.compress(b"Synthetic documentation")[:12], True),
+        }
+        for name, (status, headers, body, complete) in cases.items():
+            with self.subTest(name):
+                row, _ = probe(response(status, 0, headers, body=body))
+                self.assertEqual(row["status"], "accessible")
+                self.assertIs(row["body_complete"], complete)
+                self.assertEqual(row["sampled_bytes"], len(body))
 
     def test_transport_refusal_is_unchanged(self):
         row, session = probe(http.TransportError("synthetic refusal"))

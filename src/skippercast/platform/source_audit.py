@@ -1,11 +1,30 @@
 """Bounded documentation-access audit. HTTP success is not scientific approval."""
 import argparse
+import zlib
 from concurrent.futures import ThreadPoolExecutor
 
 from .. import http
 from .contracts import REPO, atomic_json, load_catalogs, public_url, stamp
 
 SAMPLE_BYTES = 1_000_000
+
+
+def _gzip_blank(body,encoding):
+    """True only when a complete gzip body provably decodes to nothing but whitespace.
+
+    A sample is fetched undecoded, so gzip framing (20 bytes for an empty document) would
+    otherwise look like content. Anything undecodable or larger than the sample cap is not
+    judged here and keeps the raw-body result."""
+    if (encoding or "").strip().lower() not in ("gzip","x-gzip"): return False
+    rest=body
+    while True:
+        decoder=zlib.decompressobj(16+zlib.MAX_WBITS)
+        try: text=decoder.decompress(rest,SAMPLE_BYTES)
+        except zlib.error: return False
+        if not decoder.eof or text.strip(): return False
+        rest=decoder.unused_data
+        if not rest.strip(b"\0"): return True  # nothing left, or terminal zero padding
+        if rest[:2]!=b"\x1f\x8b": return False
 
 
 def probe(source, session=None):
@@ -24,7 +43,8 @@ def probe(source, session=None):
                    content_type=r.headers.get("Content-Type"),http_last_modified=r.headers.get("Last-Modified"),
                    # Complete only if not cut by the local sample cap and not an HTTP 206 fragment.
                    sampled_bytes=len(body),body_complete=r.status!=206 and len(body)<=SAMPLE_BYTES,sha256=r.receipt.sha256)
-        if not body.strip(): raise ValueError("Empty documentation response")
+        if row["body_complete"] and _gzip_blank(body,r.headers.get("Content-Encoding")) or not body.strip():
+            raise ValueError("Empty documentation response")
     except Exception as e:
         row.update(status="unavailable",error=f"{type(e).__name__}: {str(e)[:180]}")
     return row
