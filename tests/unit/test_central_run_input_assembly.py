@@ -44,22 +44,35 @@ def argv(workspace, bindings, *extra):
             *(token for role, entry in bindings.items() for token in ('--input', role, *entry))]
 
 
-@pytest.mark.parametrize(('explicit_zone', 'fresh_out'), [(False, False), (True, False), (False, True)],
-                         ids=['receipt-zone', 'explicit-zone', 'fresh-receipt-zone'])
-def test_stdout_round_trips_through_runner(workspace, bindings, explicit_zone, fresh_out):
+@pytest.mark.parametrize(('zone', 'fresh_out'), [
+    ('receipt', False), ('explicit', False), ('hard-linked', False), ('receipt', True),
+], ids=['receipt-zone', 'explicit-zone', 'hard-linked-zone', 'fresh-receipt-zone'])
+def test_stdout_round_trips_through_runner(workspace, bindings, zone, fresh_out):
     # Catch emitted schema/role drift, an accidentally normalized file spelling,
     # or placeholder paths/metadata displacing the runner's receipt fallback.
     extra = ['--fresh-out'] if fresh_out else []
-    if explicit_zone:
-        for role in ('coarse', 'water', 'qa_support'):
-            bindings[role] = (role, pin(workspace / role, role.encode()))
+    if zone != 'receipt':
         extra += ['--coarse-source', 'fixture-family', '--coarse-date', '2026-01-01']
+        bindings['coarse'] = ('coarse', pin(workspace / 'coarse', b'coarse'))
+        if zone == 'hard-linked':
+            # Both pins match, and even resolved path strings differ, but the roles share an inode.
+            (workspace / 'water').hardlink_to(workspace / 'coarse')
+            bindings['water'] = ('water', bindings['coarse'][1])
+        else:
+            for role in ('water', 'qa_support'):
+                bindings[role] = (role, pin(workspace / role, role.encode()))
     command = argv(workspace, bindings, *extra)
     command[-1] = command[-1].upper()  # same reviewed pin, different hex case
     result = subprocess.run(
         [sys.executable, '-B', str(ROOT / 'scripts/relief/central_run_input_assembly.py'), *command],
-        cwd=workspace, capture_output=True, check=True,
+        cwd=workspace, capture_output=True, check=False,
     )
+    if zone == 'hard-linked':
+        assert not result.stdout, 'assembly emitted JSON for one file bound as coarse and water'
+        assert result.returncode == 2
+        assert b'coarse and water must refer to distinct files' in result.stderr
+        return
+    result.check_returncode()
     assert not result.stderr
     record = workspace / 'assembled.json'
     record.write_bytes(result.stdout)
@@ -75,7 +88,7 @@ def test_stdout_round_trips_through_runner(workspace, bindings, explicit_zone, f
         assert getattr(options, role) == f'{workspace}/{spelling}'
         assert run_region.input_problem(run_region.Config(basemap_roots=(workspace,)), role,
                                         getattr(options, role), reviewed) is None
-    if explicit_zone:
+    if zone == 'explicit':
         assert (options.coarse_source, options.coarse_date) == ('fixture-family', '2026-01-01')
     else:
         assert (options.coarse, options.water, options.coarse_source, options.coarse_date) == (None,) * 4
