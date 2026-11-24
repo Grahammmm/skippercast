@@ -208,6 +208,7 @@ def fetch_member_step(cycle, member, step, cells, shape, *, reference_lats, refe
     `reference_lats`/`reference_lons` are the land mask's decoded axes; each decoded field must match
     them before `cells` (indices into the mask) are used to index it."""
     import numpy as np
+    from .build import RANGES   # function-local: the reading half of this module stays numpy-free at import
     http = http or fetch.http
     url = gefs_url(cycle, member, step)
     text = http(url + '.idx')
@@ -244,7 +245,9 @@ def fetch_member_step(cycle, member, step, cells, shape, *, reference_lats, refe
         check_field_axes(name, field_lats, field_lons, reference_lats, reference_lons)
         receipts.append({'member': member, 'step': step, 'field': name, 'url': url, 'range': list(found[name]),
                          'bytes': len(blob), 'sha256': hashlib.sha256(blob).hexdigest()})
-        values[name] = [None if cell is None or not np.isfinite(grid[cell[0], cell[1]]) else float(grid[cell[0], cell[1]])
+        low, high = RANGES[name]    # the tile builder's inclusive physical range; outside it (a fill value) is missing
+        values[name] = [None if cell is None or not np.isfinite(grid[cell[0], cell[1]])
+                        or not low <= grid[cell[0], cell[1]] <= high else float(grid[cell[0], cell[1]])
                         for cell in cells]
     return values, receipts, sorted(set(missing), key=list(FIELDS).index)
 
