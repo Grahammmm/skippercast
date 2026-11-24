@@ -39,6 +39,8 @@ TARGET = 'inventory'
 MANIFEST = 'manifest.json'
 CODE_FILES = ('skippercast.relief.package', 'skippercast.relief.mosaic')
 SHALLOW_M = 91.44
+# The header stores bounds as e7 integers; this is the slack QA allows (relief/qa.py bounds_ok check).
+BOUNDS_TOLERANCE_DEG = 5.1e-8
 _RIGHTS_TEXT = ('public_display', 'license', 'attribution', 'commercial_use', 'terms_url')
 _SUPPORT_KEYS = ('tiles', 'limit_m', 'support_class')
 
@@ -78,7 +80,22 @@ def archive_metadata(path):
             raise InventoryError(f'PMTiles metadata {field} {zoom} does not match header {header_zoom}')
     if metadata['minzoom'] > metadata['maxzoom']:
         raise InventoryError('PMTiles zoom interval is inverted: minzoom exceeds maxzoom')
+    if 'bounds' in metadata:
+        _check_bounds(metadata['bounds'], struct.unpack_from('<4i', header, 102))
     return metadata
+
+
+def _check_bounds(declared, header_e7):
+    """Refuse declared [west, south, east, north] that disagree with the header's e7 bounds."""
+    if not isinstance(declared, list) or len(declared) != 4:
+        raise InventoryError('PMTiles metadata bounds must be [west, south, east, north]')
+    for name, value, header_value in zip(('west', 'south', 'east', 'north'), declared, header_e7):
+        if type(value) not in (int, float):
+            raise InventoryError(f'PMTiles metadata {name} bound must be a number')
+        header_degrees = header_value / 1e7
+        # Written so that a NaN difference also refuses.
+        if not abs(value - header_degrees) <= BOUNDS_TOLERANCE_DEG:
+            raise InventoryError(f'PMTiles metadata {name} bound {value} does not match header {header_degrees}')
 
 
 def owned(doc, prefix=package.LAYERS):
