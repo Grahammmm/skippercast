@@ -61,14 +61,21 @@ def parse_rules(html, region):
             'interpretation': 'Official document watch only. Date, method, depth, species and local closures still require the actual regulations.'}
 
 
+def _valid_mpa_feature(f):
+    """A feature must be an object whose geometry and properties are objects, so a null or odd shape is refused by name."""
+    if not isinstance(f, dict): return False
+    geometry, props = f.get('geometry'), f.get('properties')
+    return (isinstance(geometry, dict) and geometry.get('type') in ('Polygon','MultiPolygon')
+            and isinstance(props, dict) and isinstance(props.get('NAME'), str))
+
+
 def mpa_loader(client):
     count = client.get(MPA + '?' + urlencode({'where':'1=1','returnCountOnly':'true','f':'json'}), True).get('count')
     if not isinstance(count, int) or not 100 <= count <= 500: raise ValueError('Unexpected statewide MPA inventory')
     url = MPA + '?' + urlencode({'where':'1=1','outFields':'NAME,FULLNAME,Type,CCR','returnGeometry':'true','outSR':4326,'f':'geojson','resultRecordCount':1000})
     geo = client.get(url, True)
     if geo.get('exceededTransferLimit') or len(geo.get('features', [])) != count: raise ValueError('Incomplete statewide MPA boundaries')
-    if any(f.get('geometry', {}).get('type') not in ('Polygon','MultiPolygon') or not isinstance(f.get('properties',{}).get('NAME'),str) for f in geo['features']):
-        raise ValueError('Invalid MPA feature')
+    if not all(_valid_mpa_feature(f) for f in geo['features']): raise ValueError('Invalid MPA feature')
     return {'geojson':geo,'feature_count':count,'source_url':url}
 
 
