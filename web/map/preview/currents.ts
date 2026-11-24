@@ -22,8 +22,18 @@ export function arrowhead(tip: Position, from: Position, size: number): Position
 
 export function currentsOverlay(lines: Array<{coords: number[][]}>, image: {url: string; coordinates: number[][]}, size: number): Overlay {
   const features = lines.map(({coords}) => ({type: 'Feature' as const, properties: {}, geometry: {type: 'LineString' as const, coordinates: coords}}));
-  const heads = lines.filter(({coords}) => coords.length > 2).map(({coords}) => ({type: 'Feature' as const, properties: {},
-    geometry: {type: 'Polygon' as const, coordinates: [arrowhead(coords.at(-1)! as Position, coords.at(-3)! as Position, size)]}}));
+  const heads = [];
+  for (const {coords} of lines) {
+    const tip = coords.at(-1) as Position | undefined;
+    if (!tip) continue;
+    for (let i = coords.length - 2; i >= 0; i--) {
+      const from = coords[i] as Position;
+      if (from[0] === tip[0] && from[1] === tip[1]) continue;
+      heads.push({type: 'Feature' as const, properties: {},
+        geometry: {type: 'Polygon' as const, coordinates: [arrowhead(tip, from, size)]}});
+      break;
+    }
+  }
   return {
     sources: {
       [CURRENTS_TINT]: {type: 'image', url: image.url, coordinates: image.coordinates as [Position, Position, Position, Position]},
