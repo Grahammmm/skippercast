@@ -6,7 +6,7 @@ import zlib
 import pytest
 
 from scripts.relief import fine_lineage_manifest
-from skippercast.relief import package
+from skippercast.relief import package, receipts
 from tests.unit.test_r8_packet_compare import _candidate
 from tests.unit.test_relief_package import assembly, sha  # noqa: F401 (assembly fixture)
 
@@ -110,6 +110,27 @@ def test_swapped_summary_rejects_a_different_valid_raster(inputs, tmp_path, caps
     assert _run(summary, review, z16, z17) == 1
     out, err = capsys.readouterr()
     assert not out and 'z16 proof bytes do not match summary raster_sha256' in err
+
+
+def test_reused_digest_refuses_both_zooms_before_reading_proofs(inputs, capsys, monkeypatch):
+    """Copying the z16 raster to a second pathname cannot supply a z17 proof."""
+    summary, _, z16, z17 = inputs
+    z17.write_bytes(z16.read_bytes())
+    summary.write_text(json.dumps([_row(16, Z16), _row(17, Z16)]), encoding='utf-8')
+    proof_reads = []
+    hash_file = receipts.sha256_file
+
+    def record_hash(path):
+        if path in (z16, z17):
+            proof_reads.append(path)
+        return hash_file(path)
+
+    monkeypatch.setattr(receipts, 'sha256_file', record_hash)
+    code = _run(*inputs)
+    out, err = capsys.readouterr()
+    assert (code, out) == (1, '')
+    assert 'z16 and z17 must declare distinct raster_sha256 values' in err
+    assert not proof_reads
 
 
 @pytest.mark.parametrize('missing', ['argument', 'file', 'summary_row'])
