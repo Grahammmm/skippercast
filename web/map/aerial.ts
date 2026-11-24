@@ -145,6 +145,15 @@ export function createAerial({engine, offer, sharp}: AerialOptions): {destroy():
   // region, engine, or the base chosen again) starts at jpgpng, and a failure of the png32 form is not retried.
   let shown: {a: AerialBase; e: Engine; format?: NaipFormat; stage: AerialStage; overlay: Overlay} | null = null;
   let unwatch = (): void => {};
+  const removeDraw = (): void => {
+    if (!shown) return;
+    const previous = shown.e;
+    // Invalidate a queued idle callback before removing the draw from its owner.
+    shown = null;
+    unwatch(); unwatch = () => {};
+    previous.setOverlay(REGISTRY_ID, null, ENC_LAYER);
+    softStage.value = false;
+  };
   const put = (a: AerialBase, e: Engine, format: NaipFormat | undefined, stage: AerialStage): void => {
     unwatch(); unwatch = () => {};
     const overlay = aerialOverlay(a, format, stage);
@@ -169,14 +178,7 @@ export function createAerial({engine, offer, sharp}: AerialOptions): {destroy():
     effect(() => { if (sharp?.()) sharpened.value = true; }),
     effect(() => {
       const e = engine.value, a = drawn.value;
-      if (shown && (shown.e !== e || !a)) {
-        const previous = shown.e;
-        // Invalidate a queued idle callback before removing the draw from its owner.
-        shown = null;
-        unwatch(); unwatch = () => {};
-        previous.setOverlay(REGISTRY_ID, null, ENC_LAYER);
-        softStage.value = false;
-      }
+      if (shown && (shown.e !== e || !a)) removeDraw();
       if (!e || !a) return;
       if (shown?.a === a && shown.e === e) return;
       put(a, e, undefined, !sharpened.peek() && previewTiles() ? 'preview' : 'full');
@@ -203,8 +205,7 @@ export function createAerial({engine, offer, sharp}: AerialOptions): {destroy():
   return {
     destroy() {
       for (const dispose of disposers) dispose();
-      unwatch();
-      softStage.value = false;
+      removeDraw();
       aerialOffer.value = null;
     },
   };

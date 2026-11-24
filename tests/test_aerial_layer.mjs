@@ -285,8 +285,10 @@ test('a failed jpgpng draw is retried once as png32; a failed png32 draw stays u
   offer.value = MORRO;
   assert.equal(formatOf(next.overlay), 'jpgpng');
   a.destroy();
+  assert.equal(next.overlay, null, 'destroy clears the held Aerial overlay');
+  const afterDestroy = next.calls;
   markUnavailable('aerial');
-  assert.equal(next.calls, calls + 1, 'a destroyed controller swaps nothing');
+  assert.equal(next.calls, afterDestroy, 'a destroyed controller swaps nothing');
   assert.ok(unavailable.value.includes('aerial'));
   assert.ok([...e.tiles, ...next.tiles].every(t => origin(t) === 'https://imagery.nationalmap.gov'));
   unavailable.value = [];
