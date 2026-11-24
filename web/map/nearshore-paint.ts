@@ -15,8 +15,23 @@ type ZoomPairs = readonly (readonly [number, number])[];
  * 256 px tile), as `?view=` writes them; MapLibre's 512 px zoom is ZOOM_OFFSET less. One pair is a constant.
  */
 export function kitZoom(pairs: ZoomPairs): number | unknown[] {
-  if (pairs.length === 1) return pairs[0]![1];
-  return ['interpolate', ['linear'], ['zoom'], ...pairs.flatMap(([zoom, value]) => [zoom - ZOOM_OFFSET, value])];
+  if (!pairs.length) throw new Error('Nearshore zoom table needs at least one stop');
+  const stops: number[] = [];
+  let previous = -Infinity;
+  for (const [i, pair] of pairs.entries()) {
+    if (!pair || !Number.isFinite(pair[0]) || !Number.isFinite(pair[1])) {
+      throw new Error(`Nearshore zoom stop ${i + 1}: zoom and value must be finite numbers`);
+    }
+    const [zoom, value] = pair;
+    // Check the emitted coordinates: the offset can round distinct inputs to the same zoom.
+    const mapZoom = zoom - ZOOM_OFFSET;
+    if (mapZoom <= previous) {
+      throw new Error(`Nearshore zoom stop ${i + 1}: zooms must be strictly increasing after the zoom offset`);
+    }
+    stops.push(mapZoom, value);
+    previous = mapZoom;
+  }
+  return pairs.length === 1 ? stops[1]! : ['interpolate', ['linear'], ['zoom'], ...stops];
 }
 
 /** A kit web-map zoom as a MapLibre layer zoom. */

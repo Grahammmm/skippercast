@@ -2,23 +2,26 @@
 
 import hashlib
 import json
+import subprocess
+import sys
 
 import pytest
 
 from scripts.relief.north_water_evidence import summarize
 from skippercast.relief import receipts
+from tests._support import ROOT
 
 _REGION = 'shelter-cove-north-mendocino'
 
 
 @pytest.fixture
 def saved_water(tmp_path):
-    def save(*, omit=None, unavailable=None):
+    def save(*, omit=None, unavailable=None, close_m=36.0):
         audit = {
             'region': _REGION,
             'region_bounds_wgs84': [-125, 39, -124, 40],
             'frame_wgs84': [-125, 39, -124, 40],
-            'close_m': 36.0,
+            'close_m': close_m,
             'connect_m': 250.0,
             'hor_acc_values_m': [4.31, 18.0, 36.0],
             'unavailable_tiles': ['10/156/388'] if unavailable is None else unavailable,
@@ -68,6 +71,18 @@ def test_reads_saved_values_without_rejudging_displacement(tmp_path, saved_water
         'status': 'verified', 'region': _REGION, 'max_stated_accuracy_m': 36.0,
         'close_m': 36.0, 'unavailable_tiles': unavailable,
     }
+
+
+def test_refuses_digest_bound_contradictory_accuracy(tmp_path, saved_water):
+    """A matching digest alone would verify a stale closing radius against newer accuracies."""
+    saved_water(close_m=18.0)
+    run = subprocess.run(
+        [sys.executable, '-B', '-m', 'scripts.relief.north_water_evidence', str(tmp_path), _REGION],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    result = json.loads(run.stdout)
+    assert (result['status'], run.returncode) == ('incomplete', 1)
+    assert 'close_m' in result['reason'] and 'hor_acc_values_m' in result['reason']
 
 
 def test_refuses_same_size_changed_audit(tmp_path, saved_water):

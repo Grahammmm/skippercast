@@ -109,7 +109,8 @@ function decodeFeature(value: unknown, sources: ReadonlySet<string>): HabitatCon
   }};
 }
 
-/** Decode an already reviewed HAB-1 v1 file. Refuse malformed rows by input index;
+/** Decode an already reviewed HAB-1 v1 file. Refuse malformed rows and rows
+ * sharing a decoded feature ID by input index;
  * a malformed envelope is distinct from a valid collection with no features.
  * Source ids are lineage only; this isn't a rights, freshness or release gate.
  */
@@ -127,9 +128,15 @@ export function decodeHabitatContext(geojson: unknown): DecodedHabitatContext {
   }
   const collection = {type: 'FeatureCollection' as const, features: [] as HabitatContextFeature[]};
   const refused = [];
-  for (const [index, feature] of geojson.features.entries()) {
+  const counts = new Map<string, number>();
+  const rows = Array.from(geojson.features, feature => {
     const decoded = decodeFeature(feature, sources);
+    if (typeof decoded !== 'string') counts.set(decoded.id, (counts.get(decoded.id) ?? 0) + 1);
+    return decoded;
+  });
+  for (const [index, decoded] of rows.entries()) {
     if (typeof decoded === 'string') refused.push({index, reason: decoded});
+    else if (counts.get(decoded.id)! > 1) refused.push({index, reason: 'Duplicate feature id'});
     else collection.features.push(decoded);
   }
   return {collection, refused};

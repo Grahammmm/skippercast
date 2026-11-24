@@ -14,16 +14,17 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const grids = [{bounds: [-121, 35, -120.85, 35.2], cells: [[35.05, -120.95], [35.1, -120.9]]}, {bounds: [-120.85, 35, -120.7, 35.2], cells: [[35.05, -120.8], [35.1, -120.75]]}];
 const flow = () => [0.2, -0.1];
 
-function sstFeed({region = REGION, tile = t => t, record = r => r} = {}) {
+function sstFeed({region = REGION, sampleAt = '2026-10-15T12:00:00Z', retrievedAt = RETRIEVED, tile = t => t, record = r => r} = {}) {
+  const time = Date.parse(sampleAt) / 1000;
   const tiles = grids.map(({bounds, cells}, k) => {
     const body = tile({schema_version: 1, region_id: region, layer_id: 'sst-analysis', bounds, resolution_degrees: [0.05, 0.05], fields: SST_FIELDS,
-      frames: [{time: TIME, cells: cells.map(([lat, lon]) => [lat, lon, 14.5, 0.3])}]}, k);
+      frames: [{time, cells: cells.map(([lat, lon]) => [lat, lon, 14.5, 0.3])}]}, k);
     const bytes = Buffer.from(JSON.stringify(body));
     return {bytes, record: record({path: `habitat-tiles/sst-analysis-${k}-0-${sha(bytes).slice(0, 16)}.json`, bounds, sha256: sha(bytes), bytes: bytes.length}, k)};
   });
-  const layer = {id: 'sst-analysis', kind: 'analysis', sample_at: '2026-10-15T12:00:00Z', resolution_degrees: [0.05, 0.05], fields: SST_FIELDS, status: 'ok', max_age_hours: 72,
-    native_stride: 1, source_id: 'noaa-blended-sst', frames: [{time: TIME, valid_cells: 2, total_cells: 2}], tiles: tiles.map(t => t.record)};
-  const source = {id: 'sst-analysis', name: 'NOAA Geo-Polar Blended night SST, 5 km', kind: 'analysis', url: 'https://coastwatch.noaa.gov/', max_age_hours: 72, status: 'ok', data_retrieved_at: RETRIEVED};
+  const layer = {id: 'sst-analysis', kind: 'analysis', sample_at: sampleAt, resolution_degrees: [0.05, 0.05], fields: SST_FIELDS, status: 'ok', max_age_hours: 72,
+    native_stride: 1, source_id: 'noaa-blended-sst', frames: [{time, valid_cells: 2, total_cells: 2}], tiles: tiles.map(t => t.record)};
+  const source = {id: 'sst-analysis', name: 'NOAA Geo-Polar Blended night SST, 5 km', kind: 'analysis', url: 'https://coastwatch.noaa.gov/', max_age_hours: 72, status: 'ok', data_retrieved_at: retrievedAt};
   return {layer, source, tiles};
 }
 
@@ -338,6 +339,27 @@ test('a layer past its window, retrieved too long ago or short of one is recorde
   assert.ok(!r.srv.asked.some(u => u.includes('wcofs-surface-forecast')), 'no WCOFS tile fetched');
   assert.ok(!r.st.keys().some(k => k.includes('wcofs-surface-forecast')));
   assert.equal(result.bytes, f.manifestBytes.length + result.layers[S].bytes);
+});
+
+test('offline SST save refuses an overflowing age before tile reads or writes', async t => {
+  const now = new Date(), sampleAt = at(now, -2 * H), retrievedAt = at(now, -H);
+  for (const [name, maxAge, current] of [['finite 72h control', 72, true], ['overflowing 1e308h', 1e308, false]]) {
+    await t.test(name, async () => {
+      // Even finite JSON hours can become Infinity in milliseconds and look drawable forever.
+      const f = feed({sst: {sampleAt, retrievedAt}, edit: m => {
+        m.layers[S].max_age_hours = maxAge;
+        delete m.layers[W];
+        return m;
+      }});
+      const r = run(f, {eligible: (id, m) => eligibility(id, m, now)});
+      const result = await r.done(), layer = result.layers[S], keys = current ? sstKeys(f) : [];
+      assert.deepEqual([layer.state, layer.why, r.srv.asked, r.st.keys()],
+        [current ? 'saved' : 'not-current', current ? undefined : 'age', [MANIFEST, ...keys], [...keys, MANIFEST]],
+        'overflow must be ineligible without any SST tile read or write');
+      assert.equal(layer.max_age_hours, current ? 72 : undefined);
+      assert.equal(layer.drawable_until, current ? at(sampleAt, 72 * H) : undefined);
+    });
+  }
 });
 
 test('saved layers carry data_at, retrieved_at, max_age_hours and drawable_until; failed, over-cap and absent layers follow the manifest', async () => {

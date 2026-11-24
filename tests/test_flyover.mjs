@@ -89,20 +89,29 @@ function engine() {
   return {e, map: fake.maps[0], host: h, moves};
 }
 
-test('a full flight eases each leg around the same centre and zoom, then restores max pitch 0', () => {
-  const {e, map, host, moves} = engine(), results = [];
-  const legs = flyoverLegs(CENTER, HARBOR);
-  e.flyover(legs, finished => results.push(finished));
-  assert.equal(map.maxPitch, MAX_TILT, 'pitch allowed only while flying');
-  for (const type of FLY_STOPPERS) assert.equal(host.listeners[type].length, 1, `${type} stops it`);
-  for (let i = 0; i < legs.length; i++) { assert.equal(map.eases.length, i + 1); map.finish(); }
-  assert.deepEqual(map.eases.map(o => [o.pitch, o.bearing]), legs.map(l => [l.pitch, l.bearing]));
-  assert.ok(map.eases.every(o => o.zoom === 11 && o.center.lat === 35.37 && o.center.lng === -120.95));
-  assert.deepEqual(results, [true]);
-  assert.deepEqual([map.pitch, map.bearing, map.maxPitch], [0, 0, 0]);
-  for (const type of FLY_STOPPERS) assert.equal(host.listeners[type].length, 0, `${type} listener removed`);
-  assert.ok(moves.every(c => c.latitude === 35.37 && c.longitude === -120.95 && c.zoom === 12), 'the shared camera never changes');
-});
+for (const [name, harbor, turn] of [
+  ['Morro harbor', HARBOR, 90],
+  ['no harbor', null, 30],
+  // A malformed point used to survive the proximity check and send NaN to easeTo.
+  ['malformed harbor', {...HARBOR, longitude: NaN}, 30],
+]) {
+  test(`a full flight with ${name} keeps the same centre and zoom and settles north up`, () => {
+    const {e, map, host, moves} = engine(), results = [];
+    const legs = flyoverLegs(CENTER, harbor);
+    e.flyover(legs, finished => results.push(finished));
+    assert.equal(map.maxPitch, MAX_TILT, 'pitch allowed only while flying');
+    for (const type of FLY_STOPPERS) assert.equal(host.listeners[type].length, 1, `${type} stops it`);
+    for (let i = 0; i < legs.length; i++) { assert.equal(map.eases.length, i + 1); map.finish(); }
+    assert.deepEqual(map.eases.map(o => [o.pitch, o.bearing, o.duration]), [
+      [45, turn / 2, 7000], [50, turn, 7000], [0, 0, 5000],
+    ]);
+    assert.ok(map.eases.every(o => o.zoom === 11 && o.center.lat === 35.37 && o.center.lng === -120.95));
+    assert.deepEqual(results, [true]);
+    assert.deepEqual([map.pitch, map.bearing, map.maxPitch], [0, 0, 0]);
+    for (const type of FLY_STOPPERS) assert.equal(host.listeners[type].length, 0, `${type} listener removed`);
+    assert.ok(moves.every(c => c.latitude === 35.37 && c.longitude === -120.95 && c.zoom === 12), 'the shared camera never changes');
+  });
+}
 
 test('the first touch stops the flight north up and flat where it is', () => {
   const {e, map, host} = engine(), results = [];
