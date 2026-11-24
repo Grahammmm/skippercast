@@ -108,6 +108,12 @@ test('loader verifies the window hash, cache-busts by digest and caches the inde
  assert.deepEqual(l.calls,['/regions/morro-bay/bottom/index.json','/regions/morro-bay/bottom/t1.json?v='+sha(files['/regions/morro-bay/bottom/t1.json']).slice(0,12)]);
  await l.load('t1');assert.equal(l.calls.filter(c=>c.endsWith('index.json')).length,1,'index fetched once');
 });
+test('loader withholds public windows whose finite spacing overflows section distances',async()=>{
+ // A finite-only spacing check misses overflow in metres (1e308) or only after conversion to feet (4e305).
+ for(const cell_m of [1e308,4e305]){
+  await assert.rejects(loader(setup({...v1(),cell_m})).load('t1'),/Unsupported survey window/,`${cell_m} m spacing`);
+ }
+});
 test('loader admits schema 2 only behind a private_diagnostic index record, and vice versa',async()=>{
  assert.equal((await loader(setup(v2(),'private_diagnostic')).load('t2')).diagnostic,true);
  await assert.rejects(loader(setup(v2(),'surveyed')).load('t2'),/requires diagnostic index/);

@@ -57,6 +57,9 @@ export function decodeBottom(data: BottomWindowData): (number | null)[] {
   if (data.schema_version !== 1 || data.encoding !== 'base64-int16-le' || data.width !== 129 || data.height !== 129 ||
     data.elevation_unit_m !== 0.1 || data.nodata !== -32768 || !Number.isFinite(data.cell_m) || data.cell_m <= 0)
     throw new Error('Unsupported survey window');
+  // The corner-to-corner diagonal is the longest section. Check in feet, in bottomSection's multiplication order.
+  const diagonal = Math.hypot(data.width - 1, data.height - 1);
+  if (!Number.isFinite(diagonal * data.cell_m * FEET_PER_M)) throw new Error('Unsupported survey window');
   const bytes = Uint8Array.from(atob(data.elevations), (c) => c.charCodeAt(0));
   if (bytes.length !== data.width * data.height * 2) throw new Error('Incomplete survey window');
   const view = new DataView(bytes.buffer);
