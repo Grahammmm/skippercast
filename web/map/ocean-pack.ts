@@ -117,7 +117,10 @@ function clocksOf(id: string, manifest: unknown) {
   const m = object(manifest) ? manifest : {}, layer = object(m.layers) && object(m.layers[id]) ? m.layers[id] : {}, source = object(m.sources) && object(m.sources[id]) ? m.sources[id] : {};
   const times = (Array.isArray(layer.frames) ? layer.frames : []).filter(f => object(f) && typeof f.time === 'number' && (typeof f.valid_cells !== 'number' || f.valid_cells > 0)).map(f => (f as {time: number}).time);
   const wcofs = id === WCOFS_LAYER_ID, data = wcofs ? at(layer.issued_at) : times.length ? Math.max(...times) * 1000 : NaN;
-  const got = at(source.data_retrieved_at), hours = typeof layer.max_age_hours === 'number' ? layer.max_age_hours : NaN, age = hours > 0 ? hours * HOUR : NaN;
+  const got = at(source.data_retrieved_at), hours = typeof layer.max_age_hours === 'number' ? layer.max_age_hours : NaN;
+  const ageMs = hours * HOUR;
+  // Finite hours can still overflow on conversion; both eligibility and evidence need a usable age.
+  const age = Number.isFinite(ageMs) && ageMs > 0 ? ageMs : NaN;
   return {layer, data, got, hours, age, wcofs, populated: times.length > 0, dataEnd: data + (wcofs ? Math.min(age, WCOFS_ISSUE_LIMIT) : age), gotEnd: got + (wcofs ? WCOFS_RETRIEVAL_LIMIT : age)};
 }
 
