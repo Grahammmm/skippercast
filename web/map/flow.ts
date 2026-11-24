@@ -63,9 +63,9 @@ export function frameField(field: CurrentField, frame: CurrentFrame): SurfaceFie
     {maxStep: [km / 111 / Math.cos(latitude * Math.PI / 180) * 1.6, km / 111 * 1.6]});
 }
 
-/** The frame's 80th percentile cell speed in knots (nearest rank). */
+/** The frame's 80th percentile vector speed in knots (nearest rank over source cells). */
 export function fastSpeed(frame: CurrentFrame): number {
-  const speeds = frame.cells.map(c => c.speedKnots).filter(Number.isFinite).sort((a, b) => a - b);
+  const speeds = frame.cells.map(c => vectorReading([c.uMs, c.vMs]).speedKnots).filter(Number.isFinite).sort((a, b) => a - b);
   return speeds.length ? speeds[Math.max(0, Math.ceil(FAST_PERCENTILE * speeds.length) - 1)]! : Infinity;
 }
 

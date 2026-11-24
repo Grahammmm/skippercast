@@ -20,17 +20,21 @@ await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
 bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
 const {SkipLinks, createSkip, focusSkipTarget, skipFocusTarget, needsCoast, BRIEF_ID, MAP_ID, language, render, h} = await import(pathToFileURL(out).href);
 
-/** A stand-in document: elements by selector or id, focus that works unless the element refuses it, [hidden] ancestors by name. */
+/** A stand-in document: elements by selector or id, focus that works unless the element refuses it, [hidden] ancestors by name.
+ *  mapFocusTarget (web/app/map-focus.ts) walks querySelectorAll and checks layout boxes and computed visibility, so the stub
+ *  answers those too: every element has a box and `visibility: visible` unless it is named in `hidden`. */
 function page({selectors = {}, ids = {}, refuse = [], hidden = []} = {}) {
-  const doc = {activeElement: null, body: {tag: 'body'}};
+  const doc = {activeElement: null, body: {tag: 'body'}, defaultView: {getComputedStyle: () => ({visibility: 'visible'})}};
   doc.activeElement = doc.body;
-  const wrap = (name, el) => el && Object.assign(el, {name, attrs: el.attrs ?? {},
+  const wrap = (name, el) => el && Object.assign(el, {name, attrs: el.attrs ?? {}, ownerDocument: doc,
     hasAttribute: a => a in el.attrs, setAttribute: (a, v) => { el.attrs[a] = v; },
-    closest: q => (q === '[hidden]' && hidden.includes(name) ? el : null),
+    closest: q => (/\[hidden\]/.test(q) && hidden.includes(name) ? el : null),
+    getClientRects: () => [{}],
     focus() { if (!refuse.includes(name) && !hidden.includes(name)) doc.activeElement = el; }});
   const byId = Object.fromEntries(Object.entries(ids).map(([id, v]) => [id, wrap(id, v)]));
   const bySel = Object.fromEntries(Object.entries(selectors).map(([s, v]) => [s, wrap(s, v)]));
   doc.querySelector = s => bySel[s] ?? null;
+  doc.querySelectorAll = s => (bySel[s] ? [bySel[s]] : []);
   doc.getElementById = id => byId[id] ?? null;
   return {doc, byId, bySel};
 }

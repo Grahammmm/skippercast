@@ -38,7 +38,7 @@ const HOUR = 3_600_000;
 
 export interface Ring {readonly site: NearshoreSite; readonly hour: NearshoreHour; readonly waveFt: number; readonly product: string}
 export interface Rings {
-  /** Changes with the sites, their runs and the samples drawn. */
+  /** Changes with the rendered geometry or the issue, fetch and sample times. */
   readonly key: string;
   readonly rings: readonly Ring[];
   /** The shared product, or "multiple nearshore models" when drawn products differ. */
@@ -67,11 +67,15 @@ export function nearshoreRings(report: Report | null, areaId: string | null, at:
     if (hour && finite(hour.waveFt) && hour.waveFt >= 0) rings.push({site, hour, waveFt: hour.waveFt, product: productOf(report, site.sourceId)});
   }
   if (!rings.length) return null;
+  const collection: Rings['collection'] = {type: 'FeatureCollection', features: rings.map(r => ({type: 'Feature',
+    properties: {id: r.site.id, radius: ringRadius(r.waveFt)}, geometry: {type: 'Point', coordinates: [r.site.lon, r.site.lat]}}))};
   return {
-    key: rings.map(r => `${r.site.id}|${r.site.issuedAt}|${r.site.fetchedAt}|${r.hour.at}`).join(','), rings,
+    key: JSON.stringify(rings.map((r, i) => {
+      const {properties, geometry} = collection.features[i]!;
+      return [properties.id, r.site.issuedAt, r.site.fetchedAt, r.hour.at, ...geometry.coordinates, properties.radius];
+    })),
+    rings, collection,
     product: rings.every(r => r.product === rings[0]!.product) ? rings[0]!.product : MULTIPLE,
-    collection: {type: 'FeatureCollection', features: rings.map(r => ({type: 'Feature', properties: {id: r.site.id, radius: ringRadius(r.waveFt)},
-      geometry: {type: 'Point', coordinates: [r.site.lon, r.site.lat]}}))},
   };
 }
 

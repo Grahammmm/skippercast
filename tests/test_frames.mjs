@@ -94,6 +94,18 @@ test('clouds: listed frames inside 90 minutes on today only; the window is appli
   assert.deepEqual(cloudFrames(null, NOW, NOW, TZ), []);
 });
 
+test('clouds: equivalent timestamps take one playback slot and keep the first listed spelling', () => {
+  const now = new Date('2026-10-01T12:20:00Z');
+  const first = '2026-10-01T05:00:00-07:00', alias = '2026-10-01T12:00:00Z';
+  const earlier = '2026-10-01T11:55:00Z', later = '2026-10-01T12:15:00Z';
+  const cloud = image({observedAt: later, fetchedAt: now.toISOString(), availableTimes: [later, first, alias, earlier, '2026-10-01T10:45:00Z']});
+  // Deduplicating raw strings spends two of the loop's limited slots on the same acquisition.
+  const frames = cloudFrames(cloud, now, now, TZ);
+  assert.deepEqual(frames, [earlier, first, later]);
+  assert.match(cloudTiles(cloud, frames[1], now).tiles[0], /&time=2026-10-01T05%3A00%3A00-07%3A00$/);
+  assert.equal(cloudTiles(cloud, '2026-10-01T12:00:00.000Z', now), null, 'even an equivalent unlisted spelling is refused');
+});
+
 test('a GOES index is admitted only in the CloudImage shape goes-times.json publishes', () => {
   assert.equal(cloudImage(image())?.observedAt, '2026-10-02T02:53:00.000Z');
   for (const patch of [{id: 'goes-visible'}, {kind: 'forecast'}, {layer: 'other'}, {observedAt: 'latest'}, {observedAt: '2026-10-02T02:54:00Z'}, {availableTimes: []}, {availableTimes: ['current']}, {attribution: 1}, {fetchedAt: null}]) {

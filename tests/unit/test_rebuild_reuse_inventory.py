@@ -76,15 +76,25 @@ def test_intact_history_is_distinct_from_current(stage_history, report):
     assert (path.read_bytes(), path.stat().st_mtime_ns) == before
 
 
-@pytest.mark.parametrize('change', ['same-size-changed-bytes', 'missing-output'])
+@pytest.mark.parametrize('change', ['same-size-changed-bytes', 'missing-output', 'wrong-target'])
 def test_saved_output_identity_is_required(stage_history, report, change):
-    # A size-only or receipt-only check would list an output that cannot re-hash.
+    # A digest-only check can mistake the current generation's byte-identical
+    # payload for a saved output of a prior generation.
     region, _, path, _, saved, current = stage_history
     doc = receipts.read_receipt(path)
     assert doc is not None
-    evidence = doc['generation_history'][saved]['outputs'][0]
+    prior = doc['generation_history'][saved]
+    evidence = prior['outputs'][0]
     output = region.resolve(evidence['path'])
-    if change == 'same-size-changed-bytes':
+    if change == 'wrong-target':
+        assert report(region)['reusable_history'] == [{'generation': saved, 'output_count': 1}]
+        foreign = doc['outputs'][0]
+        assert output.parent == region.resolve(prior['target'])
+        assert region.resolve(foreign['path']).parent == region.resolve(doc['target']) != output.parent
+        assert region.resolve(foreign['path']).read_bytes() == output.read_bytes()
+        evidence['path'] = foreign['path']
+        receipts.write_json_atomic(path, doc)
+    elif change == 'same-size-changed-bytes':
         output.write_bytes(b'modified')
         assert output.stat().st_size == evidence['bytes']
     else:

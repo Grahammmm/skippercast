@@ -7,6 +7,7 @@ import sys
 
 import pytest
 
+from scripts.relief import release_history
 from skippercast.relief.rollback import GitCli, previous_state
 from tests._support import ROOT
 
@@ -195,3 +196,27 @@ def test_c2_missing_repo_option_is_usage_error():
         2, '', 'usage: release_history.py [-h] --repo REPO [REGION ...]\n'
         'release_history.py: error: the following arguments are required: --repo\n',
     )
+
+
+def test_c1_pointer_versions_preserve_invalid_absent_and_same_generation_rows(repo):
+    """C1: Reading catalog states or deduplicating by generation corrupts the version order."""
+    root, git = repo
+    old = release(repo, 1, {POINTER: pointer()})
+    wrong = release(repo, 2, {POINTER: pointer(region='other-bay')})
+    invalid = release(repo, 3, {POINTER: b'{'})
+    git('rm', '--cached', '--', POINTER)
+    git('commit', '-m', 'Remove pointer', day=4)
+    absent = git('rev-parse', 'HEAD')
+    restored = release(repo, 5, {POINTER: pointer()})
+    amended = release(repo, 6, {POINTER: pointer(envelope='e')})
+    release(repo, 7, {CONTOURS: A})
+
+    assert release_history.pointer_versions(GitCli(root), REGION, release_history.package.pointer_schema()) == [
+        release_history.PointerVersion(amended, 'a' * 64, 'reviewed'),
+        release_history.PointerVersion(restored, 'a' * 64, 'reviewed'),
+        release_history.PointerVersion(absent, None, 'absent'),
+        release_history.PointerVersion(invalid, None,
+                                       'invalid: "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"'),
+        release_history.PointerVersion(wrong, None, 'invalid: "pointer region does not match \'fixture-bay\'"'),
+        release_history.PointerVersion(old, 'a' * 64, 'reviewed'),
+    ]

@@ -68,10 +68,17 @@ export function cloudImage(value: unknown): CloudImage | null {
  * The acquisition times a cloud loop may show for the dock's `selected` hour at `now`, oldest
  * first: none unless `selected` falls on today's local day in `tz`, and only times that pass
  * cloudSource's own gate (at most 90 minutes old, at most 5 minutes ahead, listed).
+ * Keep the first admitted spelling of each acquisition for the exact WMS request.
  */
 export function cloudFrames(cloud: CloudImage | null, selected: Date, now: Date, tz: string): string[] {
   if (!cloud || localParts(selected, tz).day !== localParts(now, tz).day) return [];
-  return [...new Set(cloud.availableTimes)].filter(at => cloudTiles(cloud, at, now) !== null).sort((a, b) => Date.parse(a) - Date.parse(b));
+  const frames = new Map<number, string>();
+  for (const at of cloud.availableTimes) {
+    if (cloudTiles(cloud, at, now) === null) continue;
+    const epoch = Date.parse(at);
+    if (!frames.has(epoch)) frames.set(epoch, at);
+  }
+  return [...frames].sort(([a], [b]) => a - b).map(([, at]) => at);
 }
 
 /** The WMS raster source pinned to acquisition time `at`, or null outside the gate (packages/coast `cloudSource`). */
