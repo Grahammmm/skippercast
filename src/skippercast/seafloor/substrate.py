@@ -18,14 +18,29 @@ from .fetch import fetch_source
 from skippercast.platform.contracts import public_url
 
 
+class MissingBindingSource(ValueError, KeyError):
+    """A rule names a source absent from the full catalog.
+
+    Still a KeyError so callers and tests written against the old bare
+    ``rows[...]`` lookup keep working; the message is the ValueError text.
+    """
+
+    __str__ = ValueError.__str__
+
+
 def resolve_bindings(rules, manifest, *, scoped=False):
     rows = {row['id']: row for row in manifest['surveys']}
     result = {}
+    if 'substrate_bindings' not in rules:
+        raise ValueError("Substrate rules lack 'substrate_bindings'")
     for binding in rules['substrate_bindings']:
         # A source absent from an explicit input scope contributes no classes.
         # Missing rows in the ordinary complete catalog remain an error.
         if scoped and binding['source_id'] not in rows:
             continue
+        if binding['source_id'] not in rows:
+            raise MissingBindingSource(
+                f"Substrate binding source {binding['source_id']!r} is not in the survey manifest")
         row = rows[binding['source_id']]
         if row['status'] in {'hold', 'withdrawn'}:
             continue
@@ -36,8 +51,14 @@ def resolve_bindings(rules, manifest, *, scoped=False):
                 or not re.fullmatch('[a-f0-9]{64}', binding['metadata_sha256'])):
             raise ValueError('Substrate binding lacks matching original-source review')
         public_url(binding['metadata_url'])
+        for code, category in binding['classes'].items():
+            if 'normalized_code' not in category:
+                raise ValueError(
+                    f"Substrate binding {binding['source_id']!r} class {code!r} lacks 'normalized_code'")
         if any(category['normalized_code'] not in (1, 2, 3) for category in binding['classes'].values()):
             raise ValueError('Unreviewed normalized substrate class')
+        if 'depth_source_ids' not in binding:
+            raise ValueError(f"Substrate binding {binding['source_id']!r} lacks 'depth_source_ids'")
         for depth_id in binding['depth_source_ids']:
             if scoped and depth_id not in rows:
                 continue
