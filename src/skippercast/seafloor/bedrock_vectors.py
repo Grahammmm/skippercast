@@ -7,11 +7,14 @@ does not read/download files, infer rugosity, rank fish habitat or publish.
 """
 from dataclasses import dataclass
 import math
+import numbers
 
+from affine import Affine
 import numpy as np
 from pyproj import CRS
 from rasterio.features import shapes
 from shapely.geometry import shape
+from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 
 MAX_WINDOW_EDGE = 512
@@ -32,6 +35,9 @@ def _metre_crs(value):
 
 
 def _polygons(records):
+    if (not isinstance(records, dict)
+            or not all(isinstance(g, BaseGeometry) for g in records.values())):
+        raise ValueError('Require a dict of original shapely geometries keyed by record')
     for key, geometry in records.items():
         if (not isinstance(key, str) or not key or geometry.geom_type not in
                 ('Polygon', 'MultiPolygon') or not geometry.is_valid):
@@ -44,6 +50,8 @@ def window_fragments(records, depth_m, valid, affine, crs, *, depth_band_descrip
     Every polygon is in the supplied CRS already. No reprojection, rasterization
     of geology, filling, smoothing, inset or simplification is performed.
     """
+    if not isinstance(affine, Affine):
+        raise ValueError('Require the native grid as an affine.Affine')
     crs = _metre_crs(crs)
     _polygons(records)
     if depth_band_description != 'depth_m_positive_down':
@@ -95,9 +103,17 @@ def assemble_components(batches, *, existing=None, min_area_m2=1000):
     habitat. A baseline must carry the identical horizontal CRS. Adjacent tiles
     must be assembled together before the minimum connected-component test.
     """
+    # bool is an int subclass, so it must be refused before the numeric test.
+    if isinstance(min_area_m2, bool) or not isinstance(min_area_m2, numbers.Real):
+        raise ValueError('Require the minimum component area as a real number of m2')
     if not math.isfinite(min_area_m2) or min_area_m2 <= 0:
         raise ValueError('Require a positive finite native component area')
-    batches = list(batches)
+    try:
+        batches = list(batches)
+    except TypeError:
+        raise ValueError('Require an iterable of NativeFragments batches') from None
+    if not all(isinstance(batch, NativeFragments) for batch in batches):
+        raise ValueError('Require an iterable of NativeFragments batches')
     if not batches:
         return []
     crs = _metre_crs(batches[0].crs)
