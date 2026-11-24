@@ -86,10 +86,12 @@ def source_rights(row, *, use="noncommercial", today=None):
 
 def feature_rights(source_ids, sources, *, use="noncommercial"):
     """Every contributor must resolve, including interpreted substrate sources."""
-    if (not isinstance(source_ids, (list, tuple, set, frozenset))
-            or not all(isinstance(ident, str) for ident in source_ids)):
+    # Iterables (including one-shot generators) stay accepted; consume exactly once.
+    if isinstance(source_ids, (str, bytes, dict)) or not hasattr(source_ids, '__iter__'):
         raise ValueError('Feature source ids must be a list, tuple or set of strings')
     source_ids = list(source_ids)
+    if not all(isinstance(ident, str) for ident in source_ids):
+        raise ValueError('Feature source ids must be a list, tuple or set of strings')
     if not source_ids or any(ident not in sources for ident in source_ids):
         raise ValueError('Feature source attribution is incomplete')
     return [source_rights(sources[ident], use=use) for ident in sorted(set(source_ids))]

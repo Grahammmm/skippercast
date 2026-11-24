@@ -107,10 +107,14 @@ class FeatureRightsIdTests(unittest.TestCase):
                 self.assertEqual([r['source_id'] for r in feature_rights(ids, self.SOURCES)], ['u', 'u'])
         self.assertEqual(len(feature_rights(['a'], self.SOURCES)), 1)
 
+    def test_generator_ids_still_resolve(self):
+        # Bug caught: the type guard rejects the one-shot generators tests/unit/test_sc54_regression.py accepts.
+        self.assertEqual(len(feature_rights((i for i in ('a', 'b')), self.SOURCES)), 2)
+
     def test_bare_string_or_non_string_ids_are_refused(self):
         # Bug caught: 'ab' is silently treated as the two source ids 'a' and 'b'.
         for label, ids in (('bare string', 'ab'), ('single id string', 'a'), ('None', None), ('int', 5),
-                           ('dict', {'a': 1}), ('generator', (i for i in 'ab')), ('bytes', b'ab'),
+                           ('dict', {'a': 1}), ('generator of non-strings', (i for i in (1, 2))), ('bytes', b'ab'),
                            ('list with None', ['a', None]), ('list with int', ['a', 1]),
                            ('list with list', ['a', ['b']])):
             with self.subTest(label):
