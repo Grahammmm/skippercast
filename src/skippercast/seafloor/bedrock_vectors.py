@@ -109,7 +109,11 @@ def assemble_components(batches, *, existing=None, min_area_m2=1000):
     if (isinstance(min_area_m2, bool)
             or not isinstance(min_area_m2, (numbers.Real, decimal.Decimal))):
         raise ValueError('Require the minimum component area as a real number of m2')
-    if not math.isfinite(min_area_m2) or min_area_m2 <= 0:
+    # Decimal.is_finite() is False for NaN/sNaN/Infinity without raising (math.isfinite
+    # raises on a signalling NaN).
+    finite = (min_area_m2.is_finite() if isinstance(min_area_m2, decimal.Decimal)
+              else math.isfinite(min_area_m2))
+    if not finite or min_area_m2 <= 0:
         raise ValueError('Require a positive finite native component area')
     try:
         batches = list(batches)
