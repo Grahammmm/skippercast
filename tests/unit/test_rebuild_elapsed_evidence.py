@@ -80,11 +80,21 @@ def test_counts_non_success_and_bad_clocks_separately(tmp_path):
     naive = _save(tmp_path, 'naive', ended='2026-01-01T00:00:08')
     missing_end = _save(tmp_path, 'missing-end', ended=None)
     malformed_clock = _save(tmp_path, 'malformed-clock', started='not-a-clock')
+    # Direct subtraction can count an out-of-range UTC instant as a measured
+    # duration; normalization without overflow handling can drop the whole report.
+    underflow = _save(tmp_path, 'underflow', started='0001-01-01T00:59:58+01:00',
+                      ended='0001-01-01T00:00:06Z')
+    overflow = _save(tmp_path, 'overflow', started='9999-12-31T23:59:58Z',
+                     ended='9999-12-31T23:00:06-01:00')
+    good = _save(tmp_path, 'valid', started='2025-12-31T16:00:00-08:00',
+                 ended='2026-01-01T01:00:08+01:00')
     report = rebuild_elapsed_evidence.summarize([busy, held, failed, negative, naive,
-                                                missing_end, malformed_clock])
-    assert report == {'groups': [], 'ignored': {
-        'busy': 1, 'held': 1, 'failed': 1, 'negative_elapsed': 1, 'invalid_clock': 3,
-    }}
+                                                missing_end, malformed_clock, underflow, overflow, good])
+    assert report == {
+        'groups': [{'region': 'fixture-coast', 'stage': 'mosaic', 'scope': 'public',
+                    'count': 1, 'min_seconds': 8, 'max_seconds': 8}],
+        'ignored': {'busy': 1, 'held': 1, 'failed': 1, 'negative_elapsed': 1, 'invalid_clock': 5},
+    }
 
 
 @pytest.mark.parametrize('overrides', [
