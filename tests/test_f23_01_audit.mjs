@@ -62,8 +62,12 @@ test('public CI only checks committed receipts and records the hold, without a p
   const job = workflow.match(/^  csumb-native:\n((?:^(?: {4}[^\n]*|)\n)+)/m);
   assert.ok(job, 'the hold must remain visible in the workflow');
   const [header, ...steps] = job[1].split(/^      - /m);
-  assert.deepEqual(header.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#')),
-    ['runs-on: ubuntu-latest', 'timeout-minutes: 45', 'steps:']);
+  // SC-CI-OC1 chains the research jobs with `needs:`/`if: ${{ !cancelled() }}` to cap
+  // parallelism; ordering lines are allowed, but the runner, timeout and steps stay pinned
+  // (a `runs-on:` change to a private runner still fails this check).
+  assert.deepEqual(header.split('\n').map(line => line.trim())
+    .filter(line => line && !line.startsWith('#') && !/^(needs|if): /.test(line)),
+  ['runs-on: ubuntu-latest', 'timeout-minutes: 45', 'steps:']);
   // Allowlist, not a denylist: any fetch, cache, artifact or audit-script step
   // added here would turn this back into an off-box processing job.
   const allowed = [
