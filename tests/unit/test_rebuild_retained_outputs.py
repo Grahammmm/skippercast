@@ -24,13 +24,17 @@ def saved_plan(tmp_path):
     return path
 
 
-def run_report(saved_plan, owners):
+def invoke_report(saved_plan, owners):
     path = saved_plan.with_name('owners.json')
     path.write_text(json.dumps(owners), encoding='utf-8')
-    result = subprocess.run([
+    return subprocess.run([
         sys.executable, '-B', str(ROOT / 'scripts/relief/rebuild_retained_outputs.py'),
         '--plan', str(saved_plan), '--owners', str(path),
     ], cwd=saved_plan.parent, capture_output=True, text=True, timeout=10)
+
+
+def run_report(saved_plan, owners):
+    result = invoke_report(saved_plan, owners)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -61,3 +65,25 @@ def test_nonintersecting_retained_output_stays_unaffected(saved_plan, region, st
         {'artifact_id': artifact_id, 'region': region, 'stage': stage},
     ]
     assert run_report(saved_plan, owners) == {'affected': [affected], 'unaffected': [artifact_id]}
+
+
+@pytest.mark.parametrize('contradictory', [
+    pytest.param(True, id='reuse-then-rebuild'),
+    pytest.param(False, id='identical-reuse-in-second-block'),
+])
+def test_duplicate_plan_stage_refuses_before_classifying(saved_plan, contradictory):
+    """A rebuild-only set silently classifies artifacts despite repeated plan rows."""
+    plan = json.loads(saved_plan.read_text(encoding='utf-8'))
+    block = plan['regions'][0]
+    reuse = next(row for row in block['stages'] if row['stage'] == 'tiles.private')
+    if contradictory:
+        block['stages'].append({**reuse, 'action': 'rebuild'})
+    else:
+        plan['regions'].append({'region': block['region'], 'stages': [dict(reuse)]})
+    saved_plan.write_text(json.dumps(plan), encoding='utf-8')
+    result = invoke_report(saved_plan, [
+        {'artifact_id': 'private-tiles', 'region': block['region'], 'stage': reuse['stage']},
+    ])
+    assert result.returncode == 2, result.stdout or result.stderr
+    assert result.stdout == ''
+    assert "('east-test', 'tiles.private'): duplicate plan stage" in result.stderr
