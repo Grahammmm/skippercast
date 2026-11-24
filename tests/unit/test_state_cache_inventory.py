@@ -117,6 +117,37 @@ def test_good_inventory_transfers_a_missing_file(tmp_path, monkeypatch):
     assert recorded == [('var/seafloor/reference/run.json', DIGEST)]
 
 
+def marker_entry(marker):
+    data = marker.read_bytes()
+    return {'path': 'screen/refresh-failure.json', 'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)}
+
+
+def test_inventory_listing_the_marker_once_keeps_it(tmp_path, calls, marker):
+    # Control for the duplicate-key case: the same inventory without a repeated key restores.
+    assert restore(tmp_path, inventory([marker_entry(marker)])) is True
+    assert calls == [] and marker.read_text() == '{"failed": true}'
+
+
+@pytest.mark.parametrize('suffix', [
+    ',"files":[]',  # last-wins would drop the listed marker and clear the hold
+    ',"version":1',  # a harmless-looking repeat is still a damaged file
+])
+def test_duplicate_top_level_key_is_refused_and_keeps_the_marker(tmp_path, calls, marker, suffix):
+    body = inventory([marker_entry(marker)])
+    assert body.endswith(b'}')
+    with pytest.raises(ValueError, match='^Invalid private state inventory$'):
+        restore(tmp_path, body[:-1] + suffix.encode() + b'}')
+    assert calls == [] and marker.read_text() == '{"failed": true}'
+
+
+def test_duplicate_key_inside_an_entry_is_refused(tmp_path, calls, marker):
+    # "anywhere": a repeated nested key (last-wins would pick the second size) is refused too.
+    body = inventory([marker_entry(marker)]).replace(b'"bytes"', b'"bytes": 0, "bytes"')
+    with pytest.raises(ValueError, match='^Invalid private state inventory$'):
+        restore(tmp_path, body)
+    assert calls == [] and marker.exists()
+
+
 def test_missing_inventory_is_false(tmp_path, calls, marker):
     assert restore(tmp_path, None) is False
     assert calls == [] and marker.exists()
