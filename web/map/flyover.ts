@@ -18,7 +18,7 @@ import type {FlyLeg} from './engine.ts';
 export const FLYOVER_KEY = 'skippercast-flyover-v1';
 /** The turn's limit either way, in degrees: past it the labels read sideways. */
 export const MAX_TURN = 90;
-/** The turn when no harbor is known, or the camera sits on it. */
+/** The turn when the harbor is unknown, too close, or has no finite bearing. */
 export const DEFAULT_TURN = 30;
 /** The steepest tilt, in degrees: steeper loads tiles out to the horizon. */
 export const MAX_TILT = 50;
@@ -36,7 +36,8 @@ export function bearingTo(a: Point, b: Point): number {
 export function flyoverTurn(center: Point, harbor: Point | null): number {
   const near = harbor && Math.abs(harbor.latitude - center.latitude) < 0.005 && Math.abs(harbor.longitude - center.longitude) < 0.005;
   if (!harbor || near) return DEFAULT_TURN;
-  return Math.max(-MAX_TURN, Math.min(MAX_TURN, Math.round(bearingTo(center, harbor))));
+  const bearing = bearingTo(center, harbor);
+  return Number.isFinite(bearing) ? Math.max(-MAX_TURN, Math.min(MAX_TURN, Math.round(bearing))) : DEFAULT_TURN;
 }
 
 /** The flight: tilt in while turning halfway, finish the turn, then settle north up and flat (about 19 seconds). */
