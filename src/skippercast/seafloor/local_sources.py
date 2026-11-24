@@ -129,7 +129,9 @@ def import_manifest(surveys, cache, local_root, *, ids=None):
             continue
         try:
             result = import_local(row, cache, local_root)
-        except (ValueError, FileNotFoundError) as error:
+        except ValueError as error:
+            # A missing or unreadable local original is already a ValueError (resolve and the
+            # copy in fetch_source); a cache-side OSError, FileNotFoundError included, propagates.
             report['refused'].append({'source_id': source_id, 'url': url, 'reason': str(error)})
             continue
         if result is None:

@@ -100,8 +100,21 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
         with os.fdopen(fd, 'wb') as output:
             if local is not None:
                 digest, size = hashlib.sha256(), 0
-                with Path(local).open('rb') as stream:
-                    for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                # Only reads of the local original become a per-source ValueError; a failure
+                # writing the cache copy (output.write) stays an OSError.
+                try:
+                    stream = Path(local).open('rb')
+                except OSError as error:
+                    raise ValueError(f'Local original unreadable ({type(error).__name__}): {error}') from error
+                with stream:
+                    while True:
+                        try:
+                            chunk = stream.read(1024 * 1024)
+                        except OSError as error:
+                            raise ValueError(
+                                f'Local original unreadable ({type(error).__name__}): {error}') from error
+                        if not chunk:
+                            break
                         size += len(chunk)
                         if size > max_bytes:
                             raise ValueError('Original source exceeds byte limit')

@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import stat
 import tempfile
 import unittest
@@ -105,6 +106,66 @@ class UnreadableOriginalTests(unittest.TestCase):
         self.assertEqual(report['refused'], [])
         self.assertEqual(self.cache_files(), sorted(f"{self.rows[k]['sha256']}/source.{e}"
                                                     for k in 'ab' for e in ('json', 'tif')))
+
+    def test_original_unreadable_during_the_copy_is_refused_and_the_next_source_imports(self):
+        # Bug caught: only the verifying hash read is translated, so an open or read error on the
+        # copy in fetch_source raises OSError and aborts the batch before the healthy source.
+        real_open, real_sha = Path.open, local_sources.sha256
+
+        class FailingStream:
+            def __init__(self, stream):
+                self.stream = stream
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                self.stream.close()
+
+            def read(self, *args):
+                raise OSError(errno.EIO, 'Input/output error')
+
+        for mode in ('open', 'read'):
+            with self.subTest(mode=mode):
+                def opener(path, *args, **kwargs):
+                    if path.name != 'a.tif':
+                        return real_open(path, *args, **kwargs)
+                    if mode == 'open':
+                        raise OSError(errno.EIO, 'Input/output error')
+                    return FailingStream(real_open(path, *args, **kwargs))
+                # The hash check passes from the catalog; only the later copy read fails.
+                with mock.patch.object(local_sources, 'sha256',
+                                       lambda path: self.rows['a']['sha256'] if Path(path).name == 'a.tif'
+                                       else real_sha(path)), \
+                        mock.patch.object(Path, 'open', opener):
+                    report = import_manifest([self.rows['a'], self.rows['b']], self.cache, self.root)
+                self.assertEqual([r['source_id'] for r in report['imported']], ['src-b'])
+                (refused,) = report['refused']
+                self.assertEqual(refused['source_id'], 'src-a')
+                self.assertIn('Local original unreadable (OSError)', refused['reason'])
+                # Bug caught: the temporary .part file or a half-written entry survives the refusal.
+                self.assertEqual(self.cache_files(), [f"{self.rows['b']['sha256']}/source.json",
+                                                      f"{self.rows['b']['sha256']}/source.tif"])
+                shutil.rmtree(self.cache)
+
+    def test_cache_side_file_not_found_propagates_and_retry_repairs_it(self):
+        # Bug caught: FileNotFoundError is caught around the whole import, so a missing cache
+        # directory during the metadata write is reported as the source being refused.
+        with mock.patch.object(fetch, 'atomic_json', side_effect=FileNotFoundError(errno.ENOENT, 'No such file')):
+            with self.assertRaises(FileNotFoundError):
+                import_manifest([self.rows['a'], self.rows['b']], self.cache, self.root)
+        self.assertEqual(self.cache_files(), [])
+        report = import_manifest([self.rows['a'], self.rows['b']], self.cache, self.root)
+        self.assertEqual([r['source_id'] for r in report['imported']], ['src-a', 'src-b'])
+        self.assertEqual(report['refused'], [])
+
+    def test_missing_original_is_still_refused_per_source(self):
+        # Control for the narrowed handler: a missing local original is a source refusal.
+        self.files['a'].unlink()
+        report = import_manifest([self.rows['a'], self.rows['b']], self.cache, self.root)
+        self.assertEqual([r['source_id'] for r in report['imported']], ['src-b'])
+        self.assertEqual([r['source_id'] for r in report['refused']], ['src-a'])
+        self.assertIn('Local original missing', report['refused'][0]['reason'])
 
     def test_interrupt_is_not_swallowed_by_the_broadened_except(self):
         # Bug caught: the handler widens to BaseException/Exception-like catch-all and eats Ctrl-C.
