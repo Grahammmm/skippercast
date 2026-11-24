@@ -21,6 +21,19 @@ test('place_maps_empty_and_unknown_boundary', () => {
   }
 });
 
+test('3D habitat naming refuses finite coordinates outside the geographic domain', () => {
+  // A finiteness check alone lets an impossible waypoint inherit Morro's sole approved place.
+  const region = 'morro-bay';
+  const [lon, lat] = [-120.847, 35.352]; // Pinned Morro Bay Harbor preview destination.
+  assert.equal(habitatPlace(region, lon, lat), 'morro');
+  assert.deepEqual({
+    west: habitatPlace(region, -181, lat),
+    east: habitatPlace(region, 181, lat),
+    south: habitatPlace(region, lon, -91),
+    north: habitatPlace(region, lon, 91),
+  }, {west: 'coast', east: 'coast', south: 'coast', north: 'coast'});
+});
+
 test('place_maps_healthy_controls_preserved', () => {
   assert.equal(reportAreaPlace('north'), 'cambria');
   assert.equal(reportAreaPlace('central'), 'morro');
