@@ -38,6 +38,8 @@ def _summary_hashes(raw):
         digest = row.get('raster_sha256')
         if not package.is_sha256(digest):
             raise ValueError(f'z{zoom} requires a raster_sha256 in the proof summary')
+        if digest in hashes.values():
+            raise ValueError('z16 and z17 must declare distinct raster_sha256 values')
         hashes[zoom] = digest
     return hashes
 
