@@ -98,6 +98,34 @@ test('rounded provider speeds do not mark a uniform frame as fast', () => {
   assert.equal(fastSpeed(frame), 1.943844492);
 });
 
+// Contract: --flow-fast means "meaningfully faster than the frame's 80th percentile", so a field with one
+// speed everywhere paints nothing fast. Bug caught: comparing the bilinear-interpolated seed speed with the
+// exact cell speed, where a last-bit rounding difference (seen at 0.3 m/s, not at 1 m/s) colours paths fast.
+test('a uniform field draws every path in the normal colour, at 0.3 m/s as at 1 m/s', () => {
+  for (const [u, expected] of [[0.3, 0.3 * 1.943844492], [1, 1.943844492]]) {
+    // Four cells 0.04° apart whose lat/lon are not exact binary fractions, so the bilinear weights round.
+    const four = [35, 35.04].flatMap(lat => [-121, -120.96].map(lon => ({lat, lon, uMs: u, vMs: 0, speedKnots: u * 1.943844492, towardDeg: 90})));
+    const source = wcofs(four), frame = source.frames[1];
+    const size = 384;
+    const vector = screenVector(frameField(source, frame), (x, y) => ({lon: -121 + x / size * 0.04, lat: 35 + y / size * 0.04}));
+    const paths = flowPaths(vector, size, size, fastSpeed(frame));
+    assert.equal(paths.length, 36, `${u} m/s: the path count is unchanged`);
+    assert.ok(paths.every(p => Math.abs(p.speed - expected) < 1e-9), `${u} m/s: path speed still comes from the sampled vector`);
+    assert.equal(paths.filter(p => p.fast).length, 0, `${u} m/s: equal-speed paths must not get the fast class`);
+  }
+});
+
+// Contract: the tolerance only absorbs interpolation rounding. Bug caught: a tolerance so wide (or a threshold
+// so loose) that real differences vanish, or none at all so rounding noise passes as fast.
+test('only a speed clear of the threshold is fast: rounding noise is not, a 1% excess is', () => {
+  const at = 0.4, flat = speed => (() => ({x: 1, y: 0, speed}));
+  const fastCount = speed => flowPaths(flat(speed), 384, 384, at).filter(p => p.fast).length;
+  assert.equal(fastCount(at * (1 + 4 * Number.EPSILON)), 0, 'a few ulps above is interpolation noise');
+  assert.equal(fastCount(at * 1.01), 36, '1% above the percentile is fast');
+  assert.equal(fastCount(at), 0, 'at the threshold is not above it');
+  assert.equal(fastCount(at * 0.99), 0, 'below the threshold is not fast');
+});
+
 test('the nearest-rank threshold ignores nonfinite vector speeds and falls back to Infinity', () => {
   const ranked = Array.from({length: 10}, (_, k) => ({uMs: (10 - k) / 8, vMs: 0, speedKnots: (10 - k) / 8 * 1.943844492}));
   const invalid = [{uMs: NaN, vMs: 0, speedKnots: NaN}, {uMs: 0, vMs: Infinity, speedKnots: Infinity}];
