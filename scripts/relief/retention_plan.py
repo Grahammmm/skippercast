@@ -33,13 +33,15 @@ def directory_names(path: Path, pattern: re.Pattern[str]) -> set[str]:
 
 
 def region_plan(git: GitCli, region: Region, schema: dict) -> dict:
-    versions = [row.generation for row in history.pointer_versions(git, region.id, schema)
-                if row.generation is not None]
+    versions = [row.generation for row in history.pointer_versions(git, region.id, schema)]
     local = directory_names(region.dir / 'release', HEX64) | directory_names(region.dir / 'review', HEX64)
-    roles: dict[str, list[str]] = {generation: [] for generation in versions}
+    roles: dict[str, list[str]] = {generation: [] for generation in versions if generation is not None}
+    # Roles belong to history positions, so an absent or invalid pointer keeps its
+    # position (and gets no role) instead of promoting an older build.
     # Mark versions before deduplicating: two versions can name the same build.
     for generation, role in zip(versions, ('live', 'rollback')):
-        roles[generation].append(role)
+        if generation is not None:
+            roles[generation].append(role)
     return {
         'region': region.id,
         'keep': [{'generation': generation, 'roles': marks} for generation, marks in roles.items()],
