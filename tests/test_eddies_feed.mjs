@@ -49,6 +49,12 @@ test('C3: an empty tile is valid and preserves minute precision', () => {
   assert.deepEqual(parseEddiesTile(raw), {ok: true, frameTime: minute, eddies: []});
 });
 
+test('C3: accepts real February dates without changing timestamp precision or geometry', () => {
+  for (const frameTime of ['2028-02-29T03:00Z', '2026-02-28T23:59:59Z']) {
+    assert.deepEqual(parseEddiesTile({...tile(), frame_time: frameTime}), {...expected(), frameTime});
+  }
+});
+
 // Each fixture isolates a rule: coercion, missing bounds, sparse-array skipping,
 // or dropping the closure/sign check would turn that refusal into success.
 const tileCases = [
@@ -60,6 +66,12 @@ const tileCases = [
   ['frame_time not a string', {...tile(), frame_time: 0}, 'frame_time'],
   ['parseable but noncanonical frame_time', {...tile(), frame_time: '2026-01-02T03:04:05+00:00'}, 'frame_time'],
   ['canonical-looking but unparseable frame_time', {...tile(), frame_time: '2026-13-02T03:04:05Z'}, 'frame_time'],
+  // Date.parse can silently roll nonexistent days and 24:00 into another day.
+  ['February 30 frame_time', {...tile(), frame_time: '2026-02-30T03:00Z'}, 'frame_time'],
+  ['nonleap February 29 frame_time', {...tile(), frame_time: '2026-02-29T03:00Z'}, 'frame_time'],
+  ['hour 24 frame_time', {...tile(), frame_time: '2026-02-28T24:00:00Z'}, 'frame_time'],
+  ['minute 60 frame_time', {...tile(), frame_time: '2026-02-28T23:60Z'}, 'frame_time'],
+  ['second 60 frame_time', {...tile(), frame_time: '2026-02-28T23:59:60Z'}, 'frame_time'],
   ['missing features', {frame_time: frameTime}, 'features'],
   ['non-array features', tile({0: first(), length: 1}), 'features'],
   ['too many features', tile(Array.from({length: 201}, first)), 'features'],
