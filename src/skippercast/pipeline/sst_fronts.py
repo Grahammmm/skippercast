@@ -74,6 +74,9 @@ def _frames(tile, name):
     res = tile.get("resolution_degrees") if isinstance(tile, dict) else None
     if not isinstance(fields, list) or any(n not in fields for n in NEEDED) or not isinstance(frames, list):
         raise SstFrontError(f"{name}: not an sst-analysis tile")
+    for field in NEEDED:
+        if fields.count(field) > 1:
+            raise SstFrontError(f"{name}: duplicate required field {field}")
     if not isinstance(res, list) or len(res) != 2 or res[0] != res[1] or not isinstance(res[0], (int, float)) or not 0 < res[0] <= 0.25:
         raise SstFrontError(f"{name}: unusable grid resolution")
     return [fields.index(n) for n in NEEDED], frames, float(res[0])
