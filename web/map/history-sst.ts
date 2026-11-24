@@ -19,8 +19,10 @@ export function historySurfaceTemperature(
   const t = day.fields.indexOf('temperature_c'), e = day.fields.indexOf('analysis_error_c');
   if (t < 0 || e < 0) return null;
   const [lat, lon] = day.resolution;
-  if (lat !== lon) return null; // The surface field takes a single spacing.
-  if (!Number.isFinite(stride) || stride < 1) return null;
+  if (!Number.isFinite(lat) || lat <= 0 || lat !== lon) return null; // The surface field takes a single spacing.
+  if (!Number.isSafeInteger(stride) || stride < 1) return null;
+  const sampleSpacingDeg = lat * stride;
+  if (!Number.isFinite(sampleSpacingDeg)) return null;
 
   const points: SSTPoint[] = [];
   for (const r of day.rows) {
@@ -30,5 +32,5 @@ export function historySurfaceTemperature(
   }
   if (!points.length) return null;
   return {sourceId, analysedAt: day.sampleAt, fetchedAt, nativeResolutionDeg: lat,
-    sampleSpacingDeg: lat * stride, points, url, kind: 'analysis'};
+    sampleSpacingDeg, points, url, kind: 'analysis'};
 }
