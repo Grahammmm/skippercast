@@ -25,6 +25,11 @@ export const attach: PreviewAttach = async ctx => {
   if (probe.status !== 206 || !/^bytes 0-0\/(?:0*[1-9]\d*|\*)$/i.test(probe.headers.get('Content-Range') ?? '')) {
     throw new Error(`seafloor relief archive did not return the requested one-byte range (HTTP ${probe.status})`);
   }
+  const length = probe.headers.get('Content-Length');
+  // HTTP Content-Length is decimal digits; allow leading zeros for a value of one.
+  if (length !== null && !/^0*1$/.test(length)) {
+    throw new Error('seafloor relief archive returned a Content-Length inconsistent with the requested one-byte range');
+  }
   ctx.engine.setOverlay(SEAFLOOR_ID, seafloorOverlay(archive), SEAFLOOR_BEFORE);
   ctx.report({state: 'ready', text: 'Medium relief with 2 m shallow bathymetry. Tan or clear = no survey.'});
   return handle(() => ctx.engine.setOverlay(SEAFLOOR_ID, null));
