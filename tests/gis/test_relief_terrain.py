@@ -30,14 +30,15 @@ def source(identity, resolution):
                 label='estimated', citation='Synthetic terrain')
 
 
-def fixture(root, *, native, epsg=3857):
+def fixture(root, *, native, epsg=3857, mosaic_crs=None):
     region = receipts.Region(root, 'north-fixture')
     mx, my = Transformer.from_crs(4326, epsg, always_xy=True).transform(*ORIGIN)
     step = 4 / cos(radians(ORIGIN[1])) if epsg == 3857 else 4
     transform = Affine(step, 0, mx - 12 * step, 0, -step, my + 12 * step)
+    crs = f'EPSG:{epsg}'
 
-    def raster(path, data):
-        with rasterio.open(path, 'w', driver='GTiff', crs=f'EPSG:{epsg}', dtype=data.dtype,
+    def raster(path, data, projection=crs):
+        with rasterio.open(path, 'w', driver='GTiff', crs=projection, dtype=data.dtype,
                            width=24, height=24, count=1, transform=transform) as ds:
             ds.write(data, 1)
 
@@ -61,8 +62,9 @@ def fixture(root, *, native, epsg=3857):
         contributors = np.ones((24, 24), dtype='uint16')
         contributors[:, 16:] = 300  # DL-5 contributors are UInt16, not viewer bytes.
         heights[13, 14] = np.nan  # Off-centre sub-overview-pixel hole, even with a contributor.
-        raster(out / 'elevation.tif', heights)
-        raster(out / 'contributor.tif', contributors)
+        elevation_crs, contributor_crs = (crs, crs) if mosaic_crs is None else mosaic_crs
+        raster(out / 'elevation.tif', heights, elevation_crs)
+        raster(out / 'contributor.tif', contributors, contributor_crs)
         write_json(out / 'manifest.json', dict(segment=region.id, units='m', bounds_wgs84=BOUNDS,
                    value_convention='elevation_positive_up', sources=[dict(source('base', 10), code=1),
                                                                       dict(source('land', 10), code=300)]))
@@ -171,6 +173,31 @@ def test_receipted_overview_round_trip_and_real_noop(tmp_path, capsys):
     (region.dir / 'receipted-mosaic/manifest.json').write_text('{}')
     assert run(region) == 3
     assert '[terrain] BLOCKED' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(('crs_pair', 'message'), [
+    pytest.param((None, None), 'must both declare a CRS', id='neither-crs'),
+    pytest.param((None, 'EPSG:3857'), 'must both declare a CRS', id='missing-elevation-crs'),
+    pytest.param(('EPSG:3857', None), 'must both declare a CRS', id='missing-contributor-crs'),
+    pytest.param(('EPSG:3857', 'EPSG:3310'), 'must share one grid', id='mismatched-crs'),
+])
+def test_mosaic_crs_refused_before_sampling(tmp_path, monkeypatch, crs_pair, message):
+    # Equality alone lets two missing CRSs through when affine and shape match.
+    region = fixture(tmp_path / 'out', native=False, mosaic_crs=crs_pair)
+
+    def unexpected_sample(*args, **kwargs):
+        pytest.fail('terrain reached sampling before refusing the mosaic CRS')
+
+    monkeypatch.setattr(terrain, 'samples', unexpected_sample)
+    assert run(region) == 1
+    receipt = receipts.read_receipt(region.receipt_path('terrain'))
+    assert receipt is not None
+    assert receipt['status'] == 'failed'
+    assert receipt['error'].startswith('ReceiptError:')
+    assert message in receipt['error']
+    assert receipt['outputs'] == []
+    assert not (region.dir / 'layers/terrain').exists()
+    assert not list(region.resolve(receipt['failed_dir']).glob('*.bin.gz'))
 
 
 @pytest.mark.parametrize('epsg', [3857, 3310])
