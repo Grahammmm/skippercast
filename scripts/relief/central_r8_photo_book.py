@@ -2,6 +2,7 @@
 """Render one local R8 capture inventory as a standalone HTML photo book."""
 import argparse
 from base64 import b64encode
+from hashlib import sha256
 from html import escape
 from pathlib import Path
 import struct
@@ -21,6 +22,12 @@ MAX_LAYER_BYTES = 2_000_000_000  # includes the R7 archive budget plus other pub
 PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
 # Fixed-size color/physical metadata only; no APNG frames or compressed metadata.
 PNG_METADATA = {b'sRGB': 1, b'gAMA': 4, b'cHRM': 32, b'pHYs': 9}
+GALLERY_CSS = (
+    'body { overflow-wrap: anywhere; }\n'
+    'figure { margin-inline: 0; min-inline-size: 0; }\n'
+    'figure img { max-inline-size: 100%; block-size: auto; }'
+)
+GALLERY_STYLE_HASH = b64encode(sha256(GALLERY_CSS.encode('utf-8')).digest()).decode('ascii')
 
 
 def _read(path, limit):
@@ -153,8 +160,10 @@ def _render(verified, photos):
     release = verified.release
     lines = [
         '<!doctype html>', '<html lang="en">', '<meta charset="utf-8">',
-        "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src data:; base-uri 'none'\">",
+        '<meta http-equiv="Content-Security-Policy" '
+        f"content=\"default-src 'none'; img-src data:; style-src 'sha256-{GALLERY_STYLE_HASH}'; base-uri 'none'\">",
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        f'<style>{GALLERY_CSS}</style>',
         '<title>Central R8 photo book</title>', '<h1>Central R8 photo book</h1>',
         '<p>Captured QA evidence for inspection only. Not for navigation or release approval.</p>',
         f'<p>Region: {escape(release["region"])}<br>Generation: {escape(verified.generation)}'
