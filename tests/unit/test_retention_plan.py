@@ -79,6 +79,41 @@ def test_c1_same_generation_can_have_both_roles(repo):
     )
 
 
+@pytest.mark.parametrize(('case', 'keep', 'missing'), [
+    ('absent-newest', [(PREVIOUS, ['rollback']), (OLD, [])], []),
+    ('invalid-newest', [(PREVIOUS, ['rollback']), (OLD, [])], []),
+    ('absent-rollback', [(LIVE, ['live']), (PREVIOUS, []), (OLD, [])], [LIVE]),
+], ids=['C1: absent newest pointer', 'C1: invalid newest pointer', 'C1: absent rollback position'])
+def test_c1_roles_follow_history_position_when_a_pointer_is_not_reviewed(repo, case, keep, missing):
+    """C1: Roles belong to history positions 0 (live) and 1 (rollback), not to reviewed rows only.
+
+    Plausible bugs caught: (1) dropping absent or invalid rows before roles are handed out
+    reports the previous release as live although the newest pointer is gone, disagreeing
+    with release_history's index-1 restore mark; (2) the same drop shifts rollback onto the
+    build after an absent rollback position; (3) the keep list loses or gains a reviewed
+    generation while roles are corrected.
+    """
+    root, git = repo
+    out = root / 'out'
+    release(repo, 1, {POINTER: pointer(generation='a')})
+    release(repo, 2, {POINTER: pointer(generation='b')})
+    if case == 'invalid-newest':
+        release(repo, 3, {POINTER: b'{'})
+    else:
+        git('rm', '--cached', '--', POINTER)
+        git('commit', '-m', 'Remove pointer', day=3)
+    if case == 'absent-rollback':
+        release(repo, 4, {POINTER: pointer(generation='c')})
+    build(out, REGION, 'release', OLD)
+    build(out, REGION, 'review', PREVIOUS)
+
+    assert json_report(invoke(root, '--out', out, REGION, '--json')) == {'regions': [
+        {'region': REGION,
+         'keep': [{'generation': generation, 'roles': roles} for generation, roles in keep],
+         'unreferenced': [], 'missing-local': missing},
+    ]}
+
+
 def test_c2_missing_local_does_not_remove_keep_or_fail_report(repo):
     """C2: Looking only at built directories drops the sole reviewed keep generation."""
     root, _ = repo
