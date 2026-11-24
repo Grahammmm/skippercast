@@ -457,9 +457,13 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // bundles and measures the real Reports paint with unchanged inputs and gates.
   // Rebind both manifests and rerun the rendered contrast and fail-closed controls.
   // SCA-026: The dev-only esbuild advisory override changes no contrast or catch-sheet inputs.
-  "package.json": "352415f5bf7a630374c314e90cb584e2348401319ac678ca531ecaf7a5791ed3",
+  // Dependabot #3710 (npm-minor-and-patch, 3 updates: hono 4.13.19, maplibre-gl 6.19.0, @cloudflare/workers-types 5.20261121.1,
+  // plus transitive maplibre entries): only dependency pins change. BODY09 renders Reports with preact; hono is server-only,
+  // workers-types is type-only and Reports never mounts MapStage, so maplibre-gl is not loaded. No CSS, token, font or catch
+  // markup input changes; contrast(), assertions and thresholds are untouched. Rebind only these two.
+  "package.json": "b7aa7ef9e8b23b5f7118630f9d7e83948ec39d18f54856b8cb490b9b4ab2de9f",
   // SCA-026: The dev-only esbuild lock resolution changes no contrast or catch-sheet inputs.
-  "pnpm-lock.yaml": "fc12ec668d88f564cc828f9e54e863fa990fc8e7bf7afd46923a84d5e7c53075",
+  "pnpm-lock.yaml": "23341b4b4685f91021792a746016e33fe1fd09984e0c2ecb352d6e85b95fd43b",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {

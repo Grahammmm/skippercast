@@ -176,7 +176,7 @@ def _value(token):
 def parse_dap_ascii(text):
     """DAP2 ASCII response -> {name: values}; an array shorter or longer than declared raises."""
     parts = re.split(r"\n-{10,}\s*\n", text)
-    if len(parts) != 2:
+    if len(parts) != 2 or not parts[1].strip():
         raise ValueError("Invalid DAP ASCII response")
     result = {}
     for group in re.split(r"\n\s*\n", parts[1].strip()):
