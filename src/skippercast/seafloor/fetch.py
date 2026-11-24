@@ -51,7 +51,7 @@ def canonical_source_url(url):
 
 def compilation_source(url):
     """True for reviewed compilation products: context only, never habitat depth."""
-    return url.startswith(COMPILATION_PREFIXES)
+    return isinstance(url, str) and url.startswith(COMPILATION_PREFIXES)
 
 
 def habitat_url_refusal(url):
@@ -64,13 +64,15 @@ def habitat_url_refusal(url):
 
 
 def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000, session=None):
+    if any(key not in row for key in ('url', 'sha256', 'bytes')):
+        raise ValueError('Source row needs url, sha256 and bytes')
     url, expected = row['url'], row['sha256']
     if not canonical_source_url(url):
         raise ValueError('Unreviewed original-source URL: not in canonical form')
     if not (url.startswith(GENERAL_PREFIXES) or url in CSUMB_EXACT_ARCHIVES) or any(
             s in url.lower() for s in ('bluetopo', '/modeling/')):
         raise ValueError('Unreviewed original-source URL')
-    if not re.fullmatch(r'[a-f0-9]{64}|unknown', expected):
+    if not isinstance(expected, str) or not re.fullmatch(r'[a-f0-9]{64}|unknown', expected):
         raise ValueError('Invalid source checksum')
     extension = Path(urlsplit(url).path).suffix.lower()
     if urlsplit(url).path.lower().endswith('.tar.gz'):
