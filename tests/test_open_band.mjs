@@ -50,7 +50,9 @@ test('no covers, narrow, non-finite, non-overlapping and full-height covers pad 
 
 test('a band under 160 px shrinks both in proportion to leave at least 160; a host under 160 pads nothing', () => {
   assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 400}, {...SHEET, top: 444}]), {...ZERO, top: 342, bottom: 342});
-  assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 600}, {...SHEET, top: 644}]), {...ZERO, top: 513, bottom: 171}, '3:1 stays 3:1');
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 500}, {...SHEET, top: 544}]), {...ZERO, top: 428, bottom: 256}, '5:3 stays 5:3 while the centre (508) stays in the 500..544 gap');
+  // The old 3:1 split of this 600..644 gap put the centre at 593, behind the top card; it now stays on the gap midpoint 622.
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 600}, {...SHEET, top: 644}]), {...ZERO, top: 542, bottom: 142}, 'centre kept in the gap');
   assert.deepEqual(openBandPadding(HOST, [TOP, {...SHEET, top: 290}]), {...ZERO, top: 130, bottom: 554}, 'an exact-fit 160 px band');
   // Rounding the two shares against a fractional remainder can spend 14 px of a 13.75 px allowance.
   const short = {...HOST, bottom: 173.75};
@@ -59,6 +61,34 @@ test('a band under 160 px shrinks both in proportion to leave at least 160; a ho
   assert.deepEqual(openBandPadding({...HOST, bottom: 400}, [{...TOP, bottom: 70}]), {...ZERO, top: 70}, 'the taller host still exposes 330 px');
   assert.deepEqual(openBandPadding({top: 0, bottom: 120, left: 0, right: 390}, [{...TOP, bottom: 40}]), ZERO);
   assert.deepEqual(openBandPadding({top: 0, bottom: NaN, left: 0, right: 390}, [TOP]), ZERO);
+});
+
+// Contract: the camera centre MapLibre draws is (top + height - bottom) / 2. When the covers leave a visible gap the shrink to the
+// 160 px budget must keep that centre inside the gap, or the point the user centred on is hidden behind a cover.
+test('a narrow gap between tall covers keeps the padded camera centre inside the gap', () => {
+  const centre = pad => (pad.top + HOST.bottom - pad.bottom) / 2;
+  const sheetAt = top => toEdge({...SHEET, top, bottom: top + 704}, HOST.bottom);  // the 704 px phone sheet translated to `top`
+  // Catches: the proportional shrink alone, which moved this 130..144 gap's centre to 187, behind the sheet.
+  const narrow = openBandPadding(HOST, [TOP, sheetAt(144)]);
+  assert.ok(centre(narrow) > 130 && centre(narrow) < 144, `centre ${centre(narrow)} must lie in the 130..144 gap`);
+  assert.deepEqual(narrow, {...ZERO, top: 57, bottom: 627}, 'a 160 px band around the gap midpoint 137');
+  // Catches: a fix that spends more than the 160 px minimum-band budget (padding sum above host - 160) to centre the gap.
+  assert.equal(HOST.bottom - narrow.top - narrow.bottom, 160, 'the minimum band is still exactly kept');
+  // Catches: the fix changing a layout that needed no shrink (control: sheet at half).
+  const control = openBandPadding(HOST, [TOP, sheetAt(366)]);
+  assert.deepEqual(control, {...ZERO, top: 130, bottom: 478});
+  assert.equal(centre(control), 248);
+  // Catches: a gap at the top edge, where centring on the midpoint needs a negative top pad (must clamp to 0, centre still in the gap).
+  const edge = openBandPadding(HOST, [{...TOP, bottom: 0.5}, sheetAt(144)]);
+  assert.ok(centre(edge) > 0 && centre(edge) < 144, `edge-clamped centre ${centre(edge)}`);
+  assert.ok(edge.top >= 0 && edge.bottom >= 0 && edge.top + edge.bottom <= 684);
+  // Catches: any sheet position where the shrink hides the centre, or breaks the budget, or pads more than the cover.
+  for (let top = 131; top < 700; top++) {
+    const pad = openBandPadding(HOST, [TOP, sheetAt(top)]), c = centre(pad);
+    assert.ok(pad.top + pad.bottom <= 684, `sheet at ${top}: budget`);
+    assert.ok(pad.top <= 130 && pad.bottom <= HOST.bottom - top, `sheet at ${top}: no more than the cover`);
+    if (top - 130 >= 2) assert.ok(c > 130 && c < top, `sheet at ${top}: centre ${c} in ${130}..${top}`);
+  }
 });
 
 /** A fake MapLibre just big enough for the engine and the Chart; `withPadding` gives it a recorded setPadding. */
