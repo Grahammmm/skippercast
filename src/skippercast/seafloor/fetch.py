@@ -126,9 +126,17 @@ def fetch_source(row, cache, *, fetch=False, local=None, max_bytes=2_000_000_000
             raise ValueError('Original source byte count mismatch')
         destination = cache / actual / ('source' + extension)
         destination.parent.mkdir(parents=True, exist_ok=True)
+        existed = destination.exists()
         temporary.replace(destination)
-        atomic_json(destination.parent / 'source.json', {'url': url, 'sha256': actual, 'bytes': size},
-                    unique_tmp=True)
+        try:
+            atomic_json(destination.parent / 'source.json', {'url': url, 'sha256': actual, 'bytes': size},
+                        unique_tmp=True)
+        except BaseException:
+            # Never leave a new original without its metadata: a retry would see the file and
+            # report it cached. A pre-existing original is left as it was.
+            if not existed:
+                destination.unlink(missing_ok=True)
+            raise
         return destination, local is None
     finally:
         temporary.unlink(missing_ok=True)

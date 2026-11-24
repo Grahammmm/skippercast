@@ -76,12 +76,17 @@ class LocalSourceRoot:
             raise ValueError(f'Local original missing: {row["dest"]}') from error
         if not resolved.is_relative_to(self.root) or not resolved.is_file():
             raise ValueError(f'Local original escapes its source root: {row["dest"]}')
-        if resolved.stat().st_size != row['size']:
-            raise ValueError('Local original byte count differs from its catalog row')
-        # Hash the selected file itself, even when the cache already holds these
-        # bytes, so a report of "imported" always means the local copy was verified.
-        if sha256(resolved) != row['sha256']:
-            raise ValueError('Local original checksum mismatch against its catalog row')
+        # Only reads of the local original are translated here; a cache write failure
+        # later in fetch_source is a different problem and must not be named as this one.
+        try:
+            if resolved.stat().st_size != row['size']:
+                raise ValueError('Local original byte count differs from its catalog row')
+            # Hash the selected file itself, even when the cache already holds these
+            # bytes, so a report of "imported" always means the local copy was verified.
+            if sha256(resolved) != row['sha256']:
+                raise ValueError('Local original checksum mismatch against its catalog row')
+        except OSError as error:
+            raise ValueError(f'Local original unreadable ({type(error).__name__}): {error}') from error
         return resolved, row
 
 
@@ -106,8 +111,10 @@ def import_manifest(surveys, cache, local_root, *, ids=None):
     """Import reviewed manifest sources found in the local catalog; report each mapping.
 
     Only ``usable`` and ``physical-only`` rows (or explicitly selected ``ids``)
-    are considered. Any refusal is reported per source and nothing is cached
-    for it; the caller fails when ``refused`` is non-empty.
+    are considered. Any refusal (including an original that cannot be read) is
+    reported per source and nothing is cached for it; the caller fails when
+    ``refused`` is non-empty. A cache write failure is not a refusal of the
+    source: it propagates as ``OSError`` instead of being blamed on the original.
     """
     selected = [r for r in surveys if (r.get('id') in ids if ids else r.get('status') in IMPORTABLE)]
     if ids and {r['id'] for r in selected} != set(ids):
@@ -124,11 +131,6 @@ def import_manifest(surveys, cache, local_root, *, ids=None):
             result = import_local(row, cache, local_root)
         except (ValueError, FileNotFoundError) as error:
             report['refused'].append({'source_id': source_id, 'url': url, 'reason': str(error)})
-            continue
-        except OSError as error:
-            # An original the operator cannot read (permissions, I/O error); never abort the batch.
-            report['refused'].append({'source_id': source_id, 'url': url,
-                                      'reason': f'Local original unreadable ({type(error).__name__}): {error}'})
             continue
         if result is None:
             report['not_catalogued'].append(row['id'])

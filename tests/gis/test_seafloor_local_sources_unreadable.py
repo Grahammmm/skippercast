@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from skippercast.seafloor import local_sources
+from skippercast.seafloor import fetch, local_sources
 from skippercast.seafloor.local_sources import LocalSourceRoot, import_manifest
 
 URLS = {'a': 'https://pubs.usgs.gov/fixture/first.tif', 'b': 'https://pubs.usgs.gov/fixture/second.tif'}
@@ -91,6 +91,20 @@ class UnreadableOriginalTests(unittest.TestCase):
         self.assertEqual([r['source_id'] for r in report['imported']], ['src-b'])
         self.assertEqual([r['source_id'] for r in report['refused']], ['src-a'])
         self.assertEqual(hashlib.sha256(cached.read_bytes()).hexdigest(), self.rows['b']['sha256'])
+
+    def test_cache_metadata_failure_is_not_blamed_on_the_original_and_retry_repairs_it(self):
+        # Bug caught: a cache write failure after the move is reported as an unreadable original,
+        # leaves source.tif without source.json, and a retry then calls the entry imported.
+        with mock.patch.object(fetch, 'atomic_json', side_effect=OSError(errno.ENOSPC, 'No space left on device')):
+            with self.assertRaises(OSError) as raised:
+                import_manifest([self.rows['a'], self.rows['b']], self.cache, self.root)
+        self.assertNotIn('unreadable', str(raised.exception))
+        self.assertEqual(self.cache_files(), [])
+        report = import_manifest([self.rows['a'], self.rows['b']], self.cache, self.root)
+        self.assertEqual([r['source_id'] for r in report['imported']], ['src-a', 'src-b'])
+        self.assertEqual(report['refused'], [])
+        self.assertEqual(self.cache_files(), sorted(f"{self.rows[k]['sha256']}/source.{e}"
+                                                    for k in 'ab' for e in ('json', 'tif')))
 
     def test_interrupt_is_not_swallowed_by_the_broadened_except(self):
         # Bug caught: the handler widens to BaseException/Exception-like catch-all and eats Ctrl-C.
