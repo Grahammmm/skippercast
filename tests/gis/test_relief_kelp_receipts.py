@@ -52,6 +52,20 @@ def test_failed_same_day_run_keeps_the_good_receipt(tmp_path, monkeypatch, prior
     assert json.loads(failed.read_text(encoding='utf-8')) == result
 
 
+@pytest.mark.parametrize('prior', ['updated', 'no_change'])
+def test_failed_same_day_run_keeps_a_status_only_receipt(tmp_path, monkeypatch, prior):
+    # Bug caught: preservation also demanded the Planet `source`, so a same-day
+    # {"status": "updated"} receipt without it was overwritten by the failure receipt.
+    receipts = tmp_path / 'receipts'
+    good = write(receipts, '19', {'status': prior})
+    before = good.read_bytes()
+    monkeypatch.setattr(kelp, '_metadata', broken_metadata)
+    result = refresh(tmp_path, 19)
+    assert good.read_bytes() == before
+    failed = receipts / '2026-11-19-planet-failed.json'
+    assert json.loads(failed.read_text(encoding='utf-8')) == result
+
+
 @pytest.mark.parametrize('prior', [None, {**NEW, 'status': 'access_failed'}, {**NEW, 'status': 'rights_changed'}])
 def test_failure_still_replaces_a_same_day_non_success_receipt(tmp_path, monkeypatch, prior):
     # Bug caught (over-correction): the guard moves every failure aside, so the usual dated
