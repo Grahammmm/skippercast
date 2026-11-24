@@ -155,11 +155,13 @@ class RightsGateTests(unittest.TestCase):
         # naming the asset. Bug caught: the malformed pin is dropped like an absent one, the asset is downloaded
         # and the manifest pins whatever bytes arrived under a freshly computed hash (an irreproducible release).
         path, good = '/data/coast-wide/t.bin', 'a' * 64
+        NULL_PIN = object()  # stands for a JSON "sha256": null that is present in the index
         for label, pin, malformed in (('truncated', good[:-1], True), ('non-hex', 'g' * 64, True),
                                       ('uppercase', good.upper(), True), ('empty', '', True), ('trailing newline', good + '\n', True),
+                                      ('explicit null', NULL_PIN, True),  # present-but-null is damaged, not omitted
                                       ('valid pin (control)', good, False), ('omitted digest (control)', None, False)):
             with self.subTest(label):
-                asset = {'url': path, 'bytes': 3} if pin is None else {'url': path, 'sha256': pin, 'bytes': 3}
+                asset = {'url': path, 'bytes': 3} if pin is None else {'url': path, 'sha256': None if pin is NULL_PIN else pin, 'bytes': 3}
                 terrain = {'sources': [{'url': 'https://doi.org/10.5066/P9OPEN01'}], 'tiles': [asset]}
                 calls = []
                 with serving({pa.TERRAIN_INDEX[0]: terrain, pa.TERRAIN_INDEX[1]: {}, pa.TERRAIN_INDEX[2]: terrain}, calls):
