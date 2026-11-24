@@ -6,6 +6,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: research-substrate
+  cancel-in-progress: false
+
 jobs:
   monterey-original-300-source-screen:
     runs-on: ubuntu-latest
@@ -84,6 +88,8 @@ jobs:
             var/review/monterey-17-bluetopo-contributor-pixels.json
           retention-days: 30
   monterey-original-multibeam-crosssurvey:
+    needs: monterey-original-300-source-screen
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -461,6 +467,8 @@ jobs:
             var/review/san-pedro-rca-screen.json
           retention-days: 30
   usgs-state-waters-catalog:
+    needs: san-pedro-original-character
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -496,6 +504,8 @@ jobs:
           path: var/review/usgs-ds781-metadata-review.json
           retention-days: 30
   nos-historical-seabed-samples:
+    needs: monterey-original-multibeam-crosssurvey
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -546,6 +556,8 @@ jobs:
           path: var/review/reefcheck/statewide-observation-audit.json
           retention-days: 30
   original-hard-context-enc-review:
+    needs: reefcheck-historical-observations
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -685,6 +697,8 @@ jobs:
             var/review/bolinas-enc-context-review.json
           retention-days: 30
   bluetopo-source-leads:
+    needs: nos-historical-seabed-samples
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -724,6 +738,8 @@ jobs:
             var/review/central-bluetopo-upstream-source-leads.json
           retention-days: 30
   usgs-caldig-deepwater:
+    needs: bluetopo-source-leads
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -755,6 +771,8 @@ jobs:
           path: var/review/usgs-caldig-v2-native-review.json
           retention-days: 30
   ncei-survey-discovery:
+    needs: original-hard-context-enc-review
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -786,6 +804,8 @@ jobs:
             var/review/noaa-central-multibeam-footprint-leads.json
           retention-days: 30
   csumb-native:
+    needs: central-coverage-and-source-queue
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     # SCA-137: no CI runner or storage is approved for the licence-held CSUMB
@@ -806,6 +826,8 @@ jobs:
         run: |
           printf '%s\n' 'SCA-137: CSUMB native survey processing skipped; no approved private runner or storage route.' >> "$GITHUB_STEP_SUMMARY"
   central-deepwater:
+    needs: csumb-native
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -842,6 +864,8 @@ jobs:
           path: var/review/noaa-central-deepwater-native-depth-screen.json
           retention-days: 30
   san-miguel-original-habitat:
+    needs: central-deepwater
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -906,6 +930,8 @@ jobs:
             var/review/enc-hazards-san-miguel-h13084.geojson
           retention-days: 30
   audit:
+    needs: usgs-state-waters-catalog
+    if: ${{ !cancelled() }}
     # pylerc 4.2.0 has a verified macOS universal2 wheel for this adapter.
     runs-on: macos-latest
     timeout-minutes: 90
@@ -1285,6 +1311,8 @@ jobs:
           retention-days: 30
 
   hard-footprint-native-depth:
+    needs: ncei-survey-discovery
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -1326,6 +1354,8 @@ jobs:
           retention-days: 30
 
   usgs-sur-arguello-sediment:
+    needs: audit
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -1349,6 +1379,8 @@ jobs:
           retention-days: 30
 
   csumb-scc-source-leads:
+    needs: usgs-caldig-deepwater
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -1380,6 +1412,8 @@ jobs:
           retention-days: 30
 
   h11983-original-point-st-george:
+    needs: san-miguel-original-habitat
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -1484,6 +1518,8 @@ jobs:
           retention-days: 30
 
   usgs-ds781-native-character:
+    needs: hard-footprint-native-depth
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
