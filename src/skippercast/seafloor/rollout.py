@@ -24,6 +24,8 @@ def private_progress(root, ledger, manifest):
     result = {}
     for path in (root/'var/seafloor/private-reaches').glob('*/run.json'):
         receipt = read_json(path)
+        if not isinstance(receipt, dict) or not isinstance(receipt.get('inputs', {}), dict):
+            raise ValueError('Private progress receipt is malformed')
         inputs = receipt.get('inputs', {})
         if (receipt.get('publication_prohibited') is not True
                 or inputs.get('reference_cells_sha256') != ledger['reference_cells_sha256']
@@ -31,14 +33,15 @@ def private_progress(root, ledger, manifest):
                 or any(current.get(r['id']) != r for r in inputs['sources'])):
             continue
         outputs = receipt.get('outputs', {})
-        if not outputs:
+        if not isinstance(outputs, dict) or not outputs:
             continue
         for name, expected in outputs.items():
             if (Path(name).name != name or not (path.parent/name).is_file()
                     or sha256(path.parent/name) != expected):
                 raise ValueError('Private progress output checksum mismatch')
-        if receipt['ledger_summary'].get('processing_incomplete') is False:
-            result[path.parent.name] = receipt['ledger_summary']
+        summary = receipt.get('ledger_summary')
+        if isinstance(summary, dict) and summary.get('processing_incomplete') is False:
+            result[path.parent.name] = summary
     return result
 
 
