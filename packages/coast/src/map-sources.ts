@@ -39,7 +39,15 @@ export function selectCurrentFrame(field:CurrentField,selectedAt:string|Date,now
  if(field.kind==='observation'){
   // Observations represent now or a historical instant, never a future timeline hour.
   if(selected>clock+300000)return null;
-  return [...field.frames].reverse().find(f=>{const at=Date.parse(f.validAt);return at<=selected&&selected-at<=6*3600000&&clock-at<=6*3600000&&f.cells.length>0;})??null;
+  let newest:CurrentFrame|null=null,newestAt=-Infinity;
+  for(const frame of field.frames){
+   const at=Date.parse(frame.validAt);
+   // On equal epochs, keep the last eligible frame in supplied order as before.
+   if(at>=newestAt&&at<=selected&&selected-at<=6*3600000&&clock-at<=6*3600000&&frame.cells.length>0){
+    newest=frame;newestAt=at;
+   }
+  }
+  return newest;
  }
  const issued=field.issuedAt?Date.parse(field.issuedAt):NaN;
  if(!Number.isFinite(issued)||issued>clock+300000||clock-issued>36*3600000||!field.frames.length)return null;
