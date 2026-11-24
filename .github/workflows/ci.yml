@@ -51,6 +51,14 @@ jobs:
         with:
           # Synthetic merge commit and first parent give the complete PR diff.
           fetch-depth: 2
+          # The selector reads only itself and its map, and `git diff --name-only` compares
+          # tree entries, so no other file is materialized and no blob is downloaded
+          # (SC-CI-OC2). If the diff ever fails, ci_select.py still selects every area.
+          filter: blob:none
+          sparse-checkout: |
+            scripts/ci_select.py
+            scripts/ci_affected.json
+          sparse-checkout-cone-mode: false
       - name: Affected-area fixtures
         run: python3 scripts/ci_select.py --fixtures
       - name: Classify changed paths
@@ -73,7 +81,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # SC-CI-OC2: an upstream failed/cancelled job already decides this roll-up (the gate below
+      # exits 1 for it whatever else is true), so say so before any checkout. Every other result,
+      # including skipped/empty/unknown, still goes through the gate; this step never passes anything.
+      - name: Fail fast on a failed or cancelled prerequisite (no checkout)
+        env:
+          GATE: ${{ needs.changes.result }}
+          TESTS: ${{ needs.survey-tests.result }}
+          CHECK: ${{ needs.check.result }}
+        run: |
+          failed=""
+          for pair in "changes=$GATE" "check=$CHECK" "survey-tests=$TESTS"; do
+            case "${pair#*=}" in failure|cancelled) failed="${failed:+$failed, }${pair%%=*} = ${pair#*=}" ;; esac
+          done
+          if [ -n "$failed" ]; then
+            echo "survey-science is not green because an upstream job did not succeed: $failed."
+            echo "The failing job reports the cause; this roll-up only restates it."
+            echo "**survey-science: Upstream job did not succeed** ($failed)" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      # The gate reads only scripts/ci_select.py (its map is loaded by other modes).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            scripts/ci_select.py
+            scripts/ci_affected.json
+          sparse-checkout-cone-mode: false
       - name: Roll-up gate (fails closed; names the failed prerequisite)
         env:
           EVENT: ${{ github.event_name }}
@@ -273,7 +308,7 @@ jobs:
     # Accounting only, in the existing nightly schedule. No tests are duplicated,
     # no write token/PR/publication, and a missing/failed shard earns no green day.
     needs: [e2e, e2e-2, e2e-3, e2e-4]
-    if: always() && github.event_name == 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: ${{ !cancelled() && github.event_name == 'schedule' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
