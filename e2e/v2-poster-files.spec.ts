@@ -9,7 +9,7 @@ import {expect, test} from './fixtures.ts';
 const TINY = readFileSync(new URL('../tests/fixtures/basemap/tiny.pmtiles', import.meta.url));
 const ARCHIVE = 'tiles/basemap/ca-coast-fixture.pmtiles';
 const POSTER = '/regions/morro-bay/poster.svg';
-const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" data-zoom="12" data-west="-121.2" data-north="35.6"><path d="M0 0l100 100l50 -20"/></svg>';
+const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" data-zoom="12" data-west="-121.2" data-north="35.6"><path d="M0 0l100 100 50 -20"/></svg>';
 const PLACE = {region: 'morro-bay', profile: 'boat', view: '35.38000,-120.88000,12'};
 
 test.beforeEach(async ({page, v2: _v2}) => {

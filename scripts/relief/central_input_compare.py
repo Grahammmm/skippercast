@@ -32,6 +32,8 @@ def read_record(path: Path) -> dict:
         if (not isinstance(binding, dict) or binding.keys() != {'path', 'sha256'}
                 or not isinstance(binding['path'], str)):
             raise ValueError(f'{name}: expected path and sha256')
+        if not binding['path']:
+            raise ValueError(f'{name}: path must not be empty')
         digest = binding['sha256']
         if not isinstance(digest, str) or not run_region.HEX64.fullmatch(digest.lower()):
             raise ValueError(f'{name}: sha256 must be 64 hexadecimal digits')

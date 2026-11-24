@@ -13,9 +13,9 @@ const day = {
 
 // A past observation must keep its own date, not the current feed's retrieval date.
 test('C1: converts a ready history day into the Water temp field', () => {
-  assert.deepEqual(historySurfaceTemperature(day, source), {
+  assert.deepEqual(historySurfaceTemperature({...day, resolution: [0.02, 0.02]}, {...source, stride: 2}), {
     sourceId: source.sourceId, analysedAt: day.sampleAt, fetchedAt: source.fetchedAt,
-    nativeResolutionDeg: 0.125, sampleSpacingDeg: 0.125,
+    nativeResolutionDeg: 0.02, sampleSpacingDeg: 0.04,
     points: [{lat: 35, lon: -121, tempF: 59, errorF: 0}], url: source.url, kind: 'analysis',
   });
 });
@@ -28,13 +28,17 @@ test('C2: refuses either missing analysis field', () => {
   }
 });
 
-test('C2: refuses unequal resolution rather than using just latitude spacing', () => {
-  assert.equal(historySurfaceTemperature({...day, resolution: [0.125, 0.25]}, source), null);
+test('C2: requires finite positive square cells and finite sampled spacing', () => {
+  for (const resolution of [[0.02, 0.04], [0, 0], [-0.02, -0.02], [Infinity, Infinity],
+    [NaN, NaN], ['0.02', '0.02'], [Number.MAX_VALUE, Number.MAX_VALUE]]) {
+    assert.equal(historySurfaceTemperature({...day, resolution}, {...source, stride: 2}), null, String(resolution));
+  }
 });
 
-test('C2: refuses sub-unit, non-finite and coercible non-number strides', () => {
-  for (const stride of [0.5, NaN, Infinity, '2']) {
-    assert.equal(historySurfaceTemperature(day, {...source, stride}), null, String(stride));
+// A check that only requires finite values >= 1 invents 0.03° spacing from 0.02° native cells.
+test('C2: requires a positive safe-integer stride on the native grid', () => {
+  for (const stride of [1.5, Number.MAX_SAFE_INTEGER + 1, -1, 0, 0.5, NaN, Infinity, '2']) {
+    assert.equal(historySurfaceTemperature({...day, resolution: [0.02, 0.02]}, {...source, stride}), null, String(stride));
   }
 });
 
@@ -57,14 +61,13 @@ test('C3: converts the same rows as regionalSST, in order, skipping unusable cel
     [35, -120.25, 1, true],
     day.rows[0],
   ];
-  const stride = 1.5;
   const expected = {
     sourceId: source.sourceId, analysedAt: day.sampleAt, fetchedAt: source.fetchedAt,
-    nativeResolutionDeg: 0.125, sampleSpacingDeg: 0.1875,
+    nativeResolutionDeg: 0.125, sampleSpacingDeg: 0.125,
     points: [{lat: 35, lon: -120.875, tempF: 50, errorF: 1.8}, {lat: 35, lon: -121, tempF: 59, errorF: 0}],
     url: source.url, kind: 'analysis',
   };
-  const history = historySurfaceTemperature({...day, rows}, {...source, stride});
+  const history = historySurfaceTemperature({...day, rows}, source);
   assert.deepEqual(history, expected);
 
   const page = 'https://s.test/map', region = 'test-coast', id = SST_LAYER_ID;
@@ -77,7 +80,7 @@ test('C3: converts the same rows as regionalSST, in order, skipping unusable cel
   const sha256 = createHash('sha256').update(bytes).digest('hex');
   const path = `habitat-tiles/sst-analysis-${sha256.slice(0, 16)}.json`;
   const manifest = {schema_version: 1, region_id: region,
-    layers: {[id]: {id, kind: 'analysis', ...grid, status: 'ok', source_id: source.sourceId, native_stride: stride,
+    layers: {[id]: {id, kind: 'analysis', ...grid, status: 'ok', source_id: source.sourceId, native_stride: source.stride,
       max_age_hours: 24, frames: [{time, valid_cells: 2}], tiles: [{path, bounds, sha256, bytes: bytes.length}]}},
     sources: {[id]: {name: 'Fixture', url: source.url, data_retrieved_at: source.fetchedAt}},
   };

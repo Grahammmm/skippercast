@@ -18,20 +18,25 @@ def _owner_key(region, stage_key):
 def report(plan, owners):
     """Join planner JSON to a list of {artifact_id, region, stage} owner records.
 
-    Use the planner's full stage key (e.g. tiles.public) in both inputs. IDs
-    are opaque, unique strings. Unaffected means no matching `rebuild` row in
-    this plan, not that the artifact was verified or is safe to remove.
+    Use the planner's full stage key (e.g. tiles.public) in both inputs. The
+    plan must have at most one row per region and full stage key. IDs are
+    opaque, unique strings. Unaffected means no matching `rebuild` row in this
+    plan, not that the artifact was verified or is safe to remove.
     """
     blocks = plan.get('regions') if isinstance(plan, dict) else None
     if not isinstance(blocks, list):
         raise ValueError('expected a rebuild plan object with a regions list')
     writes = set()
+    planned = set()
     for block in blocks:
         rows = block['stages']
         if not isinstance(rows, list):
             raise ValueError('expected a stages list')
         for row in rows:
             key = _owner_key(block['region'], row['stage'])
+            if key in planned:
+                raise ValueError(f'{key}: duplicate plan stage')
+            planned.add(key)
             action = row['action']
             if action not in ('rebuild', 'reuse'):
                 raise ValueError(f'{key}: unknown plan action {action!r}')

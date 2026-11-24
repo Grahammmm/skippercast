@@ -16,6 +16,10 @@ from skippercast.relief import select
     [
         # A valid pair must not be reported as selected or rejected.
         ('identical-lattice', 0, 'compatible', 'CRS, affine transform and shape match'),
+        # Nonzero off-diagonal terms do not by themselves make a grid unusable.
+        ('rotated-lattice', 0, 'compatible', 'CRS, affine transform and shape match'),
+        # Comparing headers for equality alone accepts a grid with no inverse.
+        ('singular-lattice', 2, 'unavailable', 'affine transform is singular'),
         # A dimensions-only check would accept the shifted mask.
         ('equal-shape-half-pixel-shift', 1, 'incompatible', 'mismatched affine transform'),
         # Matching numeric coordinates do not identify the same CRS.
@@ -43,6 +47,10 @@ def test_reports_one_pair(case, code, status, detail, tmp_path, capsys, monkeypa
     profile = dict(driver='GTiff', width=4, height=3,
                    crs=None if case == 'absent-crs' else 'EPSG:26910',
                    transform=Affine(10, 0, 500000, 0, -10, 4000000))
+    if case == 'rotated-lattice':
+        profile['transform'] = Affine(8, 6, 500000, 6, -8, 4000000)
+    elif case == 'singular-lattice':
+        profile['transform'] = Affine(10, 20, 500000, 5, 10, 4000000)
     with rasterio.open(grid, 'w', dtype='float32', count=2 if case == 'multiband-grid' else 1, **profile) as dst:
         dst.write(np.full((3, 4), -10, dtype='float32'), 1)
 
