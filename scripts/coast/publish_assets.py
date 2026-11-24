@@ -124,7 +124,11 @@ def assets(value, out, problems):
             entry = out.setdefault(path, {})
             for field in ('sha256', 'bytes'):
                 pin = value.get(field)
-                if pin is None or (field == 'sha256' and not SHA.match(str(pin))):
+                if pin is None:
+                    continue
+                if field == 'sha256' and not (isinstance(pin, str) and SHA.fullmatch(pin)):
+                    # A supplied pin that is damaged must stop the plan; dropping it would let build pin whatever arrives.
+                    problems.append(f'terrain: {path} has a malformed upstream sha256 pin (need 64 lowercase hex characters)')
                     continue
                 if entry.setdefault(field, pin) != pin:
                     problems.append(f'terrain: {path} has conflicting upstream {field} pins')
