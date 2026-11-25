@@ -225,8 +225,14 @@ def from_m24(row, receipt):
     def served(gen):
         z15, z11 = ref[f'{gen}_z15'], ref[f'{gen}_z11']
         ptr = _last(z15, POINTER_PATH)
+        if not ptr or ptr.get('status') == 404:
+            pointer = None  # proven absent
+        elif ptr.get('status') == 200:
+            pointer = ptr.get('sha256')
+        else:
+            pointer = f"http-{ptr.get('status')}"  # 403/5xx/redirect is not absence; never equals a target
         detail, overview = _last(z15, BAND_PATHS['detail']), _last(z11, BAND_PATHS['overview'])
-        return {'build': z15.get('build'), 'pointer': ptr['sha256'] if ptr and ptr.get('status') == 200 else None,
+        return {'build': z15.get('build'), 'pointer': pointer,
                 'detail': detail and detail.get('sha256'), 'overview': overview and overview.get('sha256'),
                 'sources': (z15.get('sources') or {}).get('sha256')}
 

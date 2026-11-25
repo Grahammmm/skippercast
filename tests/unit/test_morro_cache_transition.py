@@ -225,6 +225,18 @@ def test_m24_adapter_splits_directions_and_reads_served_from_cold_refs():
     assert ct.judge(up)['verdict'] == ct.judge(back)['verdict'] == 'ACCEPT'
 
 
+@pytest.mark.parametrize('status', [403, 500, 302])
+def test_m24_adapter_cold_pointer_error_is_not_absence(status):
+    """FIX t_8126d387 note: a broken cold pointer on the rollback target is not proof the pointer is gone."""
+    row = _m24_row('light', BACK)
+    row['ref']['v1_z15']['fetches'].insert(0, {'path': PTR, 'status': status, 'sha256': None})
+    _, back = ct.from_m24(row, RECEIPT)
+    assert back['served']['pointer'] == f'http-{status}'
+    assert ct.judge(back)['reasons'] == ['served-mismatch:pointer']
+    row['ref']['v1_z15']['fetches'][0]['status'] = 404
+    assert ct.judge(ct.from_m24(row, RECEIPT)[1])['verdict'] == 'ACCEPT'
+
+
 def test_cli_exit_codes(tmp_path, capsys):
     good, short = tmp_path / 'phone-good.json', tmp_path / 'phone-short.json'
     receipt, single, bad = tmp_path / 'receipt.json', tmp_path / 'one.json', tmp_path / 'bad.json'
