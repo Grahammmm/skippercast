@@ -9,8 +9,8 @@ from pathlib import Path
 import re
 from typing import BinaryIO, Protocol
 
-from skippercast.relief import package, receipts
-from skippercast.relief.envelope import verify_chain
+from skippercast.relief import package, receipts, survey_delivery
+from skippercast.relief.envelope import verify_chain, survey_pointer_member
 from skippercast.relief.package import ReleaseError
 
 _BLOCK_BYTES = 1 << 20
@@ -117,6 +117,10 @@ def plan(release_dir: Path, approval: Path, envelope: Path, *, scope_path: Path)
         raise ReleaseError(f'cannot plan relief digest index: {exc}') from exc
     paths = [(package.ARCHIVE, f'{stem}.pmtiles')]
     paths.extend((name, f'{stem}.digests/{root_sha}/{name.removeprefix(_DIGEST_DIR)}') for name in members)
+    survey = survey_pointer_member(release).get('survey_detail')
+    if survey:
+        paths.append((survey_delivery.WIRE_PATH, survey_delivery.key(
+            release['region'], verified.envelope_sha256, survey['wire']['sha256'])))
     objects = tuple(PublishObject(path, key, layers[path]['sha256'], layers[path]['bytes']) for path, key in paths)
     return PublishPlan(release_dir, approval, envelope, scope_path, verified.region_dir,
                        verified.envelope_sha256, objects)

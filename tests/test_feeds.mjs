@@ -259,3 +259,27 @@ test('canonical reef export shares the current manifest and revision gate',async
   assert.equal((await serveFeed(new Request('https://s/feeds/tiles/seafloor/regions/morro-bay/candidates.geojson'),'/feeds/tiles/seafloor/regions/morro-bay/candidates.geojson')).status,404);
  }finally{useBucket({});}
 });
+
+// Chart rejects the verified survey if the Worker loses its Brotli header or labels an error body as compressed.
+test('only an R2 survey with a content-named relief path is served as Brotli GeoJSON', async () => {
+  const key = `tiles/relief/morro-bay/${'a'.repeat(64)}/survey/${'b'.repeat(64)}.geojson.br`;
+  const other = 'tiles/other.geojson.br';
+  const get = k => serveFeed(new Request('https://s/feeds/' + k), '/feeds/' + k);
+  useBucket({FEEDS: fakeBucket({[key]: 'wire', [other]: 'other'})});
+  try {
+    const r = await get(key);
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get('Content-Encoding'), 'br', 'survey encoding');
+    assert.equal(r.headers.get('Content-Type'), 'application/geo+json');
+    assert.equal(r.headers.get('Content-Length'), '4');
+    assert.equal(await r.text(), 'wire'); // Worker body, before HTTP decoding
+    const legacy = await get(other);
+    assert.equal(legacy.headers.get('Content-Encoding'), null);
+    assert.equal(legacy.headers.get('Content-Type'), 'application/octet-stream');
+    useBucket({FEEDS: fakeBucket({})});
+    const absent = await get(key);
+    assert.equal(absent.status, 404);
+    assert.equal(absent.headers.get('Content-Encoding'), null);
+    assert.equal(absent.headers.get('Cache-Control'), 'no-store');
+  } finally { useBucket(null); }
+});

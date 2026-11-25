@@ -132,6 +132,19 @@ def verify_chain(approval: Path, envelope: Path) -> VerifiedRelease:
         raise ReleaseError(str(exc)) from exc
 
 
+def survey_pointer_member(release: dict) -> dict:
+    """Only the exact public survey pair in the verified release can supply pins."""
+    prefix = 'layers/public/survey-detail/'
+    paths = {prefix + 'detail.geojson': 'decoded', prefix + 'detail.geojson.br': 'wire'}
+    rows = {r['path']: r for r in package.release_layers(release) if r['path'].startswith(prefix)}
+    if not rows:
+        return {}  # Original releases have no survey-detail representation pair.
+    if rows.keys() != paths.keys():
+        raise ReleaseError('incomplete or unexpected public survey representation')
+    return {'survey_detail': {kind: {k: rows[path][k] for k in ('bytes', 'sha256')}
+                              for path, kind in paths.items()}}
+
+
 def build_pointer(approval: Path, envelope: Path, *, previous: dict | None = None) -> dict:
     """Build a repo-pointer candidate, without writing it or authorizing upload."""
     verified = verify_chain(approval, envelope)
@@ -154,6 +167,7 @@ def build_pointer(approval: Path, envelope: Path, *, previous: dict | None = Non
                    sha256=archive['sha256'], bytes=archive['bytes'], previous=prior)
     if 'style' in release:
         pointer['style'] = release['style']
+    pointer.update(survey_pointer_member(release))
     package.validate_schema(pointer, schema)
     return pointer
 
