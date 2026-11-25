@@ -26,6 +26,13 @@
   /* Under the top strip and the presentation toggle; the sheet's peek and the tab bar own the bottom. */
   .app-chart .maplibregl-ctrl-bottom-right { top: calc(var(--app-strip, 84px) + 2 * var(--touch-min) + var(--space-5) + var(--space-4)); bottom: auto; }
 }
+/* M21 (phone hit targets): in the phone shell the top strip grows (a preview region's card, the activity row) and the
+   presentation stack's notes grow downwards from it, so a fixed offset under the strip put Zoom in under the
+   "Zoom in to use 3D" note or the Kayak chip and the Sources link under the depth notice. Anchor the group (Sources,
+   scale, zoom) to the bottom instead, just above the Readings sheet's 176 px peek (.app-sheet --sheet-peek) and the tab bar. */
+.app-mobile .app-chart .maplibregl-ctrl-bottom-right { position: fixed; top: auto; bottom: calc(var(--app-tabs) + 176px + var(--space-3)); }
+/* A mark card's sheet peeks higher (.app-sheet--mark, 220 px); keep the group clear of it too. */
+.app-mobile:has(.app-sheet--mark) .app-chart .maplibregl-ctrl-bottom-right { bottom: calc(var(--app-tabs) + 220px + var(--space-3)); }
 
 /* The Currents streamlines (FE-15, web/map/currents.ts): two canvases over the map's own, under its controls, never taking a click. */
 .app-chart .chart-flow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
