@@ -100,6 +100,12 @@ jobs:
             echo "::error::Morro stage preview held: Cloudflare credentials are not configured."
             exit 1
           fi
+      - name: Hold until the /sources credits overlay is built in
+        run: |
+          # A plain build names a /sources page without the candidate's shading and contour credits, and a copy
+          # after the build is not what the Worker serves. Until the overlay runs before the build, nothing deploys.
+          echo "::error::Morro stage preview held: the /sources credits overlay is not wired into the build yet."
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.workflow_sha }}

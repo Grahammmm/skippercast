@@ -132,6 +132,14 @@ def test_guards_run_from_the_controller_before_dependencies_build_or_any_credent
     assert 'secrets.' not in json.dumps(WORKFLOW['jobs']['preview']['env'])
 
 
+def test_nothing_deploys_until_the_sources_overlay_runs_before_the_build():
+    # Interim fail-closed hold: a plain build serves stale /sources credits (M9 receipt 230aecce).
+    hold = STEPS[step('Hold until the /sources credits overlay')]
+    assert hold['run'].rstrip().endswith('exit 1') and 'env' not in hold
+    assert step('Reject a non-main dispatch') < step('Hold until the /sources credits overlay') < min(
+        i for i, s in enumerate(STEPS) if str(s.get('uses', '')).startswith('actions/checkout@'))
+
+
 def test_every_action_is_pinned_to_a_full_commit():
     for s in STEPS:
         if 'uses' in s:
