@@ -523,6 +523,9 @@ test('a relief pointer that breaks catalog/relief/pointer.schema.json fails the 
     'no detail_summary': without('detail_summary'),
     'unsupported zoom key': {...POINTER('morro-bay'), native_support_by_zoom: {7: {tiles: 1, sources: []}}},
     'survey wire over its limit': {...POINTER('morro-bay'), survey_detail: {wire: {sha256: sha('f'), bytes: 5242881}, decoded: {sha256: sha('f'), bytes: 9}}},
+    'survey gap without its detail': {...POINTER('morro-bay'), survey_gap: {wire: {sha256: sha('9'), bytes: 9}, decoded: {sha256: sha('a'), bytes: 9}}},
+    'survey gap wire over its limit': {...POINTER('morro-bay'), survey_detail: {wire: {sha256: sha('7'), bytes: 9}, decoded: {sha256: sha('8'), bytes: 9}},
+      survey_gap: {wire: {sha256: sha('9'), bytes: 262145}, decoded: {sha256: sha('a'), bytes: 9}}},
     'unknown top-level field': {...POINTER('morro-bay'), extra: true},
   };
   for (const [label, doc] of Object.entries(cases)) {
@@ -535,11 +538,12 @@ test('a relief pointer that breaks catalog/relief/pointer.schema.json fails the 
   // The schema checked is the repository's, not a permissive copy placed beside the pointers.
   const src = await reliefDir(t, {'morro-bay.json': JSON.stringify(without('sha256')), 'pointer.schema.json': '{}'});
   await assert.rejects(copyReliefPointers(src, await mkdtemp(join(tmpdir(), 'relief-out-'))), /violates catalog\/relief\/pointer\.schema\.json/);
-  // A previous release and the optional style and survey_detail blocks are accepted when they follow the schema.
+  // A previous release and the optional style, survey_detail and survey_gap blocks are accepted when they follow the schema.
   const full = {...POINTER('morro-bay'),
     previous: {generation: sha('1'), release_sha256: sha('2'), envelope_sha256: sha('3'), sha256: sha('4')},
     style: {baked: sha('5'), contours: null, habitat: sha('6'), built_with: 'v1.2'},
-    survey_detail: {wire: {sha256: sha('7'), bytes: 5242880}, decoded: {sha256: sha('8'), bytes: 16777216}}};
+    survey_detail: {wire: {sha256: sha('7'), bytes: 5242880}, decoded: {sha256: sha('8'), bytes: 16777216}},
+    survey_gap: {wire: {sha256: sha('9'), bytes: 262144}, decoded: {sha256: sha('a'), bytes: 2097152}}};
   const okSrc = await reliefDir(t, {'morro-bay.json': JSON.stringify(full)});
   const okOut = await mkdtemp(join(tmpdir(), 'relief-out-'));
   t.after(() => rm(okOut, {recursive: true, force: true}));

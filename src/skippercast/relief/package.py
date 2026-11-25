@@ -10,7 +10,7 @@ import re
 
 from skippercast.paths import repo_root
 from skippercast.platform.contracts import owner_display_cleared
-from skippercast.relief import receipts
+from skippercast.relief import receipts, survey_delivery
 
 RELEASE_SCHEMA = 'sc-relief-release/1'
 DISCLAIMER = 'NOT FOR NAVIGATION'
@@ -213,6 +213,32 @@ def is_sha256(value: object) -> bool:
     return isinstance(value, str) and receipts.HEX64.fullmatch(value) is not None
 
 
+def code_files() -> list[tuple[str, Path]]:
+    """The package stage's receipt code identity; rebuild_plan hashes the same labelled files."""
+    return [('package.py', Path(__file__)), ('survey_delivery.py', Path(survey_delivery.__file__))]
+
+
+def check_survey(root: Path, rows: list[dict]) -> None:
+    """A survey gap companion ships only with, and byte-derived from, the packaged survey detail.
+
+    Releases without the companion are unchanged. With it, both wires must decode to their pinned
+    representations and the companion must equal the detail's tier-none subset (survey_delivery.gap_document)."""
+    survey = {row['path']: row for row in rows if survey_delivery.is_survey_path(row['path'])}
+    try:
+        members = survey_delivery.pointer_members(survey)
+        if 'survey_gap' not in members:
+            return
+        detail = survey_delivery.check_decoded(artifact_path(root, survey_delivery.WIRE_PATH), members['survey_detail'])
+        wire, decoded = survey_delivery.LIMITS['survey_gap']
+        gap = survey_delivery.check_decoded(artifact_path(root, survey_delivery.GAP_WIRE_PATH), members['survey_gap'],
+                                            wire_limit=wire, decoded_limit=decoded)
+        survey_delivery.check_gap(detail, gap)
+    except ReleaseError:
+        raise
+    except ValueError as exc:
+        raise ReleaseError(str(exc)) from None
+
+
 def _check_inventory(root: Path, paths: list[str]) -> None:
     # The digest producer owns its format. Package every file under its dedicated
     # index directory, not merely the root, when that producer is present.
@@ -271,7 +297,7 @@ def main(argv=None) -> int:
         catalog = root / 'catalog/sources.json'
         contract = root / 'regions' / region.id / 'region.json'
         schema = root / 'catalog/relief/pointer.schema.json'
-        code = receipts.stage_digest([('package.py', Path(__file__))])
+        code = receipts.stage_digest(code_files())
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
 
@@ -320,6 +346,7 @@ def main(argv=None) -> int:
             producer = provenance.get(row['path'], {})
             if any(producer.get(key) != row[key] for key in ('sha256', 'bytes')):
                 raise ReleaseError(f'layer bytes are not in the current upstream outputs: {row["path"]}')
+        check_survey(region.dir, rows)
         code_sha = pending['code']['repo_sha']
         if not isinstance(code_sha, str) or not re.fullmatch(r'[a-f0-9]{40}', code_sha):
             raise ReleaseError('package must run from a pinned repository checkout')

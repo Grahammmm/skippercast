@@ -131,10 +131,11 @@ export function basemapStyle(palette: Palette, {archive, assets, variant = 'day'
     road('roads-highway', ['highway'], 10, c.road, ramp(10, 0.6, 15, 3)),
     day && road('roads-major', ['major_road'], 11, c.road, ramp(11, 0.5, 15, 2)),
     day && road('roads-minor', ['minor_road'], 13, c.roadMinor, ramp(13, 0.5, 16, 1.5)),
-    day && from('labels-water', 'water', {type: 'symbol', minzoom: LABEL_MIN_ZOOM,
-      filter: ['all', geometry('Point'), ['has', 'name']], ...label(ramp(9, 11, 14, 13), {'text-letter-spacing': 0.08})}),
+    // MapLibre places later symbol layers first: let water and harbor names win road overlaps.
     day && from('labels-roads', 'roads', {type: 'symbol', minzoom: 13, filter: ['all', kind('highway', 'major_road'), ['has', 'name']],
       ...label(ramp(13, 10, 16, 12), {'symbol-placement': 'line'})}),
+    day && from('labels-water', 'water', {type: 'symbol', minzoom: LABEL_MIN_ZOOM,
+      filter: ['all', geometry('Point'), ['has', 'name']], ...label(ramp(9, 11, 14, 13), {'text-letter-spacing': 0.08})}),
     day && from('labels-harbor', 'pois', {type: 'symbol', minzoom: 12, filter: ['all', kind('marina'), ['has', 'name']],
       ...label(ramp(12, 11, 16, 13))}),
     from(PLACE_LABELS, 'places', {type: 'symbol', minzoom: LABEL_MIN_ZOOM, filter: ['all', kind('locality'), ['has', 'name']],

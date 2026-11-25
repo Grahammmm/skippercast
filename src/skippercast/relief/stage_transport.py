@@ -63,11 +63,28 @@ def _objects(pointer):
 
 
 def _survey(pointer):
+    """The pinned survey wires: the detail, then its no-survey companion when the pointer binds one."""
     if 'survey_detail' not in pointer:
         return ()
-    wire = pointer['survey_detail']['wire']
-    key = survey_delivery.key(pointer['region'], pointer['envelope_sha256'], wire['sha256'])
-    return (Object(key, wire['sha256'], survey_delivery.WIRE_LIMIT, wire['bytes']),)
+    objects = []
+    for member, (limit, _) in survey_delivery.LIMITS.items():
+        if member in pointer:
+            wire = pointer[member]['wire']
+            key = survey_delivery.key(pointer['region'], pointer['envelope_sha256'], wire['sha256'])
+            objects.append(Object(key, wire['sha256'], limit, wire['bytes']))
+    return tuple(objects)
+
+
+def _check_survey(pointer, paths):
+    """Decode each staged survey wire against its own pins; a companion must derive from this detail."""
+    decoded = {}
+    for member, (wire_limit, decoded_limit) in survey_delivery.LIMITS.items():
+        if member in pointer:
+            decoded[member] = survey_delivery.check_decoded(
+                paths[pointer[member]['wire']['sha256']], pointer[member],
+                wire_limit=wire_limit, decoded_limit=decoded_limit)
+    if 'survey_gap' in decoded:
+        survey_delivery.check_gap(decoded['survey_detail'], decoded['survey_gap'])
 
 
 def _chunks(pointer, root_obj, path):
@@ -162,8 +179,7 @@ def prepare_release(release_dir, envelope, *, scope_path, pointer,
             raise StageError('approved inventory differs from pointer digest chain')
         for obj in chunks:
             stage_one(obj, rows[obj.key])
-        for obj in _survey(pointer):
-            survey_delivery.check_decoded(stage_one(obj, rows[obj.key]), pointer['survey_detail'])
+        _check_survey(pointer, {obj.sha: stage_one(obj, rows[obj.key]) for obj in _survey(pointer)})
         _require_new_stage_directory(output)
         stage.rename(output)
     return release_tag(pointer)
@@ -343,10 +359,12 @@ def copy_release(pointer, github, r2, *, allow_create, recheck):
         objects = (*_chunks(pointer, root, root_file), root, archive, *_survey(pointer))
         if assets.keys() != {obj.name for obj in objects}:
             raise StageError('GitHub release asset list differs from the pointer digest chain')
+        survey = {}
         for obj in objects:
             path = download(obj)
             if obj.key.endswith('.geojson.br'):
-                survey_delivery.check_decoded(path, pointer['survey_detail'])
+                survey[obj.sha] = path
+        _check_survey(pointer, survey)
 
         for obj in objects:
             size = assets[obj.name].size

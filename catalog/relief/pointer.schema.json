@@ -16,6 +16,7 @@
     "digest_root_sha256": {"$ref": "#/$defs/sha256"},
     "style": {"$ref": "#/$defs/style"},
     "survey_detail": {"$ref": "#/$defs/survey_detail"},
+    "survey_gap": {"$ref": "#/$defs/survey_gap"},
     "previous": {
       "oneOf": [
         {"type": "null"},
@@ -35,12 +36,21 @@
     }
   },
   "unevaluatedProperties": false,
+  "anyOf": [{"required": ["survey_detail"]}, {"properties": {"survey_gap": {"type": "null"}}}],
   "$defs": {
     "survey_detail": {
       "type": "object", "additionalProperties": false, "required": ["wire", "decoded"],
       "properties": {
         "wire": {"$ref": "#/$defs/survey_rep", "properties": {"bytes": {"maximum": 5242880}}},
         "decoded": {"$ref": "#/$defs/survey_rep", "properties": {"bytes": {"maximum": 16777216}}}
+      }
+    },
+    "survey_gap": {
+      "description": "The survey detail's tier-none (no survey) features only, byte-derived from it at package time; drawn at start.",
+      "type": "object", "additionalProperties": false, "required": ["wire", "decoded"],
+      "properties": {
+        "wire": {"$ref": "#/$defs/survey_rep", "properties": {"bytes": {"maximum": 262144}}},
+        "decoded": {"$ref": "#/$defs/survey_rep", "properties": {"bytes": {"maximum": 2097152}}}
       }
     },
     "survey_rep": {

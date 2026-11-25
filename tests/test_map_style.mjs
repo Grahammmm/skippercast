@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {existsSync, readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {PALETTE_TOKENS, coastPalette, readPalette} from '../web/map/palette.ts';
-import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE, GLYPH_VERSION, LABEL_FONT, LABEL_MIN_ZOOM, basemapStyle} from '../web/map/style.ts';
+import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE, GLYPH_VERSION, LABEL_FONT, LABEL_MIN_ZOOM, PLACE_LABELS, basemapStyle} from '../web/map/style.ts';
 import {glyphVersion} from '../scripts/client-build.mjs';
 import {FILES, themes} from '../scripts/check_contrast.mjs';
 import {lintFile} from '../scripts/check_tokens.mjs';
@@ -68,6 +68,18 @@ test('no labels below zoom 9; the night variant keeps only town labels', () => {
   assert.equal(LABEL_MIN_ZOOM, 9);
   assert.deepEqual(symbols(styles.night).map(layer => layer.id), ['labels-places']);
   assert.ok(styles.night.layers.length < styles.day.layers.length);
+});
+
+test('day coastal labels take collision priority over road captions without moving the place anchor', () => {
+  const ids = styles.day.layers.map(layer => layer.id);
+  const roads = ids.indexOf('labels-roads');
+  assert.ok(roads >= 0, 'road captions are still enabled');
+  // MapLibre places later symbol layers first. Moving roads above water again
+  // would let a causeway caption hide the water name at the shoreline.
+  for (const coastal of ['labels-water', 'labels-harbor']) {
+    assert.ok(ids.indexOf(coastal) > roads, `${coastal} must be placed before road captions`);
+  }
+  assert.equal(ids.at(-1), PLACE_LABELS);
 });
 
 test('the attribution reads "© OpenStreetMap contributors, © Protomaps"', () => {

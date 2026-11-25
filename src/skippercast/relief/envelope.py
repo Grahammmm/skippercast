@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 
 from skippercast.paths import repo_root
-from skippercast.relief import package, receipts
+from skippercast.relief import package, receipts, survey_delivery
 from skippercast.relief.package import ReleaseError
 
 ENVELOPE_SCHEMA = 'sc-relief-envelope/1'
@@ -133,16 +133,15 @@ def verify_chain(approval: Path, envelope: Path) -> VerifiedRelease:
 
 
 def survey_pointer_member(release: dict) -> dict:
-    """Only the exact public survey pair in the verified release can supply pins."""
-    prefix = 'layers/public/survey-detail/'
-    paths = {prefix + 'detail.geojson': 'decoded', prefix + 'detail.geojson.br': 'wire'}
-    rows = {r['path']: r for r in package.release_layers(release) if r['path'].startswith(prefix)}
-    if not rows:
-        return {}  # Original releases have no survey-detail representation pair.
-    if rows.keys() != paths.keys():
-        raise ReleaseError('incomplete or unexpected public survey representation')
-    return {'survey_detail': {kind: {k: rows[path][k] for k in ('bytes', 'sha256')}
-                              for path, kind in paths.items()}}
+    """Only the exact public survey pairs in the verified release can supply pins.
+
+    Original releases have no survey-detail pair; others have the detail pair, optionally with its derived
+    no-survey companion (``survey_gap``, checked against the detail at package time)."""
+    rows = {r['path']: r for r in package.release_layers(release) if survey_delivery.is_survey_path(r['path'])}
+    try:
+        return survey_delivery.pointer_members(rows)
+    except ValueError as exc:
+        raise ReleaseError(str(exc)) from None
 
 
 def build_pointer(approval: Path, envelope: Path, *, previous: dict | None = None) -> dict:

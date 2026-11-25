@@ -1,4 +1,4 @@
-"""Verify the survey representation actually served to the Chart."""
+"""Verify the survey representations actually served to the Chart."""
 import ctypes
 from hashlib import sha256
 
@@ -6,22 +6,34 @@ from skippercast.relief.package import is_sha256
 
 
 LIMITS = {'wire': 5 << 20, 'decoded': 16 << 20}
+# The no-survey companion drawn at start (survey_delivery.GAP_*_LIMIT), served under the same content-addressed prefix.
+GAP_LIMITS = {'wire': 256 << 10, 'decoded': 2 << 20}
+CHECKS = {'survey_detail': 'survey', 'survey_gap': 'survey-gap'}
 
 
-def binding(pointer):
-    if 'survey_detail' not in pointer:
+def binding(pointer, member='survey_detail'):
+    if member not in pointer:
         return None
-    pins = pointer['survey_detail']
-    if (not isinstance(pins, dict) or pins.keys() != LIMITS.keys()
+    if member == 'survey_gap' and 'survey_detail' not in pointer:
+        raise ValueError('survey gap companion without its reviewed survey detail in HEAD')
+    limits = GAP_LIMITS if member == 'survey_gap' else LIMITS
+    pins = pointer[member]
+    if (not isinstance(pins, dict) or pins.keys() != limits.keys()
             or not is_sha256(pointer.get('envelope_sha256'))):
         raise ValueError('invalid reviewed survey binding in HEAD')
-    for name, limit in LIMITS.items():
+    for name, limit in limits.items():
         rep = pins[name]
         if (not isinstance(rep, dict) or rep.keys() != {'bytes', 'sha256'}
                 or type(rep['bytes']) is not int or not 0 < rep['bytes'] <= limit
                 or not is_sha256(rep['sha256'])):
             raise ValueError('invalid reviewed survey binding in HEAD')
     return pins
+
+
+def bindings(pointer):
+    """Every pinned survey representation in HEAD, detail first: [(member, pins), ...]."""
+    found = ((member, binding(pointer, member)) for member in CHECKS)
+    return [(member, pins) for member, pins in found if pins is not None]
 
 
 def _decoded_reason(wire, expected):
@@ -41,7 +53,7 @@ def _decoded_reason(wire, expected):
     return 'identical'
 
 
-def check(pointer, pins, fetch):
+def check(pointer, pins, fetch, member='survey_detail'):
     wire = pins['wire']
     key = (f'feeds/tiles/relief/{pointer["region"]}/{pointer["envelope_sha256"]}'
            f'/survey/{wire["sha256"]}.geojson.br')
@@ -59,5 +71,5 @@ def check(pointer, pins, fetch):
         else:
             reason = _decoded_reason(data, pins['decoded'])
     passed = reason == 'identical'
-    return dict(check='survey', key=key, status='PASS' if passed else 'FAIL', reason=reason,
+    return dict(check=CHECKS[member], key=key, status='PASS' if passed else 'FAIL', reason=reason,
                 **(pins if passed else {}))
