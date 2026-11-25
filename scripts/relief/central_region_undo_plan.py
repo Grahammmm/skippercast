@@ -18,8 +18,8 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
 import sys
+import tempfile
 
 if __name__ == '__main__':
     sys.dont_write_bytecode = True
@@ -176,8 +176,9 @@ def load_plan(plan_file: Path) -> tuple[dict, Path]:
 
 def _require_disposable(tree: Path) -> Path:
     tree = _real_dir(tree, 'tree')
-    if (tree / '.git').exists():
-        raise ValueError('refusing a git checkout: restore works on disposable trees only')
+    for folder in (tree, *tree.parents):  # the tree itself or any ancestor being a checkout is refused
+        if (folder / '.git').exists():
+            raise ValueError('refusing a git checkout or a tree inside one: restore works on disposable trees only')
     if os.path.ismount(tree) or tree == Path(tree.anchor) or tree == Path.home():
         raise ValueError('refusing a mount point, filesystem root or home directory')
     marker = tree / MARKER
@@ -212,20 +213,29 @@ def restore(plan_file: Path, tree: Path, *, dry_run: bool = False) -> dict:
     for row, dst in targets:
         if row['state'] == 'present':
             have = _sha256(dst.read_bytes()) if dst.exists() else None
-            actions.append(dict(path=row['path'], action='unchanged' if have == row['sha256'] else 'rewrite'))
+            same = have == row['sha256'] and dst.stat().st_mode & 0o777 == int(row['mode'], 8)
+            actions.append(dict(path=row['path'], action='unchanged' if same else 'rewrite'))
         else:
             actions.append(dict(path=row['path'], action='remove' if dst.exists() else 'unchanged'))
     if not dry_run:
         for row, dst in targets:
             if row['state'] == 'present':
                 data = (base / row['prior']).read_bytes()
-                if dst.exists() and dst.read_bytes() == data:
+                mode = int(row['mode'], 8)
+                if dst.exists() and dst.read_bytes() == data and dst.stat().st_mode & 0o777 == mode:
                     continue
                 dst.parent.mkdir(parents=True, exist_ok=True)
-                tmp = dst.with_name(f'.{dst.name}.undo-tmp')
-                tmp.write_bytes(data)
-                os.chmod(tmp, int(row['mode'], 8))
-                os.replace(tmp, dst)
+                # mkstemp creates a new file exclusively (O_EXCL) and never follows a pre-planted link.
+                fd, name = tempfile.mkstemp(dir=dst.parent, prefix=f'.{dst.name}.undo-')
+                try:
+                    with os.fdopen(fd, 'wb') as handle:
+                        handle.write(data)
+                        os.fchmod(handle.fileno(), mode)
+                    os.replace(name, dst)
+                except BaseException:
+                    if os.path.lexists(name):
+                        os.unlink(name)
+                    raise
             elif dst.exists():
                 dst.unlink()
         for rel in doc['absent_parent_dirs']:  # deepest first; only directories this plan saw absent
@@ -238,8 +248,8 @@ def restore(plan_file: Path, tree: Path, *, dry_run: bool = False) -> dict:
         for row in doc['paths']:
             p = tree / row['path']
             if row['state'] == 'present':
-                if not p.is_file() or _sha256(p.read_bytes()) != row['sha256']:
-                    raise RuntimeError(f'restore did not reproduce prior bytes: {row["path"]}')
+                if not p.is_file() or _sha256(p.read_bytes()) != row['sha256'] or p.stat().st_mode & 0o777 != int(row['mode'], 8):
+                    raise RuntimeError(f'restore did not reproduce prior bytes and mode: {row["path"]}')
             elif p.exists():
                 raise RuntimeError(f'restore left a file that was absent before: {row["path"]}')
     return dict(region=region, kind=doc['kind'], dry_run=dry_run, actions=actions,

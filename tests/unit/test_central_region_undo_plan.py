@@ -224,3 +224,48 @@ def test_cli_plan_then_restore(tmp_path, capsys):
     assert (tree / f'catalog/relief/{TERRAIN}.json').read_bytes() == f'old catalog/relief/{TERRAIN}.json'.encode()
     assert undo.main(['restore', '--plan', str(tmp_path / 'p/undo-plan.json'), '--tree', str(tmp_path / 'nope')]) == 1
     assert 'error:' in capsys.readouterr().err
+
+
+def test_planted_link_at_the_old_temp_name_is_never_followed(tmp_path):
+    tree, plan = _plan(tmp_path)
+    outside = tmp_path / 'outside.json'
+    outside.write_bytes(b'precious')
+    os.chmod(outside, 0o600)
+    target = tree / f'catalog/relief/{CONTOUR}.json'
+    (target.parent / f'.{target.name}.undo-tmp').symlink_to(outside)
+    target.write_bytes(b'changed by the release')
+    undo.restore(plan, tree)
+    assert outside.read_bytes() == b'precious' and outside.stat().st_mode & 0o777 == 0o600
+    assert target.read_bytes() == f'old catalog/relief/{CONTOUR}.json'.encode()
+    assert [p.name for p in target.parent.iterdir() if '.undo-' in p.name and p.name != f'.{target.name}.undo-tmp'] == []
+
+
+def test_marked_subdirectory_inside_a_checkout_is_refused(tmp_path):
+    checkout = tmp_path / 'checkout'
+    (checkout / '.git').mkdir(parents=True)
+    tree = _make_tree(checkout, 'scratch-tree')
+    undo.make_plan(tree, CONTOUR, tmp_path / 'plan')
+    _apply_release(tree, CONTOUR)
+    changed = _snapshot(tree)
+    with pytest.raises(ValueError, match='inside one'):
+        undo.restore(tmp_path / 'plan' / 'undo-plan.json', tree)
+    assert _snapshot(tree) == changed
+    (checkout / '.git').rmdir()  # a worktree's .git is a file; both count
+    (checkout / '.git').write_text('gitdir: /elsewhere')
+    with pytest.raises(ValueError, match='inside one'):
+        undo.restore(tmp_path / 'plan' / 'undo-plan.json', tree)
+
+
+def test_a_mode_only_release_change_is_undone(tmp_path):
+    tree = _make_tree(tmp_path)
+    target = tree / f'dist/regions/{CONTOUR}/depth-contours.geojson'
+    os.chmod(target, 0o644)
+    undo.make_plan(tree, CONTOUR, tmp_path / 'plan')
+    os.chmod(target, 0o600)  # same bytes, different mode
+    dry = undo.restore(tmp_path / 'plan' / 'undo-plan.json', tree, dry_run=True)
+    assert [a['action'] for a in dry['actions'] if a['path'].endswith('/depth-contours.geojson') and 'dist' in a['path']] == ['rewrite']
+    assert target.stat().st_mode & 0o777 == 0o600
+    undo.restore(tmp_path / 'plan' / 'undo-plan.json', tree)
+    assert target.stat().st_mode & 0o777 == 0o644
+    again = undo.restore(tmp_path / 'plan' / 'undo-plan.json', tree)
+    assert {a['action'] for a in again['actions']} == {'unchanged'}
