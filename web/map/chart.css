@@ -29,8 +29,11 @@
 /* M21 (phone hit targets): in the phone shell the top strip grows (a preview region's card, the activity row) and the
    presentation stack's notes grow downwards from it, so a fixed offset under the strip put Zoom in under the
    "Zoom in to use 3D" note or the Kayak chip and the Sources link under the depth notice. Anchor the group (Sources,
-   scale, zoom) to the bottom instead, just above the Readings sheet's 176 px peek (.app-sheet --sheet-peek) and the tab bar. */
-.app-mobile .app-chart .maplibregl-ctrl-bottom-right { position: fixed; top: auto; bottom: calc(var(--app-tabs) + 176px + var(--space-3)); }
+   scale, zoom) to the bottom instead, just above the Readings sheet's 176 px peek (.app-sheet --sheet-peek) and the tab bar.
+   M23: on the LEFT edge. The presentation stack (Chart/2D/3D and its notes: the depth notice, "Zoom in to use 3D")
+   owns the right column under the strip; on a short phone (375x667, 414x736) the bottom of that column reaches the
+   group, so a right-hand group still put Zoom in under the 3D note and the Sources link under the depth notice. */
+.app-mobile .app-chart .maplibregl-ctrl-bottom-right { position: fixed; top: auto; bottom: calc(var(--app-tabs) + 176px + var(--space-3)); left: var(--space-4); right: auto; align-items: flex-start; }
 /* A mark card's sheet peeks higher (.app-sheet--mark, 220 px); keep the group clear of it too. */
 .app-mobile:has(.app-sheet--mark) .app-chart .maplibregl-ctrl-bottom-right { bottom: calc(var(--app-tabs) + 220px + var(--space-3)); }
 
