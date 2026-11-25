@@ -161,6 +161,85 @@ def test_non_loopback_origin_is_refused():
         served.fetch('http://example.com', '/sources')
 
 
+@pytest.mark.parametrize('origin', ['http://127.0.0.1:80@example.com', 'http://127.0.0.1:8080/x', 'https://127.0.0.1:8080',
+                                    'http://127.0.0.1', 'http://127.0.0.1:0', 'http://user@127.0.0.1:8080', 'http://127.0.0.1:99999'])
+def test_disguised_or_malformed_origins_are_refused(origin):
+    with pytest.raises(served.Held, match='loopback'):
+        served.fetch(origin, '/sources')
+
+
+def test_protocol_relative_path_is_refused():
+    with pytest.raises(served.Held, match='origin-relative'):
+        served.fetch('http://127.0.0.1:8080', '//example.com/x')
+
+
+class _Counter(served.SimpleHTTPRequestHandler):
+    hits = []
+    location = None
+
+    def log_message(self, format, *args):  # noqa: A002
+        pass
+
+    def do_GET(self):
+        type(self).hits.append(self.path)
+        if self.location:
+            self.send_response(302)
+            self.send_header('Location', self.location)
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'{}')
+
+
+def _start(handler):
+    server = served.ThreadingHTTPServer(('127.0.0.1', 0), handler)
+    served.threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, f'http://127.0.0.1:{server.server_address[1]}'
+
+
+def test_redirects_are_not_followed():
+    elsewhere_handler = type('Elsewhere', (_Counter,), {'hits': []})
+    elsewhere, elsewhere_origin = _start(elsewhere_handler)
+    for target in (f'{elsewhere_origin}/x', 'http://example.com/x'):
+        redirector_handler = type('Redirector', (_Counter,), {'hits': [], 'location': target})
+        redirector, origin = _start(redirector_handler)
+        try:
+            row = served.fetch(origin, '/catalog/relief/morro-bay.json')
+        finally:
+            redirector.shutdown()
+            redirector.server_close()
+        assert row['status'] == 302 and redirector_handler.hits == ['/catalog/relief/morro-bay.json']
+    elsewhere.shutdown()
+    elsewhere.server_close()
+    assert elsewhere_handler.hits == []  # the redirect target was never contacted
+
+
+def test_redirecting_host_is_refused(tree, monkeypatch):
+    handler = type('Redirector', (_Counter,), {'hits': [], 'location': 'http://example.com/x'})
+    monkeypatch.setattr(served, 'serve', lambda *a: _start(handler))
+    with pytest.raises(served.Held, match='HTTP 302'):
+        served.receipt_for(tree)
+
+
+def test_proxy_environment_is_ignored(monkeypatch):
+    proxy_handler = type('Proxy', (_Counter,), {'hits': []})
+    proxy, proxy_origin = _start(proxy_handler)
+    target_handler = type('Target', (_Counter,), {'hits': []})
+    target, origin = _start(target_handler)
+    for name in ('http_proxy', 'HTTP_PROXY', 'all_proxy', 'ALL_PROXY'):
+        monkeypatch.setenv(name, proxy_origin)
+    monkeypatch.delenv('no_proxy', raising=False)
+    monkeypatch.delenv('NO_PROXY', raising=False)
+    try:
+        row = served.fetch(origin, '/x')
+    finally:
+        for server in (proxy, target):
+            server.shutdown()
+            server.server_close()
+    assert row['status'] == 200 and target_handler.hits == ['/x'] and proxy_handler.hits == []
+
+
 def test_manifest_that_serves_a_path_as_something_else_is_refused(tree):
     manifest = json.loads((tree / 'manifest.json').read_bytes())
     manifest['served']['/regions/morro-bay/depth-contours.geojson'] = 'overview'

@@ -27,6 +27,7 @@ from pathlib import Path
 import sys
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -88,12 +89,37 @@ def serve(client: Path, build_id: str, miss: str = '404'):
     return server, f'http://127.0.0.1:{server.server_address[1]}'
 
 
-def fetch(origin: str, path: str) -> dict:
-    if not origin.startswith('http://127.0.0.1:'):
-        raise Held('fetch: loopback origins only')
-    request = urllib.request.Request(origin + path, headers={'Accept': '*/*', 'Cache-Control': 'no-cache'})
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow a redirect: a 3xx stays the answer (and is refused), so a read-back cannot leave loopback."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+# No proxy (an http_proxy variable must not route a loopback read-back elsewhere) and no redirects.
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+
+
+def _loopback(origin: str) -> str:
+    """Return ``origin`` only if it is exactly http://127.0.0.1:<port> (no user info, path, query or other host)."""
+    parts = urllib.parse.urlsplit(origin)
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        port = parts.port
+    except ValueError:
+        port = None
+    if (parts.scheme != 'http' or parts.hostname != '127.0.0.1' or not port or parts.username is not None
+            or parts.password is not None or parts.path or parts.query or parts.fragment
+            or origin != f'http://127.0.0.1:{port}'):
+        raise Held('fetch: loopback origins only')
+    return origin
+
+
+def fetch(origin: str, path: str) -> dict:
+    if not path.startswith('/') or path.startswith('//'):
+        raise Held('fetch: path must be origin-relative')
+    request = urllib.request.Request(_loopback(origin) + path, headers={'Accept': '*/*', 'Cache-Control': 'no-cache'})
+    try:
+        with _OPENER.open(request, timeout=30) as response:
             body, status, ctype = response.read(), response.status, response.headers.get('Content-Type', '')
     except urllib.error.HTTPError as error:
         body, status, ctype = error.read(), error.code, error.headers.get('Content-Type', '')
