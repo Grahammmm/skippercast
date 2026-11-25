@@ -84,6 +84,27 @@ def generated_block(page):
     return page.split(begin, 1)[1].split(end, 1)[0]
 
 
+def contour_indexes(root, snapshot, *, update=False):
+    """Bind the Chart loader's region-local index to the exact preview overlay."""
+    names = set(CONTOURS.values())
+    for region in sorted(CENTRAL_RELEASES):
+        if f'catalog/relief/{region}.json' not in snapshot:
+            continue
+        index = artifact_path(root, f'regions/{region}/region.json')
+        doc = decode_document(index.read_bytes())
+        files = doc.get('chart_files')
+        if doc.get('id') != region or not isinstance(files, list) or not all(isinstance(f, str) for f in files):
+            raise ValueError(f'{region}: invalid region or chart_files in Chart index')
+        wanted = sorted(name for name in names if f'regions/{region}/{name}' in snapshot)
+        listed = sorted(name for name in files if name in names)
+        if listed == wanted:
+            continue
+        if not update:
+            raise ValueError(f'{region}: chart_files does not match pinned contours')
+        doc['chart_files'] = [name for name in files if name not in names] + wanted
+        index.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
 def check_client(client, snapshot, html, baseline):
     build = decode_document((client / 'precache.json').read_bytes())['build']
     if not isinstance(build, str) or not re.fullmatch(r'[0-9a-f]{10}', build):
@@ -99,6 +120,7 @@ def check_client(client, snapshot, html, baseline):
     actual |= {p.relative_to(client).as_posix() for p in (client / 'regions').glob('*/depth-contours*.geojson')}
     if actual != expected.keys():
         raise ValueError(f'wrong Central scope: {sorted(actual ^ expected.keys())}')
+    contour_indexes(client, snapshot)
     return build, shell
 
 
@@ -156,6 +178,7 @@ def assemble(review, pins_path, bundle_path, bundle_sha256, out):
                 raise ValueError(f'overlay path traverses a link: {path}')
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(raw)
+        contour_indexes(repo / 'dist', snapshot, update=True)
         baseline = {}
         for name in CONTOURS.values():  # retain only these ordinary Morro v1 base assets, byte for byte
             rel = f'regions/morro-bay/{name}'
