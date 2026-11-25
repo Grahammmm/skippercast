@@ -135,3 +135,26 @@ def test_catalogue_display_decision_does_not_infer_rights_from_allowed_label(can
     row['rights']['owner_public_display'] = {'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}
     path.write_text(json.dumps(doc), encoding='utf-8')
     assert check(**candidate)['shading'] == {'shade': ['unstated']}
+
+
+def _wrap_shading(candidate, opening):
+    page = candidate['page']
+    text = page.read_text(encoding='utf-8')
+    for before, after in (('<h5>Depth shading</h5><ul>', '<h5>Depth shading</h5>' + opening + '<ul>'),
+                          ('</ul><h5>Depth contours</h5>', '</ul></details><h5>Depth contours</h5>')):
+        assert before in text
+        text = text.replace(before, after, 1)
+    page.write_text(text, encoding='utf-8')
+
+
+@pytest.mark.parametrize('opening', ['<details>', '<details><summary>Show credits</summary>'])
+def test_closed_details_contents_are_not_displayed_credits(candidate, opening):
+    # A closed <details> shows only its first <summary>; the credit list inside it is not displayed.
+    _wrap_shading(candidate, opening)
+    with pytest.raises(ValueError, match='Depth shading: missing credits for shade'):
+        check(**candidate)
+
+
+def test_open_details_contents_are_displayed_credits(candidate):
+    _wrap_shading(candidate, '<details open>')
+    assert check(**candidate)

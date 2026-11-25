@@ -89,6 +89,7 @@ def _hides(tag, attrs):
     """True when this element's own markup keeps its contents from being displayed.
 
     Only attributes in the saved HTML are visible here; a stylesheet class cannot hide a row from this check.
+    A closed <details> hiding its non-summary children is handled by the parser, which tracks the element stack.
     """
     attrs = dict(attrs)
     return ('hidden' in attrs or tag == 'template' or (tag == 'dialog' and 'open' not in attrs)
@@ -101,7 +102,8 @@ class _MorroRows(HTMLParser):
     def __init__(self, page):
         super().__init__()
         self.sections = []
-        self.open = []  # (tag, hidden) for every open non-void element; hidden is inherited
+        # [tag, hidden, closed_details, summary_seen] per open non-void element; hidden is inherited
+        self.open = []
         self.morro = False
         self.heading = None
         self.layer = None
@@ -120,7 +122,15 @@ class _MorroRows(HTMLParser):
         if tag == 'section':
             self.sections.append(ident)
         if tag not in VOID:
-            self.open.append((tag, self.hidden or _hides(tag, attrs)))
+            # A closed <details> displays only its first <summary> child; every other child is not displayed.
+            parent = self.open[-1] if self.open else None
+            hidden = self.hidden or _hides(tag, attrs)
+            if parent is not None and parent[2]:
+                if tag == 'summary' and not parent[3]:
+                    parent[3] = True
+                else:
+                    hidden = True
+            self.open.append([tag, hidden, tag == 'details' and 'open' not in dict(attrs), False])
         if 'data-sources' not in self.sections or self.hidden:
             return
         if tag in ('h2', 'h3', 'h4'):
