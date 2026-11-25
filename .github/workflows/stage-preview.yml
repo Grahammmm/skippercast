@@ -14,8 +14,8 @@ name: Morro stage preview
 # Guards, all from this workflow's own reviewed revision (the controller), never the
 # candidate's copies:
 #   1. dispatch only from protected main of this repository;
-#   2. the candidate may differ from the controller commit only in Morro's pointer
-#      and contour files, so the code built and deployed is exactly reviewed main;
+#   2. the candidate may differ from the controller commit only in Morro's pointer,
+#      contour import and published contour files, so the code built is reviewed main;
 #   3. scripts/relief/morro_stage_preview.py plans a config that refuses every
 #      production name, route, schedule and bucket and binds the candidate commit and
 #      the reviewed pointer digest; the plan is re-run after the build;

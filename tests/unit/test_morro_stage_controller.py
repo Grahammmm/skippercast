@@ -156,10 +156,20 @@ def test_the_first_step_holds_bad_dispatches_before_checkout(change, held):
 # --- scope ----------------------------------------------------------------------------------------
 
 def test_scope_admits_a_data_only_candidate(repo, base):
-    sha = commit(repo, {preview.POINTER: pointer_bytes(), preview.CONTOURS: '{"type":"FeatureCollection","features":[]}\n'},
-                 'morro data')
-    assert controller.scope(repo, base, sha) == sorted([preview.POINTER, preview.CONTOURS])
+    published = {f'dist/regions/morro-bay/{name}': '{"type":"FeatureCollection","features":[]}\n'
+                 for name in ('depth-contours.geojson', 'depth-contours-overview.geojson')}
+    sha = commit(repo, {preview.POINTER: pointer_bytes(), preview.CONTOURS: '{"type":"FeatureCollection","features":[]}\n',
+                        **published}, 'morro data')
+    assert controller.scope(repo, base, sha) == sorted([preview.POINTER, preview.CONTOURS, *published])
     assert controller.main(['scope', '--tree', str(repo), '--base', base, '--sha', sha]) == 0
+
+
+@pytest.mark.parametrize('other', ['dist/regions/morro-bay/region.json', 'dist/regions/big-sur-coast/depth-contours.geojson',
+                                   'catalog/relief/big-sur-coast.json', 'catalog/sources.json'])
+def test_scope_holds_any_other_data_file(repo, base, other):
+    sha = commit(repo, {preview.POINTER: pointer_bytes(), other: '{}\n'}, 'other data')
+    with pytest.raises(controller.HoldError, match='outside the Morro data'):
+        controller.scope(repo, base, sha)
 
 
 def test_scope_holds_a_candidate_that_also_changes_code(repo, base, capsys):

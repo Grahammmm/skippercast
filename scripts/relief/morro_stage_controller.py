@@ -5,7 +5,7 @@ Runs from the workflow's own reviewed revision, never from the candidate checkou
 never touches production: no production Worker, bucket, route, schedule or secret.
 
   scope         the candidate differs from the reviewed controller commit only in
-                Morro's two data files, so the code built is exactly reviewed code
+                Morro's data files (DATA_PATHS), so the code built is exactly reviewed code
   place-config  put the planned stage Wrangler config into the built candidate tree,
                 after re-checking its digest, its isolation and the preview origin
   copy          copy the candidate pointer's published release objects into the
@@ -35,7 +35,11 @@ if __name__ == '__main__':
 from scripts.relief import morro_stage_preview as preview  # noqa: E402
 
 PLAN_SCHEMA = 'sc-morro-stage-preview/1'
-DATA_PATHS = frozenset({preview.POINTER, preview.CONTOURS})
+# The Morro data a candidate may change: the relief pointer, the contour import and the
+# two published contour files the browser loads (scripts/build_depth_contours.py output).
+DATA_PATHS = frozenset({preview.POINTER, preview.CONTOURS,
+                        f'dist/regions/{preview.REGION}/depth-contours.geojson',
+                        f'dist/regions/{preview.REGION}/depth-contours-overview.geojson'})
 CONFIG_NAME = 'wrangler.stage.json'
 _SHA = re.compile(r'[0-9a-f]{40}')
 _SHA256 = re.compile(r'[0-9a-f]{64}')
