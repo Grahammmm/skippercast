@@ -156,3 +156,36 @@ def test_morro_writer_whole_line_budget(morro_pair, mode, tmp_path, monkeypatch)
             assert stats['original_lines'] == lines
             assert stats['retained_lines'] == (groups + (name == 'full') if mode == 'overflow' else lines)
             assert sum(row['dropped'] for row in stats['dropped_lines_by_group']) == lines - stats['retained_lines']
+
+
+@pytest.mark.parametrize('region_id', sorted(contours.WHOLE_LINE_BUDGET_REGIONS - {'morro-bay'}))
+def test_central_coast_regions_get_the_same_whole_line_budget(morro_pair, region_id, tmp_path, monkeypatch):
+    # An overflowing Central Coast pair must be fitted exactly as Morro's is, not stop the release chain.
+    ctx, original, compacted = morro_pair
+    ctx.contour_job[1]['id'] = region_id
+    original['provenance']['region_id'] = compacted['provenance']['region_id'] = region_id
+    expected = tuple(map(_encoded, (compacted, dc.overview_contours(compacted))))
+    monkeypatch.setattr(dc, 'size_budgets', lambda _: tuple(map(len, expected)))
+    metrics = contours.build(ctx, tmp_path)
+    assert metrics['compacted'] is True
+    assert tuple((tmp_path / n).read_bytes() for n in ('contours.geojson', 'contours-overview.geojson')) == expected
+
+
+def test_central_coast_region_drops_a_group_that_no_longer_fits_and_morro_still_refuses(morro_pair, tmp_path, monkeypatch):
+    # Arguello's overview floor (one whole line per group) was 18% over budget; Central regions drop the
+    # last group that does not fit and say so in the metrics, Morro Bay keeps the hard refusal.
+    ctx, original, compacted = morro_pair
+    expected = tuple(map(_encoded, (compacted, dc.overview_contours(compacted))))
+    full_cap, overview_cap = map(len, expected)
+    monkeypatch.setattr(dc, 'size_budgets', lambda _: (full_cap, overview_cap - 1))
+    with pytest.raises(receipts.ReceiptError, match='cannot retain group'):
+        contours.build(ctx, tmp_path)  # morro-bay
+    ctx.contour_job[1]['id'] = original['provenance']['region_id'] = 'point-arguello-conception'
+    metrics = contours.build(ctx, tmp_path)
+    full, overview = (json.loads((tmp_path / n).read_bytes()) for n in ('contours.geojson', 'contours-overview.geojson'))
+    assert (tmp_path / 'contours-overview.geojson').stat().st_size <= overview_cap - 1
+    assert metrics['compacted'] is True
+    assert metrics['overview']['retained_groups'] == metrics['overview']['original_groups'] - 1
+    assert metrics['full']['retained_groups'] == metrics['full']['original_groups'] - 1
+    assert any(row['dropped'] for row in metrics['overview']['dropped_lines_by_group'])
+    assert dc.overview_contours(full) == overview
