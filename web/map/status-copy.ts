@@ -42,9 +42,15 @@ function moment(locale: string, tz: string, at: string | number, form: 'hour' | 
   return form === 'hour' ? `${p.weekday} ${hour}` : form === 'run' ? `${day}, ${hour}` : `${p.weekday} ${day}, ${hour}`;
 }
 
+function finite(n: number): number {
+  if (!Number.isFinite(n)) throw new RangeError('nonfinite-status-value');
+  return n;
+}
+
 /** The variable as the text or number the template takes, in `lang`; throws on a value that cannot be formatted. */
 function resolveVar(v: StatusVar, lang: string): string | number {
-  if (typeof v === 'string' || typeof v === 'number') return v;
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number') return finite(v);
   const locale = localeOf(lang);
   if ('id' in v) return t(v.id, lang, Object.fromEntries(Object.entries(v.vars ?? {}).map(([k, x]) => [k, resolveVar(x, lang)])));
   if ('day' in v) return format(locale, v.tz, 'day').format(new Date(v.day));
@@ -53,8 +59,11 @@ function resolveVar(v: StatusVar, lang: string): string | number {
     return `${p.hour}:${p.minute} ${(p.dayPeriod ?? '').toLowerCase()}`;
   }
   if ('moment' in v) return moment(locale, v.tz, v.moment, v.form);
-  if ('num' in v) return new Intl.NumberFormat(locale, {minimumFractionDigits: v.digits, maximumFractionDigits: v.digits, useGrouping: false}).format(v.num);
-  const h = Math.floor(Math.max(0, v.age) / HOUR);
+  if ('num' in v) {
+    const num = finite(v.num), digits = finite(v.digits);
+    return new Intl.NumberFormat(locale, {minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false}).format(num);
+  }
+  const h = Math.floor(Math.max(0, finite(v.age)) / HOUR);
   return h < 1 ? t('map.status.common.underHour', lang) : h < 72 ? t('map.status.common.hours', lang, {n: h}) : t('map.status.common.days', lang, {n: Math.floor(h / 24)});
 }
 

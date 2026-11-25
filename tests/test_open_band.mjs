@@ -15,7 +15,7 @@ const TOP = {top: 0, bottom: 130, left: 0, right: 390}, SHEET = {top: 611, botto
 const ZERO = {top: 0, bottom: 0, left: 0, right: 0};
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-test('phone at peek: the top card pads the top, the sheet the bottom', () => {
+test('phone at peek: the top card pads the top, the sheet the bottom', async t => {
   assert.deepEqual(openBandPadding(HOST, [TOP, SHEET]), {top: 130, bottom: 233, left: 0, right: 0});
   assert.deepEqual(openBandPadding({top: 50, bottom: 894, left: 0, right: 390}, [{...TOP, top: 50, bottom: 180}, {...SHEET, top: 661, bottom: 894}]),
     {top: 130, bottom: 233, left: 0, right: 0}, 'relative to the host');
@@ -26,23 +26,77 @@ test('phone at peek: the top card pads the top, the sheet the bottom', () => {
   // app.css at 390×844: the 704 px sheet on the 56 px tabs, translated to peek 612..1316, half 366..1070; a hidden sheet has no box.
   const edge = box => toEdge({...SHEET, ...box}, 844);
   assert.deepEqual([{top: 612, bottom: 1316}, {top: 366, bottom: 1070}, {top: 0, bottom: 0}].map(b => openBandPadding(HOST, [TOP, edge(b)]).bottom), [232, 478, 0]);
+  // The raw edge can be well outside the 8 px tolerance while the visible cover still meets the host edge.
+  const spill = {left: -20, right: 410};
+  await t.test('top card spilling past the viewport still pads the top', () => {
+    assert.deepEqual(openBandPadding(HOST, [{...TOP, ...spill, top: -24}]), {...ZERO, top: 130});
+  });
+  await t.test('half-open sheet spilling past the viewport still pads the bottom', () => {
+    assert.deepEqual(openBandPadding(HOST, [{...SHEET, ...spill, top: 366, bottom: 1070}]), {...ZERO, bottom: 478});
+  });
 });
 
 test('no covers, narrow, non-finite, non-overlapping and full-height covers pad nothing', () => {
   assert.deepEqual(openBandPadding(HOST, []), ZERO);
-  assert.deepEqual(openBandPadding(HOST, [{top: 0, bottom: 300, left: 346, right: 390}]), ZERO, 'a 44 px zoom button');
+  assert.deepEqual(openBandPadding(HOST, [{top: 0, bottom: 300, left: 346, right: 600}]), ZERO, 'only 44 px of the side control is visible');
   for (const bad of [NaN, Infinity, -Infinity]) assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: bad}, {...SHEET, left: bad}]), ZERO, String(bad));
   assert.deepEqual(openBandPadding(HOST, [{...TOP, top: -200, bottom: 0}, {...SHEET, top: 844, bottom: 1000}, {...TOP, left: 390, right: 780}]), ZERO, 'outside the host');
   assert.deepEqual(openBandPadding(HOST, [{...SHEET, top: 0}]), ZERO, 'a full-height sheet');
-  assert.deepEqual(openBandPadding(HOST, [{...TOP, top: 20}]), ZERO, 'a card more than 8 px below the top edge');
+  assert.deepEqual(openBandPadding(HOST, [{...SHEET, top: 0, bottom: 1070}]), ZERO, 'a sheet that fully covers the host and spills below it');
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, top: 8, bottom: 4}]), ZERO, 'an inverted rectangle near the top edge');
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, top: 8}]), {...ZERO, top: 130}, 'a card within the 8 px tolerance');
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, top: 9}]), ZERO, 'a card just outside the 8 px tolerance');
 });
 
-test('a band under 160 px shrinks both in proportion to exactly 160; a host under 160 pads nothing', () => {
+test('a band under 160 px shrinks both in proportion to leave at least 160; a host under 160 pads nothing', () => {
   assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 400}, {...SHEET, top: 444}]), {...ZERO, top: 342, bottom: 342});
-  assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 600}, {...SHEET, top: 644}]), {...ZERO, top: 513, bottom: 171}, '3:1 stays 3:1');
-  assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 2000}]), {...ZERO, top: 684}, 'clamped to the host, then shrunk');
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 500}, {...SHEET, top: 544}]), {...ZERO, top: 428, bottom: 256}, '5:3 stays 5:3 while the centre (508) stays in the 500..544 gap');
+  // The old 3:1 split of this 600..644 gap put the centre at 593, behind the top card; it now stays on the gap midpoint 622.
+  assert.deepEqual(openBandPadding(HOST, [{...TOP, bottom: 600}, {...SHEET, top: 644}]), {...ZERO, top: 542, bottom: 142}, 'centre kept in the gap');
+  assert.deepEqual(openBandPadding(HOST, [TOP, {...SHEET, top: 290}]), {...ZERO, top: 130, bottom: 554}, 'an exact-fit 160 px band');
+  // Rounding the two shares against a fractional remainder can spend 14 px of a 13.75 px allowance.
+  const short = {...HOST, bottom: 173.75};
+  assert.deepEqual(openBandPadding(short, [{...TOP, bottom: 90}, {...short, top: 143.75}]),
+    {...ZERO, top: 10, bottom: 3}, 'a 3:1 split fits the 13 px budget and exposes 160.75 px');
+  assert.deepEqual(openBandPadding({...HOST, bottom: 400}, [{...TOP, bottom: 70}]), {...ZERO, top: 70}, 'the taller host still exposes 330 px');
   assert.deepEqual(openBandPadding({top: 0, bottom: 120, left: 0, right: 390}, [{...TOP, bottom: 40}]), ZERO);
   assert.deepEqual(openBandPadding({top: 0, bottom: NaN, left: 0, right: 390}, [TOP]), ZERO);
+});
+
+// Contract: the camera centre MapLibre draws is (top + height - bottom) / 2. When the covers leave a visible gap the shrink to the
+// 160 px budget must keep that centre inside the gap, or the point the user centred on is hidden behind a cover.
+test('a narrow gap between tall covers keeps the padded camera centre inside the gap', () => {
+  const centre = pad => (pad.top + HOST.bottom - pad.bottom) / 2;
+  const sheetAt = top => toEdge({...SHEET, top, bottom: top + 704}, HOST.bottom);  // the 704 px phone sheet translated to `top`
+  // Catches: the proportional shrink alone, which moved this 130..144 gap's centre to 187, behind the sheet.
+  const narrow = openBandPadding(HOST, [TOP, sheetAt(144)]);
+  assert.ok(centre(narrow) > 130 && centre(narrow) < 144, `centre ${centre(narrow)} must lie in the 130..144 gap`);
+  assert.deepEqual(narrow, {...ZERO, top: 57, bottom: 627}, 'a 160 px band around the gap midpoint 137');
+  // Catches: a fix that spends more than the 160 px minimum-band budget (padding sum above host - 160) to centre the gap.
+  assert.equal(HOST.bottom - narrow.top - narrow.bottom, 160, 'the minimum band is still exactly kept');
+  // Catches: the fix changing a layout that needed no shrink (control: sheet at half).
+  const control = openBandPadding(HOST, [TOP, sheetAt(366)]);
+  assert.deepEqual(control, {...ZERO, top: 130, bottom: 478});
+  assert.equal(centre(control), 248);
+  // Catches: a gap at the top edge, where centring on the midpoint needs a negative top pad (must clamp to 0, centre still in the gap).
+  const edge = openBandPadding(HOST, [{...TOP, bottom: 0.5}, sheetAt(144)]);
+  assert.ok(centre(edge) > 0 && centre(edge) < 144, `edge-clamped centre ${centre(edge)}`);
+  assert.ok(edge.top >= 0 && edge.bottom >= 0 && edge.top + edge.bottom <= 684);
+  // Catches: any sheet position where the shrink hides the centre, or breaks the budget, or pads more than the cover.
+  for (let top = 131; top < 700; top++) {
+    const pad = openBandPadding(HOST, [TOP, sheetAt(top)]), c = centre(pad);
+    assert.ok(pad.top + pad.bottom <= 684, `sheet at ${top}: budget`);
+    assert.ok(pad.top <= 130 && pad.bottom <= HOST.bottom - top, `sheet at ${top}: no more than the cover`);
+    assert.ok(c > 130 && c < top, `sheet at ${top}: centre ${c} in ${130}..${top}`);
+  }
+  // Catches: rounding the pads to the whole budget, which puts a 1 px gap's centre on the sheet edge (131) instead of 130.5,
+  // on an even and an odd host height. The centre must be strictly inside, with the pads still whole px and within budget.
+  for (const bottom of [844, 843, 845]) {
+    const host = {...HOST, bottom}, pad = openBandPadding(host, [TOP, toEdge({...SHEET, top: 131, bottom: 131 + 704}, bottom)]);
+    const c = (pad.top + bottom - pad.bottom) / 2;
+    assert.ok(c > 130 && c < 131, `host ${bottom}: centre ${c} must lie strictly inside the 130..131 gap`);
+    assert.ok(Number.isInteger(pad.top) && Number.isInteger(pad.bottom) && pad.top + pad.bottom <= bottom - 160, `host ${bottom}: whole px within budget`);
+  }
 });
 
 /** A fake MapLibre just big enough for the engine and the Chart; `withPadding` gives it a recorded setPadding. */
@@ -78,19 +132,20 @@ test('the engine passes the padding to MapLibre once, and a library without setP
   assert.equal(padded.maps[0].paddings[0], p, 'the exact object');
 });
 
-function chartAt(width, dom = false, flyoverGate = () => ({reduced: true, saveData: false, hidden: false, linked: false, seen: true})) {
+function chartAt(width, dom = false, flyoverGate = () => ({reduced: true, saveData: false, hidden: false, linked: false, seen: true}),
+  {height = HOST.bottom, top = TOP, theme = 'dark'} = {}) {
   globalThis.location = {href: `${PAGE}?region=morro-bay&presentation=chart`};
   globalThis.history = {state: null, pushState(_s, _t, url) { location.href = url; }, replaceState(_s, _t, url) { location.href = url; }};
   globalThis.dispatchEvent = () => true; configureStore({v2: true, storage: null}); syncFromURL(location.href);
   const fake = library(true);
-  const host = {dataset: {}, clientWidth: width, clientHeight: 844, getBoundingClientRect: () => ({...HOST, right: host.clientWidth})};
+  const host = {dataset: {}, clientWidth: width, clientHeight: Math.floor(height), getBoundingClientRect: () => ({...HOST, right: host.clientWidth, bottom: height})};
   terrainFailed.value = false; chartFailed.value = false; chartMark.value = null; unavailable.value = [];
   const fetchFn = async () => ({ok: false, status: 404, json: async () => ({})}), sheet = {...SHEET};
   const land = {styles: [], mountCoast: () => ({load: async () => true, destroy() {}, setOverlay() {}, removeOverlay() {}})};
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land, center: () => [35.37, -120.86], viewDelay: 0,
     doc: {hidden: false, addEventListener() {}, removeEventListener() {}},
-    renderers: [() => createChart({host, load: async () => fake.module, fetchFn, page: () => PAGE, palette: () => readPalette(n => /^map-.*-(?:opacity|width)$/.test(n) ? '1' : `token(${n})`), viewDelay: 0,
-      covers: dom ? undefined : () => [TOP, sheet], flyoverGate})]});
+    renderers: [() => createChart({host, load: async () => fake.module, fetchFn, page: () => PAGE, palette: () => readPalette(n => /^map-.*-(?:opacity|width)$/.test(n) ? '1' : `${theme}(${n})`), viewDelay: 0,
+      covers: dom ? undefined : () => [top, sheet], flyoverGate})]});
   return {fake, host, stage, sheet, view: () => new URL(location.href).searchParams.get('view')};
 }
 
@@ -120,6 +175,23 @@ test('Chart wiring: a phone pads at mount and on resize, desktop never, phone th
   map.fire('resize'); assert.deepEqual(map.paddings, [], 'desktop never pads');
   assert.equal(run.host.dataset.view, '35.37000,-120.86000,12');
   run.stage.destroy();
+});
+
+test('Chart wiring: a fractional phone host keeps the minimum open band in either theme', async t => {
+  for (const name of ['warn', 'error']) t.mock.method(console, name, () => {});
+  for (const theme of ['light', 'dark']) await t.test(theme, async t => {
+    const height = 160.75;
+    const run = chartAt(390, false, undefined, {height, top: {...TOP, bottom: 70}, theme});
+    t.after(() => run.stage.destroy());
+    await tick(); await tick(); const [map] = run.fake.maps;
+    const [pad] = map.paddings;
+    // Rounding the 0.75 px margin up to one pixel would expose only 159.75 px.
+    assert.ok(height - pad.top - pad.bottom >= 160, 'at least 160 px remain open');
+    assert.deepEqual(map.paddings, [ZERO]);
+    assert.deepEqual(map.center, {lat: 35.37, lng: -120.86});
+    assert.equal(map.zoom, map.options.zoom, 'mount padding preserves the opening zoom');
+    assert.equal(run.view(), null);
+  });
 });
 
 test('the mount padding is not a camera move: a phone keeps ?view= unwritten and still flies on the first idle', async t => {

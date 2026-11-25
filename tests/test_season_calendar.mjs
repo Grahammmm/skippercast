@@ -110,7 +110,7 @@ test('leap day, final day, and civil dates across LA DST do not slip into UTC da
   d.species.lingcod.windows = [{start: '2028-03-12', end: '2028-03-13'}];
   assert.equal(month(d, 3, 'lingcod', 2028).label, 'Part open: 12–13');
 });
-test('strip has twelve word-labelled cells, safe link and no promises; Conditions uses the region year and shown target', async () => {
+test('strip has twelve word-labelled cells, safe link and no promises; Conditions uses the region year and shown target', async context => {
   const dir = await mkdtemp(join(tmpdir(), 'season-')), out = join(dir, 'render.mjs');
   try {
     await build({stdin: {resolveDir: root, loader: 'ts', contents: `
@@ -118,12 +118,25 @@ test('strip has twelve word-labelled cells, safe link and no promises; Condition
       export {Conditions} from './web/app/views/Conditions.tsx';
       export {regionInfo} from './web/app/App.tsx';
       export {regsData} from './web/regs.ts';
+      export {language} from './web/i18n.ts';
+      export {prepareCatalogue} from './web/i18n-catalogue.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
       bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
     const m = await import(pathToFileURL(out).href), d = data();
     const render = props => m.render(m.h(m.SeasonStrip, {data: d, species: 'lingcod', region, year: 2026, ...props}));
     const html = render({});
+    await context.test('C1: the species rules anchor follows the strip language without changing English bytes', async () => {
+      const anchor = markup => markup.match(/<a\b[^>]*>[^<]*<\/a>/)?.[0];
+      const link = '<a href="https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary" target="_blank" rel="noopener">';
+      assert.equal(anchor(html), `${link}Official Lingcod rules</a>`);
+      await m.prepareCatalogue('es');
+      // Without forwarding the strip language, the same anchor still says "Official Lingcod rules".
+      m.language.value = 'es';
+      try {
+        assert.equal(anchor(render({})), `${link}Reglas oficiales: Lingcod</a>`);
+      } finally { m.language.value = 'en'; }
+    });
     assert.equal((html.match(/<li\b/g) ?? []).length, 12);
     assert.match(html, /aria-label="Lingcod season 2026"/);
     assert.equal((html.match(/<span>Open<\/span>/g) ?? []).length, 12);

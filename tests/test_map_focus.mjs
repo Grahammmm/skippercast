@@ -1,6 +1,4 @@
 // SC2222-04: closing the mark card returns focus to the map the user is looking at, never <body>.
-// mapFocusTarget (web/app/map-focus.ts) is built with esbuild like test_app_shell.mjs and run against
-// stub elements that carry only `closest` and `querySelector`.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp, readFile} from 'node:fs/promises';
@@ -8,36 +6,101 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const out = join(await mkdtemp(join(tmpdir(), 'map-focus-')), 'map-focus.mjs');
-await build({entryPoints: [join(ROOT, 'web/app/map-focus.ts')], bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent'});
-const {mapFocusTarget} = await import(pathToFileURL(out).href);
+await build({
+  stdin: {resolveDir: ROOT, loader: 'ts', contents: `
+    export {MarkCard} from './web/app/MarkCard.tsx';
+    export {mapFocusTarget} from './web/app/map-focus.ts';
+    export {chartMark} from './web/map/chart.ts';
+    export {session} from './web/account.ts';
+    export {h, options} from 'preact';
+    export {render} from 'preact-render-to-string';`},
+  bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent',
+  jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+});
+const {MarkCard, mapFocusTarget, chartMark, session, h, options, render} = await import(pathToFileURL(out).href);
 
-/** `present` lists the selectors that find an element; `hidden` those whose element sits under a [hidden] ancestor-or-self. */
-const page = (present, hidden = []) => {
-  const parts = Object.fromEntries(present.map(selector => [selector, {selector, closest: q => (q === '[hidden]' && hidden.includes(selector) ? parts[selector] : null)}]));
-  return {parts, doc: {querySelector: selector => parts[selector] ?? null}};
-};
 const CHART = '.app-chart canvas', TERRAIN_CANVAS = '.app-terrain canvas', TERRAIN = '.app-terrain', STAGE = '.app-stage';
 
-test('Chart shown and not failed: the Chart canvas', () => {
-  const {parts, doc: d} = page([CHART, TERRAIN, STAGE], [TERRAIN]);
-  assert.equal(mapFocusTarget(d), parts[CHART]);
+// Ordered selector matches. Attributes are on a wrapper, not the focus target itself.
+function page(...matches) {
+  const body = {id: 'body'}, focusCalls = [];
+  const doc = {body, activeElement: body, defaultView: {getComputedStyle: el => ({visibility: el.visibility})},
+    querySelectorAll: selector => nodes.filter(el => el.selector === selector),
+    querySelector: selector => doc.querySelectorAll(selector)[0] ?? null};
+  const nodes = matches.map(([selector, id, {ancestor, noBox, visibility = 'visible'} = {}]) => ({
+    selector, id, ownerDocument: doc, visibility,
+    closest: query => ancestor && query.split(/,\s*/).includes(ancestor) ? {attribute: ancestor} : null,
+    getClientRects: () => noBox || ancestor === '[hidden]' ? [] : [{}],
+    focus() {
+      focusCalls.push(id);
+      if (!ancestor && !noBox && visibility === 'visible') doc.activeElement = this;
+    },
+  }));
+  return {doc, focusCalls};
+}
+
+function escapeFromMark({doc, focusCalls}, expected) {
+  const mark = {id: 'depth:fixture', name: 'Synthetic depth mark', kind: 'Depth', reading: '12 ft', source: 'Fixture', basis: 'Fixture'};
+  const lastVNode = options.vnode, lastSession = session.value, lastDocument = globalThis.document;
+  let keydown;
+  options.vnode = node => {
+    lastVNode?.(node);
+    if (node.type === 'section' && node.props.class === 'app-mark') keydown = node.props.onKeyDown;
+  };
+  try {
+    session.value = {state: 'signed-out'};
+    chartMark.value = mark;
+    render(h(MarkCard, {}));
+    assert.equal(typeof keydown, 'function');
+    // Exercise the real MarkCard Escape handler with no surviving returnTo element.
+    globalThis.document = doc;
+    doc.activeElement = {id: 'mark-heading'};
+    const card = Object.assign(new EventTarget(), {querySelector: () => null});
+    const event = Object.assign(new Event('keydown', {cancelable: true}), {key: 'Escape'});
+    card.addEventListener('keydown', keydown);
+    card.dispatchEvent(event);
+    assert.ok(event.defaultPrevented);
+    assert.equal(chartMark.value, null, 'Escape clears the selected mark');
+    assert.equal(doc.activeElement.id, expected, 'focused element after Escape');
+    assert.deepEqual(focusCalls, [expected], 'never attempt focus on a blocked target');
+  } finally {
+    options.vnode = lastVNode;
+    chartMark.value = null;
+    session.value = lastSession;
+    if (lastDocument === undefined) delete globalThis.document; else globalThis.document = lastDocument;
+  }
+}
+
+test('Escape during a region transition focuses the first usable Chart canvas', () => {
+  // If the selector checks only the first match, it skips the whole Chart group and focuses terrain.
+  escapeFromMark(page(
+    [CHART, 'old-region-chart', {ancestor: '[hidden]'}],
+    [CHART, 'inactive-chart', {ancestor: '[inert]'}],
+    [CHART, 'unrendered-chart', {noBox: true}],
+    [CHART, 'invisible-chart', {visibility: 'hidden'}],
+    [CHART, 'visible-chart'], [CHART, 'later-visible-chart'],
+    [TERRAIN_CANVAS, 'terrain-canvas'], [TERRAIN, 'terrain-host'], [STAGE, 'stage'],
+  ), 'visible-chart');
 });
-test('2D/3D shown: the terrain canvas, else its host; never the hidden Chart canvas', () => {
-  const withCanvas = page([CHART, TERRAIN_CANVAS, TERRAIN, STAGE], [CHART]);
-  assert.equal(mapFocusTarget(withCanvas.doc), withCanvas.parts[TERRAIN_CANVAS]);
-  const hostOnly = page([CHART, TERRAIN, STAGE], [CHART]);
-  assert.equal(mapFocusTarget(hostOnly.doc), hostOnly.parts[TERRAIN]);
+test('Escape with only a hidden Chart focuses the terrain canvas, else its shadow host', () => {
+  const hiddenChart = [CHART, 'hidden-chart', {ancestor: '[hidden]'}];
+  escapeFromMark(page(hiddenChart, [TERRAIN_CANVAS, 'terrain-canvas'], [TERRAIN, 'terrain-host'], [STAGE, 'stage']), 'terrain-canvas');
+  escapeFromMark(page(hiddenChart, [TERRAIN, 'terrain-host'], [STAGE, 'stage']), 'terrain-host');
 });
-test('Chart failed (hidden .app-chart): the map stage', () => {
-  const {parts, doc: d} = page([CHART, TERRAIN, STAGE], [CHART, TERRAIN]);
-  assert.equal(mapFocusTarget(d), parts[STAGE]);
+test('Escape focuses the stage when it is the only usable target', () => {
+  escapeFromMark(page([STAGE, 'stage']), 'stage');
+  escapeFromMark(page([CHART, 'hidden-chart', {ancestor: '[hidden]'}],
+    [TERRAIN, 'hidden-terrain', {ancestor: '[hidden]'}], [STAGE, 'stage']), 'stage');
 });
-test('nothing mounted: null, not a throw', () => {
-  assert.equal(mapFocusTarget(page([]).doc), null);
-  assert.equal(mapFocusTarget(page([CHART], [CHART]).doc), null);
+test('no usable map or stage: null, not a throw', () => {
+  assert.equal(mapFocusTarget(page().doc), null);
+  assert.equal(mapFocusTarget(page([CHART, 'hidden-chart', {ancestor: '[hidden]'}]).doc), null);
+  assert.equal(mapFocusTarget(page([TERRAIN, 'inert-terrain', {ancestor: '[inert]'}],
+    [STAGE, 'inert-stage', {ancestor: '[inert]'}]).doc), null);
 });
 
 const MARK_CARD = await readFile(join(ROOT, 'web/app/MarkCard.tsx'), 'utf8');

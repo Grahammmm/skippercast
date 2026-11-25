@@ -62,9 +62,12 @@ def record(root, manifest, source_id, reach_ids, outcome, evidence, *, now, note
     if (relative.is_absolute() or '..' in relative.parts or path.is_symlink()
             or not relative.as_posix().startswith(('var/seafloor/', 'research/receipts/'))
             or not path.resolve().is_relative_to(root) or path.suffix != '.json'
-            or path.stat().st_size > MAX_EVIDENCE_BYTES):
+            or not path.is_file() or path.stat().st_size > MAX_EVIDENCE_BYTES):
         raise ValueError('Unsafe source-review evidence')
-    document = read_json(path)
+    try:
+        document = read_json(path)
+    except (OSError, ValueError) as exc:  # unreadable or non-JSON evidence, named like the rest
+        raise ValueError('Unsafe source-review evidence') from exc
     row = {'source_id': source_id, 'reach_ids': sorted(set(reach_ids)),
            'outcome': outcome, 'note': note, 'physical_context_sha256': context(root, manifest),
            'reviewed_at': now.isoformat(), 'expires_at': (now+TTL).isoformat(),
@@ -112,7 +115,10 @@ def partition(root, manifest, queue, reach_ids, *, now=None):
         return queue, [], ['Invalid source-review checkpoint; all leads remain actionable.']
     if not state['reviews']:
         return queue, [], []
-    current = context(root, manifest)
+    try:
+        current = context(root, manifest)
+    except OSError:  # a hashed catalog file is missing or unreadable: defer nothing
+        return queue, [], ['Source-review context is unreadable; all leads remain actionable.']
     reviews = {}
     for row in reversed(state['reviews']):  # Prefer the last recorded applicable row.
         if (isinstance(row, dict) and isinstance(row.get('source_id'), str)

@@ -138,31 +138,44 @@ test.describe('at 360 px', () => {
     });
   }
 
-  test('every status group scrolls inside its own wrapper, by keyboard, without moving the page', async ({page}) => {
-    const index = await (await page.request.get('/regions/index.json')).json();
-    for (const region of index.regions) region.name = 'W'.repeat(90);   // an unbreakable name wider than the phone
-    await page.route('**/regions/index.json', route => route.fulfill({json: index}));
-    await open(page, 'status', '/status');
-    const wraps = page.locator('#status-rows .forecast-table-wrap');
-    expect(await wraps.count()).toBeGreaterThanOrEqual(3);
-    for (const info of await wraps.evaluateAll(nodes => nodes.map(node => ({
-      overflowX: getComputedStyle(node).overflowX, role: node.getAttribute('role'), tabindex: node.getAttribute('tabindex'),
-      name: node.getAttribute('aria-label'), tables: node.querySelectorAll(':scope > table').length, width: node.getBoundingClientRect().width,
-    })))) {
-      expect(info).toMatchObject({overflowX: 'auto', role: 'region', tabindex: '0', tables: 1});
-      expect(info.name).toMatch(/ data table$/);
-      expect(info.width).toBeLessThanOrEqual(360);
-    }
-    const wide = wraps.first();
-    expect(await wide.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
-    await wide.focus();
-    for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
-    await expect.poll(() => wide.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
-    const widths = await overflow(page);
-    expect(widths.doc).toBeLessThanOrEqual(widths.inner);
-    expect(widths.x).toBe(0);
-    await expect(wide.locator('table thead th[scope="col"]')).toHaveCount(4);
-    await expect(wide.locator('tbody th[scope="row"]', {hasText: 'Buoys: WWWW'})).toHaveCount(index.regions.length);
+  for (const lang of ['en', 'es']) {
+    test(`every status row's status is inside the 360 px viewport without sideways scrolling (${lang})`, async ({page}) => {
+      const index = await (await page.request.get('/regions/index.json')).json();
+      for (const region of index.regions) region.name = 'W'.repeat(90);   // an unbreakable name wider than the phone
+      await page.route('**/regions/index.json', route => route.fulfill({json: index}));
+      await open(page, 'status', `/status?lang=${lang}`);
+      const wraps = page.locator('#status-rows .forecast-table-wrap');
+      expect(await wraps.count()).toBeGreaterThanOrEqual(3);
+      const cells = await page.evaluate(() => [...document.querySelectorAll('#status-rows .forecast-table-wrap')].map(wrap => {
+        const box = wrap.getBoundingClientRect();
+        return {
+          wrapRight: box.right, noTravel: wrap.scrollWidth <= wrap.clientWidth,
+          statuses: [...wrap.querySelectorAll('tbody tr')].map(tr => {
+            const cell = tr.lastElementChild!.getBoundingClientRect();
+            return {text: tr.lastElementChild!.textContent!.trim(), left: cell.left, right: cell.right};
+          }),
+        };
+      }));
+      for (const group of cells) {
+        expect(group.noTravel, 'the table fits its wrapper').toBe(true);
+        expect(group.statuses.length).toBeGreaterThan(0);
+        for (const s of group.statuses) {
+          expect(s.text.length, 'a status is written').toBeGreaterThan(0);
+          expect(s.left).toBeGreaterThanOrEqual(0);
+          expect(s.right).toBeLessThanOrEqual(Math.min(360, group.wrapRight) + 0.5);
+        }
+      }
+      const widths = await overflow(page);
+      expect(widths.doc).toBeLessThanOrEqual(widths.inner);
+      await expect(wraps.first().locator('table thead th[scope="col"]')).toHaveCount(4);
+    });
+  }
+
+  test('the Spanish status page marks the English-as-published names lang="en" and nothing translated', async ({page}) => {
+    await open(page, 'status', '/status?lang=es');
+    await expect(page.locator('#status-rows th[scope="row"][lang="en"]', {hasText: 'GOES East and West longwave infrared imagery'})).toHaveCount(1);
+    await expect(page.locator('#status-coverage li[lang="en"]', {hasText: 'NOAA ENC display service'})).toHaveCount(1);
+    await expect(page.locator('#status-rows th[scope="row"]', {hasText: 'Condiciones en vivo'})).not.toHaveAttribute('lang', /./);
   });
 
   test('the licences and sources tables are in their own named scrollers', async ({page}) => {
@@ -182,5 +195,37 @@ test.describe('at 360 px', () => {
       await expect(wrap.locator('table')).toHaveCount(1);
       expect(await wrap.evaluate(node => getComputedStyle(node).overflowX)).toBe('auto');
     }
+  });
+});
+
+// Above the phone layout (480 px) the status tables keep their natural width and scroll inside their own named wrapper.
+test.describe('at 520 px', () => {
+  test.use({viewport: {width: 520, height: 740}, isMobile: false, hasTouch: false});
+
+  test('every status group scrolls inside its own wrapper, by keyboard, without moving the page', async ({page}) => {
+    const index = await (await page.request.get('/regions/index.json')).json();
+    for (const region of index.regions) region.name = 'W'.repeat(120);   // an unbreakable name wider than the viewport
+    await page.route('**/regions/index.json', route => route.fulfill({json: index}));
+    await open(page, 'status', '/status');
+    const wraps = page.locator('#status-rows .forecast-table-wrap');
+    expect(await wraps.count()).toBeGreaterThanOrEqual(3);
+    for (const info of await wraps.evaluateAll(nodes => nodes.map(node => ({
+      overflowX: getComputedStyle(node).overflowX, role: node.getAttribute('role'), tabindex: node.getAttribute('tabindex'),
+      name: node.getAttribute('aria-label'), tables: node.querySelectorAll(':scope > table').length, width: node.getBoundingClientRect().width,
+    })))) {
+      expect(info).toMatchObject({overflowX: 'auto', role: 'region', tabindex: '0', tables: 1});
+      expect(info.name).toMatch(/ data table$/);
+      expect(info.width).toBeLessThanOrEqual(520);
+    }
+    const wide = wraps.first();
+    expect(await wide.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+    await wide.focus();
+    for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
+    await expect.poll(() => wide.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+    const widths = await overflow(page);
+    expect(widths.doc).toBeLessThanOrEqual(widths.inner);
+    expect(widths.x).toBe(0);
+    await expect(wide.locator('table thead th[scope="col"]')).toHaveCount(4);
+    await expect(wide.locator('tbody th[scope="row"]', {hasText: 'Buoys: WWWW'})).toHaveCount(index.regions.length);
   });
 });

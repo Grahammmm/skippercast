@@ -3,22 +3,33 @@
 
     run_region.py <region> --out <OUT> --through <stage> [--norm <NORM>]
                   [--scope public] [--region-config FILE]
+                  [--census FILE --census-sha256 HEX]
                   [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
                   [--basemap PMTILES] [--qa-support TIF] [--qa-fine-proof ZOOM TIF ...]
+    run_region.py <region> --out <OUT> --through <stage> --inputs FILE
     run_region.py <region> [--out <OUT>] --dry-run  # preview the full chain without stage inputs
 
 Runs ``region.py <stage> --region <region> --out <OUT>`` through the requested stage::
 
     select mosaic tiles zone digests inventory contours nearshore_vectors package shots qa envelope
 
-Normalize separately, per source. Select reads the resulting cache. Package reads the
-inventory and its public producer receipts, including the unscoped contours receipt
+With --census, census-bind runs before select. Normalize separately, per source. Select reads
+the resulting cache. Zone fills omitted coarse and water paths from done stage receipts;
+when using stage coarse it defaults the source ID to the family in the receipted coarse.json.
+Package reads the inventory and its public producer receipts, including the unscoped contours receipt
 for style provenance. Contour files remain QA evidence, not release layers. A held
 contours stage stops the chain before package. Shots needs a local basemap and performs receipt-bound MB-08
 capture. The runner checks ``region.py status --json`` after package and shots: QA uses
 the exact package release hash and the shots stage's own generation, while the envelope
 uses the package generation. No caller-supplied manifest, evidence path for shots, or
 release identity can replace these handoffs.
+After a successful envelope stage, the runner prints that region's read-only R8 packet.
+A NOT READY packet exits 1 without changing the written envelope.
+
+--inputs loads a sc-run-inputs/1 JSON record for the positional region. Listed files are
+SHA-256 checked as a group before any stage, even if the chain stops early. Paths use the
+same working-directory and ~ rules as flags. Use flags only for values not set by the record
+(null metadata does not set an option). Dry runs report the record digest and each file verdict.
 
 Each stage is a subprocess under ``nice -n 19 ionice -c3``. The run stops at the first stage
 that exits non-zero, names that stage and its code, and exits with the same code (a code
@@ -47,14 +58,15 @@ processes (``python3 -u run_region.py`` included) is repeated before every stage
 When the cap state cannot be established (``/proc`` unreadable, slot directory not safely
 ours) the run is refused, exit 3.
 
-``--dry-run`` prints the chain and the state of every guard and runs nothing: it creates no
-file or directory. Nothing here downloads, uploads, pushes or publishes, and this script writes
+``--dry-run`` prints the chain and the state of every guard. With an output root it also
+previews the region's receipt-based rebuild plan. It runs nothing and creates no file or
+directory. Nothing here downloads, uploads, pushes or publishes, and this script writes
 only the lock file inside ``OUT/<region>/`` and the two slot files. The stages themselves keep
 their own receipts.
 
 Exit codes: 0 chain complete (or dry run), 2 usage error or stage not available, 3 a guard
-refused, 5 region already running or two runs already on the box (3 when that cannot be established), anything else is the code of
-the stage that failed.
+or input check refused, 5 region already running or two runs already on the box (3 when
+that cannot be established), anything else is the code of the stage that failed.
 """
 import argparse
 from dataclasses import dataclass, field
@@ -75,12 +87,14 @@ DEFAULT_NORM = '/mnt/agentorange-backup/seafloor-relief-cache/_norm'  # select's
 SCOPED_STAGES = ('mosaic', 'tiles', 'zone', 'nearshore_vectors')
 STAGES = ('select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'nearshore_vectors',
           'package', 'shots', 'qa', 'envelope')
-STAGE_INPUTS = {'zone': ('coarse', 'water', 'coarse-source'), 'shots': ('basemap',)}
+ZONE_STAGE_INPUTS = {'--coarse': 'coarse', '--water': 'water', '--coarse-source': 'coarse'}
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 HEX64 = re.compile(r'[0-9a-f]{64}')
 LOCK_NAME = '.run_region.lock'
-# file-valued options: fixed once by parse() so the guard and the stage see the same spelling
-PATH_OPTIONS = ('region_config', 'coarse', 'water', 'basemap', 'qa_support')
+# file-valued options: the guard and the stage see the same spelling
+PATH_OPTIONS = ('region_config', 'coarse', 'water', 'basemap', 'qa_support', 'census')
+RECORD_FILES = frozenset(PATH_OPTIONS) - {'region_config'}
+RECORD_METADATA = ('coarse_source', 'coarse_date', 'norm')
 GB = 10 ** 9
 STOP_FILE_NAMES = ('LOCAL-STOP', 'UNITFEED-STOP')
 
@@ -127,6 +141,7 @@ class Config:
     python: str = sys.executable
     free_bytes: object = field(default=_default_free_bytes)
     pid: int = field(default_factory=os.getpid)
+    r8_packet_py: Path = Path(__file__).resolve().with_name('r8_packet.py')
 
 
 def effective_norm(option, environ=None):
@@ -173,6 +188,83 @@ def under(path, root):
     return False
 
 
+def basemap_allowed(cfg, path):
+    roots = [real(p) for p in cfg.basemap_roots]
+    paths = (Path(os.path.abspath(path)), real(path))
+    return all(any(p.is_relative_to(root) for root in roots) for p in paths)
+
+
+def unique_object(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError(f'duplicate key {key!r}')
+        obj[key] = value
+    return obj
+
+
+def load_inputs(args, parser):
+    """Validate the closed record and CLI conflicts before inspecting any listed input."""
+    try:
+        path = Path(spelled(args.inputs))
+        if not path.is_file():
+            raise ValueError('not a regular file')
+        raw = path.read_bytes()
+        doc = json.loads(raw, object_pairs_hook=unique_object)
+        if (not isinstance(doc, dict) or doc.keys() != {'schema', 'region', 'inputs', *RECORD_METADATA}
+                or doc['schema'] != 'sc-run-inputs/1' or not isinstance(doc['inputs'], dict)):
+            raise ValueError('expected a sc-run-inputs/1 object with schema, region, inputs, coarse_source, coarse_date and norm')
+        if doc['region'] != args.region:
+            raise ValueError(f'region {doc["region"]!r} does not match {args.region!r}')
+        pins, options = {}, {}
+        for name, entry in doc['inputs'].items():
+            if name not in RECORD_FILES:
+                raise ValueError(f'unknown input {name!r}')
+            if not isinstance(entry, dict) or entry.keys() != {'path', 'sha256'} or not isinstance(entry['path'], str):
+                raise ValueError(f'{name}: expected path and sha256')
+            digest = entry['sha256']
+            if not isinstance(digest, str) or not HEX64.fullmatch(digest.lower()):
+                raise ValueError(f'{name}: sha256 must be 64 hexadecimal digits')
+            pins[name] = digest.lower()
+            options[name] = entry['path']
+        if 'census' in pins:
+            options['census_sha256'] = pins['census']
+        for name in RECORD_METADATA:
+            value = doc[name]
+            if value is not None:
+                if not isinstance(value, str):
+                    raise ValueError(f'{name} must be a string or null')
+                options[name] = value
+        for name in options:
+            if getattr(args, name) is not None:
+                raise ValueError(f'also supplied --{name.replace("_", "-")} on the command line')
+    except (OSError, ValueError, RecursionError) as exc:
+        parser.error(f'--inputs {args.inputs}: {exc}')
+        raise  # argparse.error exits
+    for name, value in options.items():
+        setattr(args, name, value)
+    return hashlib.sha256(raw).hexdigest(), pins
+
+
+def input_problem(cfg, name, path, digest):
+    # NUL is valid JSON but cannot name a filesystem path; realpath itself raises on it.
+    if '\x00' in path:
+        return f'{path!r} is missing or not a regular file'
+    # Hashing opens the file earlier than a stage would; honor the same read boundaries first.
+    if under(path, cfg.forbidden_root):
+        return f'{path} is under {cfg.forbidden_root}'
+    if name == 'basemap' and not basemap_allowed(cfg, path):
+        return f'{path} must be in an allowed read root'
+    try:
+        if not os.path.isfile(path):
+            return f'{path} is missing or not a regular file'
+        with open(path, 'rb') as handle:
+            actual = hashlib.file_digest(handle, 'sha256').hexdigest()
+    except OSError as exc:
+        return f'cannot read {path}: {exc.strerror}'
+    return None if actual == digest else f'{path} expected sha256 {digest}, got {actual}'
+
+
 def chain_through(through):
     return STAGES[:STAGES.index(through) + 1]
 
@@ -182,7 +274,9 @@ def stage_command(cfg, stage, region, out, extra=None):
             *(extra or {}).get(stage, ())]
 
 
-def steps_through(through):
+def steps_through(through, extra):
+    if 'census-bind' in extra:
+        yield 'census-bind', None
     for stage in chain_through(through):
         yield stage, None
         if stage in ('package', 'shots'):
@@ -206,6 +300,8 @@ def stage_extras(args, out):
                '--shots', str(root / 'shots/<shots-generation>/shots.json')],
         'envelope': ['--generation', '<generation>'],
     }
+    if args.census:
+        extra['census-bind'] = ['--from', args.census, '--sha256', args.census_sha256]
     for stage in SCOPED_STAGES:
         extra[stage] = ['--scope', args.scope]
     if args.region_config:
@@ -224,11 +320,51 @@ def stage_extras(args, out):
 def missing_inputs(args, through):
     """``[(stage, [flag, ...])]`` for every stage of the chain whose required inputs were not given."""
     rows = []
-    for stage in chain_through(through):
-        names = [name for name in STAGE_INPUTS.get(stage, ()) if not getattr(args, name.replace('-', '_'))]
-        if names:
-            rows.append((stage, [f'--{name}' for name in names]))
+    chain = chain_through(through)
+    if 'zone' in chain and args.coarse and not args.coarse_source:
+        rows.append(('zone', ['--coarse-source']))
+    if 'shots' in chain and not args.basemap:
+        rows.append(('shots', ['--basemap']))
     return rows
+
+
+def bind_zone_inputs(cfg, out, region, zone):
+    """Fill only omitted options from verified producer outputs, just before zone."""
+    flags = zone[::2]
+    if '--coarse' in flags and '--water' in flags:
+        return
+
+    from skippercast.relief import receipts
+
+    receipt_region = receipts.Region(out, region)
+
+    def outputs(stage, *names):
+        verdict = receipts.check(receipt_region, stage)
+        if not verdict.done or verdict.receipt is None:
+            raise ValueError(f'{stage} is not done ({verdict.state}: {verdict.reason})')
+        for name in names:
+            paths = [receipt_region.resolve(item['path']) for item in verdict.receipt['outputs']
+                     if Path(item['path']).name == name]
+            if len(paths) != 1:
+                raise ValueError(f'{stage} receipt must name one {name} output')
+            if under(paths[0], cfg.forbidden_root):
+                raise ValueError(f'{stage} output {name} is under {cfg.forbidden_root}')
+            yield str(paths[0])
+
+    if '--coarse' not in flags:
+        if '--coarse-source' in flags:
+            coarse, = outputs('coarse', 'coarse-3310.tif')
+        else:
+            coarse, report = outputs('coarse', 'coarse-3310.tif', 'coarse.json')
+            doc = json.loads(Path(report).read_bytes())
+            family = doc.get('family') if isinstance(doc, dict) else None
+            if not isinstance(family, str) or not family.strip():
+                raise ValueError('coarse.json has no family')
+            zone += ['--coarse-source', family]
+        zone += ['--coarse', coarse]
+    if '--water' not in flags:
+        water, = outputs('water', 'water.geojson')
+        zone += ['--water', water]
 
 
 def attested_generation(raw, region, stage):
@@ -307,9 +443,7 @@ def check_guards(cfg, out, norm, inputs=(), *, basemap=None):
         checks.append(('input-path', not bad, f'{path} is {"" if bad else "not "}under {cfg.forbidden_root}'))
     if basemap is not None and not under(basemap, cfg.forbidden_root):
         # Both the lexical/comparable path and its actual target must be inside admitted read roots.
-        roots = [real(p) for p in cfg.basemap_roots]
-        paths = (Path(os.path.abspath(basemap)), real(basemap))
-        allowed = all(any(path.is_relative_to(root) for root in roots) for path in paths)
+        allowed = basemap_allowed(cfg, basemap)
         try:
             ok = allowed and Path(basemap).is_file()
         except OSError:
@@ -463,7 +597,32 @@ def say(text):
     print(text, flush=True)
 
 
-def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap):
+def show_rebuild_plan(cfg, out, region):
+    if __package__:
+        from . import rebuild_plan as report
+    else:
+        import rebuild_plan as report
+
+    stages = out / region / 'stages'
+    if under(out, cfg.forbidden_root) or under(stages, cfg.forbidden_root):
+        say('rebuild plan unavailable: receipt directory is under the forbidden root')
+        return
+    try:
+        # The planner reads every *.json receipt, including scoped and symlinked files.
+        if any(under(path, cfg.forbidden_root) for path in stages.glob('*.json')):
+            say('rebuild plan unavailable: receipt is under the forbidden root')
+            return
+        rows = report._region_plan(out, region, report._stage_digests())
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+        say(f'rebuild plan unavailable: {exc}')
+        return
+    say('rebuild plan (from receipts):')
+    for row in rows:
+        reasons = ', '.join(row['reasons']) or '-'
+        say(f"  {row['stage']} {row['action']} ({reasons})")
+
+
+def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap, *, show_plan):
     source_root = Path(__file__).resolve().parents[2] / 'src'
     if str(source_root) not in sys.path:
         sys.path.insert(0, str(source_root))
@@ -477,11 +636,31 @@ def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap):
         say(f'  REFUSE tiles style: {exc}')
         if 'tiles' in chain_through(through):
             missing = [*missing, ('tiles', ('valid render recipe',))]
+    if 'census-bind' in extra:
+        say('inputs for census-bind: --census (option), --census-sha256 (option)')
+    if 'zone' in chain_through(through):
+        zone = extra['zone']
+        flags = zone[::2]
+        sources = []
+        for flag, producer in ZONE_STAGE_INPUTS.items():
+            if flag in flags:
+                sources.append(f'{flag} (option)')
+            elif flag == '--coarse-source' and '--coarse' in flags:
+                sources.append(f'{flag} (missing option)')
+            else:
+                sources.append(f'{flag} (stage {producer})')
+                label = 'family' if flag == '--coarse-source' else 'output'
+                zone += [flag, f'<{producer} {label}>']
+        say('inputs for zone: ' + ', '.join(sources))
     say('chain (in order, each as a subprocess under ' + ' '.join(cfg.prefix) + '):')
-    for index, (stage, attest) in enumerate(steps_through(through), 1):
+    for index, (stage, attest) in enumerate(steps_through(through, extra), 1):
         note = f'  # verify {attest}' if attest else ''
         say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, extra))}{note}')
     say('not run: ' + ', '.join(STAGES[STAGES.index(through) + 1:]) if through != STAGES[-1] else 'not run: (none)')
+    if through == 'envelope':
+        say('r8 packet: after envelope')
+    if show_plan:
+        show_rebuild_plan(cfg, out, region)
     say('guards (re-checked before every stage):')
     refused = bool(missing)
     for stage, flags in missing:
@@ -529,7 +708,8 @@ def run_chain(cfg, region, out, norm, through, extra, inputs, basemap):
         return code
     problems = refusal(cfg, out, norm, inputs, basemap)  # before any lock, so a refused run leaves no file behind
     if problems:
-        say('run_region: refused before ' + STAGES[0] + ': ' + '; '.join(problems))
+        first = 'census-bind' if 'census-bind' in extra else STAGES[0]
+        say(f'run_region: refused before {first}: ' + '; '.join(problems))
         return EXIT_REFUSED
     try:
         slot = acquire_slot(cfg)  # the atomic box-wide cap; the /proc scan above is only a second check
@@ -545,6 +725,23 @@ def run_chain(cfg, region, out, norm, through, extra, inputs, basemap):
         os.close(slot)
 
 
+def print_r8_packet(cfg, region, out):
+    command = [*cfg.prefix, cfg.python, '-B', str(cfg.r8_packet_py), '--out', str(out), region]
+    try:
+        result = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors='replace')
+    except OSError as exc:
+        reason = f'cannot start the command: {exc}'
+    else:
+        print(result.stdout, end='', flush=True)
+        if not result.returncode:
+            return 0
+        heading = f'NOT READY {region}: '
+        reason = (result.stdout.rstrip('\n').removeprefix(heading) if result.stdout.startswith(heading)
+                  else result.stderr.strip() or f'r8_packet.py exit {result.returncode}')
+    say(f'run_region: envelope written but R8 packet NOT READY: {reason}')
+    return 1
+
+
 def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
     try:
         fd = acquire_lock(cfg, out, region)
@@ -555,7 +752,7 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
         say(f'run_region: refused: region {region} already has a run (lock {lock_path(out, region)})')
         return EXIT_RUNNING
     try:
-        for stage, attest in steps_through(through):
+        for stage, attest in steps_through(through, extra):
             problems = refusal(cfg, out, norm, inputs, basemap)
             if problems:
                 say(f'run_region: refused before {stage}: ' + '; '.join(problems))
@@ -564,6 +761,12 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
                 code, detail = cap
                 say(f'run_region: refused before {stage}: {detail}')
                 return code
+            if stage == 'zone':
+                try:
+                    bind_zone_inputs(cfg, out, region, extra['zone'])
+                except (OSError, ValueError) as exc:
+                    say(f'run_region: refused before zone: {exc}')
+                    return EXIT_REFUSED
             command = stage_command(cfg, stage, region, out, extra)
             label = f'status for {attest}' if attest else stage
             say(f'run_region: stage {label}: ' + ' '.join(command))
@@ -592,7 +795,8 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
             say(f'run_region: STOPPED at {label}: exit {code}')
             return code if 0 < code < 256 else 1
         say(f'run_region: {region} complete through {through}')
-        return 0
+        # Keep the region lock until the packet has read the just-built evidence.
+        return print_r8_packet(cfg, region, out) if through == 'envelope' else 0
     finally:
         os.close(fd)  # releases the lock
 
@@ -614,20 +818,31 @@ def parse(argv):
     parser.add_argument('--qa-fine-proof', nargs=2, action='append', metavar=('ZOOM', 'PATH'),
                         help='qa option: fine-support raster for zoom 16 or 17 (z16/z17 also accepted; qa receives 16/17); repeat per zoom')
     parser.add_argument('--region-config', help='region config file for select, mosaic, tiles and zone (default: regions/<id>/region.json)')
-    parser.add_argument('--coarse', help='zone input: EPSG:3310 coarse elevation TIFF (needed when the chain reaches zone)')
-    parser.add_argument('--water', help='zone input: reviewed WGS84 ocean-water GeoJSON (needed when the chain reaches zone)')
-    parser.add_argument('--coarse-source', help='zone input: provenance id of --coarse (needed when the chain reaches zone)')
+    parser.add_argument('--census', help='local census to bind before select')
+    parser.add_argument('--census-sha256', help='expected SHA-256 of --census (required with --census)')
+    parser.add_argument('--coarse', help='zone input: EPSG:3310 elevation TIFF (defaults to done coarse output)')
+    parser.add_argument('--water', help='zone input: WGS84 ocean-water GeoJSON (defaults to done water output)')
+    parser.add_argument('--coarse-source', help='zone source ID (required with --coarse; otherwise defaults to the coarse family)')
     parser.add_argument('--coarse-date', help='zone input: optional date of --coarse')
+    parser.add_argument('--inputs', metavar='FILE', help='region input record (sc-run-inputs/1), with SHA-256 pinned files')
     parser.add_argument('--dry-run', action='store_true', help='print the chain and the guard state; run nothing')
     args = parser.parse_args(argv)
+    if args.inputs is None:
+        resolve_options(args, parser)
+    return parser, args
+
+
+def resolve_options(args, parser, pins=()):
+    if bool(args.census) != bool(args.census_sha256):
+        parser.error('--census and --census-sha256 must be given together')
     args.norm = effective_norm(args.norm)  # resolved once: guarded and forwarded as the very same path
     # every file input is likewise fixed once here: the spelling the guard resolves is the spelling forwarded
     for name in PATH_OPTIONS:
-        if getattr(args, name):
+        if name in pins or getattr(args, name):
             setattr(args, name, spelled(getattr(args, name)))
     if args.qa_fine_proof:
         args.qa_fine_proof = [(fine_zoom(parser, zoom), spelled(path)) for zoom, path in args.qa_fine_proof]
-    return parser, args
+
 
 
 def main(argv=None, cfg=None):
@@ -650,6 +865,23 @@ def main(argv=None, cfg=None):
     out = Path(os.path.abspath(os.path.expanduser(args.out))) if args.out is not None else Path('<OUT>')
     if args.out is not None and not out.is_dir():
         parser.error(f'--out {out} is not an existing directory')
+    if args.inputs is not None:
+        if under(args.inputs, cfg.forbidden_root):
+            say(f'run_region: refused --inputs: {args.inputs} is under {cfg.forbidden_root}')
+            return EXIT_REFUSED
+        record_digest, pins = load_inputs(args, parser)
+        resolve_options(args, parser, pins)
+        checks = {name: input_problem(cfg, name, getattr(args, name), pin) for name, pin in pins.items()}
+        if args.dry_run:
+            say(f'inputs from {args.inputs} (sha256 {record_digest})')
+            for name, problem in checks.items():
+                say(f'  {name}: MISMATCH ({problem})' if problem else f'  {name}: ok')
+        else:
+            for name, problem in checks.items():
+                if problem:
+                    say(f'run_region: refused input {name}: {problem}')
+        if any(checks.values()):
+            return EXIT_REFUSED
     norm = args.norm
     missing = missing_inputs(args, args.through)
     if missing and not full_preview:
@@ -657,11 +889,18 @@ def main(argv=None, cfg=None):
     if args.out is None:
         missing = [('pipeline', ('--out',)), *missing]
     extra = stage_extras(args, out)
-    # the very spellings stage_extras forwards (parse fixed them), so guard and child see one path
+    # the very spellings stage_extras forwards, so guard and child see one path
     inputs = [Path(p) for p in (*(getattr(args, name) for name in PATH_OPTIONS),
                                 *(path for _, path in args.qa_fine_proof or ())) if p]
     if args.dry_run:
-        return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing, args.basemap)
+        # Lazy imports for the preview must not create bytecode caches on a cold checkout.
+        previous = sys.dont_write_bytecode
+        sys.dont_write_bytecode = True
+        try:
+            return dry_run(cfg, args.region, out, norm, args.through, extra, inputs, missing, args.basemap,
+                           show_plan=args.out is not None)
+        finally:
+            sys.dont_write_bytecode = previous
     try:
         return run_chain(cfg, args.region, out, norm, args.through, extra, inputs, args.basemap)
     except KeyboardInterrupt:
@@ -670,4 +909,6 @@ def main(argv=None, cfg=None):
 
 
 if __name__ == '__main__':
+    # Prefer this checkout, as region.py does, for receipt verification.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src'))
     sys.exit(main())

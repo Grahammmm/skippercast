@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from io import BytesIO
 import json
 from pathlib import Path
 import socket
@@ -13,6 +14,29 @@ from scripts import site_uptime_alert as uptime
 
 T0 = datetime(2026, 11, 1, 20, 0, tzinfo=timezone.utc)
 OK = {"/api/health": (200, '{"ok": true}'), "/": (200, "<html>"), "/map": (200, "<html>")}
+MANIFEST = "/feeds/tiles/seafloor/manifest-morro-bay.json"
+READY = {"region": "morro-bay", "status": "ready", "expires_at": "2099-01-01T00:00:00Z"}
+BASE = "https://alarm.example"
+
+
+class FetchResponse(BytesIO):
+    headers = {"X-Synthetic": "header-canary"}
+    url = "https://response.example/url-canary"
+
+    def __init__(self, status, body):
+        super().__init__(body)
+        self.status = status
+
+    def geturl(self):
+        return self.url
+
+
+def mock_fetch(routes):
+    """An opener serving synthetic HTTP replies without touching the network."""
+    def open_response(req, timeout):
+        return FetchResponse(*routes[req.full_url.removeprefix(BASE)])
+
+    return mock.patch.object(uptime.request, "build_opener", return_value=mock.Mock(open=mock.Mock(side_effect=open_response)))
 
 
 class FakeSite:
@@ -92,22 +116,93 @@ class SiteUptimeTest(unittest.TestCase):
         self.assertEqual(code, 0)
         return json.loads(self.report.read_text())
 
-    def test_seafloor_manifest_needs_ready_region_and_current_expiry(self):
-        path = "/feeds/tiles/seafloor/manifest-morro-bay.json"
-        good = {"region": "morro-bay", "status": "ready", "expires_at": "2099-01-01T00:00:00Z"}
-        bodies = [good, {**good, "status": "held"}, {**good, "region": "other"},
-                  {**good, "expires_at": "2020-01-01T00:00:00Z"}, {**good, "expires_at": "2099-01-01"},
-                  {**good, "expires_at": None}, [], {}, "not a manifest"]
-        for index, body in enumerate(bodies):
+    def assert_manifest(self, body, reason):
+        with mock_fetch({MANIFEST: (200, json.dumps(body).encode())}):
+            self.assertEqual(uptime.probe(BASE, MANIFEST),
+                             {"path": MANIFEST, "status": 200, "error": reason} if reason else None)
+
+    def test_c1_not_ready(self):
+        self.assert_manifest({**READY, "status": "held"}, "habitat not ready")
+
+    def test_c1_another_region(self):
+        self.assert_manifest({**READY, "region": "other"}, "habitat for another region")
+
+    def test_c1_expired(self):
+        for expiry in ("2020-01-01T00:00:00Z", "2099-01-01"):
+            with self.subTest(expiry=expiry):
+                self.assert_manifest({**READY, "expires_at": expiry}, "habitat expired")
+
+    def test_c1_manifest_unreadable(self):
+        for body in ({**READY, "expires_at": None}, {"status": "held", "expires_at": READY["expires_at"]},
+                     [], {}, "not a manifest"):
             with self.subTest(body=body):
-                site = FakeSite({path: (200, json.dumps(body))})
-                self.addCleanup(site.server.server_close)
-                self.addCleanup(site.server.shutdown)
-                result = uptime.probe(site.base, path)
-                if index == 0:
-                    self.assertIsNone(result)
-                else:
-                    self.assertEqual(result, {"path": path, "status": 200, "error": "habitat unavailable"})
+                self.assert_manifest(body, "habitat manifest unreadable")
+
+    def test_c3_ready_manifest_is_up(self):
+        self.assert_manifest(READY, None)
+
+    def test_c2_a_200_failure_changes_the_create_body_even_after_a_503(self):
+        failures = [{"path": "/map", "status": 503}, {"path": "/api/health", "status": 200, "error": "not JSON"}]
+        self.assertEqual(uptime.plan(failures, [], T0), [("create", "Site is down",
+            "The site did not answer, or answered without usable data, on:\n- /map 503\n- /api/health not JSON 200\n\n"
+            "This issue is the alert: it is not repeated every hour. A `still: N h` comment follows every 6 h "
+            "while it stays down, and the issue closes when the site answers again.")])
+
+    def test_c3_manifest_retry_issue_lifecycle_and_success_exit(self):
+        sleeps = []
+        argv = ["--base", BASE, "--report", str(self.report), "--paths", MANIFEST, "--label", "coast-data-down",
+                "--title", "Coast data path is down", "--subject", "the coast data service"]
+        held = json.dumps({**READY, "status": "held"}).encode()
+        with mock_fetch({MANIFEST: (200, held)}) as fetch:
+            for hour in (0, 5, 6, 6):
+                self.now = T0 + timedelta(hours=hour)
+                self.assertEqual(uptime.main(argv, runner=self.gh, now=self.now, sleep=sleeps.append), 0)
+            self.assertEqual([call.args[0].full_url for call in fetch.return_value.open.call_args_list], [BASE + MANIFEST] * 8)
+        with mock_fetch({MANIFEST: (200, json.dumps(READY).encode())}):
+            self.now = T0 + timedelta(hours=7, minutes=30)
+            self.assertEqual(uptime.main(argv, runner=self.gh, now=self.now, sleep=sleeps.append), 0)
+        self.assertEqual(sleeps, [20, 20, 20, 20])
+        self.assertEqual(self.gh.writes(), [
+            ("issue", "create", "--label", "coast-data-down", "--title", "Coast data path is down", "--body",
+             "The coast data service did not answer, or answered without usable data, on:\n"
+             f"- {MANIFEST} habitat not ready 200\n\n"
+             "This issue is the alert: it is not repeated every hour. A `still: N h` comment follows every 6 h "
+             "while it stays down, and the issue closes when the coast data service answers again."),
+            ("issue", "comment", "1", "--body", f"still: 6 h - still down:\n- {MANIFEST} habitat not ready 200"),
+            ("issue", "close", "1", "--comment", "Recovered: the coast data service was down for 7 h 30 min."),
+        ])
+
+    def test_c3_unexpected_manifest_probe_error_is_not_a_down_alert(self):
+        argv = ["--base", BASE, "--report", str(self.report), "--paths", MANIFEST]
+        with mock.patch.object(uptime.request, "build_opener", side_effect=RuntimeError("synthetic probe crash")):
+            with self.assertRaises(RuntimeError) as raised:
+                uptime.main(argv, runner=self.gh, now=T0)
+        self.assertEqual((type(raised.exception), str(raised.exception)), (RuntimeError, "synthetic probe crash"))
+        self.assertEqual((self.report.exists(), self.gh.calls), (False, []))
+
+    def test_c4_manifest_precedence_and_no_response_text_in_issue(self):
+        tainted = {"status": "held\nstatus-canary", "region": "other\nregion-canary", "expires_at": "2020-01-01\nexpiry-canary"}
+        cases = ((tainted, "habitat manifest unreadable"),
+                 ({**tainted, "expires_at": "2020-01-01T00:00:00Z"}, "habitat not ready"),
+                 ({**tainted, "expires_at": "2020-01-01T00:00:00Z", "status": "ready"}, "habitat for another region"))
+        for body, reason in cases:
+            with self.subTest(reason=reason), mock_fetch({MANIFEST: (200, json.dumps(body).encode())}):
+                failure = uptime.probe(BASE, MANIFEST)
+                self.assertEqual(failure, {"path": MANIFEST, "status": 200, "error": reason})
+                self.assertEqual(uptime.plan([failure], [], T0), [("create", "Site is down",
+                    "The site did not answer, or answered without usable data, on:\n"
+                    f"- {MANIFEST} {reason} 200\n\n"
+                    "This issue is the alert: it is not repeated every hour. A `still: N h` comment follows every 6 h "
+                    "while it stays down, and the issue closes when the site answers again.")])
+
+    def test_c4_site_down_issue_body_is_byte_identical_without_200_failures(self):
+        with mock_fetch({"/api/health": (503, b"body-canary")}):
+            failure = uptime.probe(BASE, "/api/health")
+        self.assertEqual(failure, {"path": "/api/health", "status": 503})
+        self.assertEqual([(action, title, body.encode()) for action, title, body in uptime.plan([failure], [], T0)],
+                         [("create", "Site is down", b"The site did not answer on:\n- /api/health 503\n\n"
+                           b"This issue is the alert: it is not repeated every hour. A `still: N h` comment follows every 6 h "
+                           b"while it stays down, and the issue closes when the site answers again.")])
 
     def test_all_up_reports_up_and_makes_no_write_call(self):
         report = self.run_once(self.site())

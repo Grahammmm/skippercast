@@ -48,8 +48,23 @@ def index_unique(rows, label):
     return result
 
 
+def require_atlas_shape(data):
+    """Refuse a malformed atlas document by name before any row is indexed."""
+    require(isinstance(data, dict), "Atlas document must be a JSON object")
+    version = data.get("schema_version")
+    require(isinstance(version, int) and not isinstance(version, bool),
+            "Atlas schema_version must be an integer")
+    for key in ("sources", "targets", "areas", "drifts"):
+        rows = data.get(key)
+        require(isinstance(rows, list), f"Atlas {key} must be a list")
+        require(all(isinstance(r, dict) for r in rows), f"Atlas {key} must be a list of objects")
+        require(all(isinstance(r.get("id"), str) for r in rows),
+                f"Atlas {key} rows must each have a string id")
+
+
 def validate(data):
     """Check data consistency and recorded evidence; do not revalidate the sea floor."""
+    require_atlas_shape(data)
     require(data["schema_version"] == 1, "Unsupported atlas schema")
     require(data["fishing_depth_limit_ft"] == 200, "This edition uses a 200-foot ceiling")
     sources = index_unique(data["sources"], "source")

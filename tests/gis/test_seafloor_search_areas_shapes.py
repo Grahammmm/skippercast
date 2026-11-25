@@ -59,6 +59,27 @@ class MisshapedPropertiesTests(unittest.TestCase):
         self.assertTrue(published_contract(self.changed(hold_reasons=[])))
         self.assertFalse(published_contract(self.changed(hold_reasons=['rights'])))
 
+    def test_out_of_range_integer_rejects_only_that_area(self):
+        # Contract: one malformed row is "not admitted", never an exception that
+        # aborts the batch. Bug caught: math.isfinite(10**400) raising OverflowError
+        # out of assessment()/published_contract() (support, min depth, max depth).
+        for field in ('metric_support_fraction', 'depth_min_ft', 'depth_max_ft'):
+            for big in (10**400, -10**400):
+                p = self.changed(**{field: big})
+                with self.subTest(field=field, big=big > 0):
+                    self.assertIsNone(assessment(p))
+                    self.assertFalse(published_contract(p))
+
+    def test_out_of_range_integer_does_not_affect_next_area(self):
+        # Control: a batch keeps admitting valid areas around a bad one with
+        # byte-identical output. Bug caught: the guard dropping or altering a valid area.
+        before = repr(assessment(self.p))
+        rows = [self.changed(depth_max_ft=10**400), self.p,
+                self.changed(metric_support_fraction=-10**400)]
+        self.assertEqual([published_contract(r) for r in rows], [False, True, False])
+        self.assertEqual(repr(assessment(self.p)), before)
+        self.assertEqual(self.p['search_area'], assessment(self.p))
+
     def test_misshaped_input_not_mutated(self):
         p = self.changed(screen='pass', tier=True)
         before = deepcopy(p)

@@ -12,16 +12,18 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
+import {signal} from '@preact/signals';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {distanceNm} from '../dist/spot-ranking.js';
 import {assessScreen} from '../web/map/habitat.ts';
 import {LAYERS, layerEntry} from '../web/map/layers.ts';
-import {REACH_LABEL, REACH_LINE, REACH_SOURCE, reachFeatures, reachLabel, reachOverlay} from '../web/map/reach.ts';
+import {MARK_PICK, markData} from '../web/map/marks.ts';
+import {REACH_LABEL, REACH_LINE, REACH_SOURCE, createReach, reachFeatures, reachLabel, reachOverlay} from '../web/map/reach.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {harborOrigin, ranking} from '../web/ranking.ts';
 import * as reach from '../web/reach.ts';
-import {configureStore, STORAGE_KEYS} from '../web/state.ts';
+import {configureStore, profile, region, STORAGE_KEYS} from '../web/state.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
@@ -115,6 +117,77 @@ test('the Chart ring: a dashed line and one label, drawn only with a harbor and 
   assert.ok(ids.indexOf('reach') < ids.indexOf('marks'), 'under the marks');
   assert.deepEqual(layerEntry('reach').sources, [REACH_SOURCE]);
   assert.doesNotMatch(layerEntry('reach').basis + layerEntry('reach').legend[0].label, /safe|reachable|guarantee/i);
+});
+
+// A controller that only updates the new engine leaves the old ring registered;
+// disposing its effects alone also leaves the final ring behind.
+test('the Chart ring belongs only to the current engine and is withdrawn on destroy', () => {
+  const unrelated = {};
+  const harbor = {name: 'Fixture Harbor', latitude: 35.36, longitude: -120.86};
+  const palette = {blue: '#246', bg: '#fff'};
+  // A recording engine like the preview-layer fake; the camera stays fixed across the handoff.
+  function fakeEngine() {
+    const overlays = new Map([['unrelated', unrelated]]), idle = new Set();
+    return {overlays, idle, removals: [], updates: [],
+      setOverlay(id, overlay, before) {
+        if (overlay) { assert.equal(before, MARK_PICK); overlays.set(id, overlay); }
+        else { this.removals.push(id); overlays.delete(id); }
+      },
+      setData(id, data) { assert.equal(id, REACH_SOURCE); this.updates.push(data); },
+      rendered: id => Number(id === REACH_LINE && overlays.has('reach')),
+      view: {on(type, fn) { assert.equal(type, 'idle'); idle.add(fn); return () => idle.delete(fn); }},
+    };
+  }
+  const saved = [region.value, profile.value, markData.value, reach.reachRange.value];
+  const observed = [];
+  try {
+    for (const viaNull of [false, true]) {
+      region.value = 'morro-fixture'; profile.value = 'boat';
+      markData.value = {region: {id: region.value, harbor}};
+      reach.reachRange.value = {boat: 2};
+      const a = fakeEngine(), b = fakeEngine(), engine = signal(a), host = {dataset: {}};
+      const layer = createReach({engine, host, palette: () => palette});
+      try {
+        const first = a.overlays.get('reach');
+        assert.ok(first, 'initial mount draws a ring');
+        for (const fn of a.idle) fn();
+        assert.equal(host.dataset.reachDrawn, '1');
+        reach.reachRange.value = {boat: 3};
+        assert.equal(a.overlays.get('reach'), first, 'same-engine redraw updates data in place');
+        const label = a.updates.at(-1).features[1].properties.label;
+        assert.equal(label, '3 nm from Fixture Harbor · straight line, not a route');
+        if (viaNull) engine.value = null;
+        const duringNull = viaNull && a.overlays.has('reach');
+        engine.value = b;
+        const replaced = [a.overlays.has('reach'), b.overlays.has('reach')];
+        assert.equal(a.idle.size, 0);
+        assert.equal(b.updates.at(-1).features[1].properties.label, label);
+        const [lastIdle] = b.idle;
+        lastIdle();
+        assert.equal(host.dataset.reachDrawn, '1');
+
+        region.value = 'other-fixture';
+        assert.equal(b.overlays.has('reach'), false, 'new region must not use the old region’s harbor');
+        markData.value = {region: {id: region.value, harbor: {...harbor, name: 'Other Harbor'}}};
+        assert.equal(b.updates.at(-1).features[1].properties.label, '3 nm from Other Harbor · straight line, not a route');
+
+        const updates = a.updates.length + b.updates.length;
+        layer.destroy();
+        const removals = b.removals.length;
+        layer.destroy();
+        lastIdle(); // An idle dispatch that already captured its callbacks must stay inert.
+        reach.reachRange.value = {boat: 4};
+        engine.value = a;
+        assert.equal(b.idle.size + a.idle.size, 0);
+        assert.equal(a.updates.length + b.updates.length, updates);
+        assert.equal(b.removals.length, removals, 'second destroy does not touch the engine');
+        assert.equal(a.overlays.get('unrelated'), unrelated);
+        assert.equal(b.overlays.get('unrelated'), unrelated);
+        observed.push({viaNull, duringNull, replaced, destroyed: b.overlays.has('reach'), oldRemovals: a.removals, dataset: {...host.dataset}});
+      } finally { layer.destroy(); }
+    }
+  } finally { [region.value, profile.value, markData.value, reach.reachRange.value] = saved; }
+  assert.deepEqual(observed, [false, true].map(viaNull => ({viaNull, duringNull: false, replaced: [false, true], destroyed: false, oldRemovals: ['reach'], dataset: {}})));
 });
 
 let mod;

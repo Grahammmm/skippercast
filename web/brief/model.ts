@@ -43,6 +43,9 @@ export const LOCAL_REPORT_LINE = {
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+/** The advisory row's hazard onset: carried when it is text, marked unreadable when present but not text (never the message time). */
+const hazardOnset = (value: unknown): Pick<Alert, 'onset' | 'unreadableHazardTime'> =>
+  typeof value === 'string' && value ? {onset: value} : value == null || value === '' ? {} : {unreadableHazardTime: ['onset']};
 const compass = (deg: number | null | undefined) => finite(deg) ? COMPASS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]! : null;
 
 function tile(id: TileId, label: string, value: number | null, unit: string, detail: string, source: Pick<SourceStatus, 'label' | 'url'> | null, at: string | null, limitMs: number, now: Date, lastGood = false, display?: TileDisplay): BriefTile {
@@ -116,7 +119,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     const surf = shoreHour && shoreHour.surf.band !== 'Unknown'
       ? ` · ${shoreHour.surf.band.toLowerCase()} surf${shoreHour.surf.basis === 'offshore' ? ' (offshore estimate)' : ''}${shoreHour.surf.sneaker ? ' · long-period swell' : ''}` : '';
     swell = tile('swell', 'Swell', point?.waveFt ?? null, 'ft', (site ? `${finite(point?.periodS) ? `${periodSecondsText(point.periodS)} s · ` : ''}${site.name}` : 'No nearshore model site') + surge + surf,
-      site ? {label: site.name, url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now, false,
+      site ? {label: 'Scripps/CDIP', url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now, false,
       {parts: [...(site ? [...(finite(point?.periodS) ? [{kind: 'literal', text: `${periodSecondsText(point.periodS)} s`} as TileDetailPart] : []), {kind: 'literal', text: site.name} as TileDetailPart] : [{kind: 'noNearshore'} as TileDetailPart]),
         ...(surgeHour && surgeHour.surge.band !== 'Unknown' ? [{kind: 'surge', band: surgeHour.surge.band} as TileDetailPart] : []),
         ...(shoreHour && shoreHour.surf.band !== 'Unknown' ? [{kind: 'surf', band: shoreHour.surf.band, offshore: shoreHour.surf.basis === 'offshore'} as TileDetailPart, ...(shoreHour.surf.sneaker ? [{kind: 'longSwell'} as TileDetailPart] : [])] : [])],
@@ -158,7 +161,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area, now), fleet,
     localReport: basis === 'coast-report' ? {available: true, text: LOCAL_REPORT_LINE.available} : {available: false, text: LOCAL_REPORT_LINE.unavailable},
-    spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, limits: daily.limits, alerts: daily.alerts, missing: daily.missing, gaps: context.gaps ?? [], tides: daily.tides, tideEvents: daily.tideEvents, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
+    spear: daily.spear, shore: daily.shore, bar: daily.bar, kayak: daily.kayak, limits: daily.limits, alerts: daily.alerts, missing: daily.missing, gaps: context.gaps ?? [], tides: daily.tides, tideEvents: daily.tideEvents, entranceTide: {events: report.tideEvents, fresh: tide.state === 'fresh', source: tide.source}, tideDatum: datum, sunrise: daily.sunrise, sunset: daily.sunset,
   };
 }
 
@@ -286,6 +289,7 @@ export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForec
   const alerts: Alert[] = advisories.flatMap(source => ((source.data?.alerts as Record<string, unknown>[] | undefined) ?? []).map(row => ({
     id: String(row.id), event: String(row.event), headline: String(row.headline ?? row.event), description: '',
     effective: typeof row.effective === 'string' ? row.effective : null, expires: typeof (row.ends ?? row.expires) === 'string' ? String(row.ends ?? row.expires) : null, url: source.url,
+    ...hazardOnset(row.onset),
   })));
   const alertCheck = advisories.length ? advisories.reduce((a, b) => Date.parse(a.checked_at) <= Date.parse(b.checked_at) ? a : b) : undefined;
   const sources: SourceStatus[] = [];

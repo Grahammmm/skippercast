@@ -1,17 +1,20 @@
-// THEME-D3 part 1 of 2 — not full-map acceptance.
+// THEME-D3 part 2 of 2 — checkpoint, not full-map acceptance.
 // Covered: observed Chart paints with night/ENC bases, seafloor, contours,
-// stations, condition selection and admin fleet; marks admission and terrain
-// registry output (not rendered marks).
-// DEFERRED (web/map/ unless otherwise specified): bottom relief/survey detail
-// (bottom-relief.ts, survey-detail.ts); nearshore rings (nearshore.ts, swell.ts);
-// public charter/AIS (charter-grounds.ts, commercial-ais.ts); shore/reach/route
-// (shore.ts, reach.ts, planning-route.ts); study previews (preview-layers.ts,
-// preview/); current particles (currents.ts, flow.ts); built-app marks rendering
-// and drape (marks.ts, stage.ts); 3D material/camera parity (stage.ts,
-// packages/coast/src/coast3d/viewer.ts).
+// stations, condition selection, nearshore rings, admin fleet and shore
+// runs/access; marks admission and terrain registry output (not rendered marks).
+// DEFERRED in this checkpoint (web/map/ unless otherwise specified):
+// - Bottom relief (bottom-relief.ts): no authenticated synthetic raster and tile index wired here yet.
+// - Survey detail (survey-detail.ts, web/app/MapStage.tsx): the app does not supply the verified sidecar to attachBottomRelief.
+// - Public charter/AIS (charter-grounds.ts, commercial-ais.ts): no synthetic regional asset and ready protected-area screen established yet.
+// - Reach/route (reach.ts, planning-route.ts): no synthetic reach response and generated route journey wired yet.
+// - Study previews (preview-layers.ts, preview/): no synthetic admitted preview receipt wired yet.
+// - Current particles (currents.ts, flow.ts): the Chart style snapshot cannot see the separate canvas paint.
+// - Built-app marks rendering/drape (marks.ts, stage.ts): part 1 qualifies the atlas and registry, not renderer consumption.
+// - 3D material/camera parity (stage.ts, packages/coast/src/coast3d/viewer.ts): no synthetic 3D scene and material observation wired yet.
 // DEFERRED: not mountable offline — aerial (aerial.ts, web/app/MapStage.tsx).
 import process from 'node:process';
 import {expect, test} from '@playwright/test';
+import {REGION_READ_TIMEOUT_MS} from '../web/app/region-info.ts';
 import {bindThemeFixture, FIRST, NEXT, NOW, serveThemeApp, snapshot, type Theme} from './theme-d3-fixture.ts';
 import {buildMarksProbe, marksManifest, qualifyMarksInputs, serveMarksArm, type MarksArm} from './theme-d3-marks.ts';
 
@@ -64,7 +67,7 @@ test('marks fixture manifest refuses a wrong digest before launch', async ({}, i
 // or a theme switch rebuilding sources instead of updating the mounted map.
 const other = (theme: Theme): Theme => theme === 'light' ? 'dark' : 'light';
 const view = '35.38000,-120.88000,12';
-const link = (region: string, layers: string, base: string, camera: string) => `/map?ui=v2&region=${region}&profile=boat&base=${base}&view=${camera}&presentation=chart&layers=${layers}&diagnostics=1`;
+const link = (region: string, layers: string, base: string, camera: string, profile: string) => `/map?ui=v2&region=${region}&profile=${profile}&base=${base}&view=${camera}&presentation=chart&layers=${layers}&diagnostics=1`;
 const ids = (shot: Awaited<ReturnType<typeof snapshot>>) => shot.layers.map(({id}) => id);
 type Shot = Awaited<ReturnType<typeof snapshot>>;
 function stalePaint(live: Shot, fresh: Shot) {
@@ -90,114 +93,151 @@ const rendered = (page: import('@playwright/test').Page, source: string) => page
 const frameBoundary = (page: import('@playwright/test').Page) => page.evaluate(() =>
   new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 
+// Use the real Shore profile. A selected profile alone would miss the
+// regression where a loaded package never reaches either live source.
+const plan = [{layers: 'stations', base: 'night', camera: view, profile: 'shore'},
+  {layers: choices[0]!, base: 'chart', camera: '35.16889,-120.75417,12', profile: 'boat'},
+  ...choices.map(layers => ({layers, base: 'night', camera: view, profile: 'boat'}))];
+
+// Each pair navigates to a different map and proves its own mount. Give it a
+// fresh context and its own deadline instead of summing nine page loads.
 for (const starting of ['dark', 'light'] as const) {
-  test(`mounted map stays in place and matches fresh ${other(starting)} paint (starts ${starting})`, async ({browser}, info) => {
-    // Eight paired full-page journeys plus the held-region transition share
-    // this deadline; individual readiness and request assertions stay bounded.
-    test.setTimeout(180_000);
-    const phone = info.project.name === 'phone';
-    const viewport = phone ? {width: 390, height: 844} : {width: 1200, height: 800};
-    const server = await serveThemeApp();
-    const contexts = await Promise.all([starting, other(starting)].map(colorScheme => browser.newContext({viewport, colorScheme,
-      hasTouch: phone, isMobile: phone, reducedMotion: 'reduce', serviceWorkers: 'block'})));
-    try {
-      const [live, fresh] = await Promise.all(contexts.map(context => context.newPage()));
-      await Promise.all([live, fresh].map(page => page.clock.setFixedTime(NOW)));
-      const data = await bindThemeFixture(contexts[0], server.origin, starting, process.env.D3_STALE_PAINT === '1');
-      const reference = await bindThemeFixture(contexts[1], server.origin, other(starting));
-
-      const plan = [{layers: choices[0]!, base: 'chart', camera: '35.16889,-120.75417,12'},
-        ...choices.map(layers => ({layers, base: 'night', camera: view}))];
-      for (const {layers, base, camera} of plan) {
-        await test.step(`${base}/${layers}`, async () => {
-          const loadBoundary = data.requests.length;
-          await live.emulateMedia({colorScheme: starting});
-          const url = server.origin + link(FIRST, layers, base, camera);
-          await Promise.all([live, fresh].map(page => page.goto(url)));
-          await Promise.all([live, fresh].map(page => page.waitForFunction(() => window.d3Chart?.isStyleLoaded() && window.d3Chart?.areTilesLoaded(), null, {timeout: 10_000})));
-          await Promise.all([live, fresh].map(page => enableFleet(page, phone)));
-
-          await Promise.all([live, fresh].map(settled));
-          await Promise.all([live, fresh].map(page => page.waitForLoadState('networkidle')));
-          if (base === 'chart' || base === 'night' && layers === choices[0]) {
-            const source = base === 'chart' ? 'stations' : 'depth-contours';
+  for (const {layers, base, camera, profile} of plan) {
+    test(`${profile}/${base}/${layers}: mounted map stays in place and matches fresh ${other(starting)} paint (starts ${starting})`, async ({browser}, info) => {
+      const phone = info.project.name === 'phone';
+      const viewport = phone ? {width: 390, height: 844} : {width: 1200, height: 800};
+      const server = await serveThemeApp();
+      const contexts = await Promise.all([starting, other(starting)].map(colorScheme => browser.newContext({viewport, colorScheme,
+        hasTouch: phone, isMobile: phone, reducedMotion: 'reduce', serviceWorkers: 'block'})));
+      try {
+        const [live, fresh] = await Promise.all(contexts.map(context => context.newPage()));
+        await Promise.all([live, fresh].map(page => page.clock.setFixedTime(NOW)));
+        const data = await bindThemeFixture(contexts[0], server.origin, starting, process.env.D3_STALE_PAINT === '1');
+        const reference = await bindThemeFixture(contexts[1], server.origin, other(starting));
+        const toggle = async (theme: Theme) => {
+          await live.emulateMedia({colorScheme: theme});
+          await live.waitForFunction(expected => (document.documentElement.dataset.theme ?? 'dark') === expected, theme);
+        };
+        const duringRegionLoad = async () => {
+          // Hold both real readers before popstate. Use a per-transition request
+          // boundary, so an earlier visit cannot satisfy the held-load control.
+          const fixtures = [data, reference];
+          const seen = fixtures.map(f => f.seen.length);
+          fixtures.forEach(f => f.hold());
+          try {
+            await toggle(starting);
+            await Promise.all([live, fresh].map(page => page.evaluate(({region, deadline}) => {
+              // The app gives up on region.json after REGION_READ_TIMEOUT_MS and
+              // then fails open (RF0850-2), so a slow runner used to see NEXT chart
+              // files mid-hold. Hold that deadline with region.json: its timers fire
+              // only after release, and the app's own deadline is left unchanged.
+              const held = window as Window & {d3Held?: {on: boolean; armed: number}};
+              const state = held.d3Held = {on: true, armed: 0};
+              const set = window.setTimeout, clear = window.clearTimeout, cancel = new Map<number, () => void>();
+              window.setTimeout = ((handler: TimerHandler, ms?: number, ...args: unknown[]) => {
+                if (ms !== deadline || typeof handler !== 'function' || !state.on) return set(handler, ms, ...args);
+                state.armed++;
+                let active = true;
+                const fire = () => { if (active) { if (state.on) set(fire, 50); else handler(...args); } };
+                const id = set(fire, ms);
+                cancel.set(id, () => { active = false; });
+                return id;
+              }) as typeof window.setTimeout;
+              window.clearTimeout = ((id?: number) => { if (id !== undefined) cancel.get(id)?.(); clear(id); }) as typeof window.clearTimeout;
+              const url = new URL(location.href);
+              url.searchParams.set('region', region);
+              history.pushState({}, '', url);
+              dispatchEvent(new PopStateEvent('popstate'));
+            }, {region: NEXT, deadline: REGION_READ_TIMEOUT_MS})));
+            await expect.poll(() => fixtures.every((f, i) => f.seen.slice(seen[i]).includes(`/regions/${NEXT}/region.json`))).toBe(true);
+            // Prove the app's region read deadline is the timer being held.
             for (const page of [live, fresh]) {
-              await expect.poll(() => rendered(page, source), `${source} draws actual features`).toBeGreaterThan(0);
+              expect(await page.evaluate(() => (window as Window & {d3Held?: {armed: number}}).d3Held?.armed), 'held region read deadline').toBeGreaterThan(0);
             }
+            await expect.poll(async () => {
+              const count = data.requests.length;
+              await live.waitForFunction(() => window.d3Chart?.loaded());
+              await frameBoundary(live);
+              return data.requests.length - count;
+            }).toBe(0);
+            const before = await snapshot(live), boundary = data.requests.length;
+            await toggle(other(starting));
+            await frameBoundary(live);
+            const after = await snapshot(live), target = await snapshot(fresh);
+            expect.soft(data.requests.slice(boundary), 'new requests with next region held').toEqual([]);
+            expect.soft(ids(after)).toEqual(ids(before));
+            expect.soft([...ids(after)].sort()).toEqual([...ids(target)].sort());
+            expect.soft(after.camera).toEqual(before.camera);
+            expect.soft(after.images).toEqual(before.images);
+            expect.soft(after.duplicates).toEqual([]);
+            expect.soft(stalePaint(after, target), 'stale paint with next region held').toEqual([]);
+          } finally {
+            fixtures.forEach(f => f.release());
+            await Promise.all([live, fresh].map(page => page.evaluate(() => {
+              const held = (window as Window & {d3Held?: {on: boolean}}).d3Held;
+              if (held) held.on = false;
+            }).catch(() => {})));
           }
-          const before = await snapshot(live), target = await snapshot(fresh);
-          console.log(`${info.project.name}/${starting}/${layers}: ${before.layers.length} Chart layers, sources ${before.sources.join(', ')}`);
-          expect(before.theme).toBe(starting);
-          expect(target.theme).toBe(other(starting));
-          expect(before.layers.length).toBeGreaterThan(0);
-          expect(before.layers).not.toEqual(target.layers);
-          expect(before.sources).toEqual(expect.arrayContaining(['fleet-heat', 'fleet-tracks', 'fleet-events']));
-          if (base === 'chart') expect(await live.evaluate(() => window.d3Chart.getLayoutProperty('chart-enc', 'visibility'))).toBe('visible');
-          expect([...ids(before)].sort()).toEqual([...ids(target)].sort());
-          expect(data.requests.slice(loadBoundary).some(path => path.endsWith('.pmtiles'))).toBe(true);
-          if (!process.env.CI && layers === choices[0] && base === 'night') {
-            await live.screenshot({path: info.outputPath(`${starting}.png`)});
+        };
+
+        const loadBoundary = data.requests.length;
+        const swell = layers.startsWith('swell,');
+        for (const fixture of [data, reference]) fixture.nearshore(swell);
+        await live.emulateMedia({colorScheme: starting});
+        const url = server.origin + link(FIRST, layers, base, camera, profile);
+        await Promise.all([live, fresh].map(page => page.goto(url)));
+        await Promise.all([live, fresh].map(page => page.waitForFunction(() => window.d3Chart?.isStyleLoaded() && window.d3Chart?.areTilesLoaded(), null, {timeout: 10_000})));
+        if (profile === 'boat') await Promise.all([live, fresh].map(page => enableFleet(page, phone)));
+
+        await Promise.all([live, fresh].map(settled));
+        await Promise.all([live, fresh].map(page => page.waitForLoadState('networkidle')));
+        const positive = profile === 'shore' ? ['shore-runs', 'shore-access']
+          : base === 'chart' ? ['stations'] : layers === choices[0] ? ['depth-contours']
+          : swell ? ['swell-nearshore'] : [];
+        for (const source of positive) {
+          for (const page of [live, fresh]) {
+            await expect.poll(() => rendered(page, source), `${source} draws actual features`).toBeGreaterThan(0);
           }
-          const boundary = data.requests.length;
-          for (let i = 0; i < 10; i++) {
-            const next = i % 2 === 0 ? other(starting) : starting;
-            await live.emulateMedia({colorScheme: next});
-            await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, next);
-          }
-          await frameBoundary(live);
-          const afterTen = await snapshot(live);
-          expect.soft(data.requests.slice(boundary), 'new requests after ten switches').toEqual([]);
-          expect.soft(afterTen).toEqual(before);
-          await live.emulateMedia({colorScheme: other(starting)});
-          await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, other(starting));
-          await frameBoundary(live);
-          const switched = await snapshot(live);
-          expect.soft(data.requests.slice(boundary), 'new requests after final switch').toEqual([]);
-          expect.soft(switched.camera).toEqual(before.camera);
-          expect.soft(switched.sources).toEqual(before.sources);
-          expect.soft(ids(switched)).toEqual(ids(before));
-          expect.soft(switched.images).toEqual(before.images);
-          expect.soft(switched.duplicates).toEqual([]);
-          expect.soft(stalePaint(switched, target), 'stale paint vs fresh page').toEqual([]);
-        });
-      }
-      // Trigger the same real popstate transition in the switched and fresh
-      // documents, but keep both response bodies held until after comparison.
-      await live.emulateMedia({colorScheme: starting});
-      await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, starting);
-      await Promise.all([live, fresh].map(page => page.evaluate(region => {
-        const url = new URL(location.href);
-        url.searchParams.set('region', region);
-        history.pushState({}, '', url);
-        dispatchEvent(new PopStateEvent('popstate'));
-      }, NEXT)));
-      await expect.poll(() => [data, reference].every(fixture => fixture.seen.includes(`/regions/${NEXT}/region.json`))).toBe(true);
-      // Region selection itself starts independent readers. Drain those (apart
-      // from the gated definition) before taking a theme-only request baseline.
-      await expect.poll(async () => {
-        const count = data.requests.length;
-        await live.waitForFunction(() => window.d3Chart?.loaded());
+        }
+        const before = await snapshot(live), target = await snapshot(fresh);
+        console.log(`${info.project.name}/${starting}/${layers}: ${before.layers.length} Chart layers, sources ${before.sources.join(', ')}`);
+        expect(before.theme).toBe(starting);
+        expect(target.theme).toBe(other(starting));
+        expect(before.layers.length).toBeGreaterThan(0);
+        expect(before.layers).not.toEqual(target.layers);
+        if (profile === 'boat') expect(before.sources).toEqual(expect.arrayContaining(['fleet-heat', 'fleet-tracks', 'fleet-events']));
+        if (base === 'chart') expect(await live.evaluate(() => window.d3Chart.getLayoutProperty('chart-enc', 'visibility'))).toBe('visible');
+        expect([...ids(before)].sort()).toEqual([...ids(target)].sort());
+        expect(data.requests.slice(loadBoundary).some(path => path.endsWith('.pmtiles'))).toBe(true);
+        if (!process.env.CI && layers === choices[0] && base === 'night') {
+          await live.screenshot({path: info.outputPath(`${starting}.png`)});
+        }
+        const boundary = data.requests.length;
+        for (let i = 0; i < 10; i++) {
+          const next = i % 2 === 0 ? other(starting) : starting;
+          await live.emulateMedia({colorScheme: next});
+          await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, next);
+        }
         await frameBoundary(live);
-        return data.requests.length - count;
-      }).toBe(0);
-      const pendingBefore = await snapshot(live), pendingBoundary = data.requests.length;
-      await live.emulateMedia({colorScheme: other(starting)});
-      await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, other(starting));
-      await frameBoundary(live);
-      const pendingAfter = await snapshot(live);
-      const pendingFresh = await snapshot(fresh);
-      expect.soft(data.requests.slice(pendingBoundary), 'new requests with next region held').toEqual([]);
-      expect.soft(ids(pendingAfter)).toEqual(ids(pendingBefore));
-      expect.soft([...ids(pendingAfter)].sort()).toEqual([...ids(pendingFresh)].sort());
-      expect.soft(pendingAfter.camera).toEqual(pendingBefore.camera);
-      expect.soft(pendingAfter.images).toEqual(pendingBefore.images);
-      expect.soft(pendingAfter.duplicates).toEqual([]);
-      expect.soft(stalePaint(pendingAfter, pendingFresh), 'stale paint with next region held').toEqual([]);
-      data.release();
-      reference.release();
-    } finally {
-      await Promise.all(contexts.map(context => context.close()));
-      server.close();
-    }
-  });
+        const afterTen = await snapshot(live);
+        expect.soft(data.requests.slice(boundary), 'new requests after ten switches').toEqual([]);
+        expect.soft(afterTen).toEqual(before);
+        await live.emulateMedia({colorScheme: other(starting)});
+        await live.waitForFunction(theme => (document.documentElement.dataset.theme ?? 'dark') === theme, other(starting));
+        await frameBoundary(live);
+        const switched = await snapshot(live);
+        expect.soft(data.requests.slice(boundary), 'new requests after final switch').toEqual([]);
+        expect.soft(switched.camera).toEqual(before.camera);
+        expect.soft(switched.sources).toEqual(before.sources);
+        expect.soft(ids(switched)).toEqual(ids(before));
+        expect.soft(switched.images).toEqual(before.images);
+        expect.soft(switched.duplicates).toEqual([]);
+        expect.soft(stalePaint(switched, target), 'stale paint vs fresh page').toEqual([]);
+        if (profile === 'shore' || swell || layers === choices.at(-1)) await duringRegionLoad();
+      } finally {
+        await Promise.all(contexts.map(context => context.close()));
+        server.close();
+      }
+    });
+  }
 }

@@ -7,7 +7,9 @@ const EDGE = 8;
 /**
  * A cover counts if its four numbers are finite, it overlaps `host` and spans at least half its width; one at
  * the top edge (within 8 px) pads the top, one at the bottom edge pads the bottom, one at both (a full sheet) neither.
- * A band under `minBand` px shrinks both in proportion to exactly `minBand`; a host under `minBand` pads nothing.
+ * Edge coverage is measured on the visible intersection with the host.
+ * If needed, shrink both pads proportionally to leave at least `minBand` px; a host under `minBand` pads nothing.
+ * If that shrink would carry the camera centre out of a visible gap between the covers, the centre stays on the gap midpoint instead.
  */
 export function openBandPadding(host: Box, covers: readonly Box[], minBand = 160): {top: number; bottom: number; left: 0; right: 0} {
   const height = host.bottom - host.top, width = host.right - host.left;
@@ -17,17 +19,35 @@ export function openBandPadding(host: Box, covers: readonly Box[], minBand = 160
   if (!(height >= minBand)) return {top, bottom, left: 0, right: 0};
   for (const c of covers) {
     if (![c.top, c.bottom, c.left, c.right].every(Number.isFinite)) continue;
-    if (c.bottom <= host.top || c.top >= host.bottom || c.right <= host.left || c.left >= host.right) continue;
-    if (Math.min(c.right, host.right) - Math.max(c.left, host.left) < width / 2) continue;
-    const atTop = Math.abs(c.top - host.top) <= EDGE, atBottom = Math.abs(c.bottom - host.bottom) <= EDGE;
-    if (atTop && !atBottom) top = Math.max(top, c.bottom - host.top);
-    else if (atBottom && !atTop) bottom = Math.max(bottom, host.bottom - c.top);
+    const visibleTop = Math.max(c.top, host.top), visibleBottom = Math.min(c.bottom, host.bottom);
+    const visibleWidth = Math.min(c.right, host.right) - Math.max(c.left, host.left);
+    if (visibleTop >= visibleBottom || visibleWidth <= 0 || visibleWidth < width / 2) continue;
+    const atTop = visibleTop - host.top <= EDGE, atBottom = host.bottom - visibleBottom <= EDGE;
+    if (atTop && !atBottom) top = Math.max(top, visibleBottom - host.top);
+    else if (atBottom && !atTop) bottom = Math.max(bottom, host.bottom - visibleTop);
   }
   const clamp = (v: number): number => Math.round(Math.min(Math.max(v, 0), height));
   top = clamp(top); bottom = clamp(bottom);
-  if (height - top - bottom < minBand) {
-    top = Math.round(top * (height - minBand) / (top + bottom));
-    bottom = Math.round(height - minBand - top);
+  const budget = Math.max(0, Math.floor(height - minBand));
+  if (top + bottom > budget) {
+    const gapTop = top, gapBottom = height - bottom, gapOpen = gapBottom > gapTop;
+    top = Math.round(gapTop * budget / (gapTop + bottom));
+    bottom = budget - top;
+    // The camera centre is (top + height - bottom) / 2. The proportional shrink above can carry it out of a visible gap (130..144 on
+    // a 844 px host landed on 187, behind the sheet). Rule: then keep the centre on the unshrunk gap midpoint, which needs
+    // top - bottom = gapTop - (height - gapBottom); with top + bottom = budget that gives top = (budget + that) / 2, clamped to 0..budget.
+    // The open band stays at least `minBand` wide around the point the user centred on and the pads stay within budget.
+    // Whole-px pads of the full budget put the centre on a half pixel only when top - bottom + height is odd, so a 1 px gap
+    // (130..131 on 844 px) landed on its edge, 131. Then spend one pixel less of the budget: the centre can be 130.5.
+    const inGap = (): boolean => { const c = (top + height - bottom) / 2; return c > gapTop && c < gapBottom; };
+    if (gapOpen && !inGap()) {
+      for (const spend of [budget, budget - 1]) {
+        if (spend < 0) continue;
+        top = Math.min(Math.max(Math.round((spend + gapTop - (height - gapBottom)) / 2), 0), spend);
+        bottom = spend - top;
+        if (inGap()) break;
+      }
+    }
   }
   return {top, bottom, left: 0, right: 0};
 }

@@ -1,6 +1,6 @@
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
-// Match the timestamp grammar of pastDayGate without depending on the draw gate.
-const INSTANT = /^((?:\d{4}|[+-]\d{6})-\d{2}-\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.(\d+))?)?(?:Z|[+-]\d{2}:?\d{2})$/;
+// Require canonical clock fields like the dock calendar; Date.parse rolls 24:00 into tomorrow.
+const INSTANT = /^((?:\d{4}|[+-]\d{6})-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.(\d+))?)?(?:Z|[+-]\d{2}:?\d{2})$/;
 
 function isCalendarDate(day: string): boolean {
   const midnight = new Date(`${day}T00:00:00Z`);

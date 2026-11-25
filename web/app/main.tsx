@@ -14,6 +14,7 @@ import {savedHomeURL} from '../ports.ts';
 import {followStoredLimits, loadCruise, loadLimits} from '../limits.ts';
 import {loadLaunch, loadReach, loadSpear} from '../reach.ts';
 import {startTrip} from '../trip.ts';
+import {bindShellTitle} from './LanguageChoice.tsx';
 import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo, regionLoad} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
 import {failVerdictMetadata, beginVerdictRegion, bindBriefReport, currentBrief, ensureRegionalForecast, enableSavedBrief, noteRegionInfo, loadDailyFeed, needsDailyLoad, savedBrief, showSavedBrief, verdictEpoch} from '../brief/Brief.tsx';
@@ -61,13 +62,15 @@ width.addEventListener('change', event => { narrow.value = event.matches; });
 /** The first render (in the page language, its table ready) and what follows it. initReadyLanguage never rejects. */
 async function start(): Promise<void> {
   await ready;
+  bindShellTitle(document);   // SC2052-05: the tab title in the page language, from here on
   effect(() => beginVerdictRegion(region.value));
   const host = document.getElementById('app');
   if (host) { host.replaceChildren(); render(<App />, host); }
-  // SC1407-08 (#1762 M3): a /map page that opens on the Chart starts fetching its library as soon as the map may load (SCB-11: after
-  // the first verdict), not when the Chart mounts. The Chart imports this same module (web/map/chart.ts), so the browser loads it once
-  // and the Chart reports any failure.
-  if (host && location.pathname === '/map' && region.peek() && shownPresentation.peek() === 'chart') whenMapMayLoad(() => void import('../map/maplibre.js').catch(() => {}));
+  // A /map page that opens on the Chart loads its library and starts its workers as soon as the verdict gate allows it.
+  // This is best-effort; the Chart shares the same lazy module and still reports its own failures.
+  if (host && location.pathname === '/map' && region.peek() && shownPresentation.peek() === 'chart') {
+    whenMapMayLoad(() => void import('../map/maplibre.js').then(module => module.prewarm()).catch(() => {}));
+  }
   // FE-51: after the render, so `#export` finds the planner's host.
   startTrip();
 

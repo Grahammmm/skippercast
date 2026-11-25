@@ -5,13 +5,14 @@
 import type {Brief} from './types.ts';
 import {Popover} from '../ui/Popover.tsx';
 import {region} from '../state.ts';
+import {units} from '../unit-choice.ts';
 import {language, t} from '../i18n.ts';
 import {regionalForecast} from './Brief.tsx';
 import {entranceCurrentView} from './entrance-current.ts';
 
 export function EntranceCurrent({brief, tz, now}: {brief: Brief; tz: string; now: Date}) {
   const lang = language.value;
-  const view = entranceCurrentView({brief, forecast: regionalForecast.value, region: region.value, tz, now, lang});
+  const view = entranceCurrentView({brief, forecast: regionalForecast.value, region: region.value, tz, now, lang, heightUnit: units.value.height});
   if (!view) return null;
   return (
     <div class="app-entrance" role="group" aria-label={t('entrance.aria', lang)} data-band={view.band}>

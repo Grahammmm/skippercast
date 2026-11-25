@@ -1,4 +1,4 @@
-// RF1831-6: the chlorophyll preview withholds images whose geographic bounds are not one valid rectangle. Offline: fake engine, fake fetch.
+// RF1831-6 / SCA1123-1701-10: withhold chlorophyll with invalid bounds or legend order. Offline: fake engine, fake fetch.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -20,17 +20,17 @@ test('chlorophyll_invalid_rectangles_are_rejected', () => {
   assert.ok(readChlorophyll(edge) === edge, 'the whole-world rectangle is still valid and returned unchanged');
 });
 
-function run(bounds) {
+function run(input) {
   const calls = [], reports = [], abort = new AbortController();
   const engine = {setOverlay: (id, overlay) => calls.push([id, overlay])};
-  const fetchFn = async () => new Response(JSON.stringify(doc(bounds)), {status: 200});
+  const fetchFn = async () => new Response(JSON.stringify(input), {status: 200});
   const ctx = {engine, fetchFn, now: () => NOW, palette: () => ({text: '#eee', bgDeep: '#111'}), url: p => new URL(p, 'https://x.test/app').href, signal: abort.signal, report: s => reports.push(s)};
   return {ctx, calls, reports};
 }
 
 test('chlorophyll_invalid_bounds_never_draw_or_report_ready', async () => {
   for (const [name, b] of Object.entries(BAD)) {
-    const {ctx, calls, reports} = run(b);
+    const {ctx, calls, reports} = run(doc(b));
     const handle = await attach(ctx).catch(err => err);
     if (handle && typeof handle.destroy === 'function') handle.destroy(); // old behaviour: stop the expiry timer so the run ends
     assert.ok(handle instanceof Error && /chlorophyll file is not valid/.test(handle.message), name);
@@ -39,8 +39,28 @@ test('chlorophyll_invalid_bounds_never_draw_or_report_ready', async () => {
   }
 });
 
+test('chlorophyll_non_increasing_legend_never_draws_or_reports_ready', async t => {
+  // The end labels use min/max but the gradient uses publisher order; a reversed ramp can put the high colour at the low end.
+  for (const [name, legend] of Object.entries({
+    reversed: [[100, '#ffee00'], [0.01, '#112233']],
+    duplicate: [[0.01, '#112233'], [0.01, '#336699'], [100, '#ffee00']],
+  })) {
+    await t.test(name, async () => {
+      const input = doc([-121, 35, -120, 36]);
+      input.style.legend = legend;
+      const {ctx, calls, reports} = run(input);
+      const result = await attach(ctx).catch(err => err);
+      try {
+        assert.deepEqual(reports, [], 'invalid legend must not report ready');
+        assert.deepEqual(calls, [], 'invalid legend must not mount an overlay');
+        assert.match(result?.message ?? '', /chlorophyll file is not valid/);
+      } finally { result?.destroy?.(); }
+    });
+  }
+});
+
 test('chlorophyll_valid_rectangle_keeps_corners_and_ramp', async () => {
-  const {ctx, calls, reports} = run([-121, 35, -120, 36]);
+  const {ctx, calls, reports} = run(doc([-121, 35, -120, 36]));
   const handle = await attach(ctx);
   try {
     assert.equal(calls.length, 1);
@@ -48,8 +68,7 @@ test('chlorophyll_valid_rectangle_keeps_corners_and_ramp', async () => {
     assert.ok(JSON.stringify(src.coordinates) === JSON.stringify([[-121, 36], [-120, 36], [-120, 35], [-121, 35]]), 'corners');
     assert.ok(src.url.endsWith('chlorophyll.png'), 'image path');
     assert.equal(reports.at(-1).state, 'ready');
-    assert.equal(reports.at(-1).ramp.low, '0.01 mg/m³');
-    assert.equal(reports.at(-1).ramp.high, '100+');
+    assert.deepEqual(reports.at(-1).ramp, {colours: ['#112233', '#ffee00'], low: '0.01 mg/m³', high: '100+'});
   } finally { handle.destroy(); }
   assert.equal(calls.at(-1)[1], null, 'destroy removes the overlay');
 });

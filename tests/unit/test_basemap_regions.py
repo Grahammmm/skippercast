@@ -1,4 +1,6 @@
 """The Chart basemap plan, manifest, publication and workflow (FE-10, design § 4)."""
+import contextlib
+import io
 import json
 from pathlib import Path
 import re
@@ -147,6 +149,31 @@ class ManifestAndPublishTests(unittest.TestCase):
             regions.manifest(self.planned, self.dir / 'other.pmtiles', 1)
         with self.assertRaises(ValueError):
             regions.content_key('20261008', 'A' * 64)
+
+    def test_manifest_command_points_only_at_a_pmtiles_v3_archive(self):
+        # Contract: the pointer certifies a readable PMTiles v3 archive, not just a file of the right name and size.
+        # Bug caught: the command hashes whatever sits under the planned name, so a same-size file with a corrupted
+        # header (or a v2 archive) gets a valid-looking pointer with a matching size and hash.
+        fixture = (ROOT / 'tests/fixtures/basemap/tiny.pmtiles').read_bytes()
+        self.assertEqual(fixture[:8], b'PMTiles\x03')
+        (self.dir / 'plan.json').write_text(json.dumps(self.planned))
+        pointer = self.dir / 'manifest.json'
+
+        self.archive.write_bytes(fixture)  # control: the real fixture still gets its pointer, size and hash intact
+        with contextlib.redirect_stdout(io.StringIO()):
+            regions.main(['manifest', '--dir', str(self.dir)])
+        document = json.loads(pointer.read_text())
+        self.assertEqual((document['bytes'], document['sha256']), (len(fixture), regions.sha256(self.archive)))
+        self.assertEqual(document['key'], f"tiles/basemap/ca-coast-20261008-{document['sha256'][:16]}.pmtiles")
+        pointer.unlink()
+
+        for header in (b'BADFILE\x03', b'PMTiles\x02', b'pmtiles\x03', b'PMTiles\x00', bytes(8)):
+            with self.subTest(header=header):
+                self.archive.write_bytes(header + fixture[8:])  # same size as the fixture, only the header differs
+                with self.assertRaises(SystemExit) as stop, contextlib.redirect_stdout(io.StringIO()):
+                    regions.main(['manifest', '--dir', str(self.dir)])
+                self.assertIn('PMTiles', str(stop.exception))
+                self.assertFalse(pointer.exists(), 'no pointer for a file that is not a PMTiles v3 archive')
 
     def test_publish_reads_the_archive_back_before_moving_the_manifest(self):
         document = regions.manifest(self.planned, self.archive, 1, now=NOW)

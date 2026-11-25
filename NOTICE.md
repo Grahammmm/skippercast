@@ -34,7 +34,7 @@ Whether each source may be used in a paid product is tracked separately in the [
 
 ## Web map dependencies
 
-The app bundles MapLibre GL JS 6.18.0 and PMTiles 4.5.0, each under its BSD 3-Clause license, preserved in [MAPLIBRE-LICENSE.txt](dist/vendor/MAPLIBRE-LICENSE.txt) and [PMTILES-LICENSE.txt](dist/vendor/PMTILES-LICENSE.txt). Exact downloaded asset hashes are recorded in [the vendor manifest](scripts/web-vendor-sha256.json). The SkipperCast license does not replace their terms.
+The app bundles MapLibre GL JS 6.19.0 and PMTiles 4.5.0, each under its BSD 3-Clause license, preserved in [MAPLIBRE-LICENSE.txt](dist/vendor/MAPLIBRE-LICENSE.txt) and [PMTILES-LICENSE.txt](dist/vendor/PMTILES-LICENSE.txt). Exact downloaded asset hashes are recorded in [the vendor manifest](scripts/web-vendor-sha256.json). The SkipperCast license does not replace their terms.
 
 The seafloor base tiles built by `scripts/build_bathy_tiles.py` embed the cmocean `deep` colour table (cmocean 4.0.3, Copyright (c) 2015 Kristen M. Thyng, MIT License; Thyng et al. 2016, "True colors of oceanography", Oceanography 29(3)). The full licence text sits beside the table in that script.
 
@@ -66,4 +66,6 @@ NDBC, NWS and NOAA CO-OPS supply observational, advisory and tide facts. Open-Me
 
 The Central Coast Three.js renderer and report components are ported from the owner-authorized Fish application at commit `4ac5e0cabb369c97beba5db639856b855fda347a`. Its public coastal bridge retains original source attribution, rights, dates, native sample inspection, publication checks and modeled-context distinctions; see [coastal service](docs/coastal-service.md). No new survey admission is made by copying the renderer.
 
-Three.js 0.180.0 is MIT licensed ([retained notice](dist/vendor/THREE-LICENSE.txt)). SunCalc 2.1.0 is BSD 2-Clause licensed ([retained notice](dist/vendor/SUNCALC-LICENSE.txt)). These notices remain separate from the SkipperCast license. The coastal interface uses the already self-hosted DM Sans font under the retained SIL OFL notice above.
+Three.js 0.187.0 is MIT licensed ([retained notice](dist/vendor/THREE-LICENSE.txt)). SunCalc 2.1.4 is BSD 2-Clause licensed ([retained notice](dist/vendor/SUNCALC-LICENSE.txt)). These notices remain separate from the SkipperCast license. The coastal interface uses the already self-hosted DM Sans font under the retained SIL OFL notice above.
+
+The web app also bundles Preact 11.2.0, @preact/signals 2.11.4 (including @preact/signals-core 1.14.5) and fflate 0.8.3, all MIT licensed. It loads @simplewebauthn/browser 14.0.0 separately for passkeys (MIT; [retained notice](dist/vendor/simplewebauthn-browser-14.0.0/LICENSE.md)). The licences page carries their licence texts.

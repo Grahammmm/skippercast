@@ -15,6 +15,7 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {distanceNm} from '../dist/spot-ranking.js';
 import {draftKey} from '../dist/trip-export.js';
+import {closureHits, geometryCoveredByBounds} from '../dist/geo-screen.js';
 import {ROUTE_BUDGET} from '../web/ranking.ts';
 
 const dir = await mkdtemp(join(tmpdir(), 'planner-route-')), out = join(dir, 'ui.mjs');
@@ -24,6 +25,9 @@ await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader
     export {tripLegs} from './web/trip-legs.ts';
     export {cruiseSpeed} from './web/limits.ts';
     export {landWater, landWaterModel, resetLandWater} from './web/land-water.ts';
+    export {language, prepareCatalogue} from './web/i18n.ts';
+    export {configureStore, region as activeRegion} from './web/state.ts';
+    export {planningRoute} from './web/map/planning-route.ts';
     export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
   bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
 const m = await import(pathToFileURL(out).href);
@@ -288,4 +292,94 @@ test('the planner shows each ranked reef\'s basis and the new help; legs, GPX an
   const old = list(html(again.planner));
   assert.ok(old.includes('#1 ·') && !/nm by water|nm straight line/.test(old), 'no invented distance basis');
   for (const p of [h, plain, again]) p.planner.dispose();
+});
+
+// SC2052-07: the planning-route status line follows the page language. The real planner and route builder over the synthetic coast of
+// tests/test_planning_route_preview.mjs; the line is read from the rendered Planner, the stored check time from the exported GPX.
+const rcoast = fixture('coast.json'), rbounds = [-12110000, 3530000, -12075000, 3555000];
+const rlon = x => (671 + x / 32) / 4096 * 360 - 180, rlat = y => Math.atan(Math.sinh(Math.PI * (1 - 2 * (1616 + y / 32) / 4096))) * 180 / Math.PI;
+const rpoint = (x, y) => ({longitude: rlon(x), latitude: rlat(y)});
+const rbox = [rlon(0), rlat(32), rlon(32), rlat(0)];
+const rpoly = {type: 'Polygon', coordinates: [[[rlon(13), rlat(8)], [rlon(19), rlat(8)], [rlon(19), rlat(24)], [rlon(13), rlat(24)], [rlon(13), rlat(8)]]]};
+// 03:30 UTC on 8 Nov is 7:30 pm on 7 Nov in Los Angeles: the local day differs from the stored one.
+const RCHECKED = '2026-11-08T03:30:00.000Z', RNOW = new Date('2026-11-08T04:00:00Z');
+const routeContextOf = () => ({model: m.landWaterModel({...rcoast, bounds: rbounds, tiles: {[COAST]: 'w1024'}}, 'fixture'), lines: null});
+
+async function routeRig({context = async () => routeContextOf(), allow} = {}) {
+  const features = [{geometry: rpoly}], saved = ['document', 'location', 'history', 'dispatchEvent'].map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)]);
+  globalThis.document = new EventTarget(); globalThis.location = {href: 'https://fixture.test/map?region=fixture&presentation=chart'};
+  globalThis.history = {state: null, pushState(_s, _t, url) { location.href = url; }, replaceState(_s, _t, url) { location.href = url; }}; globalThis.dispatchEvent = () => true;
+  m.configureStore({v2: true, storage: null}); m.activeRegion.value = 'fixture';
+  const screen = {ready: () => true, exportExclusions: () => ({checked_at: RCHECKED, features}), coversGeometry: g => geometryCoveredByBounds(g, rbox),
+    geometryAllowed: g => (allow ? allow(g) : true) && geometryCoveredByBounds(g, rbox) && !closureHits([g], features).length,
+    pointAllowed: p => screen.geometryAllowed({type: 'Point', coordinates: [p.longitude, p.latitude]})};
+  const targets = [rpoint(5, 16), rpoint(27, 16)].map((p, i) => ({...p, id: `user:p${i}`, name: `Stop ${i}`, category: 'other'}));
+  const raw = JSON.stringify({ids: targets.map(p => p.id), userWaypoints: targets, name: 'Detour', date: '2026-11-07'});
+  const planner = m.createPlanner({atlas: ATLAS, screen, region: {...REGION, id: 'fixture', mpa: {bounds: rbox}}, now: () => RNOW,
+    map: {getSize: () => ({x: 512}), getBounds: () => ({getWest: () => rbox[0], getSouth: () => rbox[1], getEast: () => rbox[2], getNorth: () => rbox[3]})},
+    getVisible: () => [], storage: {getItem: () => raw, setItem() {}}, landWater: async () => water, routeContext: context, loadPorts: async () => null, emit() {},
+    nav: {open() {}, showMap() {}, conditions() {}, fit() {}}});
+  await settle();
+  const line = async lang => {
+    m.language.value = lang;
+    return m.render(m.h(m.Planner, {model: planner, open: false})).match(/<p role="status">((?:(?!<\/p>)[\s\S])*)<\/p>\s*<\/section>/)[1];
+  };
+  return {planner, line, done() { m.language.value = 'en'; planner.dispose(); m.planningRoute.value = null; m.activeRegion.value = null;
+    for (const [k, d] of saved) if (d) Object.defineProperty(globalThis, k, d); else delete globalThis[k]; }};
+}
+
+test('planner_route_success_is_localized: the Chart and the download show the same local check time, a localized length and the full warning; the GPX keeps its stored time', async () => {
+  await m.prepareCatalogue('es');
+  const rig = await routeRig();
+  try {
+    assert.equal(await rig.planner.showRouteOnChart(), true, JSON.stringify(rig.planner.routeStatus.value));
+    const nm = m.planningRoute.value.nm, en1 = nm.toFixed(1), es1 = en1.replace('.', ',');
+    const warning = 'NOT FOR NAVIGATION. Planning only: no depth, hazards, tides or passage clearance. Check official charts and current rules.';
+    const english = await rig.line('en');
+    assert.match(english, new RegExp(`^Boundary check: Nov 7, 2026, 7:30\\sPM PST · ${en1} nm planning route\\. ${warning.replace(/[.]/g, '\\.')}$`), 'the region\'s local day and time, not UTC');
+    assert.ok(!/2026-11-08|03:30|T03/.test(english), 'no raw stored timestamp');
+    const spanish = await rig.line('es');
+    assert.match(spanish, new RegExp(`^Comprobación de límites: 7 nov 2026, 19:30 PST · ruta de planificación de ${es1} mn\\. NO USAR PARA NAVEGAR\\.`), 'Spanish: 24-hour local time, the page\'s decimal, the Spanish warning');
+    assert.ok(!/2026-11-08|03:30|Boundary|NOT FOR/.test(spanish));
+    // The download writes the same status and keeps the stored instant in the GPX bytes.
+    m.planningRoute.value = null; rig.planner.routeView.value = '';
+    const gpx = await (await rig.planner.exportRouteFile()).text();
+    assert.ok(gpx.includes(`Boundary check: ${RCHECKED}.`) && gpx.includes('NOT FOR NAVIGATION. Planning only'), 'the export keeps its stored time and warning');
+    assert.equal(await rig.line('es'), spanish, 'the download reports the same line as the Chart');
+    assert.match(await rig.line('en'), new RegExp(`^Boundary check: Nov 7, 2026, 7:30\\sPM PST · ${en1} nm planning route\\. NOT FOR NAVIGATION\\. Planning only`));
+  } finally { rig.done(); }
+});
+
+test('planner_route_known_and_unknown_errors: the three known refusals read in Spanish with their variables; an unknown message stays as written inside lang="en", escaped', async () => {
+  await m.prepareCatalogue('es');
+  // A leg with no water data: the builder's own refusal, leg number and reason code kept.
+  const leg = await routeRig({context: async () => ({model: null, lines: null})});
+  try {
+    assert.equal(await leg.planner.showRouteOnChart(), false);
+    assert.equal(await leg.line('es'), 'No se pudo calcular el tramo 1 de la ruta (no hay datos para calcular la ruta). No se exporta una alternativa en línea recta.');
+    assert.equal(await leg.line('en'), 'Planning route unavailable for leg 1 (no-product). No straight-line fallback is exported.', 'English is the message as it was');
+    assert.equal(m.planningRoute.value, null, 'no straight-line fallback is drawn');
+  } finally { leg.done(); }
+  // The plan changes while the route context loads.
+  let rig;
+  rig = await routeRig({context: async () => { rig.planner.toggleSpot('user:p1', false); return routeContextOf(); }});
+  try {
+    assert.equal(await rig.planner.showRouteOnChart(), false);
+    assert.equal(await rig.line('es'), 'El plan cambió mientras se calculaba la ruta. Inténtalo de nuevo.');
+    assert.equal(await rig.line('en'), 'Plan changed while routing. Try again.');
+  } finally { rig.done(); }
+  // Every leg is allowed but the whole line is not: the full-route check.
+  const full = await routeRig({allow: g => g.type !== 'LineString' || g.coordinates.length < 3});
+  try {
+    assert.equal(await full.planner.showRouteOnChart(), false);
+    assert.equal(await full.line('es'), 'Ruta de planificación no disponible: la comprobación de la ruta completa falló.');
+    assert.equal(await full.line('en'), 'Planning route unavailable: full-route check failed.');
+  } finally { full.done(); }
+  // An unknown message is neither translated nor parsed: kept whole, marked English, and never markup.
+  const odd = await routeRig({context: async () => { throw Error('Tide <b>feed</b> offline & late'); }});
+  try {
+    assert.equal(await odd.planner.showRouteOnChart(), false);
+    assert.equal(await odd.line('es'), '<span lang="en">Tide &lt;b>feed&lt;/b> offline &amp; late</span>');
+    assert.equal(await odd.line('en'), 'Tide &lt;b>feed&lt;/b> offline &amp; late', 'an English page shows it as written');
+  } finally { odd.done(); }
 });

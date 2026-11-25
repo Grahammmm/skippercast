@@ -246,8 +246,10 @@ def fetch_model(model, cycle, workers=16, log=log_err):
 
 
 def quantize(values, scale):
+    # int16 holds +/-32767 steps; -32768 is MISSING. A value needing more steps was never representable, so it is
+    # stored as missing rather than clamped to the end of the range (400 mm/h must not read as 327.67).
     q = np.round(values / scale)
-    q = np.where(np.isfinite(q), np.clip(q, -32767, 32767), MISSING).astype('<i2')
+    q = np.where(np.isfinite(q) & (np.abs(q) <= 32767), q, MISSING).astype('<i2')
     return base64.b64encode(q.tobytes()).decode()
 
 

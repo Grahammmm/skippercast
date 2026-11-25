@@ -129,7 +129,8 @@ test('phone_failure_while_layers_open: the Layers trigger and panel stay with di
     assert.match(failed, /app-tabs/, 'tabs stay');
     const panel = a.render(a.h(a.LayersPanel, {onClose() {}}));
     assert.match(panel, /app-rail/, 'the panel shows the rail');
-    assert.ok(toggles(panel).length > 0 && toggles(panel).every(b => /aria-disabled="true"/.test(b)), 'no live toggle');
+    assert.ok(chartToggles(panel).length > 0 && chartToggles(panel).every(b => /aria-disabled="true"/.test(b)), 'no live Chart layer toggle');
+    assert.equal(toggles(panel).length, chartToggles(panel).length + 1, 'the separate 3D presentation choice remains');
     a.chartFailed.value = false;
     const ok = a.render(a.h(a.Mobile, {now}));
     assert.match(ok, /aria-label="Layers"/);
@@ -158,6 +159,10 @@ test('no_false_whole_map_failure: only a failed Chart that is the shown presenta
 });
 
 const toggles = html => [...html.matchAll(/<button([^>]*ui-rail-toggle[^>]*)>/g)].map(m => m[1]);
+// The 3D view is a presentation choice, not a Chart layer; it can remain available after a Chart failure.
+const chartToggles = html => [...html.matchAll(/<li class="ui-rail-item"[^>]*>([\s\S]*?)<\/li>/g)]
+  .filter(m => !/<span class="ui-rail-label">(?:3D view|Vista 3D)<\/span>/.test(m[1]))
+  .flatMap(m => toggles(m[1]));
 const find = (node, pick, out = []) => {
   if (!node || typeof node !== 'object') return out;
   if (pick(node)) out.push(node);
@@ -172,8 +177,9 @@ test('layer_buttons_disabled_keep_choice_en_es: every Chart layer button is aria
     for (const [lang, reason] of [['en', 'Map could not start on this device or browser.'], ['es', 'El mapa no pudo iniciarse en este dispositivo o navegador.']]) {
       a.language.value = lang;
       const html = a.render(a.h(a.LayerRail, {}));
-      const btns = toggles(html);
-      assert.ok(btns.length >= 6, 'the rail entries render');
+      const btns = chartToggles(html);
+      assert.ok(btns.length >= 6, 'the Chart rail entries render');
+      assert.equal(toggles(html).length, btns.length + 1, '3D is a separate presentation choice');
       for (const b of btns) assert.match(b, /aria-disabled="true"/, 'disabled');
       assert.equal(count(html, new RegExp(reason.replace(/\./g, '\\.'), 'g')), btns.length, 'each button names the reason');
       assert.match(html, /aria-pressed="true"/, 'chosen state kept');

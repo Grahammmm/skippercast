@@ -17,8 +17,8 @@ import {
 } from '../web/map/seafloor.ts';
 import {clickMark} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
-import {camera} from '../web/map/stage.ts';
-import {configureStore, syncFromURL} from '../web/state.ts';
+import {camera, shownPresentation} from '../web/map/stage.ts';
+import {configureStore, layers as layerList, presentation, region, syncFromURL} from '../web/state.ts';
 import {signal} from '@preact/signals';
 
 const FIXTURE = readFileSync(new URL('./fixtures/seafloor/chart.pmtiles', import.meta.url));
@@ -382,6 +382,41 @@ test('v2: expiry hides candidates before the refresh answers, and a late tile ne
   assert.ok(late.calls.every(c => c[0] !== 'data' || c[2] === 0), 'no features after off');
 });
 
+test('v2: a rendered habitat hit reads only on Chart and strictly before publication expiry', async t => {
+  const expiresAt = '2030-01-01T00:01:00Z';
+  const rig = seafloorRig({manifest: {expires_at: expiresAt}});
+  t.after(() => { rig.layer.destroy(); presentation.value = 'chart'; });
+  await settle();
+  const hit = rig.data.features.find(f => f.properties.id === 'fixture-candidate-a');
+  assert.ok(hit, 'the Chart actually drew the admitted candidate');
+  const tap = () => rig.layer.mark(String(hit.properties.id));
+
+  presentation.value = '3d';
+  assert.equal(shownPresentation.value, '3d', 'Chart is hidden, not a terrain fallback to Chart');
+  assert.ok(rig.data.features.includes(hit), 'the hidden Chart still has the rendered feature');
+  const hidden = tap();
+
+  presentation.value = 'chart';
+  await settle();
+  assert.equal(shownPresentation.value, 'chart');
+  rig.clock = Date.parse(expiresAt) - 1;
+  const fresh = tap();
+  assert.equal(fresh?.id, 'seafloor:fixture-candidate-a');
+  assert.match(fresh.basis, /Planning only\. Not a navigation chart\./);
+
+  const pending = [...rig.timers.entries()];
+  assert.deepEqual(pending.map(([, timer]) => timer.delay), [60000]);
+  const lastPaint = rig.data;
+  // A rendered hit can arrive while the tab's refresh callback is delayed. Change only the clock;
+  // a lookup that trusts the last drawn map opens the old card even at the exact expiry boundary.
+  rig.clock = Date.parse(expiresAt);
+  assert.equal(rig.data, lastPaint, 'no intervening paint');
+  assert.equal(seafloorState.value.status, 'ready', 'nothing has withdrawn the publication yet');
+  const expired = tap();
+  assert.deepEqual([...rig.timers.entries()], pending, 'the scheduled refresh has not fired');
+  assert.deepEqual({hidden, expired}, {hidden: null, expired: null});
+});
+
 // #706: a person can open a drawn coverage cell's basis. Fixture cell 3310:fx:1 spans about -120.987 to -120.970,
 // 35.344 to 35.358 and overlaps candidate fixture-candidate-a east of -120.981; 3310:fx:2 lies in held reach fx2.
 const CELL_ONLY = {lon: -120.985, lat: 35.35}, OVERLAP = {lon: -120.975, lat: 35.35}, HELD_CELL = {lon: -120.961, lat: 35.337};
@@ -551,4 +586,65 @@ test('R4-SC-09-F1c: a rough-first archive shows its labelled rough layer first; 
   assert.ok(plain.asked.length > 0 && !plain.asked.includes(ROUGH_ZOOM));
   assert.equal(seafloorRough.value, false);
   assert.equal(drawnIds(today).length, 5);
+});
+
+// SCA1123-2135-08. Contract: the survey bounds a pan is judged against belong to the region now on screen. A
+// superseded region's archive header, however late it settles, is dropped before it touches that shared state;
+// otherwise the next pan says "No published seafloor survey in this view" over ground the new region surveys.
+test('SCA1123-2135-08: a superseded region\'s archive header arriving first, last or failing last leaves the new region\'s survey bounds alone', async () => {
+  const NORTH = {minLat: 36, maxLat: 37, minLon: -122, maxLon: -121, maxZoom: 12};  // the new region's survey
+  const SOUTH = {minLat: 35, maxLat: 36, minLon: -121, maxLon: -120, maxZoom: 12};  // the old region's: misses HOME
+  const HOME = {latitude: 36.1, longitude: -121.6, zoom: 14};
+  const flush = async () => { for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve)); };
+  async function run(oldSettles) {
+    configureStore({v2: true, storage: null});
+    syncFromURL(`${PAGE_V2}?region=morro-bay&presentation=chart`);
+    presentation.value = 'chart';
+    layerList.value = ['seafloor'];
+    camera.value = {latitude: 35.1, longitude: -120.6, zoom: 14};
+    const started = deferred(), oldHeader = deferred(), newHeader = deferred(), newTile = deferred();
+    let oldTiles = 0;
+    const layer = createSeafloor({engine: {setVisible() {}, setData() {}}, page: () => PAGE_V2, now: () => Date.parse('2026-11-23T00:00:00Z'),
+      size: () => ({width: 300, height: 250}),
+      fetchFn: async url => {
+        const id = url.includes('morro-bay') ? 'morro-bay' : 'monterey-point-sur';
+        const ledger = JSON.stringify({region: id, reaches: []});
+        if (url.endsWith('/ledger.json')) return new Response(ledger);
+        return Response.json({...MANIFEST_BASE, region: id, ledger_sha256: createHash('sha256').update(ledger).digest('hex'), expires_at: '2026-12-01T00:00:00Z'});
+      },
+      open: url => url.includes('morro-bay')
+        ? {getHeader() { started.release(); return oldHeader.promise; }, async getZxy() { oldTiles++; throw new Error('superseded archive must not draw'); }}
+        : {getHeader: () => newHeader.promise, async getZxy() { newTile.release(); return undefined; }}});
+    try {
+      await started.promise;
+      region.value = 'monterey-point-sur';
+      camera.value = HOME;
+      const settleOld = () => oldSettles === 'fails' ? oldHeader.release(Promise.reject(new Error('old archive range failed'))) : oldHeader.release(SOUTH);
+      if (oldSettles === 'first') { settleOld(); await flush(); }
+      newHeader.release(NORTH);
+      await newTile.promise; await flush();
+      const drawn = seafloorState.peek().note;
+      if (oldSettles !== 'first') { settleOld(); await flush(); }
+      camera.value = {...HOME, latitude: 36.1001};  // the pan
+      await flush();
+      return {drawn, panned: seafloorState.peek(), oldTiles};
+    } finally { layer.destroy(); }
+  }
+  const control = await run('first'), late = await run('last'), failing = await run('fails');
+  // Control, unaffected by the fix: the old header lands before the new region's own, so the new bounds always win.
+  assert.match(control.drawn, /^0 candidates in view · unverified; nominal depth/);
+  assert.equal(control.panned.status, 'ready');
+  assert.match(control.panned.note, /^0 candidates in view · unverified; nominal depth/);
+  // Catches `header = await archive.getHeader()` written before the superseded check: the old SOUTH bounds replace
+  // NORTH after the new region drew, and the pan reports no survey where the new region has one.
+  assert.doesNotMatch(late.panned.note, /No published seafloor survey/);
+  assert.equal(late.panned.note, control.panned.note, 'completion order must not change the status for the same view and pan');
+  assert.equal(late.panned.status, 'ready');
+  // Catches the late header also disturbing the view that had already drawn.
+  assert.equal(late.drawn, control.drawn);
+  // Catches a late failure of the old archive fail()-ing or dropping the new region's archive and header.
+  assert.equal(failing.panned.note, control.panned.note);
+  assert.equal(failing.panned.status, 'ready');
+  // Catches the superseded archive being drawn from once its header lands.
+  assert.deepEqual([control.oldTiles, late.oldTiles, failing.oldTiles], [0, 0, 0]);
 });

@@ -64,11 +64,22 @@ test('C2: no survey requires an empty sources array and admits no provenance', (
   });
 });
 
-test('C2: a reviewed footprint retains its metadata separately from the label', () => {
-  assert.deepEqual(decode({...estimated, grid_tier: '4-16m-compiled', date: '2025-01-01'}), {
-    type: 'FeatureCollection', features: [feature({tier: 'estimated', grid_m: 5, grid_tier: '4-16m-compiled',
-      source: sourceName, sourceId, date: '2025-01-01', label: 'estimated (5 m grid)'})],
-  });
+// A nonblank check (or Date.parse alone) can pass February 30 to the Chart readout.
+test('C2: a reviewed footprint retains only real survey dates at their supplied precision', () => {
+  const grid_tier = '4-16m-compiled';
+  const metadata = {tier: 'estimated', grid_m: 5, grid_tier, source: sourceName,
+    sourceId, label: 'estimated (5 m grid)'};
+  for (const date of ['2024-06-12', '2024-02-29', '2024-06', '2024']) {
+    assert.deepEqual(decode({...estimated, grid_tier, date}), {
+      type: 'FeatureCollection', features: [feature({...metadata, date})],
+    }, date);
+  }
+  for (const date of ['2030-02-30', '1900-02-29', '2024-04-31', '2024-00-12', '2024-13',
+    '0000', '2024-06-00', '2024-6-12', '2024-06-12T00:00:00Z', '2024-06-12\n', 'unstated', ' ', 2024, null]) {
+    assert.deepEqual(decode({...estimated, grid_tier, date}), {
+      type: 'FeatureCollection', features: [feature(metadata)],
+    }, JSON.stringify(date));
+  }
 });
 
 // Do not infer a measured tier from grid size, or relax the measured grid ceilings.
@@ -98,4 +109,13 @@ test('C3: the no-survey hatch is the always-on first layer in either theme', () 
       paint: {'fill-pattern': 'gap-pattern', 'fill-opacity': 0.9, 'fill-antialias': false}});
     assert.deepEqual(tint.filter, ['in', ['get', 'tier'], ['literal', ['1m-measured', '2m', '5m']]]);
   }
+});
+
+// R8 phone QA: on the light theme the 1.4 px estimated outline merged with the
+// shoreline at z15. Only the light estimated boundary is wider; dark and measured stay put.
+test('C3: the light-theme estimated boundary is drawn wider than measured outlines', () => {
+  const outline = light => layers(light).find(({id}) => id === 'detail-outline');
+  assert.deepEqual(outline(true).paint['line-width'], ['case', ['==', ['get', 'tier'], 'estimated'], 2.8, 1.4]);
+  assert.equal(outline(false).paint['line-width'], 1.4);
+  for (const light of [false, true]) assert.deepEqual(outline(light).paint['line-dasharray'], [4, 3]);
 });

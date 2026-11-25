@@ -55,10 +55,25 @@ export function coastalTargetOptions(coast,status,now=Date.now()) {
   for(const target of coast.watch_options||[])if(supported.includes(target.id)&&!options.some(t=>t.id===target.id))options.push({...target,name:target.name+' · recent reports',seasonal:true});
   return options;
 }
+function pacificAdvisoryDayEnded(through,now) {
+  if(typeof through!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(through))return true;
+  const date=new Date(through+'T00:00:00Z');
+  // UTC is just for validation: parsing alone can roll an impossible date forward.
+  if(!Number.isFinite(+date)||date.toISOString().slice(0,10)!==through)return true;
+  const instant=new Date(+now);
+  if(!Number.isFinite(+instant))return now>0;
+  // Compare calendar days in Pacific time rather than guessing the midnight offset.
+  const {era,year,month,day}=Object.fromEntries(new Intl.DateTimeFormat('en-US',{
+    timeZone:'America/Los_Angeles',calendar:'gregory',numberingSystem:'latn',
+    era:'short',year:'numeric',month:'numeric',day:'numeric',
+  }).formatToParts(instant).map(({type,value})=>[type,value]));
+  const isoYear=era==='BC'?1-Number(year):Number(year);
+  return isoYear*10000+Number(month)*100+Number(day)>Number(through.replaceAll('-',''));
+}
 export function localTargetAdvisory(coast,target,latitude,now=Date.now()) {
   const advisory=coast.local_target_advisories?.find(item=>item.target===target);
   if(!advisory||!Number.isFinite(latitude))return null;
-  const expired=now>Date.parse(advisory.through+'T23:59:59-07:00');
+  const expired=pacificAdvisoryDayEnded(advisory.through,now);
   return {text:expired?advisory.expired_note:latitude>=advisory.north_of_latitude?advisory.north_note:advisory.south_note,url:advisory.source_url};
 }
 export function initCoastSelector(catalog,coast) {

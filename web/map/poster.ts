@@ -27,14 +27,37 @@ export interface Poster {
 export const poster = signal<Poster | null>(null);
 
 const NUMBER = /^-?\d+(?:\.\d+)?$/;
-const PATH = /^[Ml0-9 \-]+$/;
 const attr = (svg: string, name: string): string | null => new RegExp(`\\s${name}="([^"]*)"`).exec(svg)?.[1] ?? null;
+
+// startup_forms.py emits adjacent Mx ylDX DY[ DX DY...] subpaths. Read one pair
+// at a time so even a long coast is checked without backtracking through its runs.
+function validPath(d: string): boolean {
+  const pair = /(-?\d+) (-?\d+)/y;
+  let i = 0;
+  const readPair = (): boolean => {
+    pair.lastIndex = i;
+    const match = pair.exec(d);
+    if (!match || !Number.isInteger(Number(match[1])) || !Number.isInteger(Number(match[2]))) return false;
+    i = pair.lastIndex;
+    return true;
+  };
+  while (i < d.length) {
+    if (d[i++] !== 'M' || !readPair() || d[i++] !== 'l' || !readPair()) return false;
+    while (d[i] === ' ') {
+      i++;
+      if (!readPair()) return false;
+    }
+  }
+  return d.length > 0;
+}
 
 /** The poster in `text` for `region`, or null for anything but the build's own shape. */
 export function parsePoster(text: string, region: string): Poster | null {
   const head = /^<svg\s[^>]*>/.exec(text)?.[0];
-  const d = /<path d="([^"]*)"\s*\/>/.exec(text)?.[1];
-  if (!head || !d || !PATH.test(d)) return null;
+  if (!head) return null;
+  // Match the whole body, not the first recognizable path anywhere in the file.
+  const d = /^(?:<title>[^<]*<\/title>)?<path d="([^"]*)"\s*\/><\/svg>\s*$/.exec(text.slice(head.length))?.[1];
+  if (d === undefined || !validPath(d)) return null;
   const box = attr(head, 'viewBox')?.split(' ') ?? [];
   // MapStage redraws with the build's literal 0 0 origin.
   if (box.length !== 4 || box[0] !== '0' || box[1] !== '0') return null;

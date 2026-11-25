@@ -1,11 +1,13 @@
 """Synthetic, whole-plan checks for the selective rebuild preview."""
 from copy import deepcopy
+from hashlib import sha256
 import json
 from pathlib import Path
 
 import pytest
 
 from skippercast.relief import rebuild_plan, receipts
+from tests._support import ROOT
 
 
 OLD = '1' * 64
@@ -255,3 +257,290 @@ def test_c3_preserves_receipt_reader_refusals(tmp_path, region):
     with pytest.raises(receipts.ReceiptError) as error:
         rebuild_plan.load_receipts(tmp_path, region)
     assert type(error.value) is receipts.ReceiptError
+
+
+def write_style_tree(repo):
+    """Small independent token/index pairs for the real style loader."""
+    directory = repo / 'style'
+    directory.mkdir()
+
+    def encoded(data):
+        return json.dumps(data, sort_keys=True, separators=(',', ':')).encode()
+
+    groups = dict.fromkeys(('baked', 'contours', 'habitat', 'paint'), 1)
+    (directory / 'groups.json').write_bytes(encoded({key: key for key in groups}))
+    versions = {'deep-fixed-v1': {'legacy': True, 'status': 'active'}}
+    for name, changed in [('base', ()), ('paint-v2', ('paint',)), ('baked-v2', ('baked',)),
+                          ('vectors-v2', ('contours', 'habitat')), ('retired', ('baked',))]:
+        tokens = groups | dict.fromkeys(changed, 2)
+        raw = encoded(tokens)
+        file = f'{name}.json'
+        (directory / file).write_bytes(raw)
+        versions[name] = {
+            'file': file, 'sha256': sha256(raw).hexdigest(),
+            'status': {'baked-v2': 'rolling', 'retired': 'retired'}.get(name, 'active'),
+            'digests': {group: sha256(encoded({group: value})).hexdigest()
+                        for group, value in tokens.items()},
+        }
+    (directory / 'index.json').write_bytes(encoded({'default': 'base', 'versions': versions}))
+    return directory, versions['base']['digests']
+
+
+@pytest.fixture
+def simulation(tmp_path, monkeypatch):
+    directory, base = write_style_tree(tmp_path)
+    monkeypatch.setenv('SKIPPERCAST_ROOT', str(tmp_path))
+    docs = {
+        'tiles.public': _receipt('tiles.public', baked=base['baked'], paint=base['paint']),
+        'contours': _receipt('contours', contours=base['contours']),
+        'digests': _receipt('digests', ('tiles.public',)),
+        'vectors.public': _receipt('vectors.public', ('tiles.public',), habitat=base['habitat']),
+    }
+    return directory, docs
+
+
+@pytest.mark.parametrize(('options', 'reasons'), [
+    pytest.param({}, ((), (), (), ()), id='C1: indexed default'),
+    pytest.param({'default': 'paint-v2'}, ((), (), (), ()), id='C1: paint-only change'),
+    pytest.param({'default': 'baked-v2'}, (('style:baked',), ('upstream:tiles.public',), (),
+                                          ('upstream:tiles.public',)), id='C1: baked change'),
+    pytest.param({'pin': 'vectors-v2'}, ((), (), ('style:contours',), ('style:habitat',)),
+                 id='C1: independent contours and habitat digests'),
+    pytest.param({'pin': 'deep-fixed-v1'}, (('style:baked',), ('upstream:tiles.public',),
+                                           ('style:contours',), ('style:habitat', 'upstream:tiles.public')),
+                 id='C1: legacy has no build digests'),
+])
+def test_simulated_style_digests(simulation, options, reasons):
+    """C1: Version identity or mismatched group selection must not trigger unrelated stages."""
+    root, docs = simulation
+    keys = ('tiles.public', 'digests', 'contours', 'vectors.public')
+    assert rebuild_plan.simulate_style('test-bay', docs, root=root, **options) == [
+        _row(key, *why) for key, why in zip(keys, reasons)
+    ]
+
+
+def test_simulated_pin_precedence(simulation):
+    """C1: A default cannot unpin a region, but a proposed pin can replace its saved pin."""
+    root, docs = simulation
+    schema = root.parent / 'schemas/sc-render-v1.schema.json'
+    schema.parent.mkdir()
+    schema.write_bytes((ROOT / 'schemas' / schema.name).read_bytes())
+    config = root.parent / 'regions/test-bay/render.json'
+    config.parent.mkdir(parents=True)
+    saved = b'{"schema":"sc-render/1","region":"test-bay","style":"base","previews":[],"piers":[]}'
+    config.write_bytes(saved)
+    assert rebuild_plan.simulate_style('test-bay', docs, default='baked-v2') == [
+        _row(key) for key in ('tiles.public', 'digests', 'contours', 'vectors.public')
+    ]
+    assert rebuild_plan.simulate_style('test-bay', docs, default='paint-v2', pin='baked-v2') == [
+        _row('tiles.public', 'style:baked'), _row('digests', 'upstream:tiles.public'),
+        _row('contours'), _row('vectors.public', 'upstream:tiles.public'),
+    ]
+    assert config.read_bytes() == saved
+
+
+@pytest.mark.parametrize(('options', 'message'), [
+    pytest.param({'default': 'unknown'}, 'unavailable render style: unknown', id='C3: unknown default'),
+    pytest.param({'pin': 'retired'}, 'unavailable render style: retired', id='C3: retired pin'),
+    pytest.param({'default': 'retired', 'pin': 'base'}, 'unavailable render style: retired',
+                 id='C3: retired default even when shadowed'),
+    pytest.param({'pin': 'paint-v2'}, 'paint-v2: sha256 mismatch', id='C1: reject tampered version bytes'),
+])
+def test_simulated_style_refusals(simulation, options, message):
+    """C3: Refuse unavailable selections; C1: selected bytes must verify, not just parse."""
+    root, docs = simulation
+    tokens = root / 'paint-v2.json'
+    tokens.write_bytes(tokens.read_bytes() + b'\n')
+    with pytest.raises(ValueError, match=message) as error:
+        rebuild_plan.simulate_style('test-bay', docs, root=root, **options)
+    assert type(error.value) is ValueError
+
+
+# RMSC-40: data inputs. The numbered tests below pin this card's contract items
+# (C1: input reasons through an injected hasher), alongside the style items above.
+CENSUS, REGISTRY, REGION_FILE, NEWER = '3' * 64, '4' * 64, '5' * 64, '6' * 64
+RECORDED = {
+    'select': (('/data/census.json', 'census', CENSUS), ('inputs/region.json', 'region', REGION_FILE),
+               ('/data/registry.json', 'registry', REGISTRY)),
+    'tiles.public': (('/data/elevation.tif', 'elevation', NEWER),),
+}
+ALL_REUSE = [_row(key) for key in CHAIN]
+
+
+def _with_inputs(docs, recorded=RECORDED):
+    for key, rows in recorded.items():
+        docs[key]['inputs'] = [{'path': path, 'role': role, 'sha256': sha} for path, role, sha in rows]
+    return docs
+
+
+class Hasher:
+    """Records every file the core asks about; answers from a path -> sha256 table."""
+
+    def __init__(self, table):
+        self.table, self.asked = dict(table), []
+
+    def __call__(self, path):
+        self.asked.append(path)
+        return self.table.get(path)
+
+
+def _disk(**changes):
+    """The recorded inputs as currently on disk, with ``path=sha`` overrides (``None`` = absent)."""
+    table = {path: sha for rows in RECORDED.values() for path, _, sha in rows}
+    return {**table, **changes}
+
+
+def test_c1_unchanged_inputs_reuse_every_stage(docs):
+    """C1: Inputs that still hash as recorded add no reason (a bug flags every recorded input)."""
+    hasher = Hasher(_disk())
+    assert rebuild_plan.plan(_with_inputs(docs), _current(CHAIN), hasher) == ALL_REUSE
+
+
+def _select_cascade(reason):
+    """Every stage when ``select`` rebuilds for ``reason``: each consumer via its direct links."""
+    return [
+        _row('select', reason),
+        _row('mosaic.public', 'upstream:select'),
+        _row('tiles.public', 'upstream:mosaic.public', 'upstream:select'),
+        _row('zone.public', 'upstream:mosaic.public', 'upstream:select'),
+        _row('digests', 'upstream:tiles.public'),
+        _row('inventory', 'upstream:digests', 'upstream:select', 'upstream:tiles.public',
+             'upstream:zone.public'),
+        _row('contours', 'upstream:mosaic.public', 'upstream:select'),
+        _row('package', 'upstream:contours', 'upstream:digests', 'upstream:inventory',
+             'upstream:tiles.public', 'upstream:zone.public'),
+        _row('shots', 'upstream:package'),
+        _row('qa', 'upstream:contours', 'upstream:mosaic.public', 'upstream:package'),
+        _row('envelope', 'upstream:package', 'upstream:qa'),
+    ]
+
+
+def test_c1_changed_registry_rebuilds_select_and_every_downstream_stage(docs):
+    """C1: A changed select input reaches each consumer through its direct links, once, in order."""
+    hasher = Hasher(_disk(**{'/data/registry.json': '9' * 64}))
+    assert rebuild_plan.plan(_with_inputs(docs), _current(CHAIN), hasher) == _select_cascade(
+        'input:registry')
+
+
+def test_c1_mid_chain_input_leaves_unrelated_stages_reusable(docs):
+    """C1: A changed tile input rebuilds only tiles and its consumers, not zone, contours or select."""
+    hasher = Hasher(_disk(**{'/data/elevation.tif': '9' * 64}))
+    assert rebuild_plan.plan(_with_inputs(docs), _current(CHAIN), hasher) == [
+        _row('select'), _row('mosaic.public'), _row('tiles.public', 'input:elevation'),
+        _row('zone.public'), _row('digests', 'upstream:tiles.public'),
+        _row('inventory', 'upstream:digests', 'upstream:tiles.public'), _row('contours'),
+        _row('package', 'upstream:digests', 'upstream:inventory', 'upstream:tiles.public'),
+        _row('shots', 'upstream:package'), _row('qa', 'upstream:package'),
+        _row('envelope', 'upstream:package', 'upstream:qa'),
+    ]
+
+
+def test_c1_missing_input_is_reported_by_role(docs):
+    """C1: A vanished input is input-missing:<role>, not silently reused or called changed."""
+    hasher = Hasher(_disk(**{'/data/census.json': None}))
+    assert rebuild_plan.plan(_with_inputs(docs), _current(CHAIN), hasher) == _select_cascade(
+        'input-missing:census')
+
+
+def test_c1_missing_and_changed_reasons_combine_sorted_with_other_reasons(docs):
+    """C1: Input reasons sit beside code/status reasons; a bug would let one hide the others."""
+    docs['select']['status'] = 'failed'
+    hasher = Hasher(_disk(**{'/data/census.json': None, '/data/registry.json': '9' * 64}))
+    current = _current(CHAIN)
+    current['stage_digest']['select'] = NEW
+    assert rebuild_plan.plan(_with_inputs(docs), current, hasher)[0] == _row(
+        'select', 'code', 'input-missing:census', 'input:registry', 'status:failed')
+
+
+def test_c1_only_recorded_inputs_are_examined_once_each(docs):
+    """C1: Never invent input reasons for files no receipt recorded; hash a shared file once."""
+    shared = {'select': (('/data/shared.json', 'census', CENSUS),),
+              'mosaic.public': (('/data/shared.json', 'sources', CENSUS),
+                                ('/data/shared.json', 'census', CENSUS))}
+    hasher = Hasher({'/data/shared.json': '9' * 64, '/data/not-recorded.json': '9' * 64})
+    rows = rebuild_plan.plan(_with_inputs(docs, shared), _current(CHAIN), hasher)
+    assert hasher.asked == ['/data/shared.json']
+    assert rows[:2] == [_row('select', 'input:census'),
+                        _row('mosaic.public', 'input:census', 'input:sources', 'upstream:select')]
+    assert [row for row in rows if row['stage'] == 'zone.public'] == [
+        _row('zone.public', 'upstream:mosaic.public', 'upstream:select')]
+
+
+def test_c1_repeated_role_gives_one_reason(docs):
+    """C1: Many tiles under one role (coarse-tile) are one reason, not one per file."""
+    tiles = {'select': (('/t/1.tif', 'tile', OLD), ('/t/2.tif', 'tile', OLD))}
+    hasher = Hasher({'/t/1.tif': NEW, '/t/2.tif': NEW})
+    assert rebuild_plan.plan(_with_inputs(docs, tiles), _current(CHAIN), hasher)[0] == _row(
+        'select', 'input:tile')
+
+
+def test_c1_no_hasher_leaves_recorded_inputs_unexamined(docs):
+    """C1: Callers that inject no hasher keep the code/style-only plan (no hidden file reads)."""
+    assert rebuild_plan.plan(_with_inputs(docs), _current(CHAIN)) == ALL_REUSE
+
+
+def test_c1_receipts_without_inputs_ask_the_hasher_nothing(docs):
+    """C1: A legacy receipt with no inputs key is not a change and not malformed."""
+    hasher = Hasher({})
+    assert rebuild_plan.plan(docs, _current(CHAIN), hasher) == ALL_REUSE
+    assert hasher.asked == []
+
+
+def test_c1_missing_receipt_has_no_inputs_to_check():
+    """C1: A stage with no receipt reports only 'missing'; the hasher is never asked about it."""
+    hasher = Hasher({})
+    assert rebuild_plan.plan({'select': None}, _current(('select',)), hasher) == [
+        _row('select', 'missing')]
+    assert hasher.asked == []
+
+
+@pytest.mark.parametrize('inputs', [
+    pytest.param('census.json', id='C1: inputs is not a list'),
+    pytest.param(['census.json'], id='C1: record is not an object'),
+    pytest.param([{'path': '/a', 'role': 'census'}], id='C1: record lacks sha256'),
+    pytest.param([{'path': '/a', 'sha256': OLD}], id='C1: record lacks role'),
+    pytest.param([{'role': 'census', 'sha256': OLD}], id='C1: record lacks path'),
+    pytest.param([{'path': 7, 'role': 'census', 'sha256': OLD}], id='C1: path is not text'),
+])
+def test_c1_refuses_malformed_input_records(inputs):
+    """C1: A damaged receipt is refused by name, never read as an unchanged input."""
+    docs = {'select': {**_receipt('select'), 'inputs': inputs}}
+    hasher = Hasher({'/a': OLD})
+    with pytest.raises(receipts.ReceiptError) as error:
+        rebuild_plan.plan(docs, _current(docs), hasher)
+    assert type(error.value) is receipts.ReceiptError
+    assert str(error.value) in ('select: malformed input records', 'select: malformed input record')
+
+
+def test_c1_hasher_refusal_passes_through_unchanged(docs):
+    """C1: A hasher that refuses a recorded path (outside its region) is not swallowed as missing."""
+    def refuse(path):
+        raise receipts.ReceiptError(f'recorded path {path!r} leaves the region directory')
+
+    with pytest.raises(receipts.ReceiptError) as error:
+        rebuild_plan.plan(_with_inputs(docs), _current(CHAIN), refuse)
+    assert type(error.value) is receipts.ReceiptError
+    assert str(error.value) == "recorded path '/data/census.json' leaves the region directory"
+
+
+def test_c1_core_reads_inputs_only_through_the_hasher(docs, monkeypatch):
+    """C1: The core stays pure: no file is opened and the snapshots stay unchanged."""
+    _with_inputs(docs)
+    current = _current(CHAIN)
+    original = deepcopy((docs, current))
+    hasher = Hasher(_disk(**{'/data/registry.json': '9' * 64, '/data/elevation.tif': None}))
+
+    def refused(*args, **kwargs):
+        pytest.fail('plan attempted filesystem I/O')
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, 'open', refused)
+        patch.setattr(Path, 'is_file', refused)
+        patch.setattr('builtins.open', refused)
+        patch.setattr('os.open', refused)
+        patch.setattr('os.stat', refused)
+        rows = rebuild_plan.plan(docs, current, hasher)
+    assert (docs, current) == original
+    assert (rows[0], next(r for r in rows if r['stage'] == 'tiles.public')) == (
+        _row('select', 'input:registry'),
+        _row('tiles.public', 'input-missing:elevation', 'upstream:mosaic.public', 'upstream:select'))

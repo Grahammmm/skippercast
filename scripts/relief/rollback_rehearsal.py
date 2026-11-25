@@ -38,6 +38,12 @@ def _blob(repo: Path, env: dict[str, str], commit: str | None, path: str) -> byt
     return _git(repo, env, 'cat-file', 'blob', f'{commit}:{path}')
 
 
+def _parents(repo: Path, env: dict[str, str], commit: str) -> list[bytes]:
+    # Read stored parents even in shallow history, where log may hide one.
+    headers = _git(repo, env, 'cat-file', 'commit', commit).split(b'\n\n', 1)[0]
+    return [line[7:] for line in headers.split(b'\n') if line.startswith(b'parent ')]
+
+
 def _lineage_matches(current: bytes | None, restored: bytes | None) -> bool:
     try:
         previous = json.loads(current)['previous'] if current is not None else None
@@ -113,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
     commit = None
     lineage_ok = False
     compared = False
+    scope_ok = False
     try:
         # An explicit outside directory also keeps a source-local TMPDIR from
         # causing transient writes in the original checkout.
@@ -123,22 +130,28 @@ def main(argv: list[str] | None = None) -> int:
             _git(clone, env, 'remote', 'remove', 'origin')
             _git(clone, env, 'switch', '--detach', head)
             # Compute the oracle separately from previous_state and from the
-            # rollback command's output. Read the actual first parent even in
-            # shallow history, where Git's log may hide a missing ancestor.
+            # rollback command's output.
             change = _git(clone, env, 'log', '--first-parent', '-1', '--format=%H', head, '--', *paths).strip()
             if not change:
                 raise ValueError(f'no catalog history for region {args.region}')
-            headers = _git(clone, env, 'cat-file', 'commit', change.decode('ascii')).split(b'\n\n', 1)[0]
-            parent = next((line[7:].decode('ascii') for line in headers.splitlines()
-                           if line.startswith(b'parent ')), None)
+            parents = _parents(clone, env, change.decode('ascii'))
+            parent = parents[0].decode('ascii') if parents else None
             expected = {path: _blob(clone, env, parent, path) for path in paths}
-            current = _blob(clone, env, head, paths[0])
+            current = {path: _blob(clone, env, head, path) for path in paths}
             _run(clone, env, sys.executable, '-B', 'scripts/relief/region.py', 'rollback',
                  '--repo', str(clone), '--region', args.region, '--branch', BRANCH)
             commit = _git(clone, env, 'rev-parse', '--verify', f'refs/heads/{BRANCH}').decode('ascii').strip()
             got = {path: _blob(clone, env, commit, path) for path in paths}
-            lineage_ok = _lineage_matches(current, got[paths[0]])
+            lineage_ok = _lineage_matches(current[paths[0]], got[paths[0]])
             compared = True
+            if _parents(clone, env, commit) != [head.encode('ascii')]:
+                raise ValueError('rollback commit must have the pinned source HEAD as its sole parent')
+            needed = {os.fsencode(path) for path in paths if current[path] != expected[path]}
+            diff = _git(clone, env, 'diff-tree', '-r', '--no-commit-id', '--name-only', '-z',
+                        '--no-renames', '--ignore-submodules=none', head, commit, '--')
+            if set(diff.split(b'\0')) - {b''} != needed:
+                raise ValueError("rollback commit's changed paths do not match the required catalog changes")
+            scope_ok = True
     except (OSError, subprocess.CalledProcessError, ValueError) as exc:
         print(f'rollback rehearsal: {_error(exc)}', file=sys.stderr)
     finally:
@@ -153,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
 
     files = [{'path': path, 'expected_sha256': _sha(expected[path]), 'got_sha256': _sha(got[path]),
               'ok': compared and expected[path] == got[path]} for path in paths]
-    passed = lineage_ok and all(item['ok'] for item in files)
+    passed = scope_ok and lineage_ok and all(item['ok'] for item in files)
     report = {'region': args.region, 'repo_head': head, 'rollback_commit': commit,
               'files': files, 'lineage_ok': lineage_ok, 'verdict': 'PASS' if passed else 'FAIL'}
     try:

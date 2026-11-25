@@ -264,10 +264,26 @@ def _sha256(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def _succeeded_receipt(path):
+    """The receipt at `path` when it is a readable object whose status is updated/no_change, else {}."""
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, ValueError):  # Truncated, non-UTF-8 or unreadable: never a basis to skip a build.
+        return {}
+    if isinstance(data, dict) and data.get('status') in ('updated', 'no_change'):
+        return data
+    return {}
+
+
+def _good_receipt(path):
+    """A `_succeeded_receipt` that also names the Planet source: the only kind a build may be skipped on."""
+    data = _succeeded_receipt(path)
+    return data if data.get('source') == 'Zenodo Planet polygons' else {}
+
+
 def _last_success(directory):
     for path in sorted(directory.glob('????-??-??-planet.json'), reverse=True):
-        data = json.loads(path.read_text(encoding='utf-8'))
-        if data['status'] in ('updated', 'no_change') and data['source'] == 'Zenodo Planet polygons':
+        if data := _good_receipt(path):
             return data
     return {}
 
@@ -313,10 +329,15 @@ def refresh_planet(*, archive_root, out, waters, receipt_dir, date):
         # messages are safe here; never persist untrusted exception messages or paths.
         receipt['error'] = str(exc) if isinstance(exc, Refusal) else type(exc).__name__
     receipt_dir.mkdir(parents=True, exist_ok=True)
+    target = receipt_dir / f'{date.isoformat()}-planet.json'
+    if receipt['status'] not in ('updated', 'no_change') and _succeeded_receipt(target):
+        # Keep today's updated/no_change receipt (judged by status alone, even without a
+        # source): _last_success must not fall back to an older identity.
+        target = receipt_dir / f'{date.isoformat()}-planet-failed.json'
     with tempfile.TemporaryDirectory(dir=receipt_dir) as tmp:
         staged = Path(tmp) / 'receipt.json'
         staged.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8')
-        staged.replace(receipt_dir / f'{date.isoformat()}-planet.json')
+        staged.replace(target)
     return receipt
 
 

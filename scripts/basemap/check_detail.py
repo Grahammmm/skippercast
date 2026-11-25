@@ -2,9 +2,11 @@
 
     python3 scripts/basemap/check_detail.py             # current extract settings
     python3 scripts/basemap/check_detail.py --dir DIR   # saved plan.json + detail.geojson
+    python3 scripts/basemap/check_detail.py --manifest PATH  # saved basemap pointer
 """
 import argparse
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -91,11 +93,71 @@ def _shape(planned, detail):
     return None
 
 
+def check_manifest(path):
+    """Require overview coverage and report which detail boxes contain each indexed region."""
+    try:
+        manifest = _load(path)
+    except UnicodeDecodeError as error:
+        raise ValueError(f'{path.name}: not valid JSON (invalid text encoding)') from error
+    if not isinstance(manifest, dict):
+        raise ValueError(f'{path.name}: manifest must be a JSON object')
+    if manifest.get('detail') != {'minzoom': 11, 'maxzoom': 14}:
+        raise ValueError(f'{path.name}: detail must be {{"minzoom": 11, "maxzoom": 14}}')
+    overview = manifest.get('overview')
+    if not isinstance(overview, dict):
+        raise ValueError(f'{path.name}: overview must be an object')
+    if overview.get('maxzoom') != 10:
+        raise ValueError(f'{path.name}: overview.maxzoom must be 10')
+    boxes = manifest.get('regions')
+    if not isinstance(boxes, list):
+        raise ValueError(f'{path.name}: regions must be a list')
+    bboxes = [('overview.bbox', overview.get('bbox'))]
+    for i, box in enumerate(boxes):
+        if not isinstance(box, dict):
+            raise ValueError(f'{path.name}: regions[{i}] must be an object')
+        if not isinstance(box.get('id'), str) or not box['id']:
+            raise ValueError(f'{path.name}: regions[{i}].id must be a nonempty string')
+        bboxes.append((f'regions[{i}].bbox', box.get('bbox')))
+    for field, bbox in bboxes:
+        if (not isinstance(bbox, list) or len(bbox) != 4
+                or not all(type(v) is int or (type(v) is float and math.isfinite(v)) for v in bbox)
+                or not (bbox[0] < bbox[2] and bbox[1] < bbox[3])):
+            raise ValueError(f'{path.name}: {field} must be an array of four finite, ordered numbers')
+
+    try:
+        w, s, e, n = regions.check_bbox(overview['bbox'])
+    except (ValueError, OverflowError) as error:
+        raise ValueError(f'{path.name}: overview.bbox must have finite, ordered coordinates within bounds') from error
+
+    coverage = {}
+    for region in regions.region_boxes():
+        west, south, east, north = region['bbox']
+        if not (w <= west and s <= south and e >= east and n >= north):
+            raise ValueError(f"{path.name}: overview.bbox does not contain indexed region {region['id']}")
+        coverage[region['id']] = [box['id'] for box in boxes
+                                  if box['bbox'][0] <= west and box['bbox'][1] <= south
+                                  and box['bbox'][2] >= east and box['bbox'][3] >= north]
+    misses = sorted(region_id for region_id, ids in coverage.items() if not ids)
+    if misses:
+        raise ValueError(f"manifest detail boxes miss indexed region(s): {', '.join(misses)}")
+    return coverage
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--dir', type=Path, help='Check saved extraction settings instead of current defaults')
+    inputs = parser.add_mutually_exclusive_group()
+    inputs.add_argument('--dir', type=Path, help='Check saved extraction settings instead of current defaults')
+    inputs.add_argument('--manifest', type=Path, metavar='PATH', help='Check a saved basemap pointer footprint')
     args = parser.parse_args(argv)
     try:
+        if args.manifest:
+            coverage = check_manifest(args.manifest)
+            for region_id, ids in coverage.items():
+                print(f"PASS {region_id}: inside manifest detail box {', '.join(ids)}")
+            count = len(coverage)
+            print(f"{count} of {count} indexed regions inside the manifest's detail boxes "
+                  "(footprint only; tile bytes not inspected)")
+            return
         if args.dir:
             planned = _load(args.dir / 'plan.json')
             detail = _load(args.dir / 'detail.geojson')

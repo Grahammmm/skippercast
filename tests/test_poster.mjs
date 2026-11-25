@@ -7,6 +7,9 @@ import {loadPoster, mercator, parsePoster, poster, posterPlacement, posterURL} f
 
 const FILE = readFileSync(new URL('../dist/regions/morro-bay/poster.svg', import.meta.url), 'utf8');
 const REGION = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/region.json', import.meta.url), 'utf8'));
+const svg = d => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" data-zoom="12" data-west="-121" data-north="35"><path d="${d}"/></svg>`;
+const PARTIAL = 'M0 0l4';
+const MULTIPART = 'M0 0l4 3 -2 1M7 8l-3 -4';
 
 test('the committed poster parses: its corner is the region\'s and its path is moves and lines only', () => {
   const p = parsePoster(FILE, 'morro-bay');
@@ -15,15 +18,28 @@ test('the committed poster parses: its corner is the region\'s and its path is m
   const [x0, y0] = mercator(REGION.bounds[0], REGION.bounds[3], 12), [x1, y1] = mercator(REGION.bounds[2], REGION.bounds[1], 12);
   assert.deepEqual([p.width, p.height], [Math.round(x1 - x0), Math.round(y1 - y0)]);
   assert.match(p.path, /^M\d/);
+  assert.equal(p.path, /<path d="([^"]*)"\/>/.exec(FILE)[1]);
   assert.equal(posterURL('morro-bay'), 'regions/morro-bay/poster.svg');
 });
 
 test('anything but the build\'s shape is refused', () => {
-  const ok = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" data-zoom="12" data-west="-121" data-north="35"><path d="M0 0l1 1"/></svg>';
+  const ok = svg('M0 0l1 1');
   assert.ok(parsePoster(ok, 'r'));
   for (const bad of [ok.replace('M0 0l1 1', 'M0 0l1 1" onload="x'), ok.replace('l1 1', 'c1 1 2 2 3 3'), ok.replace('data-zoom="12"', ''),
     ok.replace('viewBox="0 0 10 10"', 'viewBox="0 0 0 10"'), '<html></html>', ''])
     assert.equal(parsePoster(bad, 'r'), null, bad);
+});
+
+test('the parser requires complete integer pairs in every shoreline subpath and no fallback path', () => {
+  assert.equal(parsePoster(svg(MULTIPART), 'r')?.path, MULTIPART);
+  for (const d of [PARTIAL, 'l1 1', 'M0l1 1', 'M0 0l', 'M0 0l1 1M2 3', 'M0 0l1 1 2',
+    'M0 0l1 1l2 2', 'M0 0l1.5 1', `M0 0l${'9'.repeat(400)} 1`]) {
+    assert.equal(parsePoster(svg(d), 'r'), null, d);
+  }
+  const duplicate = svg('M0 0l1 1').replace('</svg>', '<path d="M2 3l4 5"/></svg>');
+  const fallback = duplicate.replace('<path d="M0 0l1 1"/>', '<path id="shore" d="M0 0l4"/>');
+  assert.equal(parsePoster(duplicate, 'r'), null, 'two unrelated paths');
+  assert.equal(parsePoster(fallback, 'r'), null, 'do not skip a non-producer path and use the next one');
 });
 
 test('placement: a world point lands where a 512-pixel MapLibre camera puts it, at any zoom', () => {
@@ -50,4 +66,22 @@ test('the poster shows only until the Chart has drawn, and a failed file shows n
   await loadPoster('morro-bay', 'https://s.test/map', () => false, ok);
   assert.equal(poster.value?.region, 'morro-bay');
   poster.value = null;
+});
+
+test('a truncated shoreline never mounts; a complete multipart shoreline mounts unchanged', async () => {
+  const respond = d => async () => new Response(svg(d));
+  poster.value = null;
+  try {
+    // A truncated line can still arrive in a complete SVG envelope with HTTP 200.
+    await loadPoster('morro-bay', 'https://s.test/map', () => false, respond(PARTIAL));
+    assert.equal(poster.value, null, 'incomplete relative line must not mount');
+    await loadPoster('morro-bay', 'https://s.test/map', () => false, respond(MULTIPART));
+    assert.equal(poster.value?.path, MULTIPART);
+    assert.deepEqual(
+      posterPlacement(poster.value, {latitude: 35, longitude: -121, zoom: 14}, 390, 844),
+      {x: 195, y: 422, scale: 2},
+    );
+  } finally {
+    poster.value = null;
+  }
 });

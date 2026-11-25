@@ -103,7 +103,7 @@ class RightsCoverageTests(unittest.TestCase):
         self.row.pop('url')
         self.write_sources([self.row])
         report = self.report()
-        self.assertEqual(report['sources'][0]['error']['type'], 'KeyError')
+        self.assertEqual(report['sources'][0]['error']['type'], 'ValueError')  # was KeyError; rights.py now names the missing url (SCB1124-0936-04)
         self.assertEqual(report['verdict'], 'INCOMPLETE')
 
     def test_resolver_error_urls_are_host_only(self):

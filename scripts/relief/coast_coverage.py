@@ -13,6 +13,7 @@ from typing import TypedDict
 
 ROOT = Path(__file__).resolve().parents[2]
 ISLANDS = ('channel-islands-north', 'outer-islands-borderland')
+ANCHOR_TOLERANCE = 1e-6  # degrees
 Bounds = tuple[float, float, float, float]  # west, south, east, north
 
 
@@ -44,19 +45,25 @@ def load_regions(root: Path) -> Regions:
 
 
 def coverage(regions: Regions) -> dict:
-    """Report gaps and pairwise latitude overlaps within the anchor window.
+    """Report coast coverage within and beyond the anchor window.
 
-    Only positive-width intervals count: touching edges are not gaps or
-    overlaps. Island containment uses all four bounds, including shared edges;
-    if several release regions qualify, report the lexically first ID.
+    Only positive-width latitude intervals count as gaps or overlaps. Island
+    rectangles include their edges for containment and intersection. If several
+    release regions contain an island, report the lexically first ID.
     """
     south, north = regions['south'], regions['north']
     if not south < north:
         raise ValueError('south anchor must be below north anchor')
 
     release = regions['release']
+    ordered_release = sorted(release.items())
+    beyond = []
     spans = []
-    for region_id, (_, low, _, high) in release.items():
+    for region_id, (_, low, _, high) in ordered_release:
+        if low < south - ANCHOR_TOLERANCE:
+            beyond.append({'region': region_id, 'edge': 'south', 'by_deg': south - low})
+        if high > north + ANCHOR_TOLERANCE:
+            beyond.append({'region': region_id, 'edge': 'north', 'by_deg': high - north})
         start, end = max(south, low), min(north, high)
         if start < end:
             spans.append((start, end, region_id))
@@ -78,18 +85,26 @@ def coverage(regions: Regions) -> dict:
             overlaps.append({'regions': [id_a, id_b], 'latitudes': [start, end]})
 
     islands_inside = {}
-    ordered_release = sorted(release.items())
+    islands_partial = []
     for island_id, (west, low, east, high) in sorted(regions['islands'].items()):
-        islands_inside[island_id] = next((
+        container = next((
             region_id for region_id, (w, s, e, n) in ordered_release
             if w <= west and s <= low and east <= e and high <= n
         ), None)
+        islands_inside[island_id] = container
+        if container is None and any(
+            w <= east and west <= e and s <= high and low <= n
+            for w, s, e, n in release.values()
+        ):
+            islands_partial.append(island_id)
 
     return {
         'gaps': gaps,
         'overlaps': overlaps,
+        'beyond': beyond,
         'islands_inside': islands_inside,
-        'ok': not gaps and all(region_id is not None for region_id in islands_inside.values()),
+        'islands_partial': islands_partial,
+        'ok': not (gaps or beyond or islands_partial or None in islands_inside.values()),
     }
 
 
@@ -241,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     formats = parser.add_mutually_exclusive_group()
     formats.add_argument('--json', action='store_true', help='print machine-readable JSON')
-    formats.add_argument('--markdown', action='store_true', help='print the catalog state table in Markdown')
+    formats.add_argument('--markdown', action='store_true', help='print catalog state and boundary findings in Markdown')
     args = parser.parse_args(argv)
     try:
         regions = load_regions(ROOT)
@@ -267,7 +282,23 @@ def main(argv: list[str] | None = None) -> int:
             low, high = row['latitudes']
             print(f'Overlap    | {" / ".join(row["regions"])} | {low} to {high} N')
         for island, container in report['islands_inside'].items():
-            print(f'Island     | {island} | {container or "outside"}')
+            if island not in report['islands_partial']:
+                print(f'Island     | {island} | {container or "outside"}')
+
+    if not args.json:
+        findings = [
+            ('Beyond', row['region'], f'{row["by_deg"]:.9g}° past {row["edge"]} anchor')
+            for row in report['beyond']
+        ] + [('Island', island, 'partial') for island in report['islands_partial']]
+        if args.markdown and findings:
+            print('\n| Check | Region / island | Result |')
+            print('| --- | --- | --- |')
+        for check, region, result in findings:
+            if args.markdown:
+                print(f'| {check} | {region} | {result} |')
+            else:
+                print(f'{check:10} | {region} | {result}')
+    if not args.json and not args.markdown:
         print(f'Configured coast coverage: {"OK" if report["ok"] else "NOT OK"}')
     return 0 if report['ok'] else 1
 

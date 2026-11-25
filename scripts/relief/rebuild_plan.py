@@ -6,8 +6,9 @@ from importlib.util import find_spec
 import json
 import os
 from pathlib import Path
+import stat
 
-from skippercast.relief import rebuild_plan, receipts, render_config
+from skippercast.relief import rebuild_plan, receipts
 
 if __package__:
     from .run_region import STAGES
@@ -15,7 +16,6 @@ else:
     from run_region import STAGES
 
 HEAVY = {'mosaic', 'tiles'}
-STYLE_GROUPS = ('baked', 'contours', 'habitat')
 
 
 def _stage_digests():
@@ -49,7 +49,27 @@ def _stage_digests():
     return current
 
 
-def _region_plan(out, region, current):
+def _input_hasher(location, memo):
+    """Read-only sha256 of a recorded input, ``None`` when it is no file; memoised by real path.
+
+    Only a genuinely absent path (or a non-file) is ``None``. Path.is_file() would also turn a
+    PermissionError into False, so stat directly and let access errors reach the CLI.
+    """
+    def hasher(recorded):
+        path = location.resolve(recorded)
+        if path not in memo:
+            try:
+                is_file = stat.S_ISREG(os.stat(path).st_mode)
+            except (FileNotFoundError, NotADirectoryError):
+                is_file = False
+            memo[path] = receipts.sha256_file(path) if is_file else None
+        return memo[path]
+    return hasher
+
+
+def _region_plan(out, region, current, memo=None, *, default=None, pin=None):
+    # run_region's dry run calls this without a memo; each call then hashes for itself.
+    memo = {} if memo is None else memo
     # Region.keys() globs, which can hide permission errors as an empty directory.
     # A missing stages directory is normal for a region that has not been run.
     location = receipts.Region(out, region)
@@ -59,8 +79,7 @@ def _region_plan(out, region, current):
     except FileNotFoundError:
         pass
     docs = rebuild_plan.load_receipts(out, region)
-    _, style = render_config.resolve_style(region)
-    styles = {group: style.digest(group) if style is not None else None for group in STYLE_GROUPS}
+    styles = rebuild_plan.style_digests(region, default=default, pin=pin)
     # Compare existing scoped receipts too, even if the current runner doesn't emit that scope.
     by_stage = {key.partition('.')[0]: digest for key, digest in current.items()}
     digests = dict(current)
@@ -68,22 +87,42 @@ def _region_plan(out, region, current):
         stage = key.partition('.')[0]
         if stage in by_stage:
             digests[key] = by_stage[stage]
-    return rebuild_plan.plan(docs, {'stage_digest': digests, 'style': styles})
+    return rebuild_plan.plan(docs, {'stage_digest': digests, 'style': styles},
+                             _input_hasher(location, memo))
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog='rebuild_plan.py', description=__doc__)
     parser.add_argument('--out', required=True, type=Path, help='existing relief output root')
     parser.add_argument('--json', action='store_true', help='print one JSON document')
+    parser.add_argument('--style-default', metavar='VERSION', help='simulate a different default style')
+    parser.add_argument('--style-pin', metavar='REGION=VERSION', action='append', default=[],
+                        help='simulate a pin for a requested region (repeatable)')
     parser.add_argument('regions', metavar='REGION', nargs='+')
     args = parser.parse_intermixed_args(argv)
+
+    pins = {}
+    for assignment in args.style_pin:
+        region, _, version = assignment.partition('=')
+        if not region or not version or '=' in version:
+            parser.error('--style-pin requires REGION=VERSION')
+        if region not in args.regions:
+            parser.error(f'--style-pin region not in report: {region}')
+        if region in pins:
+            parser.error(f'duplicate --style-pin for region: {region}')
+        pins[region] = version
 
     try:
         out = args.out.expanduser()
         with os.scandir(out):
             pass
         current = _stage_digests()
-        blocks = [{'region': region, 'stages': _region_plan(out, region, current)} for region in args.regions]
+        memo = {}
+        blocks = [
+            {'region': region, 'stages': _region_plan(out, region, current, memo,
+                                                     default=args.style_default, pin=pins.get(region))}
+            for region in args.regions
+        ]
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
 

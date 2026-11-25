@@ -304,3 +304,58 @@ test('frozen_input_and_sorted_output_compatibility: input is never reordered or 
   assert.ok(isDeepStrictEqual(r, evaluatePortAlert(LIMITS, forecast(earliestRows()), NOW)), 'same result as ascending input');
   assert.equal(r.notification.body, 'Forecast wind 15 kt (your limit 15 kt); swell 6 ft (your limit 6 ft) within 48 h. Model forecast for planning, not for navigation.');
 });
+
+// SC1222-09: the form and hit lines use the chosen units; storage stays knots and feet.
+const {shownLimits, limitsFromForm} = await import('../web/port-alert.ts');
+const {KMH_PER_KT, M_PER_FT} = await import('../web/units.ts');
+const U = (wind, height) => ({temp: 'F', wind, height});
+const submit = (stored, u, wind, swell) => { const s = store(); const out = limitsFromForm({wind, swell}, stored, u, s); return {out, raw: s.getItem(PORT_ALERT_KEY)}; };
+
+test('SC1222-09 unchanged save in km/h and metres is bit-identical', () => {
+  const stored = {windKt: 17, swellFt: 6.5}, u = U('kmh', 'm'), shown = shownLimits(stored, u);
+  assert.deepEqual([shown.wind.value, shown.swell.value], ['31', '2.0']);
+  const {out, raw} = submit(stored, u, shown.wind.value, shown.swell.value);
+  assert.ok(Object.is(out.windKt, 17) && Object.is(out.swellFt, 6.5));
+  assert.equal(raw, JSON.stringify(stored));
+  const odd = {windKt: 21.598272138228943, swellFt: 6.561679790026247}, o = shownLimits(odd, u);
+  assert.ok(Object.is(submit(odd, u, o.wind.value, o.swell.value).out.windKt, odd.windKt));
+  const d = shownLimits(null, u);
+  assert.equal(submit(null, u, d.wind.value, d.swell.value).raw, JSON.stringify({windKt: 15, swellFt: 6}), 'untouched defaults store 15 and 6');
+});
+
+test('SC1222-09 an edit converts once', () => {
+  const stored = {windKt: 17, swellFt: 6.5};
+  assert.deepEqual(submit(stored, U('kmh', 'ft'), '40', '6.5').out, {windKt: 40 / KMH_PER_KT, swellFt: 6.5});
+  assert.deepEqual(submit(stored, U('kt', 'm'), '17', '2.5').out, {windKt: 17, swellFt: 2.5 / M_PER_FT});
+  assert.equal(submit(stored, U('kt', 'ft'), '', '6.5').out, null, 'empty is invalid');
+});
+
+test('SC1222-09 bound edges round inward and save, one step outside is invalid', () => {
+  const cases = [[U('kmh', 'm'), 2, 111, 0.2, 9.1], [U('mph', 'm'), 2, 69, 0.2, 9.1], [U('kt', 'ft'), 1, 60, 0.5, 30]];
+  for (const [u, wMin, wMax, sMin, sMax] of cases) {
+    const s = shownLimits(null, u);
+    assert.deepEqual([s.wind.min, s.wind.max, s.swell.min, s.swell.max], [wMin, wMax, sMin, sMax]);
+    const step = (v, d, st) => String(Math.round((v + d * st) * 10) / 10);
+    for (const [w, sw] of [[wMin, sMin], [wMax, sMax]]) assert.ok(submit(null, u, String(w), String(sw)).out, `${u.wind} ${u.height} ${w}/${sw}`);
+    assert.equal(submit(null, u, step(wMin, -1, 1), String(sMin)).out, null);
+    assert.equal(submit(null, u, step(wMax, 1, 1), String(sMax)).out, null);
+    assert.equal(submit(null, u, String(wMin), step(sMin, -1, s.swell.step)).out, null);
+    assert.equal(submit(null, u, String(wMax), step(sMax, 1, s.swell.step)).out, null);
+  }
+});
+
+const flat = (o, l) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, v[l]]));
+
+test('SC1222-09 default bytes in knots and feet are unchanged', () => {
+  const s = shownLimits(null, U('kt', 'ft'));
+  assert.deepEqual(s, {wind: {value: '15', min: 1, max: 60, step: 1}, swell: {value: '6', min: 0.5, max: 30, step: 0.5}});
+  const en = flat(JSON.parse(readFileSync(new URL('../web/strings.en.generated.json', import.meta.url), 'utf8')), 'en');
+  const es = JSON.parse(readFileSync(new URL('../web/strings.es.generated.json', import.meta.url), 'utf8'));
+  const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]);
+  assert.equal(fill(en['portAlert.hit.wind'], {value: 22, time: 'T', limit: 15, unit: 'kt'}), 'Wind 22 kt from T (limit 15 kt)');
+  assert.equal(fill(en['portAlert.hit.swell'], {value: 8, time: 'T', limit: 6, unit: en['portAlert.unit.ft']}), 'Swell 8 ft from T (limit 6 ft)');
+  assert.equal(fill(es['portAlert.hit.swell'], {value: 8, time: 'T', limit: 6, unit: es['portAlert.unit.ft']}), 'Oleaje de fondo 8 pies desde T (límite 6 pies)');
+  assert.equal(fill(en['portAlert.swell'], {unit: en['portAlert.unit.ft']}), 'Swell limit (ft)');
+  assert.equal(fill(es['portAlert.swell'], {unit: es['portAlert.unit.ft']}), 'Límite de oleaje de fondo (pies)');
+  assert.equal(fill(es['portAlert.invalid'], {windMin: '1', windMax: '60', windUnit: 'kt', swellMin: '0,5', swellMax: '30', swellUnit: 'pies'}), 'Escribe viento de 1 a 60 kt y oleaje de fondo de 0,5 a 30 pies.');
+});

@@ -25,11 +25,15 @@ function browser() {
   syncFromURL(location.href);
   unavailable.value = [];
 }
-/** An engine that records the aerial overlays it was given; `settle()` fires the map's `idle`. */
+/** An engine with a keyed overlay registry; `settle()` fires the map's `idle`. */
 function engine() {
-  const e = {overlay: null, before: null, calls: 0, idle: new Set()};
+  const e = {overlays: new Map(), get overlay() { return this.overlays.get('aerial') ?? null; }, before: null, calls: 0, idle: new Set()};
   Object.assign(e, {
-    setOverlay(layer, overlay, before) { assert.equal(layer, 'aerial'); e.calls++; e.overlay = overlay; e.before = before; },
+    setOverlay(layer, overlay, before) {
+      e.calls++; e.before = before;
+      if (overlay === null) e.overlays.delete(layer);
+      else e.overlays.set(layer, overlay);
+    },
     view: {on(type, fn) { assert.equal(type, 'idle'); e.idle.add(fn); return () => e.idle.delete(fn); }},
     settle() { for (const fn of [...e.idle]) fn(); },
   });
@@ -71,6 +75,32 @@ test('with `sharp`, a first draw is the preview; sharp lays the full image over 
   setParams({base: 'aerial'});
   assert.deepEqual(shape(e.overlay), [[ID, '512,512', 'jpgpng']], 'chosen again after the first view: the full image at once');
   a.destroy();
+});
+
+test('destroy removes both aerial stages from the still-held Chart and queued idle cannot redraw', t => {
+  browser();
+  const e = engine(), held = signal(e), sharp = signal(false);
+  const unrelated = new Map([[ENC_LAYER, {layers: [{id: ENC_LAYER}]}], ['relief', {layers: [{id: 'relief'}]}]]);
+  for (const [id, overlay] of unrelated) e.overlays.set(id, overlay);
+  const a = createAerial({engine: held, offer: () => MORRO, sharp: () => sharp.value});
+  t.after(() => a.destroy());
+  sharp.value = true;
+  assert.deepEqual(shape(e.overlay), [[`${ID}:preview`, '256,256', 'jpgpng'], [ID, '512,512', 'jpgpng']]);
+  assert.equal(e.idle.size, 1);
+  const [queuedIdle] = e.idle;
+
+  // Detaching the listener alone would leave both rasters and let the already queued callback install the full one.
+  a.destroy();
+  const afterDestroy = e.overlay?.layers.map(l => l.id) ?? [];
+  assert.equal(e.idle.size, 0, 'destroy unregisters idle');
+  const calls = e.calls;
+  queuedIdle();
+  const afterQueuedIdle = e.overlay?.layers.map(l => l.id) ?? [];
+  assert.deepEqual({afterDestroy, afterQueuedIdle}, {afterDestroy: [], afterQueuedIdle: []}, 'no Aerial overlay on the held Chart after destroy or queued idle');
+  a.destroy();
+  assert.equal(e.calls, calls, 'queued idle and repeated destroy make no registry calls');
+  assert.equal(held.value, e, 'the engine signal was not detached');
+  assert.deepEqual(e.overlays, unrelated);
 });
 
 test('aerialSoft reads true from the preview until the full image is alone, and never for a failed or removed base', t => {

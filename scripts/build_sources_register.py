@@ -167,6 +167,27 @@ def _dates(row, extra=()):
     return '; '.join(parts)
 
 
+def _depth_detail(pointer):
+    estimated = {source['id'] for source in pointer['sources'] if source.get('estimated') is True}
+    grids = set()
+    certified_one_metre = False
+    for zoom, support in pointer['native_support_by_zoom'].items():
+        for native in support['sources']:
+            if native['id'] in estimated:
+                continue
+            grid = native['resolution_m']
+            grids.add(grid)
+            # The release validator requires certified support at z16–17. Spacing alone is not certification.
+            if grid == 1 and int(zoom) >= 16 and support.get('support_class') == 3:
+                certified_one_metre = True
+    labels = ['1 m measured' if grid == 1 and certified_one_metre else f"{str(grid).removesuffix('.0')} m"
+              for grid in sorted(grids)]
+    if estimated:
+        labels.append('estimated')
+    # Lack of evidence is not evidence of unsurveyed water.
+    return ', '.join(labels) or 'not stated'
+
+
 def _relief_pointers(root):
     directory = root / 'catalog/relief'
     schema_path = directory / 'pointer.schema.json'
@@ -188,7 +209,7 @@ def _relief_pointers(root):
                 if isinstance(entry, dict) and 'id' in entry
             )
             raise RegisterError(f'{region_id}: invalid relief pointer {path.name} (source IDs: {ids or "unavailable"}): {error}') from error
-        yield pointer['region'], dict.fromkeys((entry['id'] for entry in pointer['sources']), '')
+        yield pointer['region'], dict.fromkeys((entry['id'] for entry in pointer['sources']), ''), _depth_detail(pointer)
 
 
 def _contour_sources(root):
@@ -204,7 +225,7 @@ def _contour_sources(root):
             raise RegisterError(f'{path.name}: invalid contour region or source IDs')
         if 'publication_held' in collection or 'publication_held' in provenance:
             raise RegisterError(f'{path.name}: depth contours are held')
-        yield region_id, dict.fromkeys(ids, '')
+        yield region_id, dict.fromkeys(ids, ''), None
 
 
 def collect(root=ROOT):
@@ -253,7 +274,7 @@ def collect(root=ROOT):
     depth_inputs = ((DEPTH_SHADING, _relief_pointers(root)), (DEPTH_CONTOURS, _contour_sources(root)))
     depth_usage = set()
     for layer, inputs in depth_inputs:
-        for region_id, members in inputs:
+        for region_id, members, depth_detail in inputs:
             if region_id not in live_regions:
                 config = root / 'regions' / region_id / 'region.json'
                 if not config.is_file():
@@ -270,6 +291,8 @@ def collect(root=ROOT):
                     raise RegisterError(f'{region_id}: {layer.lower()} has unlistable source {ident!r}')
                 depth_usage.add((region_id, layer, ident))
             live_regions[region_id]['layers'].setdefault(layer, {}).update(members)
+            if depth_detail is not None:
+                live_regions[region_id]['depth_detail'] = depth_detail
 
     expected = {ident for _, ident in found}
     depth_layers = {(region_id, layer, ident) for region_id, region in live_regions.items()
@@ -346,6 +369,17 @@ def render(data):
            'The map itself shows no source names; its measured, estimated and unsurveyed labels describe data quality and stay as they are. '
            'Eligibility for public display is a rights decision that does not release a layer.</p>',
            f'{h}<p>{len(shown)} sources are in use on live layers; {len(eligible)} more are eligible for public display but no layer uses them yet.</p>']
+    # Match the map labels in survey-detail.ts and the English legend's no-survey chip.
+    out += [f'{h}<section id="depth-confidence">',
+            f'{h}  <h3>Depth confidence</h3>',
+            f'{h}  <ul>',
+            f'{h}    <li><strong>1 m measured</strong> applies only where a survey is certified for 1 m detail. '
+            'Other measured areas show the grid size, such as <strong>2 m</strong> or <strong>5 m</strong>.</li>',
+            f'{h}    <li><strong>estimated (8 m grid)</strong> means the depths come from a compiled grid. '
+            'The number is the grid size in that area.</li>',
+            f'{h}    <li><strong>no survey</strong> means no survey data is available in this map area.</li>',
+            f'{h}  </ul>',
+            f'{h}</section>']
     if any(is_csumb(sources[ident]) for ident in shown + eligible if ident in sources):
         out += [f'{h}<h3 id="data-sources-credits">Required credit</h3>',
                 f'{h}<p class="data-source-credit">{_esc(CSUMB_CREDIT)}</p>']
@@ -356,10 +390,14 @@ def render(data):
             ids = [i for i in members if show(i)]
             if ids:
                 layers[layer] = ids if layer in (DEPTH_SHADING, DEPTH_CONTOURS) else _by_name(ids, sources)
-        if not layers:
-            continue
         label = region['name'] + (f" ({region['status']} region)" if region['status'] != 'active' else '')
         out.append(f"{h}<h4 id=\"region-{_esc(region['id'])}\">{_esc(label)}</h4>")
+        if not layers:
+            # Regions collected only through depth inputs always have listable credits.
+            out.append(f'{h}<p>No sources are listed for this region.</p>')
+            continue
+        if 'depth_detail' in region:
+            out.append(f"{h}<p>Depth detail: {_esc(region['depth_detail'])}</p>")
         for layer, ids in layers.items():
             out.append(f'{h}<h5>{_esc(layer)}</h5>')
             out.append(_list(_entry(i, sources, needs, region['layers'][layer][i]) for i in ids))

@@ -21,18 +21,23 @@ def test_C1_gap_at_each_edge_and_between_regions():
                     'outside': (-125, 41, -115, 42)},
         'islands': {},
     }) == {'gaps': [[30, 31], [34, 36], [39, 40]], 'overlaps': [],
-           'islands_inside': {}, 'ok': False}
+           'beyond': [{'region': 'outside', 'edge': 'north', 'by_deg': 2}],
+           'islands_inside': {}, 'islands_partial': [], 'ok': False}
 
 
 def test_C1_overlaps_are_clipped_and_nested_spans_do_not_shorten_coverage():
-    """C1: Nested spans must not reset the frontier; touching is not overlap."""
+    """C1: Clip only the latitude sweep, not the bounds used for diagnostics."""
     assert coast.coverage({
         'south': 30, 'north': 40,
         'release': {'north': (-124, 37, -114, 42), 'nested': (-123, 28, -115, 32),
                     'south': (-125, 29, -113, 37)},
         'islands': {'equal-edge': (-124, 38, -114, 42), 'two-containers': (-122, 31, -120, 32)},
     }) == {'gaps': [], 'overlaps': [{'regions': ['nested', 'south'], 'latitudes': [30, 32]}],
-           'islands_inside': {'equal-edge': 'north', 'two-containers': 'nested'}, 'ok': True}
+           'beyond': [{'region': 'nested', 'edge': 'south', 'by_deg': 2},
+                      {'region': 'north', 'edge': 'north', 'by_deg': 2},
+                      {'region': 'south', 'edge': 'south', 'by_deg': 1}],
+           'islands_inside': {'equal-edge': 'north', 'two-containers': 'nested'},
+           'islands_partial': [], 'ok': False}
 
 
 def test_C1_islands_need_one_full_rectangle():
@@ -40,9 +45,33 @@ def test_C1_islands_need_one_full_rectangle():
     assert coast.coverage({
         'south': 30, 'north': 40,
         'release': {'south': (-125, 30, -115, 35), 'north': (-125, 35, -115, 40)},
-        'islands': {'offshore': (-126, 32, -124, 33), 'straddles': (-124, 34, -120, 36)},
-    }) == {'gaps': [], 'overlaps': [], 'islands_inside': {'offshore': None, 'straddles': None},
-           'ok': False}
+        'islands': {'offshore': (-126, 32, -124, 33), 'straddles': (-124, 34, -120, 36),
+                    'disjoint': (-127, 32, -126, 33), 'touching': (-126, 33, -125, 34)},
+    }) == {'gaps': [], 'overlaps': [], 'beyond': [],
+           'islands_inside': {'disjoint': None, 'offshore': None, 'straddles': None, 'touching': None},
+           'islands_partial': ['offshore', 'straddles', 'touching'], 'ok': False}
+
+
+def test_C2_partial_island_alone_fails_coverage():
+    """C2: A complete coast with no overhang must still fail for a partial island."""
+    assert coast.coverage({
+        'south': 30, 'north': 40, 'release': {'umbrella': (-125, 30, -115, 40)},
+        'islands': {'offshore': (-126, 31, -124, 32)},
+    }) == {'gaps': [], 'overlaps': [], 'beyond': [], 'islands_inside': {'offshore': None},
+           'islands_partial': ['offshore'], 'ok': False}
+
+
+@pytest.mark.parametrize('low, high', [
+    pytest.param(29.9999995, 40.0000005, id='C1: ignore sub-tolerance overhang'),
+    pytest.param(29.999999, 40.000001, id='C1: ignore overhang at the tolerance'),
+])
+def test_C1_anchor_tolerance(low, high):
+    """C1: Detect an inclusive cutoff or floating-point noise at normal latitudes."""
+    assert coast.coverage({
+        'south': 30, 'north': 40, 'release': {'umbrella': (-125, low, -115, high)},
+        'islands': {},
+    }) == {'gaps': [], 'overlaps': [], 'beyond': [], 'islands_inside': {},
+           'islands_partial': [], 'ok': True}
 
 
 def test_C1_reversed_anchors_refused():
@@ -52,8 +81,8 @@ def test_C1_reversed_anchors_refused():
     assert error.type is ValueError
 
 
-def test_C1_real_release_bounds():
-    """C1: Record the actual coverage and both island parents on the checked-in tree."""
+def test_C3_real_release_bounds():
+    """C3: Record the actual verdict, including the configured southern overhang."""
     assert coast.coverage(coast.load_regions(ROOT)) == {
         'gaps': [],
         'overlaps': [
@@ -64,9 +93,12 @@ def test_C1_real_release_bounds():
             {'regions': ['bodega-point-reyes', 'point-arena-bodega'], 'latitudes': [38.4, 38.5]},
             {'regions': ['point-arena-bodega', 'fort-bragg-point-arena'], 'latitudes': [38.958333333333336, 39.0]},
         ],
+        'beyond': [{'region': 'southern-california', 'edge': 'south',
+                    'by_deg': 0.034300000000001774}],
         'islands_inside': {'channel-islands-north': 'southern-california',
                            'outer-islands-borderland': 'southern-california'},
-        'ok': True,
+        'islands_partial': [],
+        'ok': False,
     }
 
 
@@ -79,7 +111,7 @@ def config_files(monkeypatch, tmp_path):
         'crescent-city': [-125, 38, -120, 40],
         'channel-islands-north': [-124, 36, -122, 38],
         'outer-islands-borderland': [-123, 33, -121, 35],
-        'umbrella': [-125, 29, -115, 41],
+        'umbrella': [-125, 30, -115, 40],
     }.items():
         files[f'regions/{region_id}/region.json'] = {'bounds': bounds}
 
@@ -120,7 +152,7 @@ def pointer():
         'generation': '0123456789abcdef' * 4, 'release_sha256': 'a' * 64,
         'envelope_sha256': 'b' * 64, 'sha256': 'c' * 64, 'bytes': 1,
         'digest_root_sha256': 'd' * 64, 'previous': None,
-        'region': 'umbrella', 'bounds': [-125, 29, -115, 41],
+        'region': 'umbrella', 'bounds': [-125, 30, -115, 40],
         'minzoom': 8, 'maxzoom': 8,
         'sources': [{
             'id': 'fixture', 'label': 'Fixture survey', 'attribution': 'Synthetic fixture',
@@ -199,11 +231,11 @@ def test_C2_table_success(config_files, capsys):
 def test_C2_table_shows_gaps_overlaps_and_outside_islands(config_files, capsys):
     """C2: A text report must not hide a gap or mistake an overlap for failure."""
     config_files['dist/regions/index.json']['regions'].append({'id': 'crescent-city'})
-    config_files['regions/umbrella/region.json']['bounds'] = [-125, 35, -115, 39]
+    config_files['regions/umbrella/region.json']['bounds'] = [-125, 35.5, -115, 39]
     assert coast.main([]) == 1
     assert capsys.readouterr() == (
         'Check      | Region(s) / island           | Result\n'
-        'Gap        | -                            | 30 to 35 N\n'
+        'Gap        | -                            | 30 to 35.5 N\n'
         'Overlap    | umbrella / crescent-city | 38 to 39 N\n'
         'Island     | channel-islands-north | umbrella\n'
         'Island     | outer-islands-borderland | outside\n'
@@ -213,16 +245,53 @@ def test_C2_table_shows_gaps_overlaps_and_outside_islands(config_files, capsys):
 
 def test_C2_json_failure(config_files, catalog_files, capsys):
     """C2: A failed check still emits the full JSON report and returns 1."""
-    config_files['regions/umbrella/region.json']['bounds'] = [-125, 32, -115, 36]
+    config_files['regions/umbrella/region.json']['bounds'] = [-125, 32, -115, 35]
     assert coast.main(['--json']) == 1
     out, err = capsys.readouterr()
     assert err == ''
     assert json.loads(out) == {
-        'gaps': [[30, 32], [36, 40]], 'overlaps': [],
+        'gaps': [[30, 32], [35, 40]], 'overlaps': [], 'beyond': [],
         'islands_inside': {'channel-islands-north': None, 'outer-islands-borderland': 'umbrella'},
+        'islands_partial': [],
         'ok': False,
         'regions': [{'id': 'umbrella', 'relief': 'none', 'contours': 'none'}],
     }
+
+
+@pytest.mark.parametrize('flags, expected', [
+    pytest.param([], (
+        'Check      | Region(s) / island           | Result\n'
+        'Island     | outer-islands-borderland | umbrella\n'
+        'Beyond     | umbrella | 1° past south anchor\n'
+        'Beyond     | umbrella | 1° past north anchor\n'
+        'Island     | channel-islands-north | partial\n'
+        'Configured coast coverage: NOT OK\n'
+    ), id='C2: table shows both diagnostics'),
+    pytest.param(['--markdown'], (
+        '| Region | Relief | Contours |\n'
+        '| --- | --- | --- |\n'
+        '| umbrella | none | none |\n'
+        '\n| Check | Region / island | Result |\n'
+        '| --- | --- | --- |\n'
+        '| Beyond | umbrella | 1° past south anchor |\n'
+        '| Beyond | umbrella | 1° past north anchor |\n'
+        '| Island | channel-islands-north | partial |\n'
+    ), id='C2: Markdown shows both diagnostics'),
+    pytest.param(['--json'], {
+        'gaps': [], 'overlaps': [],
+        'beyond': [{'region': 'umbrella', 'edge': 'south', 'by_deg': 1},
+                   {'region': 'umbrella', 'edge': 'north', 'by_deg': 1}],
+        'islands_inside': {'channel-islands-north': None, 'outer-islands-borderland': 'umbrella'},
+        'islands_partial': ['channel-islands-north'], 'ok': False,
+        'regions': [{'id': 'umbrella', 'relief': 'none', 'contours': 'none'}],
+    }, id='C2: JSON shows both diagnostics'),
+])
+def test_C2_formats_report_boundary_findings(config_files, catalog_files, capsys, flags, expected):
+    """C2: An output branch must not drop findings or return success for gap-free bounds."""
+    config_files['regions/umbrella/region.json']['bounds'] = [-123, 29, -115, 41]
+    assert coast.main(flags) == 1
+    out, err = capsys.readouterr()
+    assert (json.loads(out) if flags == ['--json'] else out, err) == (expected, '')
 
 
 @pytest.mark.parametrize('argv', [
@@ -248,7 +317,7 @@ def test_C3_load_only_index_and_region_configs(config_files):
     """C3: Derive anchors and rectangles from configs, selecting release IDs only from the index."""
     assert coast.load_regions(coast.ROOT) == {
         'south': 30, 'north': 40,
-        'release': {'umbrella': (-125, 29, -115, 41)},
+        'release': {'umbrella': (-125, 30, -115, 40)},
         'islands': {'channel-islands-north': (-124, 36, -122, 38),
                     'outer-islands-borderland': (-123, 33, -121, 35)},
     }
@@ -318,6 +387,7 @@ def test_C2_invalid_pointer_is_not_live(catalog_files, pointer, capsys, defect):
     assert err == ''
     assert json.loads(out) == {
         'gaps': [], 'overlaps': [], 'ok': True,
+        'beyond': [], 'islands_partial': [],
         'islands_inside': {'channel-islands-north': 'umbrella', 'outer-islands-borderland': 'umbrella'},
         'regions': [{'id': 'umbrella', 'relief': 'invalid', 'contours': 'present'}],
     }

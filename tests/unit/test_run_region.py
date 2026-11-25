@@ -5,25 +5,19 @@ contract a careless edit could break. region.py is replaced by a stub that logs 
 exits with a scripted code; no test starts a real stage.
 """
 import hashlib
-import importlib.util
 import json
 import os
 import re
 import sys
+from pathlib import Path
 
 import pytest
 
+from scripts.relief import rebuild_plan as report_cli, run_region as RR
+from skippercast.relief import receipts
 from tests._support import ROOT
 
 
-def _load():
-    spec = importlib.util.spec_from_file_location('relief_run_region_cli', ROOT / 'scripts' / 'relief' / 'run_region.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-RR = _load()
 STAGE_ORDER = ['select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'nearshore_vectors', 'package',
                'status', 'shots', 'status', 'qa', 'envelope']
 ZONE_ARGS = ['--coarse', '/in/coarse.tif', '--water', '/in/water.geojson', '--coarse-source', 'src-1']
@@ -56,6 +50,23 @@ if stage == 'status':
     print(json.dumps({'region': region, 'stages': rows}))
 sys.exit(plan.get('codes', {}).get(stage, 0))
 '''
+PACKET_STUB = '''\
+import json, sys
+from pathlib import Path
+here = Path(sys.argv[0]).parent
+with (here / 'calls.jsonl').open('a') as log:
+    log.write(json.dumps(['r8 packet', *sys.argv[1:]]) + '\\n')
+code = json.loads((here / 'codes.json').read_text())['codes'].get('r8 packet', 0)
+if code == 0:
+    region = sys.argv[-1]
+    print(f'READY {region}\\n  qa.json sha256: {"b" * 64}\\n  land_leak_pct: 0\\n'
+          f'APPROVED release {region} envelope={"a" * 64}')
+elif code == 1:
+    print(f'NOT READY {sys.argv[-1]}: qa.json does not match envelope')
+elif code == 2:
+    print('packet could not read the evidence', file=sys.stderr)
+sys.exit(code)
+'''
 
 
 class Box:
@@ -68,6 +79,7 @@ class Box:
         self.stub_dir = root / 'stub'
         self.stub_dir.mkdir()
         (self.stub_dir / 'region.py').write_text(STUB)
+        (self.stub_dir / 'r8_packet.py').write_text(PACKET_STUB)
         self.codes({})
         self.basemap = root / 'basemap.pmtiles'
         self.basemap.touch()
@@ -81,6 +93,7 @@ class Box:
         self.slots = root / 'slots'
         self.free = {'/': 900 * RR.GB, '/mnt/agentorange-backup': 900 * RR.GB}
         self.cfg = RR.Config(region_py=self.stub_dir / 'region.py', stop_files=(self.local_stop, self.unitfeed_stop),
+                             r8_packet_py=self.stub_dir / 'r8_packet.py',
                              proc_root=str(self.proc), prefix=(), pid=424242, slot_dir=self.slots,
                              basemap_roots=(self.root,),
                              free_bytes=lambda path: self.free[path],
@@ -118,10 +131,247 @@ def box(tmp_path, monkeypatch):
     return Box(tmp_path)
 
 
-def test_chain_order_and_stage_arguments(box, capsys):
+def record_doc(**fields):
+    return {'schema': 'sc-run-inputs/1', 'region': 'morro-bay', 'inputs': {},
+            'coarse_source': None, 'coarse_date': None, 'norm': None, **fields}
+
+
+def pinned_file(path, content):
+    path.write_bytes(content)
+    return {'path': str(path), 'sha256': hashlib.sha256(content).hexdigest()}
+
+
+def run_record(box, doc, *flags, through='select'):
+    # The record lives elsewhere than cwd: its paths still obey the normal CLI rules.
+    path = box.stub_dir / 'inputs.json'
+    path.write_bytes(doc if isinstance(doc, bytes) else json.dumps(doc, indent=2).encode() + b'\n')
+    return RR.main(['morro-bay', '--out', str(box.out), '--through', through, '--inputs', str(path), *flags], box.cfg)
+
+
+@pytest.fixture
+def no_record_guards(monkeypatch):
+    def unexpected_guard(*args, **kwargs):
+        pytest.fail('record refusal must precede the run guards')
+
+    monkeypatch.setattr(RR, 'check_guards', unexpected_guard)
+    monkeypatch.setattr(RR, 'other_runs', unexpected_guard)
+
+
+@pytest.mark.parametrize('doc', [
+    b'{', b'{"region":"a","region":"b"}', [], record_doc(extra=True),
+    {key: value for key, value in record_doc().items() if key != 'norm'},
+    record_doc(schema='sc-run-inputs/2'), record_doc(region='other'), record_doc(inputs=[]),
+    record_doc(norm=42), record_doc(inputs={'region_config': {'path': 'x', 'sha256': GEN}}),
+    record_doc(inputs={'water': {'path': [], 'sha256': GEN}}),
+    record_doc(inputs={'water': {'path': 'x', 'sha256': GEN, 'extra': 1}}),
+    *(record_doc(inputs={'coarse': {'path': 'x', 'sha256': bad}}) for bad in (GEN[:-1], 'g' * 64, 42)),
+], ids=['C1: malformed JSON', 'C1: duplicate key', 'C1: wrong root type', 'C1: unknown key',
+        'C1: missing key', 'C1: wrong schema', 'C1: wrong region', 'C1: wrong input table type',
+        'C1: wrong metadata type', 'C1: unknown input name', 'C1: wrong path type',
+        'C1: unknown entry key', 'C1: short hash', 'C1: nonhex hash', 'C1: nonstring hash'])
+def test_c1_invalid_record_is_usage_error(box, capsys, no_record_guards, doc):
+    # C1: lenient decoding could ignore a typo or let a wrong-region record reach a run guard.
+    with pytest.raises(SystemExit) as stop:
+        run_record(box, doc, '--dry-run')
+    assert type(stop.value) is SystemExit and stop.value.code == 2
+    assert capsys.readouterr().out == '' and box.calls() == [] and box.out_tree() == []
+
+
+@pytest.mark.parametrize('present', [False, True], ids=['C1: missing record', 'C1: unreadable record'])
+def test_c1_record_must_be_readable(box, capsys, no_record_guards, monkeypatch, present):
+    # C1: an unreadable record must not be treated like no --inputs flag.
+    path = box.stub_dir / 'inputs.json'
+    message = 'not a regular file'
+    if present:
+        path.touch()
+        def denied(*args):
+            raise PermissionError('access denied')
+        monkeypatch.setattr(Path, 'read_bytes', denied)
+        message = 'access denied'
+    with pytest.raises(SystemExit) as stop:
+        RR.main(['morro-bay', '--out', str(box.out), '--through', 'select', '--inputs', str(path)], box.cfg)
+    assert type(stop.value) is SystemExit and stop.value.code == 2
+    assert capsys.readouterr().err.splitlines()[-1] == f'run_region.py: error: --inputs {path}: {message}'
+    assert box.calls() == [] and box.out_tree() == []
+
+
+@pytest.mark.parametrize('field', ['census', 'census_sha256', 'coarse', 'water', 'basemap', 'qa_support',
+                                   'coarse_source', 'coarse_date', 'norm'], ids=lambda name: f'C3: duplicate {name}')
+def test_c3_record_and_cli_overlap_is_usage_error(box, capsys, no_record_guards, field):
+    # C3: even identical or empty explicit flag values must not silently win or lose.
+    doc = record_doc(coarse_source='family', coarse_date='2026-01-01', norm='cache', inputs={
+        name: {'path': name, 'sha256': GEN} for name in ('census', 'coarse', 'water', 'basemap', 'qa_support')
+    })
+    flag = '--' + field.replace('_', '-')
+    with pytest.raises(SystemExit) as stop:
+        run_record(box, doc, flag, GEN if field == 'census_sha256' else '')
+    assert type(stop.value) is SystemExit and stop.value.code == 2
+    output = capsys.readouterr()
+    assert output.err.splitlines()[-1] == (
+        f'run_region.py: error: --inputs {box.stub_dir / "inputs.json"}: also supplied {flag} on the command line')
+    assert output.out == '' and box.calls() == [] and box.out_tree() == []
+
+
+@pytest.mark.parametrize('mode', ['full', 'select'], ids=['C2: map pinned options', 'C3: mix nonoverlapping flags'])
+def test_c2_pinned_inputs_use_existing_stage_options(box, monkeypatch, mode):
+    # C2/C3: bind must precede select, all flags must reach their consumers, and hashing
+    # link/.. must read the same bytes the stage opens, not the lexically collapsed path.
+    monkeypatch.chdir(box.root)
+    monkeypatch.setenv('HOME', str(box.root))
+    monkeypatch.setenv('SC_RELIEF_NORM', str(box.root / 'other-cache'))
+    child = box.root / 'nested' / 'child'
+    child.mkdir(parents=True)
+    (box.root / 'link').symlink_to(child)
+    (box.root / 'census').write_bytes(b'decoy')
+    census = pinned_file(box.root / 'nested' / 'census', b'census')
+    census_path = str(box.root / 'link/../census')
+    files = {'census': {'path': 'link/../census', 'sha256': census['sha256'].upper()}}
+    opts = ('--norm', '~/cache', '--region-config', 'config.json') if mode == 'select' else ()
+    common = ['--region', 'morro-bay', '--out', str(box.out)]
+    expected = [['census-bind', *common, '--from', census_path, '--sha256', census['sha256']],
+                ['select', *common, '--cache', str(box.root / 'cache')]]
+    if mode == 'select':
+        expected[1] += ['--region-config', str(box.root / 'config.json')]
+        assert run_record(box, record_doc(inputs=files), *opts) == 0
+        assert box.calls() == expected
+    else:
+        paths = {name: box.root / name for name in ('coarse', 'water', 'basemap', 'qa_support')}
+        files.update({name: pinned_file(path, name.encode()) for name, path in paths.items()})
+        files['water']['path'] = '~/water'
+        doc = record_doc(inputs=files, coarse_source='family', coarse_date='2026-01-01', norm='~/cache')
+        assert run_record(box, doc, through='qa') == 0
+        calls = box.calls()
+        assert calls[:2] == expected
+        assert next(c for c in calls if c[0] == 'zone') == [
+            'zone', *common, '--scope', 'public', '--coarse', str(paths['coarse']), '--water', str(paths['water']),
+            '--coarse-source', 'family', '--coarse-date', '2026-01-01']
+        assert next(c for c in calls if c[0] == 'shots') == ['shots', *common, '--basemap', str(paths['basemap'])]
+        root = box.out / 'morro-bay'
+        assert calls[-1] == [
+            'qa', *common, '--generation', GEN, '--release-sha256', hashlib.sha256(RELEASE).hexdigest(),
+            '--elevation', str(root / 'mosaic/public/elevation.tif'),
+            '--contributor', str(root / 'mosaic/public/contributor.tif'),
+            '--upstream', 'mosaic:public', '--upstream', 'nearshore_vectors:public',
+            '--shots', str(root / 'shots' / SHOT_GEN / 'shots.json'), '--support', str(paths['qa_support'])]
+
+
+@pytest.mark.parametrize('name', ['census', 'coarse', 'water', 'basemap', 'qa_support', 'missing', 'unreadable'],
+                         ids=lambda name: f'C2: refuse bad or missing {name}')
+def test_c2_each_pin_is_preflighted_before_first_stage(box, capsys, no_record_guards, monkeypatch, name):
+    # C2: checking only the inputs for --through would miss a bad late-stage file.
+    census = pinned_file(box.root / 'census', b'census')
+    path = box.root / name
+    if name == 'missing':
+        name = 'water'
+        problem = f'{path} is missing or not a regular file'
+    elif name == 'unreadable':
+        name = 'water'
+        path.touch()
+        file_digest = hashlib.file_digest
+        def denied(handle, algorithm):
+            if handle.name == str(path):
+                raise PermissionError(13, 'access denied')
+            return file_digest(handle, algorithm)
+        monkeypatch.setattr(hashlib, 'file_digest', denied)
+        problem = f'cannot read {path}: access denied'
+    else:
+        path.write_bytes(b'wrong bytes')
+        problem = f'{path} expected sha256 {GEN}, got {hashlib.sha256(b"wrong bytes").hexdigest()}'
+    assert run_record(box, record_doc(inputs={'census': census, name: {'path': str(path), 'sha256': GEN}})) == 3
+    assert capsys.readouterr().out == f'run_region: refused input {name}: {problem}\n'
+    assert box.calls() == [] and box.out_tree() == [] and not box.slots.exists()
+
+
+@pytest.mark.parametrize('name', ['census', 'coarse', 'water', 'basemap', 'qa_support'])
+@pytest.mark.parametrize('dry_run', [False, True])
+def test_c2_embedded_nul_input_is_refused_before_guards(box, capsys, no_record_guards, name, dry_run):
+    path = 'invalid\x00name'
+    doc = record_doc(inputs={name: {'path': path, 'sha256': GEN}})
+    assert run_record(box, doc, *(['--dry-run'] if dry_run else [])) == 3
+    output = capsys.readouterr()
+    detail = f'{RR.spelled(path)!r} is missing or not a regular file'
+    if dry_run:
+        assert f'  {name}: MISMATCH ({detail})\n' in output.out
+    else:
+        assert output.out == f'run_region: refused input {name}: {detail}\n'
+    assert output.err == '' and box.calls() == [] and box.out_tree() == [] and not box.slots.exists()
+
+
+@pytest.mark.parametrize('case', ['record', 'coarse', 'basemap', 'norm'], ids=lambda case: f'C2: guard {case}')
+def test_c2_record_cannot_expand_existing_read_boundaries(box, capsys, monkeypatch, case):
+    # C2: the hash preflight must not open a vault file or an unadmitted basemap.
+    path = box.stub_dir / 'inputs.json' if case == 'record' else box.root / case
+    box.cfg.forbidden_root = str(path)
+    if case == 'record':
+        def unexpected_read(*args):
+            pytest.fail('must not open the record in the forbidden root')
+        monkeypatch.setattr(Path, 'read_bytes', unexpected_read)
+    elif case != 'norm':
+        def unexpected_hash(*args):
+            pytest.fail('must not hash an unadmitted file')
+        monkeypatch.setattr(RR.hashlib, 'file_digest', unexpected_hash)
+    doc = record_doc()
+    expected = f'run_region: refused --inputs: {path} is under {path}'
+    if case == 'norm':
+        doc['norm'] = str(path)
+        expected = f'run_region: refused before select: norm-root: {path} is under {path}'
+    elif case != 'record':
+        doc['inputs'][case] = pinned_file(path, b'guarded')
+        problem = f'{path} is under {path}'
+        if case == 'basemap':
+            box.cfg.forbidden_root = str(box.root / 'unused-vault')
+            box.cfg.basemap_roots = (box.stub_dir,)
+            problem = f'{path} must be in an allowed read root'
+        expected = f'run_region: refused input {case}: {problem}'
+    assert run_record(box, doc) == 3
+    assert capsys.readouterr().out == expected + '\n'
+    assert box.calls() == [] and box.out_tree() == []
+
+
+@pytest.mark.parametrize('code', [0, 3], ids=['C3: matching preview', 'C3: mismatch preview'])
+def test_c3_dry_run_reports_exact_record_hash_and_every_verdict(box, capsys, monkeypatch, code):
+    # C3: report the exact bytes (not reserialized JSON) and do not hide successes after a mismatch.
+    water = pinned_file(box.root / 'water', b'water')
+    census = pinned_file(box.root / 'census', b'census')
+    detail = (f'MISMATCH ({box.root / "water"} expected sha256 {GEN}, got {water["sha256"]})' if code else 'ok')
+    if code:
+        water['sha256'] = GEN
+    doc = record_doc(inputs={'water': water, 'census': census})
+    raw = json.dumps(doc, indent=4).encode() + b'\n\n'
+    file_digest = hashlib.file_digest
+    def verify_before_printing(handle, algorithm):
+        assert capsys.readouterr().out == ''
+        return file_digest(handle, algorithm)
+    monkeypatch.setattr(hashlib, 'file_digest', verify_before_printing)
+    assert run_record(box, raw, '--dry-run') == code
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[:3] == [f'inputs from {box.stub_dir / "inputs.json"} (sha256 {hashlib.sha256(raw).hexdigest()})',
+                         f'  water: {detail}', '  census: ok']
+    if code:
+        assert lines[3:] == []
+    else:
+        assert lines[3] == f'run_region dry run: region morro-bay, through select, out {box.out}'
+        assert lines[-1] == 'dry run: a real run would start; nothing was run and nothing was written'
+    assert box.calls() == [] and box.out_tree() == [] and not box.slots.exists()
+
+
+@pytest.mark.parametrize('packet_code,expected', [
+    pytest.param(0, ['READY morro-bay', f'  qa.json sha256: {SHOT_GEN}', '  land_leak_pct: 0',
+                     f'APPROVED release morro-bay envelope={GEN}'], id='C1: print ready packet after envelope'),
+    pytest.param(1, ['NOT READY morro-bay: qa.json does not match envelope',
+                     'run_region: envelope written but R8 packet NOT READY: qa.json does not match envelope'],
+                 id='C1: not-ready packet makes the run fail'),
+    pytest.param(2, ['run_region: envelope written but R8 packet NOT READY: packet could not read the evidence'],
+                 id='C1: packet failure relays stderr when no report was printed'),
+    pytest.param(3, ['run_region: envelope written but R8 packet NOT READY: r8_packet.py exit 3'],
+                 id='C1: packet failure without a report makes the run fail'),
+])
+def test_chain_order_and_stage_arguments(box, capsys, packet_code, expected):
     # CI-ARTICLE-1: a wrong producer, a hash of transformed JSON, or confusing the two
     # generations would break the consumer handoff. Inspect the actual argv at the process boundary.
-    assert box.run() == 0
+    # C1: a misplaced packet or a dropped stdout/exit status sends the wrong evidence to review.
+    box.codes({'r8 packet': packet_code})
+    assert box.run() == (0 if packet_code == 0 else 1)
     root = box.out / 'morro-bay'
     mosaic = root / 'mosaic/public'
     extras = {
@@ -138,9 +388,57 @@ def test_chain_order_and_stage_arguments(box, capsys):
                '--shots', str(root / 'shots' / SHOT_GEN / 'shots.json')],
         'envelope': ['--generation', GEN],
     }
-    assert box.calls() == [[stage, '--region', 'morro-bay', '--out', str(box.out), *extras.get(stage, [])]
-                           for stage in STAGE_ORDER]
-    assert 'complete through envelope' in capsys.readouterr().out
+    stages = [[stage, '--region', 'morro-bay', '--out', str(box.out), *extras.get(stage, [])]
+              for stage in STAGE_ORDER]
+    assert box.calls() == [*stages, ['r8 packet', '--out', str(box.out), 'morro-bay']]
+    out = capsys.readouterr().out.splitlines()
+    assert out[out.index('run_region: morro-bay complete through envelope'):] == [
+        'run_region: morro-bay complete through envelope', *expected]
+
+
+@pytest.mark.parametrize('failure', [pytest.param('stub launch failure', id='C1: packet cannot start')])
+def test_r8_packet_launch_failure(box, capsys, monkeypatch, failure):
+    # A launch error must still distinguish the successful write from the failed readback.
+    run = RR.subprocess.run
+
+    def dispatch(command, **kwargs):
+        if str(box.cfg.r8_packet_py) in command:
+            assert command[:5] == ['nice', '-n', '19', 'ionice', '-c3']
+            assert RR.lock_is_held(box.out, 'morro-bay')
+            raise OSError(failure)
+        return run(command, **kwargs)
+
+    box.cfg.prefix = RR.Config().prefix
+    monkeypatch.setattr(RR.subprocess, 'run', dispatch)
+    assert box.run() == 1
+    assert box.ran() == STAGE_ORDER
+    assert capsys.readouterr().out.splitlines()[-2:] == [
+        'run_region: morro-bay complete through envelope',
+        f'run_region: envelope written but R8 packet NOT READY: cannot start the command: {failure}',
+    ]
+
+
+@pytest.mark.parametrize('through,stage_code,expected', [
+    pytest.param('qa', 0, 0, id='C2: stopping before envelope skips packet'),
+    pytest.param('envelope', 7, 7, id='C1: failed envelope skips packet'),
+])
+def test_r8_packet_skipped_without_successful_envelope(box, capsys, through, stage_code, expected):
+    # A partial or failed chain must not print stale evidence from a previous run.
+    box.codes({'envelope': stage_code})
+    assert box.run(through=through) == expected
+    assert box.ran() == STAGE_ORDER[:STAGE_ORDER.index(through) + 1]
+    assert 'R8 packet' not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('through,expected', [
+    pytest.param('envelope', ['r8 packet: after envelope'], id='C2: envelope dry run previews packet'),
+    pytest.param('qa', [], id='C2: earlier dry run does not preview packet'),
+])
+def test_r8_packet_dry_run(box, capsys, through, expected):
+    # Dry-run must announce the planned read without executing the chain or packet.
+    assert box.run('--dry-run', through=through) == 0
+    assert [line for line in capsys.readouterr().out.splitlines() if line.startswith('r8 packet:')] == expected
+    assert (box.calls(), box.out_tree(), box.slots.exists()) == ([], [], False)
 
 
 def test_through_stops_after_that_stage(box):
@@ -164,7 +462,7 @@ def test_scoped_stages_get_scope_config_and_zone_inputs_only(box):
 
 
 @pytest.mark.parametrize('drop, through', [
-    ('--coarse', 'zone'), ('--water', 'zone'), ('--coarse-source', 'zone'), ('--basemap', 'envelope'),
+    ('--coarse-source', 'zone'), ('--basemap', 'envelope'),
 ])
 def test_chain_reaching_a_stage_without_its_inputs_is_a_usage_error_before_any_stage(box, drop, through):
     # Contract: missing stage inputs are caught before running the expensive earlier stages.
@@ -173,6 +471,115 @@ def test_chain_reaching_a_stage_without_its_inputs_is_a_usage_error_before_any_s
     with pytest.raises(SystemExit) as stop:
         RR.main(['morro-bay', '--out', str(box.out), '--through', through, *args], box.cfg)
     assert stop.value.code == 2 and box.ran() == [] and box.out_tree() == []
+
+
+@pytest.mark.parametrize('code, stages', [(0, ['census-bind', 'select']), (4, ['census-bind'])],
+                         ids=['C1: bind precedes select', 'C1: bind refusal stops select'])
+def test_c1_census_bind_first(box, capsys, code, stages):
+    # C1: putting bind after select would let select use the old census even on refusal.
+    box.codes({'census-bind': code})
+    assert box.run('--census', 'census.json', '--census-sha256', GEN, through='select') == code
+    common = ['--region', 'morro-bay', '--out', str(box.out)]
+    assert box.calls() == [
+        [stage, *common, *(['--from', os.path.join(os.getcwd(), 'census.json'), '--sha256', GEN]
+                           if stage == 'census-bind' else ['--cache', RR.DEFAULT_NORM])]
+        for stage in stages
+    ]
+    if code:
+        assert capsys.readouterr().out.splitlines()[-1] == 'run_region: STOPPED at census-bind: exit 4'
+
+
+@pytest.mark.parametrize('args', [('--census', 'census.json'), ('--census-sha256', GEN)],
+                         ids=['C1: missing digest', 'C1: missing file'])
+def test_c1_census_pair_required(box, capsys, args):
+    # C1: an incomplete pair must neither launch an unpinned bind nor silently run select alone.
+    with pytest.raises(SystemExit) as stop:
+        box.run(*args, through='select')
+    assert stop.value.code == 2 and box.calls() == [] and box.out_tree() == []
+    assert capsys.readouterr().err.splitlines()[-1] == (
+        'run_region.py: error: --census and --census-sha256 must be given together')
+
+
+def test_c1_census_is_guarded_before_first_stage(box, capsys):
+    # C1: the new path must not bypass the existing private-root guard.
+    vault = box.root / 'vault'
+    box.cfg.forbidden_root = str(vault)
+    census = vault / 'census.json'
+    assert box.run('--census', str(census), '--census-sha256', GEN, through='select') == 3
+    assert box.calls() == [] and box.out_tree() == []
+    assert capsys.readouterr().out == f'run_region: refused before census-bind: input-path: {census} is under {vault}\n'
+
+
+def seed_zone_receipt(box, stage, files, *, held=False):
+    # Use producer-shaped, hash-bound output rows but never run either GIS producer.
+    region = receipts.Region(box.out, 'morro-bay')
+    outputs = []
+    for name, data in files.items():
+        path = region.dir / 'fixture-products' / stage / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        outputs.append({'path': region.record(path), 'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)})
+    receipts.write_json_atomic(region.receipt_path(stage), {
+        'schema': receipts.SCHEMA, 'region': region.id, 'stage': stage, 'scope': None,
+        'status': 'held' if held else 'ok', 'held_reason': 'fixture held', 'generation': GEN,
+        'attempt': 1, 'upstream': [], 'outputs': outputs,
+    })
+
+
+COARSE_FILES = {'coarse-3310.tif': b'synthetic coarse', 'coarse.json': b'{"family":"fixture-family"}'}
+WATER_FILES = {'water.geojson': b'synthetic water'}
+
+
+@pytest.mark.parametrize('options, zone_tail', [
+    ([], ['--coarse-source', 'fixture-family', '--coarse', '{coarse}', '--water', '{water}']),
+    (ZONE_ARGS[:2] + ZONE_ARGS[4:], ZONE_ARGS[:2] + ZONE_ARGS[4:] + ['--water', '{water}']),
+    (ZONE_ARGS[2:4], ZONE_ARGS[2:4] + ['--coarse-source', 'fixture-family', '--coarse', '{coarse}']),
+    (ZONE_ARGS[4:], ZONE_ARGS[4:] + ['--coarse', '{coarse}', '--water', '{water}']),
+    (ZONE_ARGS, ZONE_ARGS),
+], ids=['C2: both receipts', 'C2: explicit coarse wins', 'C2: explicit water wins',
+        'C2: explicit source wins', 'C2: all explicit wins'])
+def test_c2_zone_binds_only_omitted_options(box, options, zone_tail):
+    # C2: guessed paths, dropping the family, or clobbering an explicit option break the exact zone argv.
+    seed_zone_receipt(box, 'coarse', COARSE_FILES)
+    seed_zone_receipt(box, 'water', WATER_FILES)
+    assert RR.main(['morro-bay', '--out', str(box.out), '--through', 'zone', *options], box.cfg) == 0
+    products = box.out / 'morro-bay' / 'fixture-products'
+    paths = {'coarse': products / 'coarse/coarse-3310.tif', 'water': products / 'water/water.geojson'}
+    assert box.ran() == ['select', 'mosaic', 'tiles', 'zone']
+    assert box.calls()[-1] == ['zone', '--region', 'morro-bay', '--out', str(box.out), '--scope', 'public',
+                              *(arg.format(**paths) for arg in zone_tail)]
+
+
+@pytest.mark.parametrize('stage, state, reason', [
+    ('coarse', 'missing', 'coarse is not done (missing: no receipt)'),
+    ('water', 'missing', 'water is not done (missing: no receipt)'),
+    ('coarse', 'held', 'coarse is not done (held: fixture held)'),
+    ('water', 'held', 'water is not done (held: fixture held)'),
+    ('water', 'changed', 'water is not done (unproved: output changed: fixture-products/water/water.geojson)'),
+    ('water', 'unnamed', 'water receipt must name one water.geojson output'),
+    ('coarse', 'no-family', 'coarse.json has no family'),
+    ('water', 'forbidden', 'water output water.geojson is under {vault}'),
+], ids=['C2: coarse missing', 'C2: water missing', 'C2: coarse held', 'C2: water held',
+        'C2: water changed after receipt', 'C2: missing named output', 'C2: missing family', 'C2: forbidden output'])
+def test_c2_zone_refuses_unusable_stage_inputs(box, capsys, stage, state, reason):
+    # C2: a receipt or output on disk is not enough; no zone process may open an unusable input.
+    vault = box.out / 'morro-bay/fixture-products/water'
+    for producer, files in [('coarse', COARSE_FILES), ('water', WATER_FILES)]:
+        if producer != stage:
+            seed_zone_receipt(box, producer, files)
+        elif state != 'missing':
+            if state == 'unnamed':
+                files = {'water.json': b'{}'}
+            elif state == 'no-family':
+                files = {**files, 'coarse.json': b'{}'}
+            seed_zone_receipt(box, stage, files, held=state == 'held')
+    if state == 'changed':
+        (vault / 'water.geojson').write_bytes(b'synthetic WATER')
+    if state == 'forbidden':
+        box.cfg.forbidden_root = str(vault)
+    assert RR.main(['morro-bay', '--out', str(box.out), '--through', 'zone'], box.cfg) == 3
+    assert box.ran() == ['select', 'mosaic', 'tiles']
+    assert capsys.readouterr().out.splitlines()[-1] == f'run_region: refused before zone: {reason.format(vault=vault)}'
 
 
 def test_normalize_reports_separate_per_source_step(box, capsys):
@@ -647,9 +1054,8 @@ def test_unsafe_slot_directory_refuses(box, capsys, make):
     assert box.ran() == [] and 'cannot take a run slot' in capsys.readouterr().out
 
 
-def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
-    # Contract: --dry-run shows the commands in order and every guard's state, runs nothing and
-    # creates no file or directory (not even the lock). Bug caught: dry run that starts stage one.
+def test_c2_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
+    """C2: Preview preserves commands and guards without starting a stage or taking a slot."""
     assert box.run('--dry-run', through='mosaic') == 0
     text = capsys.readouterr().out
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
@@ -658,23 +1064,149 @@ def test_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
     assert 'not run: tiles, zone, digests, inventory, contours, nearshore_vectors, package, shots, qa, envelope' in text
     for name in ('stop-file', 'cpu-pressure', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap'):
         assert f'ok     {name}' in text
-    assert 'a real run would start' in text
+    assert text.splitlines()[-1] == 'dry run: a real run would start; nothing was run and nothing was written'
     assert box.ran() == [] and box.out_tree() == [] and not box.slots.exists()
 
 
-@pytest.mark.parametrize('partial', [[], ['--coarse', '/in/coarse.tif']], ids=['bare', 'partial-zone-inputs'])
-def test_i_dry_run_without_through_previews_full_chain_only(box, capsys, partial):
-    # Contract: the bare dry run prints all ten stages without launching or writing. Bugs caught:
-    # requiring --through/zone inputs for that preview or crashing while formatting partial inputs.
+PLAN_STAGES = ('select mosaic.public tiles.public zone.public digests inventory contours '
+               'package shots qa envelope nearshore_vectors.public').split()
+
+
+@pytest.mark.parametrize('saved', [
+    pytest.param(False, id='C1: empty OUT rebuilds every stage'),
+    pytest.param(True, id='C1: matching, stale and downstream receipts match the report'),
+])
+def test_c1_dry_run_rebuild_plan(box, capsys, saved):
+    # A partial preview must neither omit stages with no receipt nor invent its own reuse rules.
+    region = 'test-bay'
+    expected = [f'{stage} rebuild (missing)' for stage in PLAN_STAGES]
+    if saved:
+        select_path = ROOT / 'src/skippercast/relief/select.py'
+        current = receipts.stage_digest([('select.py', select_path)])
+        location = receipts.Region(box.out, region)
+        location.stages_dir.mkdir(parents=True)
+        for stage, scope, digest, params, upstream in (
+            ('select', None, current, {}, []),
+            ('tiles', 'public', '0' * 64, {'baked': '0' * 64}, []),
+            ('digests', None, '0' * 64, {}, [{'stage': 'tiles', 'scope': 'public', 'generation': GEN}]),
+        ):
+            location.receipt_path(stage, scope).write_bytes(receipts.canonical(dict(
+                schema=receipts.SCHEMA, region=region, stage=stage, scope=scope,
+                status='ok', attempt=1, generation=GEN, code={'stage_digest': digest},
+                params=params, upstream=upstream, outputs=[],
+            )))
+        expected[0] = 'select reuse (-)'
+        expected[2] = 'tiles.public rebuild (code, style:baked)'
+        expected[4] = 'digests rebuild (code, upstream:tiles.public)'
+
+    def snapshot():
+        return {path: (path.stat().st_mtime_ns, path.read_bytes() if path.is_file() else None)
+                for path in (box.root, *box.root.rglob('*'))}
+
+    before = snapshot()
+    assert box.run('--dry-run', region=region, through='mosaic') == 0
+    out, err = capsys.readouterr()
+    rows = [line.strip() for line in out.splitlines() if re.fullmatch(r'  \S+ (reuse|rebuild) \(.*\)', line)]
+    assert (rows, err) == (expected, '')
+    assert (snapshot(), box.calls()) == (before, [])  # C2: existing receipts, locks and slots unchanged
+    assert report_cli.main(['--out', str(box.out), '--json', region]) == 0
+    report, err = capsys.readouterr()
+    stages = json.loads(report)['regions'][0]['stages']
+    assert (rows, err) == ([f"{row['stage']} {row['action']} ({', '.join(row['reasons']) or '-'})"
+                            for row in stages], '')
+
+
+def test_c1_dry_run_without_out_keeps_plan_absent(box, capsys):
+    """C1: The placeholder OUT is not a receipt directory."""
+    assert RR.main(['test-bay', '--through', 'select', '--dry-run'], box.cfg) == 0
+    out, err = capsys.readouterr()
+    assert ([line for line in out.splitlines() if 'rebuild plan' in line], err) == ([], '')
+    assert [line for line in out.splitlines() if 'REFUSE pipeline' in line] == [
+        '  REFUSE pipeline inputs: a real run through select needs --out',
+    ]
+
+
+@pytest.mark.parametrize('forbidden, reason', [
+    pytest.param(False, 'select.json: not a JSON object', id='C2: unreadable plan preserves stop refusal'),
+    pytest.param(True, 'receipt directory is under the forbidden root', id='C2: protected receipts are not read'),
+])
+def test_c2_dry_run_with_unavailable_plan_still_shows_guards(box, capsys, forbidden, reason):
+    # A parse failure cannot suppress the guards. A protected OUT must not be read at all.
+    box.local_stop.touch()
+    receipt = receipts.Region(box.out, 'test-bay').receipt_path('select')
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text('[]')
+    if forbidden:
+        box.cfg.forbidden_root = str(box.out)
+    before = box.out_tree()
+    assert box.run('--dry-run', region='test-bay', through='select') == 0
+    out, err = capsys.readouterr()
+    assert [line for line in out.splitlines() if 'rebuild plan' in line or 'REFUSE stop-file' in line] == [
+        f'rebuild plan unavailable: {reason}',
+        f'  REFUSE stop-file: {box.local_stop} present',
+    ]
+    assert out.splitlines()[-1] == 'dry run: a real run would be refused now; nothing was run and nothing was written'
+    assert (box.out_tree(), receipt.read_text(), box.calls(), box.slots.exists(), err) == (before, '[]', [], False, '')
+
+
+def test_dry_run_null_upstream_preserves_guards(box, capsys):
+    box.local_stop.touch()
+    receipt = receipts.Region(box.out, 'test-bay').receipt_path('select')
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text('{"upstream": null}')
+    assert box.run('--dry-run', region='test-bay', through='select') == 0
+    out = capsys.readouterr().out
+    assert 'rebuild plan unavailable:' in out
+    assert f'REFUSE stop-file: {box.local_stop} present' in out
+    assert out.splitlines()[-1] == 'dry run: a real run would be refused now; nothing was run and nothing was written'
+
+
+def test_dry_run_does_not_read_forbidden_receipt_symlink(box, capsys, monkeypatch):
+    box.local_stop.touch()
+    vault = box.root / 'vault'
+    vault.mkdir()
+    box.cfg.forbidden_root = str(vault)
+    protected = vault / 'protected.json'
+    protected.write_text('{"upstream": []}')
+    receipt = receipts.Region(box.out, 'test-bay').receipt_path('select')
+    receipt.parent.mkdir(parents=True)
+    receipt.symlink_to(protected)
+    original = receipts.read_receipt
+
+    def refuse_protected_read(path):
+        assert path.resolve() != protected, 'protected receipt was read'
+        return original(path)
+
+    monkeypatch.setattr(receipts, 'read_receipt', refuse_protected_read)
+    assert box.run('--dry-run', region='test-bay', through='select') == 0
+    out = capsys.readouterr().out
+    assert 'rebuild plan unavailable:' in out
+    assert f'REFUSE stop-file: {box.local_stop} present' in out
+    assert out.splitlines()[-1] == 'dry run: a real run would be refused now; nothing was run and nothing was written'
+
+
+@pytest.mark.parametrize('partial, census, input_lines', [
+    ([], False, ['inputs for zone: --coarse (stage coarse), --water (stage water), --coarse-source (stage coarse)']),
+    (ZONE_ARGS[:2], False, ['inputs for zone: --coarse (option), --water (stage water), --coarse-source (missing option)']),
+    (ZONE_ARGS[2:4], True, ['inputs for census-bind: --census (option), --census-sha256 (option)',
+                            'inputs for zone: --coarse (stage coarse), --water (option), --coarse-source (stage coarse)']),
+    (ZONE_ARGS, False, ['inputs for zone: --coarse (option), --water (option), --coarse-source (option)']),
+], ids=['C3: bare preview', 'C3: incomplete explicit coarse', 'C3: mixed sources with census', 'C3: explicit inputs'])
+def test_c3_dry_run_without_through_previews_full_chain_only(box, capsys, partial, census, input_lines):
+    # C3: a preview must not mistake receipt-backed inputs for missing options or launch a bind.
     args = ['morro-bay', '--out', str(box.out), *partial]
+    if census:
+        args += ['--census', '/in/census.json', '--census-sha256', GEN]
     assert RR.main([*args, '--dry-run'], box.cfg) == 0
     text = capsys.readouterr().out
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
-    assert [line.split()[3] for line in lines] == STAGE_ORDER
-    package_command = lines[STAGE_ORDER.index('package')]
+    assert [line.split()[3] for line in lines] == (['census-bind'] if census else []) + STAGE_ORDER
+    package_command = lines[STAGE_ORDER.index('package') + int(census)]
     assert package_command.endswith('--upstream contours')
     assert re.search(r'tiles style: nearshore-v1\.0\.0; B=[0-9a-f]{64}', text)
-    assert 'REFUSE zone inputs' in text and 'REFUSE shots inputs' in text and 'a real run would be refused' in text
+    assert [line for line in text.splitlines() if line.startswith('inputs for ')] == input_lines
+    assert ('REFUSE zone inputs' in text) == (partial == ZONE_ARGS[:2])
+    assert 'REFUSE shots inputs' in text and 'a real run would be refused' in text
     assert '--generation <generation>' in text and '--release-sha256 <release-sha256>' in text
     with pytest.raises(SystemExit) as stop:
         RR.main(args, box.cfg)
@@ -701,3 +1233,19 @@ def test_script_runs_as_a_command(box):
     done = subprocess.run([sys.executable, str(ROOT / 'scripts' / 'relief' / 'run_region.py'), 'morro-bay',
                            '--out', str(box.out), '--through', 'bogus'], capture_output=True, text=True)
     assert done.returncode == 2 and 'unknown stage' in done.stderr
+
+
+def test_c2_dry_run_as_a_command_leaves_no_planner_bytecode(box):
+    """C2: The direct command finds its sibling planner without caching its imports."""
+    import subprocess
+    cache = box.root / 'pycache'
+    env = {**os.environ, 'PYTHONPYCACHEPREFIX': str(cache)}
+    env.pop('PYTHONDONTWRITEBYTECODE', None)
+    done = subprocess.run([sys.executable, str(ROOT / 'scripts/relief/run_region.py'), 'test-bay',
+                           '--out', str(box.out), '--through', 'select', '--dry-run'],
+                          cwd=box.root, env=env, capture_output=True, text=True)
+    assert (done.returncode, done.stderr) == (0, '')
+    assert [line for line in done.stdout.splitlines() if line.startswith('  select rebuild')] == [
+        '  select rebuild (missing)',
+    ]
+    assert (list(cache.rglob('rebuild_plan.*.pyc')), box.out_tree()) == ([], [])

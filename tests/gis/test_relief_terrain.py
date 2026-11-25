@@ -11,7 +11,7 @@ import pytest
 import rasterio
 from affine import Affine
 
-from skippercast.relief import receipts
+from skippercast.relief import receipts, terrain
 from tests._support import ROOT
 
 ORIGIN = (-124.2, 41.7)
@@ -30,14 +30,15 @@ def source(identity, resolution):
                 label='estimated', citation='Synthetic terrain')
 
 
-def fixture(root, *, native, epsg=3857):
+def fixture(root, *, native, epsg=3857, mosaic_crs=None):
     region = receipts.Region(root, 'north-fixture')
     mx, my = Transformer.from_crs(4326, epsg, always_xy=True).transform(*ORIGIN)
     step = 4 / cos(radians(ORIGIN[1])) if epsg == 3857 else 4
     transform = Affine(step, 0, mx - 12 * step, 0, -step, my + 12 * step)
+    crs = f'EPSG:{epsg}'
 
-    def raster(path, data):
-        with rasterio.open(path, 'w', driver='GTiff', crs=f'EPSG:{epsg}', dtype=data.dtype,
+    def raster(path, data, projection=crs):
+        with rasterio.open(path, 'w', driver='GTiff', crs=projection, dtype=data.dtype,
                            width=24, height=24, count=1, transform=transform) as ds:
             ds.write(data, 1)
 
@@ -61,8 +62,9 @@ def fixture(root, *, native, epsg=3857):
         contributors = np.ones((24, 24), dtype='uint16')
         contributors[:, 16:] = 300  # DL-5 contributors are UInt16, not viewer bytes.
         heights[13, 14] = np.nan  # Off-centre sub-overview-pixel hole, even with a contributor.
-        raster(out / 'elevation.tif', heights)
-        raster(out / 'contributor.tif', contributors)
+        elevation_crs, contributor_crs = (crs, crs) if mosaic_crs is None else mosaic_crs
+        raster(out / 'elevation.tif', heights, elevation_crs)
+        raster(out / 'contributor.tif', contributors, contributor_crs)
         write_json(out / 'manifest.json', dict(segment=region.id, units='m', bounds_wgs84=BOUNDS,
                    value_convention='elevation_positive_up', sources=[dict(source('base', 10), code=1),
                                                                       dict(source('land', 10), code=300)]))
@@ -93,6 +95,42 @@ def read_asset(folder, asset):
     assert len(payload) == asset['decodedBytes'] == 5 * size**2
     return (np.frombuffer(payload, '<f4', count=size**2).reshape(size, size),
             np.frombuffer(payload, 'u1', offset=4 * size**2).reshape(size, size))
+
+
+def test_companion_nodata_is_not_support_even_when_internal_mask_says_valid(tmp_path):
+    profile = dict(driver='GTiff', crs='EPSG:3857', width=4, height=4, count=1,
+                   transform=Affine(1, 0, 100, 0, -1, 100))
+    grid, support = tmp_path / 'depth.tif', tmp_path / 'support.tif'
+    with rasterio.open(grid, 'w', **profile, dtype='float32') as ds:
+        ds.write(np.full((4, 4), -12, dtype='float32'), 1)
+    cells = np.full((4, 4), 7, dtype='uint16')
+    cells[0] = [99, 7, 0, 7]  # Nodata, valid neighbour, zero, explicit mask hole.
+    mask = np.full((4, 4), 255, dtype='uint8')
+    mask[0, 3] = 0
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True):
+        with rasterio.open(support, 'w', **profile, dtype=cells.dtype, nodata=99) as ds:
+            ds.write(cells, 1)
+            ds.write_mask(mask)
+
+    frame = terrain.Frame([-1, -1, 1, 1])  # x = Mercator easting, z = -northing.
+    with rasterio.open(grid) as depth, rasterio.open(support) as companion:
+        terrain.aligned(depth, companion)
+        assert companion.files == [str(support)]  # No external mask sidecar.
+        # GDAL's explicit mask exposes the positive sentinel as unmasked.
+        assert companion.nodata == 99
+        assert companion.read(1, masked=True)[0].tolist() == [99, 7, 0, None]
+        mosaic, native = [terrain.samples(frame, 100.5, -99.5, 1, 1, 4, depth, companion,
+                                          contributor=contributor)
+                          for contributor in (True, False)]
+        for (values, codes), expected_codes in [(mosaic, [0, 7, 0, 0]), (native, [0, 0, 0, 0])]:
+            np.testing.assert_array_equal(values[0], [np.nan, -12, np.nan, np.nan])
+            np.testing.assert_array_equal(codes[0], expected_codes)
+
+        # A positive centre is not enough if its wider footprint covers the sentinel.
+        values, codes = terrain.samples(frame, 101.25, -98.75, 1.5, 1.5, 1, depth, companion,
+                                        contributor=True)
+        np.testing.assert_array_equal(values, [[np.nan]])
+        np.testing.assert_array_equal(codes, [[0]])
 
 
 def test_receipted_overview_round_trip_and_real_noop(tmp_path, capsys):
@@ -135,6 +173,31 @@ def test_receipted_overview_round_trip_and_real_noop(tmp_path, capsys):
     (region.dir / 'receipted-mosaic/manifest.json').write_text('{}')
     assert run(region) == 3
     assert '[terrain] BLOCKED' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(('crs_pair', 'message'), [
+    pytest.param((None, None), 'must both declare a CRS', id='neither-crs'),
+    pytest.param((None, 'EPSG:3857'), 'must both declare a CRS', id='missing-elevation-crs'),
+    pytest.param(('EPSG:3857', None), 'must both declare a CRS', id='missing-contributor-crs'),
+    pytest.param(('EPSG:3857', 'EPSG:3310'), 'must share one grid', id='mismatched-crs'),
+])
+def test_mosaic_crs_refused_before_sampling(tmp_path, monkeypatch, crs_pair, message):
+    # Equality alone lets two missing CRSs through when affine and shape match.
+    region = fixture(tmp_path / 'out', native=False, mosaic_crs=crs_pair)
+
+    def unexpected_sample(*args, **kwargs):
+        pytest.fail('terrain reached sampling before refusing the mosaic CRS')
+
+    monkeypatch.setattr(terrain, 'samples', unexpected_sample)
+    assert run(region) == 1
+    receipt = receipts.read_receipt(region.receipt_path('terrain'))
+    assert receipt is not None
+    assert receipt['status'] == 'failed'
+    assert receipt['error'].startswith('ReceiptError:')
+    assert message in receipt['error']
+    assert receipt['outputs'] == []
+    assert not (region.dir / 'layers/terrain').exists()
+    assert not list(region.resolve(receipt['failed_dir']).glob('*.bin.gz'))
 
 
 @pytest.mark.parametrize('epsg', [3857, 3310])

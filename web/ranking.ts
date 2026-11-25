@@ -114,9 +114,11 @@ const miles = (origin: Origin | null, p: {latitude: number; longitude: number}):
 const distance = (nm: number | null): string => nm === null ? '—' : `${nm.toFixed(1)} nm`;
 const band = (lo: number, hi: number): string => `~${Math.round(lo)}–${Math.round(hi)} ft`;
 const known = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
-/** Verified export source credits remain visible on the ranking, including noncommercial terms. */
-const sourceCredits = (rights: unknown): string => Array.isArray(rights) ? rights.map(r =>
-  r && typeof r.credit === 'string' && typeof r.notice === 'string' ? ` ${r.credit} ${r.notice}` : '').join('') : '';
+/** Verified export source credits remain visible on the ranking, including noncommercial terms. A reef built from two surveys by one producer carries the
+ *  same credit-and-notice pair twice: each distinct pair prints once, in first-seen order (same credit with a different notice both stay). */
+const sourceCredits = (rights: unknown): string => Array.isArray(rights) ? rights.flatMap(r =>
+  r && typeof r.credit === 'string' && typeof r.notice === 'string' ? [[r.credit, r.notice] as const] : [])
+  .filter(([credit, notice], i, all) => all.findIndex(([c, n]) => c === credit && n === notice) === i).map(([credit, notice]) => ` ${credit} ${notice}`).join('') : '';
 /** RF1050-16: a depth band enters a list only if it is finite, nonnegative, ordered and wholly inside the limit; nothing is coerced, swapped or repaired. */
 const validDepthBand = (lo: unknown, hi: unknown, limitFt: number): boolean => known(lo) && known(hi) && known(limitFt) && limitFt > 0 && lo >= 0 && lo <= hi && hi <= limitFt;
 /** The same test for a published `[lo, hi]` pair: exactly two entries. */

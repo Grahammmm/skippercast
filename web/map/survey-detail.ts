@@ -17,6 +17,18 @@ const measured = (tier: unknown): tier is MeasuredTier => typeof tier === 'strin
 type FootprintProperties = {tier: Tier; grid_m?: number; source?: string; sourceId?: string;
   grid_tier?: '4-16m-compiled'; date?: string; label: string};
 
+/** Check Gregorian YYYY, YYYY-MM or YYYY-MM-DD without changing its precision. */
+function validSurveyDate(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const parts = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(value);
+  if (!parts || parts[1] === '0000') return false;
+  const [, year, month = '01', day = '01'] = parts;
+  const calendarDay = `${year}-${month}-${day}`;
+  const at = new Date(`${calendarDay}T00:00:00Z`);
+  // Date can roll a nonexistent day into the following month.
+  return Number.isFinite(at.getTime()) && at.toISOString().slice(0, 10) === calendarDay;
+}
+
 /** The renderer follows the producer's per-cell tier, not the nominal grid size. */
 function surveyDetailText(p: Record<string, unknown>): string | null {
   if (p.tier === 'none') return 'No survey';
@@ -25,8 +37,14 @@ function surveyDetailText(p: Record<string, unknown>): string | null {
   return measured(p.tier) && p.grid_m <= maximumGrid[p.tier] ? measuredLabel[p.tier] : null;
 }
 
-// Every finite binary64 is an integer multiple of 2^-1074. Keeping that
-// common scale makes the signed area exact, even for retraced or tiny rings.
+// Scaling by a power of two is exact here (the bounds prevent overflow and we
+// scale up, not down). Only use this coarser grid if every coordinate lands on
+// an integer. BigInt converts the represented integer exactly, even above 2^53.
+const areaScale = 2 ** 52;
+const areaCoordinate = (value: number): bigint => BigInt(value * areaScale);
+
+// Off-grid rings use the full binary64 grid: every finite value is an integer
+// multiple of 2^-1074, including subnormals.
 function exactCoordinate(value: number, bits: DataView): bigint {
   bits.setFloat64(0, value);
   const raw = bits.getBigUint64(0);
@@ -38,19 +56,24 @@ function exactCoordinate(value: number, bits: DataView): bigint {
 
 function validRing(ring: unknown): boolean {
   if (!Array.isArray(ring) || ring.length < 4) return false;
+  let onGrid = true;
   for (const pt of ring) {
     if (!Array.isArray(pt) || pt.length !== 2 ||
         !finite(pt[0]) || Math.abs(pt[0]) > 180 || !finite(pt[1]) || Math.abs(pt[1]) > 90) return false;
+    onGrid &&= Number.isInteger(pt[0] * areaScale) && Number.isInteger(pt[1] * areaScale);
   }
   const [x0, y0] = ring[0];
   const [lastX, lastY] = ring[ring.length - 1];
   if (x0 !== lastX || y0 !== lastY) return false;
 
-  const bits = new DataView(new ArrayBuffer(8));
+  // Use one scale for the entire sum: changing it multiplies every term by
+  // the same positive factor, preserving exact cancellation and zero area.
+  const bits = onGrid ? null : new DataView(new ArrayBuffer(8));
+  const coordinate = bits ? (value: number) => exactCoordinate(value, bits) : areaCoordinate;
   let twiceArea = 0n;
-  let previousX = exactCoordinate(x0, bits), previousY = exactCoordinate(y0, bits);
+  let previousX = coordinate(x0), previousY = coordinate(y0);
   for (let i = 1; i < ring.length; i++) {
-    const x = exactCoordinate(ring[i][0], bits), y = exactCoordinate(ring[i][1], bits);
+    const x = coordinate(ring[i][0]), y = coordinate(ring[i][1]);
     twiceArea += previousX * y - previousY * x;
     previousX = x;
     previousY = y;
@@ -88,7 +111,7 @@ export function decodeSurveyDetail(region: string, value: unknown, reviewedSourc
       properties.sourceId = id as string;
       properties.grid_m = p.grid_m as number;
       if (p.grid_tier === '4-16m-compiled') properties.grid_tier = p.grid_tier;
-      if (text(p.date)) properties.date = p.date;
+      if (validSurveyDate(p.date)) properties.date = p.date;
     }
     features.push({type: 'Feature' as const, geometry, properties});
   }
@@ -135,7 +158,7 @@ export function surveyDetailLayers(source: string, id: string, pattern: string, 
       paint: {'fill-color': ['match', tier, '2m', p.mapSurveyTint2, '5m', p.mapSurveyTint5, p.mapSurveyTint1],
         'fill-opacity': ['match', tier, '1m-measured', light ? 0.22 : 0.18, '2m', 0.14, '5m', light ? 0.08 : 0.10, 0]}},
     {id: `${id}-outline`, source, type: 'line',
-      paint: {'line-color': p.mapSurveyInk, 'line-width': 1.4, 'line-dasharray': [4, 3]}},
+      paint: {'line-color': p.mapSurveyInk, 'line-width': light ? ['case', ['==', tier, 'estimated'], 2.8, 1.4] : 1.4, 'line-dasharray': [4, 3]}},
     {id: `${id}-label`, source, type: 'symbol',
       layout: {'text-field': ['get', 'label'],
         'text-font': [LABEL_FONT], 'text-size': 11},

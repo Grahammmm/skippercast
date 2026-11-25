@@ -84,23 +84,74 @@ test('seeds keep the 64 px spacing on a laptop and widen on a large screen: neve
   }
 });
 
-test('the fastest fifth of cells draws in --flow-fast; dashes move only with the clock', () => {
-  const speeds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-  assert.equal(fastSpeed({validAt: '', cells: speeds.map(speedKnots => ({speedKnots}))}), 0.8, 'the 80th percentile by nearest rank');
-  const field = frameField(wcofs(), {validAt: AT.toISOString(), cells: cells({u: (i) => 0.1 + i * 0.1})});
-  const paths = flowPaths(screenVector(field, unproject), SIZE, SIZE, 1.0);
+test('rounded provider speeds do not mark a uniform frame as fast', () => {
+  // A provider can round its scalar knots to hundredths while retaining the native u/v.
+  const frameCells = cells({skip: (i, j) => i > 1 || j > 1, u: () => 1, v: () => 0})
+    .map(c => ({...c, speedKnots: 1.94}));
+  const source = wcofs(frameCells), frame = source.frames[1];
+  const field = frameField(source, frame), size = 384;
+  const vector = screenVector(field, (x, y) => ({lon: WEST + x / size * STEP, lat: NORTH - y / size * STEP}));
+  const paths = flowPaths(vector, size, size, fastSpeed(frame));
+  assert.equal(paths.length, 36);
+  assert.ok(paths.every(p => p.speed === 1.943844492), 'path speed still comes from the sampled vector');
+  assert.equal(paths.filter(p => p.fast).length, 0, 'equal-speed paths must not get the fast class');
+  assert.equal(fastSpeed(frame), 1.943844492);
+});
+
+// Contract: --flow-fast means "meaningfully faster than the frame's 80th percentile", so a field with one
+// speed everywhere paints nothing fast. Bug caught: comparing the bilinear-interpolated seed speed with the
+// exact cell speed, where a last-bit rounding difference (seen at 0.3 m/s, not at 1 m/s) colours paths fast.
+test('a uniform field draws every path in the normal colour, at 0.3 m/s as at 1 m/s', () => {
+  for (const [u, expected] of [[0.3, 0.3 * 1.943844492], [1, 1.943844492]]) {
+    // Four cells 0.04° apart whose lat/lon are not exact binary fractions, so the bilinear weights round.
+    const four = [35, 35.04].flatMap(lat => [-121, -120.96].map(lon => ({lat, lon, uMs: u, vMs: 0, speedKnots: u * 1.943844492, towardDeg: 90})));
+    const source = wcofs(four), frame = source.frames[1];
+    const size = 384;
+    const vector = screenVector(frameField(source, frame), (x, y) => ({lon: -121 + x / size * 0.04, lat: 35 + y / size * 0.04}));
+    const paths = flowPaths(vector, size, size, fastSpeed(frame));
+    assert.equal(paths.length, 36, `${u} m/s: the path count is unchanged`);
+    assert.ok(paths.every(p => Math.abs(p.speed - expected) < 1e-9), `${u} m/s: path speed still comes from the sampled vector`);
+    assert.equal(paths.filter(p => p.fast).length, 0, `${u} m/s: equal-speed paths must not get the fast class`);
+  }
+});
+
+// Contract: the tolerance only absorbs interpolation rounding. Bug caught: a tolerance so wide (or a threshold
+// so loose) that real differences vanish, or none at all so rounding noise passes as fast.
+test('only a speed clear of the threshold is fast: rounding noise is not, a 1% excess is', () => {
+  const at = 0.4, flat = speed => (() => ({x: 1, y: 0, speed}));
+  const fastCount = speed => flowPaths(flat(speed), 384, 384, at).filter(p => p.fast).length;
+  assert.equal(fastCount(at * (1 + 4 * Number.EPSILON)), 0, 'a few ulps above is interpolation noise');
+  assert.equal(fastCount(at * 1.01), 36, '1% above the percentile is fast');
+  assert.equal(fastCount(at), 0, 'at the threshold is not above it');
+  assert.equal(fastCount(at * 0.99), 0, 'below the threshold is not fast');
+});
+
+test('the nearest-rank threshold ignores nonfinite vector speeds and falls back to Infinity', () => {
+  const ranked = Array.from({length: 10}, (_, k) => ({uMs: (10 - k) / 8, vMs: 0, speedKnots: (10 - k) / 8 * 1.943844492}));
+  const invalid = [{uMs: NaN, vMs: 0, speedKnots: NaN}, {uMs: 0, vMs: Infinity, speedKnots: Infinity}];
+  assert.equal(fastSpeed({validAt: '', cells: [...invalid, ...ranked]}), 1.943844492, '8th of 10 finite speeds');
+  for (const cells of [invalid, []]) assert.equal(fastSpeed({validAt: '', cells}), Infinity);
+});
+
+test('unequal vectors above the frame threshold draw in --flow-fast; dashes move only with the clock', () => {
+  const source = wcofs(cells({u: i => (i + 1) / 8, v: () => 0})), frame = source.frames[1];
+  const field = frameField(source, frame);
+  const paths = flowPaths(screenVector(field, unproject), SIZE, SIZE, fastSpeed(frame));
   assert.ok(paths.some(p => p.fast) && paths.some(p => !p.fast));
-  assert.ok(paths.every(p => p.fast === p.speed > 1.0));
+  // The 52nd of 64 cells is in column 6 (0.875 m/s), not the fastest column.
+  assert.ok(paths.every(p => p.fast === (p.speed > 0.875 * 1.943844492)));
   const strokes = [];
   const ctx = {beginPath() {}, moveTo() {}, lineTo() {}, setLineDash(d) { this.dash = d; }, stroke() { strokes.push([this.strokeStyle, this.lineDashOffset, this.dash]); }};
-  const colours = {flow: 'token(flow)', fast: 'token(flow-fast)'};
+  const palette = readPalette(name => `token(${name})`);
+  const colours = {flow: palette.flow, fast: palette.flowFast};
   drawDashes(ctx, paths, colours, 0);
   const still = strokes.splice(0);
   drawDashes(ctx, paths, colours, 0);
   assert.deepEqual(strokes.splice(0), still, 'the same clock draws the same dashes');
   drawDashes(ctx, paths, colours, 1.5);
   assert.notDeepEqual(strokes.map(s => s[1]), still.map(s => s[1]), 'a later clock moves them');
-  assert.deepEqual(new Set(still.map(s => s[0])), new Set([colours.flow, colours.fast]));
+  assert.notEqual(colours.flow, colours.fast);
+  assert.deepEqual(still.map(s => s[0]), paths.map(p => p.fast ? colours.fast : colours.flow));
   assert.deepEqual(still[0][2], [...DASH]);
 });
 

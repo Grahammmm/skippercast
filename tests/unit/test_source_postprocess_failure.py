@@ -38,6 +38,33 @@ class SourcePostprocessFailureTests(unittest.TestCase):
         self.assertNotIn("changed_since_previous", result)
         self.assertTrue(result["issue"].startswith("KeyError"))
 
+    def test_chlorophyll_fallback_serves_only_an_in_window_observation(self):
+        # Contract: a failed daily chlorophyll refresh keeps the prior cells only while their
+        # observation time is inside max_age_hours. Bug caught: the fallback copied a 337-hour-old
+        # grid because it never rechecked age, and a recent retrieval must not make it look fresh.
+        def fails(client):
+            raise ValueError("Latest NOAA VIIRS chlorophyll file is stale")
+
+        def chlorophyll(previous):
+            return source("chlorophyll", "C", "grid", "https://example.org", 96, fails, NOW, previous)
+
+        recent = {"last_success_at": "2026-09-24T11:00:00Z", "data_retrieved_at": "2026-09-24T11:00:00Z"}
+        for sample in ("2026-09-10T11:00:00Z", None, "not a time"):  # expired, missing, unreadable
+            with self.subTest(sample=sample):
+                first = chlorophyll({**recent, "data": {"sample_at": sample, "valid_cells": 673}})
+                second = chlorophyll(first)
+                for result in (first, second):
+                    self.assertEqual((result["status"], result["data"]), ("failed", None))
+                    self.assertEqual(result["issue"], "ValueError: Latest NOAA VIIRS chlorophyll file is stale")
+                    self.assertEqual(result["last_success_at"], recent["last_success_at"])
+                    self.assertNotIn("data_retrieved_at", result)
+        in_window = {**recent, "data": {"sample_at": "2026-09-21T00:00:00Z", "valid_cells": 673}}
+        kept = chlorophyll(in_window)
+        self.assertEqual(kept["status"], "retained")
+        self.assertEqual(kept["data"], in_window["data"])
+        self.assertEqual((kept["last_success_at"], kept["data_retrieved_at"]),
+                         (recent["last_success_at"], recent["data_retrieved_at"]))
+
     def test_ordinary_results_keep_statuses_and_clocks(self):
         ok = run("observation", lambda c: {"sample_at": "2026-09-24T11:00:00Z"})
         self.assertEqual(ok["status"], "ok")

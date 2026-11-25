@@ -84,16 +84,40 @@ def exists(url):
 
 # ---- index parsing -------------------------------------------------------------
 
+class MissingIndexField(ValueError, KeyError):
+    """A forecast index row lacks a required field.
+
+    Still a KeyError so callers (and tests) that caught the old bare KeyError keep working.
+    """
+
+    __str__ = Exception.__str__
+
+
 def parse_gfs_idx(text):
-    """[(var, level, forecast, start, end_or_None)] from a NOAA .idx file."""
-    rows = []
+    """[(var, level, forecast, start, end_or_None)] from a NOAA .idx file.
+
+    Short lines, non-integer or negative offsets and offsets that do not strictly increase
+    are refused (a disordered index would otherwise yield an inverted byte range).
+    """
     lines = [line for line in text.splitlines() if line.strip()]
-    for number, line in enumerate(lines):
+    parsed = []
+    previous = -1
+    for number, line in enumerate(lines, 1):
         parts = line.split(':')
-        start = int(parts[1])
-        end = int(lines[number + 1].split(':')[1]) - 1 if number + 1 < len(lines) else None
-        rows.append((parts[3], parts[4], parts[5], start, end))
-    return rows
+        if len(parts) < 6:
+            raise ValueError(f'Invalid forecast index line {number}: expected at least 6 fields')
+        try:
+            start = int(parts[1])
+        except ValueError:
+            raise ValueError(f'Invalid forecast index line {number}: start offset is not an integer') from None
+        if start < 0:
+            raise ValueError(f'Invalid forecast index line {number}: negative start offset')
+        if start <= previous:
+            raise ValueError(f'Invalid forecast index line {number}: start offsets do not increase')
+        previous = start
+        parsed.append((parts[3], parts[4], parts[5], start))
+    return [(var, level, forecast, start, parsed[i + 1][3] - 1 if i + 1 < len(parsed) else None)
+            for i, (var, level, forecast, start) in enumerate(parsed)]
 
 
 def select_gfs(rows, var, level):
@@ -111,8 +135,13 @@ def parse_ecmwf_index(text):
         if not line.strip():
             continue
         row = json.loads(line)
+        if not isinstance(row, dict):
+            raise ValueError('Invalid forecast index row: not an object')
         if row.get('levtype', 'sfc') != 'sfc':
             continue
+        for key in ('param', '_offset', '_length'):
+            if key not in row:
+                raise MissingIndexField(f'Invalid forecast index row: missing {key}')
         offset, length = row['_offset'], row['_length']
         if any(type(n) is not int for n in (offset, length)) or offset < 0 or length < 1:
             raise ValueError('Invalid ECMWF index byte range')

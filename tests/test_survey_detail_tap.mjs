@@ -33,16 +33,41 @@ test('C1: all ordered subsets of the decoded tiers, including no hits', () => {
     assert.deepEqual(confidenceAt(Object.freeze(order.map(i => tiers[i][0])), 'en'), expected,
       `hits: ${order.map(i => tiers[i][1].tier).join(', ') || '(empty)'}`);
   }
+  // Metadata must not let a coarser hit replace a finer hit from the same region.
+  const finer = hit('fourth-bay', '2m');
+  const [coarser] = tiers[3];
+  const expected = {tier: '2m', gridM: null, date: null, text: '2 m', sourcesHref: '/sources#region-fourth-bay'};
+  assert.deepEqual(confidenceAt([finer, coarser], 'en'), expected);
+  assert.deepEqual(confidenceAt([coarser, finer], 'en'), expected);
 });
 
-// Equal rank must not splice the later feature's grid, date or region into the first hit.
-test('C1: equal-tier overlaps keep the first hit intact in either order', () => {
+// Ranking all equal-tier hits by metadata would steal the first region's readout.
+test('C1: equal-tier hits from different regions keep the first hit in either order', () => {
   const [first, expected] = tiers[3];
-  const second = hit('other-bay', 'estimated', {grid_m: 3});
+  const second = hit('other-bay', 'estimated');
   assert.deepEqual(confidenceAt([first, second], 'en'), expected);
   assert.deepEqual(confidenceAt([second, first], 'en'), {
-    tier: 'estimated', gridM: 3, date: null, text: 'estimated (3 m grid)', sourcesHref: '/sources#region-other-bay',
+    tier: 'estimated', gridM: null, date: null, text: 'estimated', sourcesHref: '/sources#region-other-bay',
   });
+});
+
+test('RMSC-151: same-region, same-tier duplicates prefer grid, then date, without merging', () => {
+  const duplicate = extra => hit('other-bay', 'estimated', extra);
+  const grid = duplicate({grid_m: 4});
+  const dated = duplicate({date});
+  const gridReadout = {tier: 'estimated', gridM: 4, date: null, text: 'estimated (4 m grid)', sourcesHref: '/sources#region-other-bay'};
+  const datedReadout = {tier: 'estimated', gridM: null, date, text: 'estimated', sourcesHref: '/sources#region-other-bay'};
+  for (const [why, winner, other, expected] of [
+    ['an unconditional first hit can lose a known grid', grid, duplicate(), gridReadout],
+    ['a grid-only check can lose a known date', dated, duplicate({grid_m: 0, date: ' '}), datedReadout],
+    ['a truthiness check can mistake an infinite grid for known metadata', dated, duplicate({grid_m: Infinity}), datedReadout],
+    ['a date-only tie-break or field merge can override the grid hit', grid, dated, gridReadout],
+  ]) {
+    assert.deepEqual(confidenceAt([other, winner], 'en'), expected, why);
+    assert.deepEqual(confidenceAt([winner, other], 'en'), expected, why);
+  }
+  // Equal metadata quality is not a reason to switch to the last duplicate.
+  assert.deepEqual(confidenceAt([grid, duplicate({grid_m: 8})], 'en'), gridReadout);
 });
 
 // Unrecognized metadata isn't an affirmative survey gap or a winning hit.

@@ -35,6 +35,7 @@ OVERVIEW_MAXZOOM, DETAIL_MAXZOOM, PAD = 10, 14, 0.5
 BUILDS = 'https://build-metadata.protomaps.dev/builds.json'
 SOURCE = 'https://build.protomaps.com/{build}.pmtiles'
 PREFIX = 'tiles/basemap'
+PMTILES_V3_MAGIC = b'PMTiles\x03'  # the first eight bytes of every PMTiles v3 archive
 BUILD_PATTERN = r'\d{8}'  # a Protomaps daily build, YYYYMMDD
 ATTRIBUTION = '© OpenStreetMap contributors, © Protomaps'
 MAX_LISTING_BYTES = 1 << 20  # 12 KB today
@@ -66,10 +67,20 @@ def check_bbox(box):
 def region_boxes(root=ROOT):
     """[{id, status, bbox}] of every active and preview region; drafts join when previewed."""
     boxes = []
+    seen_ids = set()
     for path in sorted(Path(root, 'regions').glob('*/region.json')):
         region = json.loads(path.read_text())
-        if region.get('status') in PUBLISHED:
-            boxes.append({'id': region['id'], 'status': region['status'], 'bbox': check_bbox(region['bounds'])})
+        if region.get('status') not in PUBLISHED:
+            continue
+        region_id = region.get('id')
+        if not isinstance(region_id, str) or not region_id:
+            raise ValueError(f'{path}: Expected a nonempty string id')
+        if region_id in seen_ids:
+            raise ValueError(f'{path}: Duplicate region id {region_id!r}')
+        if region_id != path.parent.name:
+            raise ValueError(f'{path}: Region id {region_id!r} does not match directory {path.parent.name!r}')
+        seen_ids.add(region_id)
+        boxes.append({'id': region_id, 'status': region['status'], 'bbox': check_bbox(region['bounds'])})
     if not boxes:
         raise ValueError('No active or preview region to extract')
     return boxes
@@ -212,6 +223,18 @@ def listing():
     return json.loads(body)
 
 
+def _require_pmtiles_v3(archive):
+    """Refuse a file that does not open as a PMTiles v3 archive (magic `PMTiles` plus version byte 3) so no pointer certifies it."""
+    try:
+        with open(archive, 'rb') as handle:
+            head = handle.read(len(PMTILES_V3_MAGIC))
+    except OSError:
+        return  # a missing or unreadable file keeps manifest()'s own refusal
+    if head != PMTILES_V3_MAGIC:
+        raise SystemExit(f'{Path(archive).name} is not a PMTiles v3 archive (it must start with the bytes PMTiles\\x03); '
+                         'no pointer written.')
+
+
 def _seconds(text):
     try:
         if 0 <= float(text) <= 86400:  # nan and ±inf fail one side
@@ -255,6 +278,7 @@ def main(argv=None):
     planned = _read_object(args.dir / 'plan.json', 'plan')
     archive = args.dir / planned['key'].rsplit('/', 1)[1]
     if args.command == 'manifest':
+        _require_pmtiles_v3(archive)
         m = manifest(planned, archive, args.seconds)
         (args.dir / 'manifest.json').write_text(json.dumps(m, indent=2))
         print(f"{m['key']}: {m['bytes']:,} bytes ({m['bytes'] / 2**20:.1f} MiB) in {m['build_seconds']} s "

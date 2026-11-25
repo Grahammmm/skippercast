@@ -60,10 +60,18 @@ export function afterDetent(panel: Panel, next: Detent): {panel: Panel; detent: 
   return {panel: next === 'peek' ? 'brief' : panel, detent: next};
 }
 
-/** The detent and panel after the layers button: open at half, or back to the brief. */
-export function toggleLayers(panel: Panel, detent: Detent): {panel: Panel; detent: Detent} {
-  return panel === 'layers' ? {panel: 'brief', detent} : {panel: 'layers', detent: detent === 'peek' ? 'half' : detent};
+/**
+ * The detent and panel after the layers button: open at half, or back to the brief.
+ * MORRO-M3: `openedFrom` is the detent the button raised the sheet from. Closing returns there, so a
+ * layer switched on from a peeked sheet (the survey-detail gap cue) is not left under a half sheet.
+ * Without it (or after the user moved the sheet themselves) the sheet stays where it is.
+ */
+export function toggleLayers(panel: Panel, detent: Detent, openedFrom: Detent | null = null): {panel: Panel; detent: Detent} {
+  return panel === 'layers' ? {panel: 'brief', detent: openedFrom ?? detent} : {panel: 'layers', detent: detent === 'peek' ? 'half' : detent};
 }
+
+/** The detent to return to when Layers closes: only the peek the button itself raised (MORRO-M3). */
+export const layersOpenedFrom = (panel: Panel, detent: Detent): Detent | null => panel !== 'layers' && detent === 'peek' ? 'peek' : null;
 
 /** History's series sits below the peek detent's clipped body, so entering History opens a peeked sheet to full. */
 export const viewDetent = (view: AppView, detent: Detent): Detent => view === 'history' && detent === 'peek' ? 'full' : detent;
@@ -176,6 +184,8 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
   const now = useHourNow(fixedNow, clock);
   const [detent, setDetent] = useState<Detent>('peek');
   const [panel, setPanel] = useState<Panel>('brief');
+  // MORRO-M3: where the layers button raised the sheet from, so closing Layers puts the map back.
+  const [layersFrom, setLayersFrom] = useState<Detent | null>(null);
   // RF1935-4: only the focused sheet target needs keyboard-viewport correction.
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -227,6 +237,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
     };
   }, []);
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
+  const flipLayers = () => { setLayersFrom(layersOpenedFrom(panel, detent)); apply(toggleLayers(panel, detent, layersFrom)); };
   useEffect(() => setDetent(d => viewDetent(appView.value, d)), [appView.value]);
   useEffect(() => setDetent(d => boatEntryDetent(boatEntryOpen.value, d)), [boatEntryOpen.value]);
   const lang = language.value;
@@ -243,14 +254,14 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
             <Brand />
             <Location />
           </div>
-          {<IconButton icon="layers" label={t('shell.layers', lang)} variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />}
+          {<IconButton icon="layers" label={t('shell.layers', lang)} variant="ghost" pressed={layersOpen} onClick={() => flipLayers()} />}
           <LimitsControl compact />
           <AccountMenu top />
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
       <MapStage clock={clock} />
-      {appView.value === 'reports' || appView.value === 'plan' ? <div class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><LazyReports now={now} /></Guard>}</div> : <Sheet landmark={false} label={layersOpen ? t('shell.layers', lang) : appView.value === 'conditions' || appView.value === 'fleet' || appView.value === 'history' ? viewLabel(appView.value, lang) : t('shell.brief', lang)} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
+      {appView.value === 'reports' || appView.value === 'plan' ? <div class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><LazyReports now={now} /></Guard>}</div> : <Sheet landmark={false} label={layersOpen ? t('shell.layers', lang) : appView.value === 'conditions' || appView.value === 'fleet' || appView.value === 'history' ? viewLabel(appView.value, lang) : t('shell.brief', lang)} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => { setLayersFrom(null); apply(afterDetent(panel, next)); }}
         class={['app-sheet', currentMark.value && !noMap ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<Guard name="time-dock"><HourEdge now={now} /></Guard>}
         onBodyFocus={event => {
           const target = event.target as Element | null;
@@ -262,7 +273,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
           }
         }}>
         {showsFirstRun(shownPanel) ? firstRun : null}
-        {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'fleet' ? <Guard name="fleet"><Fleet onShowMap={() => setDetent('peek')} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
+        {layersOpen ? <LayersPanel onClose={() => flipLayers()} /> : appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'fleet' ? <Guard name="fleet"><Fleet onShowMap={() => setDetent('peek')} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
       <ViewNav icons class="app-tabs" />
     </main>

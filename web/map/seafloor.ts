@@ -435,15 +435,18 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     if (key !== archiveKey) drop();
     manifest = gate.manifest;
     pub = {screened, rights: publicationRights(manifest)};
+    let head: ArchiveHeader;
     try {
       archive ??= o.open(new URL(archiveURL(id), page()).href);
       archiveKey = key;
-      header = await archive.getHeader();
+      // Read into a local: a header from a request that was superseded while it was in flight must not touch `header`.
+      head = await archive.getHeader();
     } catch {
       if (request === enabling) fail('unavailable', 'Seafloor layer unavailable · try again later', false);
       return;
     }
     if (request !== enabling) return;
+    header = head;
     attempt = 0; state = 'ready';
     if (!current()) return;
     schedule(Math.min(Date.parse(manifest.expires_at) - now(), MAX_DELAY));
@@ -590,11 +593,16 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     effect(() => { on.value; region.value; o.startReady?.(); untracked(() => void enable()); }),
     effect(() => { camera.value; shownPresentation.value; profile.value; ownSpearDepthFt.value; species.value; grade.value; seafloorView.value; untracked(() => void draw()); }),
   ];
+  // Re-judged at the click: an expired publication or another presentation reads nothing.
+  const canRead = () => current() && shownPresentation.peek() === 'chart';
   return {
-    mark(id) { const f = drawn.get(id); return f ? seafloorMark(f, view) : null; },
-    // Re-judged at the click: an expired publication or another presentation reads nothing.
+    mark(id) {
+      if (!canRead()) return null;
+      const f = drawn.get(id);
+      return f ? seafloorMark(f, view) : null;
+    },
     cellAt(at) {
-      if (!current() || shownPresentation.peek() !== 'chart') return null;
+      if (!canRead()) return null;
       const f = cells.find(c => insideGeometry(c.geometry, at.lon, at.lat));
       return f ? cellMark(f) : null;
     },
