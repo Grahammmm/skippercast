@@ -15,12 +15,16 @@
 //    /assets/* and /basemap/glyphs/v/*, and a short cache for region and data
 //    files except safety inputs, which still revalidate) and
 //    .assetsignore (keeps .vite/ off the CDN).
+// 5. Reviewed relief pointers, catalog/relief/<region>.json, are copied byte for
+//    byte to the same path (copyReliefPointers). The relief layer and ft-v3 contours
+//    fetch them there and live-check compares their SHA-256 with the merged commit.
 //
 // The build id hashes every page and every hashed asset name, so any change
 // to a module, stylesheet or page gives a new id (and a new service worker).
 import {createHash} from 'node:crypto';
-import {cp, lstat, readdir, readFile, rename, rm, writeFile} from 'node:fs/promises';
+import {cp, lstat, mkdir, readdir, readFile, rename, rm, writeFile} from 'node:fs/promises';
 import {join, relative, resolve, sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {build} from 'vite';
 import {clientConfig, pages} from '../vite.config.mjs';
 import {writePrecache} from './precache.mjs';
@@ -188,17 +192,54 @@ export function advisorAssetPaths(manifest) {
 }
 // TA-W1 end.
 
+// The repository's reviewed relief pointers. The README and the schema stay in the repository.
+export const RELIEF_POINTERS = 'catalog/relief';
+const RELIEF_SOURCE = fileURLToPath(new URL(`../${RELIEF_POINTERS}/`, import.meta.url));
+const RELIEF_KEEP = new Set(['README.md', 'pointer.schema.json']);
+const POINTER_LIMIT = 1 << 20;  // the same bound the hosted STAGE job puts on a pointer blob
+const REGION_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Copy each reviewed relief pointer in `src` to <out>/catalog/relief/ with its exact bytes; returns the names.
+ * Anything else in the directory, a link, an oversized or malformed file, or a pointer that is not a public,
+ * reviewed sc-relief-pointer/1 for the region its name says fails the build instead of being published.
+ */
+export async function copyReliefPointers(src, out) {
+  const names = await readdir(src).catch(error => { if (error.code === 'ENOENT') return []; throw error; });
+  const copied = [];
+  for (const name of names.sort()) {
+    if (RELIEF_KEEP.has(name)) continue;
+    const rel = `${RELIEF_POINTERS}/${name}`, region = name.endsWith('.json') ? name.slice(0, -5) : '';
+    if (!REGION_ID.test(region) || region.length > 64) throw Error(`refusing to publish ${rel}: not a regional relief pointer name`);
+    const from = join(src, name), info = await lstat(from);
+    if (!info.isFile()) throw Error(`refusing to publish ${rel}: not a regular file`);
+    if (info.size > POINTER_LIMIT) throw Error(`refusing to publish ${rel}: larger than ${POINTER_LIMIT} bytes`);
+    const bytes = await readFile(from);
+    let doc;
+    try { doc = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(bytes)); } catch { throw Error(`refusing to publish ${rel}: not JSON`); }
+    if (doc?.schema !== 'sc-relief-pointer/1' || doc.status !== 'reviewed' || doc.private !== false || doc.region !== region) {
+      throw Error(`refusing to publish ${rel}: not a public reviewed relief pointer for ${region}`);
+    }
+    await mkdir(join(out, RELIEF_POINTERS), {recursive: true});
+    await writeFile(join(out, RELIEF_POINTERS, name), bytes, {flag: 'wx'});
+    copied.push(name);
+  }
+  return copied;
+}
+
 /**
  * Build the client into `out` (default dist/client). `copy` filters which
- * static entries are copied (tests skip the large data directories).
+ * static entries are copied (tests skip the large data directories); `relief`
+ * is the directory of reviewed relief pointers (default the repository's).
  */
-export async function buildClient({root = 'dist', out = join(root, 'client'), copy, headers = ''} = {}) {
+export async function buildClient({root = 'dist', out = join(root, 'client'), copy, headers = '', relief = RELIEF_SOURCE} = {}) {
   root = resolve(root); out = resolve(out);
   generateStrings();   // SC1407-09: the readers' English and Spanish tables, from catalog/app/strings.json
   await rm(out, {recursive: true, force: true});
   await build({configFile: false, ...clientConfig({root, outDir: out})});
   const manifest = JSON.parse(await readFile(join(out, MANIFEST), 'utf8'));
   await copyStatic(root, out, {only: copy});
+  await copyReliefPointers(relief, out);
   await versionGlyphs(out);
   const {buildId, shells} = await hashPages(out, pages(root));
   await writeFile(join(out, '_headers'), headers + IMMUTABLE_ASSETS + IMMUTABLE_GLYPHS + STATIC_DATA + SAFETY_FILES);

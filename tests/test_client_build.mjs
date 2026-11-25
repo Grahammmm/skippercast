@@ -10,7 +10,7 @@ import {mkdtemp, mkdir, readdir, readFile, rm, symlink, writeFile} from 'node:fs
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {promisify} from 'node:util';
-import {buildClient, copyStatic, glyphVersion, hashName, IMMUTABLE_ASSETS, IMMUTABLE_GLYPHS, REVALIDATE, SAFETY_FILES, STATIC_DATA, STATIC_MAX_AGE_S, STATIC_SWR_S, versionGlyphs} from '../scripts/client-build.mjs';
+import {buildClient, copyReliefPointers, copyStatic, glyphVersion, hashName, IMMUTABLE_ASSETS, IMMUTABLE_GLYPHS, REVALIDATE, SAFETY_FILES, STATIC_DATA, STATIC_MAX_AGE_S, STATIC_SWR_S, versionGlyphs} from '../scripts/client-build.mjs';
 import {BUILD_PLACEHOLDER} from '../scripts/precache.mjs';
 import {GLYPH_VERSION} from '../web/map/style.ts';
 import {dropMaplibreLogo, MAPLIBRE_CSS, STATIC_REF} from '../vite.config.mjs';
@@ -418,4 +418,64 @@ test('only vendor files, the web manifest and icons are left out of the Vite bui
   assert.match(mark('<link rel="apple-touch-icon" href="apple-touch-icon.png"/>'), /vite-ignore/);
   assert.doesNotMatch(mark('<link rel="stylesheet" href="tokens.css" />'), /vite-ignore/);
   assert.doesNotMatch(mark('<script type="module" src="../web/app/main.tsx"></script>'), /vite-ignore/);
+});
+
+const POINTER = region => ({schema: 'sc-relief-pointer/1', status: 'reviewed', private: false, region, generation: 'a'.repeat(64)});
+async function reliefDir(t, files) {
+  const dir = await mkdtemp(join(tmpdir(), 'relief-src-'));
+  t.after(() => rm(dir, {recursive: true, force: true}));
+  for (const [name, body] of Object.entries(files)) await writeFile(join(dir, name), body);
+  return dir;
+}
+
+test('relief pointers are published byte for byte at catalog/relief/, with nothing else from the directory', async t => {
+  // Bug caught: the browser and live-check fetch /catalog/relief/<region>.json, but the build never shipped it,
+  // so a merged pointer drew no relief (and no ft-v3 contours) and live-check could only report a missing pointer.
+  const morro = `${JSON.stringify(POINTER('morro-bay'), null, 2)}\n`;
+  const src = await reliefDir(t, {'morro-bay.json': morro, 'README.md': '# notes', 'pointer.schema.json': '{}'});
+  const out = await mkdtemp(join(tmpdir(), 'relief-out-'));
+  t.after(() => rm(out, {recursive: true, force: true}));
+  assert.deepEqual(await copyReliefPointers(src, out), ['morro-bay.json']);
+  assert.deepEqual(await readdir(join(out, 'catalog/relief')), ['morro-bay.json']);
+  assert.equal(await readFile(join(out, 'catalog/relief/morro-bay.json'), 'utf8'), morro, 'exact bytes: live-check compares SHA-256');
+  // No directory (the repository before any release) publishes nothing.
+  assert.deepEqual(await copyReliefPointers(join(src, 'missing'), out), []);
+});
+
+test('a relief pointer that is not public, reviewed and for its own region fails the build', async t => {
+  const cases = {
+    'wrong region': ['morro-bay.json', JSON.stringify(POINTER('big-sur-coast'))],
+    'private': ['morro-bay.json', JSON.stringify({...POINTER('morro-bay'), private: true})],
+    'unreviewed': ['morro-bay.json', JSON.stringify({...POINTER('morro-bay'), status: 'draft'})],
+    'other schema': ['morro-bay.json', JSON.stringify({...POINTER('morro-bay'), schema: 'sc-relief-release/1'})],
+    'not JSON': ['morro-bay.json', '{"schema": '],
+    'not UTF-8': ['morro-bay.json', Buffer.from([0x7b, 0xff, 0x7d])],
+    'bad name': ['Morro_Bay.json', JSON.stringify(POINTER('Morro_Bay'))],
+    'other file': ['morro-bay.geojson', '{}'],
+    'oversized': ['morro-bay.json', JSON.stringify({...POINTER('morro-bay'), pad: 'x'.repeat(1 << 20)})],
+  };
+  for (const [label, [name, body]] of Object.entries(cases)) {
+    const src = await reliefDir(t, {[name]: body});
+    const out = await mkdtemp(join(tmpdir(), 'relief-out-'));
+    t.after(() => rm(out, {recursive: true, force: true}));
+    await assert.rejects(copyReliefPointers(src, out), new RegExp(`refusing to publish catalog/relief/${name.replace('.', '\\.')}`), label);
+    await assert.rejects(readdir(join(out, 'catalog')), {code: 'ENOENT'}, label);
+  }
+  // A link could publish any file on the build machine under a pointer's name.
+  const elsewhere = await reliefDir(t, {'private.json': JSON.stringify(POINTER('morro-bay'))});
+  const linked = await reliefDir(t, {});
+  await symlink(join(elsewhere, 'private.json'), join(linked, 'morro-bay.json'));
+  await assert.rejects(copyReliefPointers(linked, await mkdtemp(join(tmpdir(), 'relief-out-'))),
+    /refusing to publish catalog\/relief\/morro-bay\.json: not a regular file/);
+});
+
+test('the client build serves the reviewed relief pointers', async t => {
+  const root = await site(t);
+  const out = join(root, 'client');
+  const relief = await reliefDir(t, {'morro-bay.json': JSON.stringify(POINTER('morro-bay'))});
+  await buildClient({root, out, headers: '/*\n', relief});
+  assert.deepEqual(JSON.parse(await readFile(join(out, 'catalog/relief/morro-bay.json'), 'utf8')), POINTER('morro-bay'));
+  const precache = JSON.parse(await readFile(join(out, 'precache.json'), 'utf8'));
+  assert.ok(!JSON.stringify(precache).includes('catalog/relief'), 'a pointer is never precached; a rollback must reach the next load');
+  await rm(out, {recursive: true, force: true});
 });
