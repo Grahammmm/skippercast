@@ -16,7 +16,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from skippercast.platform.contracts import indexed, read_json
 from skippercast.platform.depth_contours import publish_depth_contours
-from skippercast.relief import live_archive, live_deploy, package, receipts
+from skippercast.relief import live_archive, live_deploy, live_survey, package, receipts
 from skippercast.relief.stage_transport import ARCHIVE_LIMIT
 
 _LIMIT = 20
@@ -55,10 +55,11 @@ class Site:
             raise FetchError(key, 'budget')
         self.requests += 1
 
-    def fetch(self, key, *, max_bytes):
+    def fetch(self, key, *, max_bytes, accept_encoding=None, expect_headers=None):
         self.charge(key)
+        headers = {'Accept-Encoding': accept_encoding} if accept_encoding else {}
         try:
-            response = self.opener.open(Request(f'{self.base}/{key}', method='GET'), timeout=15)
+            response = self.opener.open(Request(f'{self.base}/{key}', headers=headers, method='GET'), timeout=15)
         except HTTPError as exc:
             exc.close()
             if exc.code == 404:
@@ -69,6 +70,10 @@ class Site:
         if response.status != 200:
             response.close()
             raise FetchError(key, f'http-{response.status}')
+        for name, expected in (expect_headers or {}).items():
+            if response.headers.get_all(name) != [expected]:
+                response.close()
+                raise FetchError(key, name.lower())
         if max_bytes is None:  # presence check: never read an unmerged object's body
             response.close()
             return iter(())
@@ -228,16 +233,14 @@ def _wait_for_deploy(site, history, merge, polls, interval, sleeper, refresh):
     return deployed, _failure('deploy', 'not-deployed')
 
 
-def _check(site, history, merge, key, raw, pointer, contours, *, polls, interval, sleeper):
+def _check(site, history, merge, key, raw, pointer, contours, *, survey, tail, polls, interval, sleeper):
     refresh = None
     if polls is not None:
         def refetch():
             site.charge('history')  # a refetch is one operation, counted before it runs
             _refresh_history(history)
         refresh = refetch
-        # Pointer, archive, root, one chunk per zoom and contours stay owed after the deploy read.
-        tail = 4 + pointer['maxzoom'] - pointer['minzoom'] + 1
-        site.reserve = tail + 1  # polls and refetches must leave the full proof's deploy read and tail
+        site.reserve = tail + 1  # polls and refetches leave the full proof's deploy read and tail
         deployed, poll = _wait_for_deploy(site, history, merge, polls, interval, sleeper, refresh)
         if poll['status'] == 'FAIL':
             return deployed, [poll]
@@ -254,11 +257,17 @@ def _check(site, history, merge, key, raw, pointer, contours, *, polls, interval
             checks.append(_failure('pointer', exc.reason))
     if checks[-1]['status'] == 'PASS':
         try:
-            checks.extend(live_archive.check_archive(pointer, site.fetch, budget=_LIMIT - site.requests - 1))
+            checks.extend(live_archive.check_archive(pointer, site.fetch,
+                                                     budget=_LIMIT - site.requests - 1 - int(survey is not None)))
             if all(row['status'] == 'PASS' for row in checks):
                 checks.append(_contours_check(site, pointer['region'], contours))
         except FetchError as exc:
             checks.append({**_failure('fetch', exc.reason), 'key': exc.key})
+    if survey is not None and all(row['status'] == 'PASS' for row in checks):
+        try:
+            checks.append(live_survey.check(pointer, survey, site.fetch))
+        except FetchError as exc:
+            checks.append({**_failure('survey', exc.reason), 'key': exc.key})
     return deployed, checks
 
 
@@ -290,10 +299,12 @@ def _run(args, *, polls=None, interval=300, sleeper=sleep):
     repo, out = args.repo.resolve(), args.out.resolve()
     key = f'catalog/relief/{args.region}.json'
     head, raw, merge, pointer = _reviewed(repo, args.region, key)
-    # Git fetch + full proof: deploy, pointer, archive, root, one chunk per
-    # advertised zoom (tiles are checked locally), and contours, even if absent.
+    survey = live_survey.binding(pointer)
+    # Owed after deploy: pointer, archive, root, one chunk per zoom, contours,
+    # and one survey representation if pinned. Git fetch and deploy cost two more.
+    tail = 5 + pointer['maxzoom'] - pointer['minzoom'] + int(survey is not None)
     if polls is not None:
-        max_polls = _LIMIT - 6 - (pointer['maxzoom'] - pointer['minzoom'] + 1)
+        max_polls = _LIMIT - 2 - tail
         if polls > max_polls:
             raise LocalError(f'--wait {polls} exceeds the {max_polls}-poll budget for this release')
     parent = (out / args.region / 'live' / pointer['generation']).resolve()
@@ -306,7 +317,7 @@ def _run(args, *, polls=None, interval=300, sleeper=sleep):
         _fetch_history(repo, history)
         site = Site(base)
         deployed, checks = _check(site, history, merge, key, raw, pointer, contours,
-                                  polls=polls, interval=interval, sleeper=sleeper)
+                                  survey=survey, tail=tail, polls=polls, interval=interval, sleeper=sleeper)
     passed = all(row['status'] == 'PASS' for row in checks)
     _write(parent / 'live.json', dict(region=args.region, base=base, merge=merge, deployed=deployed,
                                     checks=checks, verdict='PASS' if passed else 'FAIL', requests=site.requests))
