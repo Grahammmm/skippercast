@@ -27,6 +27,7 @@ import {join, relative, resolve, sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {build} from 'vite';
 import {clientConfig, pages} from '../vite.config.mjs';
+import {validateSchema} from './json-schema-lite.mjs';
 import {writePrecache} from './precache.mjs';
 import {generate as generateStrings} from './build_landing_strings.mjs';
 import {GLYPH_VERSION} from '../web/map/style.ts';
@@ -195,6 +196,7 @@ export function advisorAssetPaths(manifest) {
 // The repository's reviewed relief pointers. The README and the schema stay in the repository.
 export const RELIEF_POINTERS = 'catalog/relief';
 const RELIEF_SOURCE = fileURLToPath(new URL(`../${RELIEF_POINTERS}/`, import.meta.url));
+const RELIEF_SCHEMA = join(RELIEF_SOURCE, 'pointer.schema.json');
 const RELIEF_KEEP = new Set(['README.md', 'pointer.schema.json']);
 const POINTER_LIMIT = 1 << 20;  // the same bound the hosted STAGE job puts on a pointer blob
 const REGION_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -202,11 +204,15 @@ const REGION_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /**
  * Copy each reviewed relief pointer in `src` to <out>/catalog/relief/ with its exact bytes; returns the names.
  * Anything else in the directory, a link, an oversized or malformed file, or a pointer that is not a public,
- * reviewed sc-relief-pointer/1 for the region its name says fails the build instead of being published.
+ * reviewed sc-relief-pointer/1 for the region its name says, or that breaks any rule of
+ * catalog/relief/pointer.schema.json (hashes, bytes, previous, bounds, sources and their public rights), fails the
+ * build instead of being published.
  */
-export async function copyReliefPointers(src, out) {
+export async function copyReliefPointers(src, out, schemaFile = RELIEF_SCHEMA) {
   const names = await readdir(src).catch(error => { if (error.code === 'ENOENT') return []; throw error; });
   const copied = [];
+  // The repository's own schema, never a copy found beside the pointers.
+  const schema = names.some(name => !RELIEF_KEEP.has(name)) ? JSON.parse(await readFile(schemaFile, 'utf8')) : null;
   for (const name of names.sort()) {
     if (RELIEF_KEEP.has(name)) continue;
     const rel = `${RELIEF_POINTERS}/${name}`, region = name.endsWith('.json') ? name.slice(0, -5) : '';
@@ -219,6 +225,11 @@ export async function copyReliefPointers(src, out) {
     try { doc = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(bytes)); } catch { throw Error(`refusing to publish ${rel}: not JSON`); }
     if (doc?.schema !== 'sc-relief-pointer/1' || doc.status !== 'reviewed' || doc.private !== false || doc.region !== region) {
       throw Error(`refusing to publish ${rel}: not a public reviewed relief pointer for ${region}`);
+    }
+    // The whole contract, including every source's public-rights fields, not just the four checks above.
+    const problems = validateSchema(doc, schema);
+    if (problems.length) {
+      throw Error(`refusing to publish ${rel}: violates ${RELIEF_POINTERS}/pointer.schema.json (${problems.slice(0, 5).join('; ')}${problems.length > 5 ? `; and ${problems.length - 5} more` : ''})`);
     }
     await mkdir(join(out, RELIEF_POINTERS), {recursive: true});
     await writeFile(join(out, RELIEF_POINTERS, name), bytes, {flag: 'wx'});
