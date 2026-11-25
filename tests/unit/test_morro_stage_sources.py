@@ -13,7 +13,7 @@ HTML_CREDIT = 'Credit: NOAA &amp; partners; lidar DEM 2022'
 
 
 def _source(ident, title):
-    return {'id': ident, 'name': title, 'provider': 'NOAA',
+    return {'id': ident, 'name': title, 'provider': 'NOAA', 'needs': ['bathymetry'],
             'rights': {'public_display': 'allowed', 'attribution': CREDIT}}
 
 
@@ -48,6 +48,7 @@ def candidate(tmp_path):
                              _source('detail', 'Detailed DEM')]}
     for name, doc in {
         'catalogue': catalogue,
+        'needs': {'schema_version': 1, 'needs': [{'id': 'bathymetry', 'name': 'Seabed depth'}]},
         'release': {'schema': 'sc-relief-release/1', 'region': 'morro-bay', 'private': False,
                     'style': {'contours': STYLE},
                     'sources': [{'id': 'shade', 'attribution': CREDIT, 'survey_dates': ['unstated']}]},
@@ -58,7 +59,7 @@ def candidate(tmp_path):
         path = tmp_path / f'{name}.json'
         path.write_bytes(raw)
         args[name] = path
-        if name != 'catalogue':
+        if name not in ('catalogue', 'needs'):
             args[f'{name}_sha256'] = sha256(raw).hexdigest()
     args['page'] = tmp_path / 'sources.html'
     args['page'].write_text(_page(_row('2022 Survey DEM'), _row('Overview DEM') + _row('Detailed DEM', ' · Date: survey 2011')), encoding='utf-8')
@@ -84,6 +85,16 @@ def test_cli_checks_both_contour_levels_and_year_in_product_name_is_not_a_survey
     # The product name is dated, but neither it nor a literal date claim establishes a survey year.
     (_row('2022 Survey DEM'), _row('2022 Survey DEM', ' · Date: survey 2022'), 'unsupported survey'),
     ('Date: survey 2011', 'Date: survey 2012', 'unsupported survey'),
+    # A visible credit list is the claim; a hidden layer list displays nothing, so its rows are not credits.
+    ('<h5>Depth shading</h5><ul>', '<h5>Depth shading</h5><ul hidden>', 'Depth shading: missing credits for shade'),
+    ('<h5>Depth contours</h5><ul>', '<h5>Depth contours</h5><ul style="display: none">', 'Depth contours: missing credits'),
+    # Hidden markup inside a visible row is not displayed either, so it cannot carry the credit.
+    (HTML_CREDIT, '<span hidden>' + HTML_CREDIT + '</span>', 'Depth shading: wrong or missing credit'),
+    # Provides text is the catalogue's need names; any other wording, including a survey claim, is refused.
+    ('Provides: Seabed depth · Date: survey 2011', 'Provides: Seabed depth, surveyed in 2011', 'Provides text'),
+    ('Provides: Seabed depth<br>' + HTML_CREDIT, 'Provides: Seabed depth, surveyed in 2022<br>' + HTML_CREDIT, 'Provides text'),
+    ('Provides: Seabed depth<br>' + HTML_CREDIT, 'Provides: Seabed depth · Survey completed 2022<br>' + HTML_CREDIT, 'unrecognized source facts'),
+    ('Provides: Seabed depth<br>' + HTML_CREDIT, HTML_CREDIT, 'Provides text'),
 ])
 def test_saved_page_refuses_missing_credit_or_unsupported_dates(candidate, before, after, error):
     page = candidate['page']

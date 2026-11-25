@@ -81,41 +81,67 @@ def _clean(text):
     return ' '.join(text.split())
 
 
+VOID = frozenset('area base br col embed hr img input link meta param source track wbr'.split())
+HIDDEN_STYLE = re.compile(r'(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*(?:hidden|collapse))\s*(?:!important\s*)?(?:;|$)', re.I)
+
+
+def _hides(tag, attrs):
+    """True when this element's own markup keeps its contents from being displayed.
+
+    Only attributes in the saved HTML are visible here; a stylesheet class cannot hide a row from this check.
+    """
+    attrs = dict(attrs)
+    return ('hidden' in attrs or tag == 'template' or (tag == 'dialog' and 'open' not in attrs)
+            or bool(HIDDEN_STYLE.search(attrs.get('style') or '')))
+
+
 class _MorroRows(HTMLParser):
-    """Read text from generated live-layer rows, not credits in other regions or eligible lists."""
+    """Read text from displayed generated live-layer rows, not credits in other regions, eligible lists or hidden markup."""
 
     def __init__(self, page):
         super().__init__()
         self.sections = []
+        self.open = []  # (tag, hidden) for every open non-void element; hidden is inherited
         self.morro = False
         self.heading = None
         self.layer = None
         self.item = None
+        self.item_depth = None
         self.rows = defaultdict(list)
         self.feed(page)
         self.close()
+
+    @property
+    def hidden(self):
+        return bool(self.open) and self.open[-1][1]
 
     def handle_starttag(self, tag, attrs):
         ident = dict(attrs).get('id')
         if tag == 'section':
             self.sections.append(ident)
-        if 'data-sources' not in self.sections:
+        if tag not in VOID:
+            self.open.append((tag, self.hidden or _hides(tag, attrs)))
+        if 'data-sources' not in self.sections or self.hidden:
             return
         if tag in ('h2', 'h3', 'h4'):
             self.morro = tag == 'h4' and ident == 'region-morro-bay'
             self.layer = None
         elif self.morro and tag == 'h5':
             self.heading = []
-        elif self.layer in (SHADING, CONTOURS) and tag == 'li':
+        elif self.layer in (SHADING, CONTOURS) and tag == 'li' and self.item is None:
             self.item = ['']
+            self.item_depth = len(self.open) - 1
         elif self.item is not None and tag == 'br':
             self.item.append('')
 
     def handle_endtag(self, tag):
+        depth = next((i for i in range(len(self.open) - 1, -1, -1) if self.open[i][0] == tag), None)
+        if depth is not None:
+            del self.open[depth:]
         if tag == 'h5' and self.heading is not None:
             self.layer = _clean(''.join(self.heading))
             self.heading = None
-        elif tag == 'li' and self.item is not None:
+        elif tag == 'li' and self.item is not None and depth == self.item_depth:
             self.rows[self.layer].append([_clean(line) for line in self.item])
             self.item = None
         elif tag == 'section' and self.sections:
@@ -124,13 +150,22 @@ class _MorroRows(HTMLParser):
                 self.layer = None
 
     def handle_data(self, data):
+        if self.hidden:
+            return
         if self.heading is not None:
             self.heading.append(data)
         elif self.item is not None:
             self.item[-1] += data
 
 
-def _check_rows(rows, layer, expected, catalogue):
+def _provides(row, needs):
+    """The `Provides:` text the sources register prints: the row's catalogue needs, by display name."""
+    if not row.get('needs'):
+        return ''
+    return _clean('Provides: ' + ', '.join(needs.get(need, {}).get('name', need) for need in row['needs']))
+
+
+def _check_rows(rows, layer, expected, catalogue, needs):
     headers = {_clean(f"{catalogue[i]['name']} · {catalogue[i]['provider']}"): i for i in expected}
     seen = set()
     for header, *facts in rows.get(layer, []):
@@ -142,12 +177,16 @@ def _check_rows(rows, layer, expected, catalogue):
         credit = _clean('Credit: ' + row['rights']['attribution'])
         if not facts or facts.pop().removesuffix(' · Source page') != credit:
             raise ValueError(f'{layer}: wrong or missing credit for {ident}')
-        claims = []
-        for field in ' · '.join(facts).split(' · '):
-            if field.startswith('Date: '):
-                claims.extend(field.removeprefix('Date: ').split('; '))
-            elif field and (not field.startswith('Provides: ') or re.search(r'\bsurvey(?:ed)?\s+\d', field, re.I)):
-                raise ValueError(f'{layer}: unrecognized source facts for {ident}')
+        # The only free-form claim allowed is the catalogue's own `Provides:` text, then one `Date:` field; a
+        # survey or other claim worded differently there is not covered by the artifact checks below.
+        text, provides = ' · '.join(facts), _provides(row, needs)
+        if provides:
+            if text != provides and not text.startswith(provides + ' · '):
+                raise ValueError(f'{layer}: unsupported or missing Provides text for {ident}')
+            text = text.removeprefix(provides).removeprefix(' · ')
+        if (text and not text.startswith('Date: ')) or ' · ' in text:
+            raise ValueError(f'{layer}: unrecognized source facts for {ident}')
+        claims = text.removeprefix('Date: ').split('; ') if text else []
         for claim in claims:
             if claim == 'survey date not stated' and expected[ident] == {UNSTATED_SURVEY_DATE}:
                 continue
@@ -160,10 +199,11 @@ def _check_rows(rows, layer, expected, catalogue):
         raise ValueError(f'{layer}: missing credits for {", ".join(sorted(expected.keys() - seen))}')
 
 
-def check(page, catalogue, release, overview, detail, *, release_sha256, overview_sha256, detail_sha256):
+def check(page, catalogue, needs, release, overview, detail, *, release_sha256, overview_sha256, detail_sha256):
     """Return a byte-bound, offline evidence receipt; all inputs are read-only."""
-    raw_catalogue = catalogue.read_bytes()
+    raw_catalogue, raw_needs = catalogue.read_bytes(), needs.read_bytes()
     sources = indexed(decode_document(raw_catalogue), 'sources')
+    needs = indexed(decode_document(raw_needs), 'needs')
     package = _pinned(release, release_sha256, 'relief release')
     if package['schema'] != RELEASE_SCHEMA or package['region'] != REGION or package['private'] is not False:
         raise ValueError('expected a public Morro relief release')
@@ -188,17 +228,18 @@ def check(page, catalogue, release, overview, detail, *, release_sha256, overvie
     html = page.read_bytes()
     rows = _MorroRows(html.decode('utf-8')).rows
     for layer, expected in ((SHADING, shading), (CONTOURS, contour_dates)):
-        _check_rows(rows, layer, expected, sources)
+        _check_rows(rows, layer, expected, sources, needs)
     return {'schema': 'sc-morro-sources-check/1', 'scope': 'saved-sources-html', 'region': REGION,
             'release_sha256': release_sha256, 'overview_sha256': overview_sha256, 'detail_sha256': detail_sha256,
-            'catalogue_sha256': sha256(raw_catalogue).hexdigest(), 'html_sha256': sha256(html).hexdigest(),
+            'catalogue_sha256': sha256(raw_catalogue).hexdigest(), 'needs_sha256': sha256(raw_needs).hexdigest(),
+            'html_sha256': sha256(html).hexdigest(),
             'shading': {i: sorted(dates) for i, dates in shading.items()},
             'contours': {i: sorted(dates) for i, dates in contour_dates.items()}}
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('page', 'catalogue', 'release', 'overview', 'detail'):
+    for name in ('page', 'catalogue', 'needs', 'release', 'overview', 'detail'):
         parser.add_argument(f'--{name}', type=Path, required=True)
     for name in ('release', 'overview', 'detail'):
         parser.add_argument(f'--{name}-sha256', required=True)
