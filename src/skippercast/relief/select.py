@@ -316,6 +316,9 @@ def add_parser():
     parser.add_argument('--provenance', type=Path, default=os.environ.get('SC_RELIEF_PROVENANCE',
                         'PROVENANCE-LABELS.json'))
     parser.add_argument('--region-config', type=Path, help='defaults to regions/<id>/region.json')
+    parser.add_argument('--exclude-source', action='append', default=[], metavar='REGISTRY_ID',
+                        help='skip every census row bound to this registry source id (repeatable); recorded in the '
+                             'selection report and pinned in the stage params')
     return parser
 
 
@@ -348,6 +351,11 @@ def main(argv=None):
             doc = read_json(census)
             bounds = box_of(read_json(config))
             index = rights_index(read_json(registry)['sources'])
+            excluded = sorted(set(args.exclude_source))
+            registry_ids = {r['id'] for r in read_json(registry)['sources']}
+            unknown = [s for s in excluded if s not in registry_ids or index.get(s) is None or index[s]['id'] != s]
+            if unknown:
+                raise ValueError(f'--exclude-source needs an unambiguous registry id (not an alias): {", ".join(unknown)}')
             caps = caps_index(read_json(provenance))
             if doc['summary']['region'] != region.id:
                 raise ValueError('census region mismatch')
@@ -368,7 +376,10 @@ def main(argv=None):
                     raw = local_path(row['path'])
                     if raw in seen_paths:
                         raise ValueError('duplicate_census_path')
-                    seen_paths.add(raw)
+                    seen_paths.add(raw)  # an excluded row still claims its path, so exclusion cannot widen selection
+                    if bound is not None and bound['id'] in excluded:
+                        report['reason'] = 'excluded_by_region_run_option'
+                        continue
                     if not raw.is_file():
                         raise ValueError('original_missing')
                     sha = row.get('sha256_receipt') or row.get('sha256') or receipts.sha256_file(raw)
@@ -387,8 +398,10 @@ def main(argv=None):
                 except (OSError, ValueError) as exc:
                     report['reason'] = str(exc)
             # Paths matter to a manifest even when content is identical.
-            return receipts.Plan(inputs=inputs, params={'scope': 'public', 'cache': str(cache),
-                                                       'input_paths': [str(i.path) for i in inputs]})
+            params = {'scope': 'public', 'cache': str(cache), 'input_paths': [str(i.path) for i in inputs]}
+            if excluded:  # absent when unused, so existing receipts stay valid
+                params['exclude_sources'] = excluded
+            return receipts.Plan(inputs=inputs, params=params)
 
         def produce(output):
             sources = []

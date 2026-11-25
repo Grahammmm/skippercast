@@ -67,7 +67,7 @@ def read_wrangler(text: str) -> dict:
     body = '\n'.join(line for line in text.splitlines() if not line.lstrip().startswith('//'))
     try:
         config = json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):
         raise PreviewError('wrangler config is not JSON with whole-line comments') from None
     if not isinstance(config, dict):
         raise PreviewError('wrangler config must be a JSON object')
@@ -177,7 +177,7 @@ def candidate(tree: Path, sha: str) -> dict:
         raise PreviewError(f'candidate has no {POINTER}')
     try:
         doc = json.loads(pointer)
-    except ValueError:
+    except (ValueError, RecursionError):
         raise PreviewError('candidate relief pointer is not JSON') from None
     if not isinstance(doc, dict) or doc.get('region') != REGION:
         raise PreviewError('candidate relief pointer is not for Morro Bay')
@@ -198,6 +198,22 @@ def plan(tree: Path, sha: str, base_text: str, *, worker: str, bucket: str, poin
                'worker': worker, 'bucket': bucket, 'config_sha256': _sha256(encoded),
                'scope': 'stage-only plan; not deployed, not hosted evidence'}
     return config, receipt
+
+
+def read_plan(data: bytes) -> dict:
+    """A saved plan receipt; anything damaged or not written by `plan` is held, never trusted."""
+    try:
+        receipt = json.loads(data)
+    except (ValueError, RecursionError):  # RecursionError: nesting deeper than the decoder allows
+        raise PreviewError('plan is not JSON') from None
+    if not isinstance(receipt, dict) or receipt.get('schema') != 'sc-morro-stage-preview/1' \
+            or receipt.get('region') != REGION:
+        raise PreviewError('plan is not a Morro stage preview plan')
+    if not isinstance(receipt.get('commit'), str) or not _SHA.fullmatch(receipt['commit']):
+        raise PreviewError('plan commit must be a full lowercase commit SHA')
+    if not isinstance(receipt.get('pointer_sha256'), str) or not _SHA256.fullmatch(receipt['pointer_sha256']):
+        raise PreviewError('plan pointer digest must be 64 lowercase hex digits')
+    return receipt
 
 
 def verify(receipt: dict, deploy_doc: object, served_pointer: bytes | None) -> list[dict]:
@@ -249,10 +265,10 @@ def main(argv: list[str] | None = None) -> int:
             _write(args.out / 'plan.json', (json.dumps(receipt, indent=2, sort_keys=True) + '\n').encode())
             print(f"PLAN {receipt['worker']} commit={receipt['commit']} pointer={receipt['pointer_sha256']}")
             return 0
-        receipt = json.loads(args.plan.read_bytes())
+        receipt = read_plan(args.plan.read_bytes())
         try:
             deploy_doc = json.loads(args.deploy_json.read_bytes())
-        except ValueError:
+        except (ValueError, RecursionError):
             deploy_doc = None
         served = args.pointer.read_bytes() if args.pointer and args.pointer.exists() else None
         checks = verify(receipt, deploy_doc, served)
