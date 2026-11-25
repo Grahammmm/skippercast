@@ -87,7 +87,10 @@ jobs:
             echo "::error::Morro stage preview held: pointer digest must be 64 lowercase hex digits."
             exit 1
           fi
-          if ! printf '%s' "$STAGE_URL" | grep -Eqx "https://${STAGE_WORKER}\.[a-z0-9-]+\.workers\.dev"; then
+          # The whole value, not line by line (a multi-line value is held), with the same DNS-label rule as
+          # the controller's check_origin.
+          origin_re='^https://'"$STAGE_WORKER"'\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.workers\.dev$'
+          if ! [[ "$STAGE_URL" =~ $origin_re ]]; then
             echo "::error::Morro stage preview held: origin must be https://${STAGE_WORKER}.<account subdomain>.workers.dev."
             exit 1
           fi

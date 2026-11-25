@@ -150,6 +150,14 @@ def test_every_action_is_pinned_to_a_full_commit():
     ({'STAGE_URL': 'https://skippercast.fixture-account.workers.dev'}, 'origin must be'),
     ({'STAGE_URL': 'https://skippercast.com'}, 'origin must be'),
     ({'STAGE_URL': ORIGIN + '/x'}, 'origin must be'),
+    # Review t_47dd1c14: the whole value is checked, and with the controller's DNS-label rule.
+    ({'STAGE_URL': ORIGIN + '\nhttps://skippercast.com'}, 'origin must be'),
+    ({'STAGE_URL': 'https://skippercast.com\n' + ORIGIN}, 'origin must be'),
+    ({'STAGE_URL': 'https://skippercast-morro-stage.-account.workers.dev'}, 'origin must be'),
+    ({'STAGE_URL': 'https://skippercast-morro-stage.account-.workers.dev'}, 'origin must be'),
+    ({'STAGE_URL': 'https://skippercast-morro-stage.' + 'a' * 64 + '.workers.dev'}, 'origin must be'),
+    ({'STAGE_URL': 'https://skippercast-morro-stage.Fixture.workers.dev'}, 'origin must be'),
+    ({'STAGE_URL': 'https://skippercast-morro-stage.' + 'a' * 63 + '.workers.dev'}, None),
     ({'HAS_R2': 'false'}, 'not configured'),
     ({'HAS_TOKEN': 'false'}, 'not configured'),
 ])
@@ -164,6 +172,28 @@ def test_the_first_step_holds_bad_dispatches_before_checkout(change, held):
         assert result.returncode == 0, result.stdout + result.stderr
     else:
         assert result.returncode == 1 and held in result.stdout
+
+
+def test_the_first_step_and_place_config_agree_on_every_origin():
+    # The pre-checkout hold must refuse everything check_origin (run later, after credentials) refuses.
+    script = STEPS[step('Reject a non-main dispatch')]['run']
+    worker = WORKFLOW['env']['STAGE_WORKER']
+    origins = [ORIGIN, ORIGIN + '\n', '\n' + ORIGIN, ORIGIN + '\nhttps://skippercast.com', f'https://{worker}.a.workers.dev',
+               f'https://{worker}.-a.workers.dev', f'https://{worker}.a-.workers.dev', f'https://{worker}.a--b.workers.dev',
+               f'https://{worker}.{"b" * 63}.workers.dev', f'https://{worker}.{"b" * 64}.workers.dev',
+               f'https://{worker}.a.b.workers.dev', f'https://{worker}..workers.dev', f'https://{worker}.a.workers.dev.',
+               f'https://{worker}.a.workers.dev:443', f'HTTPS://{worker}.a.workers.dev', f'https://{worker}.a_b.workers.dev']
+    for origin in origins:
+        env = {'PATH': os.environ['PATH'], 'GITHUB_REF': 'refs/heads/main', 'GITHUB_REF_PROTECTED': 'true',
+               'STAGE_WORKER': worker, 'CANDIDATE': 'a' * 40, 'POINTER_SHA256': 'b' * 64, 'HAS_TOKEN': 'true',
+               'HAS_ACCOUNT': 'true', 'HAS_R2': 'true', 'STAGE_URL': origin}
+        step_ok = subprocess.run(['bash', '-e', '-o', 'pipefail'], input=script, env=env, capture_output=True,
+                                 text=True).returncode == 0
+        try:
+            controller_ok = controller.check_origin(origin, worker) == origin
+        except controller.HoldError:
+            controller_ok = False
+        assert step_ok == controller_ok, repr(origin)
 
 
 # --- scope ----------------------------------------------------------------------------------------
