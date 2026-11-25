@@ -475,19 +475,20 @@ test('today_except_classes: map-only defaults equal the chrome roles the map use
 // sha256 of each module's JSON output under each theme's resolved tokens, taken from main 9312858 (before MGL-15; legend re-taken after SC1407-15 added the planning-route swatch), with the four
 // habitat tokens set back to their old class colours and the habitat multiplier to 1. A different hash means another property moved.
 const PRE_MGL15 = {
-  dark: {basemapDay: '4c3bc2f4888541e7279e39d822ed576c0b69703e0bfd9539c74b3da2df869ced', basemapNight: 'bcd35d05c97dac8ee923eeabc227cbf6f55466faedb2498c9a124245f8a648c0',
+  dark: {basemapDay: 'e283d7ed58a565b7b22541d0e2299a9eadec0d7e808d21d2f963c34fc7a347f3', basemapNight: 'bcd35d05c97dac8ee923eeabc227cbf6f55466faedb2498c9a124245f8a648c0',
     markStyle: 'bebbb6b4d74a346577d7366cfdd2fc4a9d78187345ed18c23f57507129272dd5',
     wind: '0b39b8c9ca321f0b4edac7d2da696b68d87884ef90d1eafe3d875a8092b55d70', stations: '2ffaa0dd2f9eead93bf5d5ab0122048ae7c93e90f004e6a7d94f54d911a44ecf',
     ranked: '5f4127c8c0d72021a8285e8dba62acf1e60e1a21f044ff0fca925ff4f3d66c8c', coastline: 'ba45dddc66343939c5869bf19d43cf62f43797ad54e86f6899ada7bfc7d51d3a',
     mpa: 'ec0211f82aa47296adaedd43b08910d776b99bf7b0cdcda64f4c5f10febc9367', seafloor: 'dc2f2708205ac09f4b0f2e50c9f434d85fbab23f3827933af731607a5c1ecb7f',
     coastPalette: '6dc9df3acfc5197dc77636fa4d3bb3b4dc4711155b9ded4a33e7ebb6e5ce3fab', legend: 'd5cd9ae3b064c601c2aa7cc2f9ffa4cf9b3ae8c6177d1f44d3b2b656d1741d28'},
-  light: {basemapDay: 'e2fddacc2a3344c7dd1e0e9a3402f0123c47c1660606263510b6a0fdfd7144f2', basemapNight: 'e06ca75e8eee8e3d3cc39b35d0d6f3c78404603525d097cc19b68c351c8b8c95',
+  light: {basemapDay: '394dbc57289825a872c8e5aeded29c06f1a9c9e5c55a5410c007d65723c7871d', basemapNight: 'e06ca75e8eee8e3d3cc39b35d0d6f3c78404603525d097cc19b68c351c8b8c95',
     markStyle: '0851253b566f2dd70c84fc653e0470f203b1c61de6309dd22a03650ba7f4b86b',
     wind: 'fcc72707149c69fd25582f517d81f968536cc73d011d46e8a7711170e698a475', stations: 'e64d698c19c4989afb104f504e95c2df46a2b91c80bebbf7978a905613d3ca94',
     ranked: '1d31b678781879b866ea49adafe7e877f5ff19219639ad66f1b1c6500e66b1c1', coastline: '359de78dddcdaff201f895087e33c9c8b99e2a5647df486268a0d8c56a248ed8',
     mpa: '93650a0be578851dc524c877b3a3659403a4cea0daa1ca834d497311d1e3bd12', seafloor: 'ce5756009be496de0072e7b66c216db27aa05020049aaccfdbccb787a0c8df39',
     coastPalette: '19dd9879dbee4907251ac533211ccd8fa8518195a58428cc48fc64570087bacb', legend: 'd50dd1ed4778fff4266d662ed8d4adeaa12a154d7efcee192ccfea54f4172e62'},
 };
+// Coastal-caption priority moved labels-water above labels-roads in the day basemap, so both themes' basemapDay pins were re-pinned; no colour or paint changed (tests/test_map_style.mjs owns the order).
 // MSK-2: `contours` left this pin (the kit paint replaced it) and `legend` was recomputed on the MSK-1 base without the contour row.
 test('today_except_classes: day and night basemap, every overlay and every legend swatch resolve exactly as before, apart from the four classes', () => {
   const OPTIONS = {archive: 'https://example.test/tiles/basemap/ca-coast.pmtiles', assets: 'https://example.test/basemap/'};
