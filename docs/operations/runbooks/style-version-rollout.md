@@ -81,10 +81,11 @@ The rules behind it are in [`style/README.md`](../../../style/README.md):
    python scripts/relief/style_diff.py $OLD $NEW
    ```
 
-   `paint_only=true` means only the paint group changed: no render stage gets a
-   new generation, so no region rebuilds and no R8 review is needed. Any other
-   `groups_changed` (`baked`, `contours`, `habitat`) means the stages that read
-   those groups rebuild, and each region needs its own review.
+   `paint_only=true` means only the paint group changed: that change alone does
+   not give a render stage a new generation. Unchanged digests do not waive
+   applicable R8 review, a reviewed data PR, or any release hold for the regional
+   rollout below. If `groups_changed` includes `baked`, `contours`, or `habitat`,
+   the stages that read those groups must rebuild before regional review.
 
 ### 2. Preview the rebuild, region by region
 
@@ -117,10 +118,13 @@ python scripts/relief/style_preview_plan.py $NEW $REGION
 
 ### 3. Pin one region first (second PR)
 
-1. Edit `regions/$REGION/render.json` and set only its `style` member:
+1. Edit `regions/$REGION/render.json` and set only its `style` member.
+   Replace `<NEW>` below with the exact indexed version selected as `$NEW` in
+   “Before you start”. JSON does not expand shell variables; do not paste the
+   placeholder or a literal `$NEW` into the file.
 
    ```json
-   "style": "nearshore-v1.1.0"
+   "style": "<NEW>"
    ```
 
    The file is validated against `schemas/sc-render-v1.schema.json`: unknown keys
@@ -207,7 +211,7 @@ version and switch the default in one PR.
 
 | What went live | Revert | Result |
 | --- | --- | --- |
-| Only the version-cut PR (default unchanged) | that PR, if no committed pointer names the new look | the new file and entry leave; nothing else changed |
+| Only the version-cut PR (default unchanged) | that PR, only after resolving every dependency listed below | the new file and entry leave without breaking a dependent region or layers version |
 | A region pin, no data PR yet | the pin PR | the region resolves to the default; its generations are the earlier ones again |
 | A region's data PR was merged | that region's data PR (then the pin PR if the pin should go too) | the prior pointer returns byte-identical with its own look |
 | The nearshore default was moved | the default PR | the old default and its generated files return; the new version stays in the index, so pointers that name its look stay valid |
@@ -228,9 +232,13 @@ merge on required CI and independent review, and let the normal deploy follow.
   what a region's live pointer says. To take a region back, revert its data PR as
   in [roll back a regional relief release](relief-rollback.md)
   (`python scripts/relief/region.py rollback --region $REGION --repo <clean clone>`).
-  Do that **before** reverting the version-cut PR: `gen_style.py --check`
-  refuses a tree in which a committed pointer (or its `previous`) names a look
-  that is no longer in the index.
+  Before removing the version, revert or migrate every dependent reference in
+  reviewed PRs: the nearshore default if it moved, any committed pointer or its
+  `previous`, any pin in `regions/<id>/render.json`, and any `layers.<id>.base`
+  in `style/index.json`. Roll back the dependent layers version or move to a
+  replacement whose base and tokens agree; do not edit an immutable version.
+  Confirm these references are gone and run `gen_style.py --check` on the
+  proposed revert before asking for review. Keep all existing release holds.
 - **Local output.** After a style revert, the earlier generations are current
   again, but the tiles output sits at a fixed path, so receipts cannot restore it
   in place: the next run rebuilds from the cached mosaic. Preview it with
