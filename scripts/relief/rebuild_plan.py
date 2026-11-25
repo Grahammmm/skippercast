@@ -6,6 +6,7 @@ from importlib.util import find_spec
 import json
 import os
 from pathlib import Path
+import stat
 
 from skippercast.relief import rebuild_plan, receipts
 
@@ -49,16 +50,26 @@ def _stage_digests():
 
 
 def _input_hasher(location, memo):
-    """Read-only sha256 of a recorded input, ``None`` when it is no file; memoised by real path."""
+    """Read-only sha256 of a recorded input, ``None`` when it is no file; memoised by real path.
+
+    Only a genuinely absent path (or a non-file) is ``None``. Path.is_file() would also turn a
+    PermissionError into False, so stat directly and let access errors reach the CLI.
+    """
     def hasher(recorded):
         path = location.resolve(recorded)
         if path not in memo:
-            memo[path] = receipts.sha256_file(path) if path.is_file() else None
+            try:
+                is_file = stat.S_ISREG(os.stat(path).st_mode)
+            except (FileNotFoundError, NotADirectoryError):
+                is_file = False
+            memo[path] = receipts.sha256_file(path) if is_file else None
         return memo[path]
     return hasher
 
 
-def _region_plan(out, region, current, memo, *, default=None, pin=None):
+def _region_plan(out, region, current, memo=None, *, default=None, pin=None):
+    # run_region's dry run calls this without a memo; each call then hashes for itself.
+    memo = {} if memo is None else memo
     # Region.keys() globs, which can hide permission errors as an empty directory.
     # A missing stages directory is normal for a region that has not been run.
     location = receipts.Region(out, region)

@@ -1,6 +1,7 @@
 """Offline receipt fixtures for the cross-region rebuild CLI."""
 from importlib import import_module
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -427,3 +428,25 @@ def test_c2_unreadable_input_is_an_error_not_a_missing_file(tmp_path, monkeypatc
     monkeypatch.setattr(receipts, 'sha256_file', denied)
     assert_error(['--out', str(out), 'west-test'],
                  f"[Errno 13] Permission denied: '{registry.resolve()}'", capsys)
+
+
+def test_c2_inaccessible_parent_is_an_error_not_a_missing_file(tmp_path, monkeypatch, capsys):
+    """C2: An existing input behind a directory we cannot stat is an access error, not input-missing.
+
+    Path.is_file() hides PermissionError as False, so a stat-denied input was reported as deleted.
+    """
+    out, registry, _ = seed(tmp_path)
+    target = registry.resolve()
+    os_stat = os.stat
+
+    def denied(path, *args, **kwargs):
+        if Path(path) == target:
+            raise PermissionError(13, 'Permission denied', str(path))
+        return os_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(cli.os, 'stat', denied)
+    # Python 3.14's Path.is_file() turns any OSError into False; emulate it on older Pythons too.
+    is_file = Path.is_file
+    monkeypatch.setattr(Path, 'is_file', lambda self: False if self == target else is_file(self))
+    assert_error(['--out', str(out), 'west-test'],
+                 f"[Errno 13] Permission denied: '{target}'", capsys)
