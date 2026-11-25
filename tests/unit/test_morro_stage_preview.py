@@ -230,3 +230,40 @@ def test_verify_requires_the_exact_commit_and_pointer_not_an_ancestor(repo, tmp_
     assert preview.main(argv) == 1
     deploy.write_text(json.dumps({'commit': sha}))
     assert preview.main(argv) == 0
+    # A served deploy.json nested past the decoder's limit is unreadable (exit 1), never a traceback.
+    deploy.write_bytes(b'[' * 100_000 + b']' * 100_000)
+    assert preview.main(argv) == 1
+
+
+@pytest.mark.parametrize('damage', [
+    b'{"schema": "sc-morro-stage-preview/1", "commit": ',  # truncated
+    b'\xff\xfe not text',
+    b'["not", "a", "plan"]',
+    b'null',
+    pytest.param(b'[' * 100_000 + b']' * 100_000, id='deep-nesting'),  # past the decoder's recursion limit (review t_5f2ba53e)
+    'other-schema',
+    'other-region',
+    'missing-commit',
+    'upper-commit',
+    'short-pointer',
+])
+def test_verify_holds_with_exit_2_on_a_damaged_or_foreign_plan(repo, tmp_path, capsys, damage):
+    # Bug caught (review t_5807c410 item 3): a damaged --plan crashed with a traceback (exit 1, the
+    # same code as a real mismatch) instead of holding cleanly with exit 2.
+    sha, data = commit_pointer(repo, POINTER, 'candidate')
+    _, receipt = _planned(repo, sha, preview._sha256(data))
+    edits = {'other-schema': {'schema': 'sc-other/1'}, 'other-region': {'region': 'fixture-bay'},
+             'missing-commit': {'commit': None}, 'upper-commit': {'commit': sha.upper()},
+             'short-pointer': {'pointer_sha256': receipt['pointer_sha256'][:63]}}
+    plan_path = tmp_path / 'plan.json'
+    plan_path.write_bytes(damage if isinstance(damage, bytes) else json.dumps({**receipt, **edits[damage]}).encode())
+    (tmp_path / 'deploy.json').write_text(json.dumps({'commit': sha}))
+    (tmp_path / 'pointer.json').write_bytes(data)
+    argv = ['verify', '--plan', str(plan_path), '--deploy-json', str(tmp_path / 'deploy.json'),
+            '--pointer', str(tmp_path / 'pointer.json')]
+    assert preview.main(argv) == 2
+    captured = capsys.readouterr()
+    assert captured.out == '' and 'Morro stage preview held: plan' in captured.err
+    # Control: the undamaged plan still passes.
+    plan_path.write_text(json.dumps(receipt))
+    assert preview.main(argv) == 0
