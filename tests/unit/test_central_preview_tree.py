@@ -61,6 +61,33 @@ def test_candidate_credits_must_survive_client_fingerprinting(tmp_path):
         preview.check_client(tmp_path, {}, page, {})
 
 
+def test_client_rejects_contour_index_that_disagrees_with_pinned_files(tmp_path):
+    # The Chart skips unlisted files even if the exact GeoJSON is on disk.
+    pins, bundle = fixture(tmp_path / 'input')
+    snapshot = preview.candidate(tmp_path / 'input', pins, bundle)
+    client = tmp_path / 'client'
+    page = preview.sources.register.BEGIN.encode() + preview.sources.register.END.encode()
+    build = '3a132db110'
+    write(client, 'precache.json', json.dumps({'build': build}).encode())
+    write(client, f'sources.{build}.html', page)
+    for path, raw in snapshot.items():
+        write(client, path, raw)
+    for region in preview.CENTRAL_RELEASES:
+        files = ['shoreline.geojson']
+        if region not in preview.TERRAIN_ONLY:
+            files += list(preview.CONTOURS.values())
+        write(client, f'regions/{region}/region.json', json.dumps({'id': region, 'chart_files': files}).encode())
+    assert preview.check_client(client, snapshot, page, {}) == (build, f'sources.{build}.html')
+    for region, files in [('cambria-san-simeon', ['depth-contours.geojson']),
+                          ('monterey-point-sur', ['depth-contours-overview.geojson'])]:
+        path = f'regions/{region}/region.json'
+        original = (client / path).read_bytes()
+        write(client, path, json.dumps({'id': region, 'chart_files': files}).encode())
+        with pytest.raises(ValueError, match=rf'{region}: .*chart_files'):
+            preview.check_client(client, snapshot, page, {})
+        write(client, path, original)
+
+
 def test_vite_checkout_paths_do_not_change_asset_identity(tmp_path):
     outputs = []
     for name in ('first', 'second'):
