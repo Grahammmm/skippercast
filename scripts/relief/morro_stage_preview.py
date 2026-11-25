@@ -67,7 +67,7 @@ def read_wrangler(text: str) -> dict:
     body = '\n'.join(line for line in text.splitlines() if not line.lstrip().startswith('//'))
     try:
         config = json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):
         raise PreviewError('wrangler config is not JSON with whole-line comments') from None
     if not isinstance(config, dict):
         raise PreviewError('wrangler config must be a JSON object')
@@ -177,7 +177,7 @@ def candidate(tree: Path, sha: str) -> dict:
         raise PreviewError(f'candidate has no {POINTER}')
     try:
         doc = json.loads(pointer)
-    except ValueError:
+    except (ValueError, RecursionError):
         raise PreviewError('candidate relief pointer is not JSON') from None
     if not isinstance(doc, dict) or doc.get('region') != REGION:
         raise PreviewError('candidate relief pointer is not for Morro Bay')
@@ -204,7 +204,7 @@ def read_plan(data: bytes) -> dict:
     """A saved plan receipt; anything damaged or not written by `plan` is held, never trusted."""
     try:
         receipt = json.loads(data)
-    except ValueError:
+    except (ValueError, RecursionError):  # RecursionError: nesting deeper than the decoder allows
         raise PreviewError('plan is not JSON') from None
     if not isinstance(receipt, dict) or receipt.get('schema') != 'sc-morro-stage-preview/1' \
             or receipt.get('region') != REGION:
@@ -268,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
         receipt = read_plan(args.plan.read_bytes())
         try:
             deploy_doc = json.loads(args.deploy_json.read_bytes())
-        except ValueError:
+        except (ValueError, RecursionError):
             deploy_doc = None
         served = args.pointer.read_bytes() if args.pointer and args.pointer.exists() else None
         checks = verify(receipt, deploy_doc, served)

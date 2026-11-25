@@ -230,6 +230,9 @@ def test_verify_requires_the_exact_commit_and_pointer_not_an_ancestor(repo, tmp_
     assert preview.main(argv) == 1
     deploy.write_text(json.dumps({'commit': sha}))
     assert preview.main(argv) == 0
+    # A served deploy.json nested past the decoder's limit is unreadable (exit 1), never a traceback.
+    deploy.write_bytes(b'[' * 100_000 + b']' * 100_000)
+    assert preview.main(argv) == 1
 
 
 @pytest.mark.parametrize('damage', [
@@ -237,6 +240,7 @@ def test_verify_requires_the_exact_commit_and_pointer_not_an_ancestor(repo, tmp_
     b'\xff\xfe not text',
     b'["not", "a", "plan"]',
     b'null',
+    pytest.param(b'[' * 100_000 + b']' * 100_000, id='deep-nesting'),  # past the decoder's recursion limit (review t_5f2ba53e)
     'other-schema',
     'other-region',
     'missing-commit',
