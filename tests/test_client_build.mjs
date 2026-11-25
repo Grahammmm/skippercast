@@ -10,7 +10,7 @@ import {mkdtemp, mkdir, readdir, readFile, rm, symlink, writeFile} from 'node:fs
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {promisify} from 'node:util';
-import {buildClient, copyStatic, glyphVersion, hashName, IMMUTABLE_ASSETS, IMMUTABLE_GLYPHS, REVALIDATE, SAFETY_FILES, STATIC_DATA, STATIC_MAX_AGE_S, STATIC_SWR_S, versionGlyphs} from '../scripts/client-build.mjs';
+import {buildClient, copyReliefPointers, copyStatic, glyphVersion, hashName, IMMUTABLE_ASSETS, IMMUTABLE_GLYPHS, REVALIDATE, SAFETY_FILES, STATIC_DATA, STATIC_MAX_AGE_S, STATIC_SWR_S, versionGlyphs} from '../scripts/client-build.mjs';
 import {BUILD_PLACEHOLDER} from '../scripts/precache.mjs';
 import {GLYPH_VERSION} from '../web/map/style.ts';
 import {dropMaplibreLogo, MAPLIBRE_CSS, STATIC_REF} from '../vite.config.mjs';
@@ -418,4 +418,141 @@ test('only vendor files, the web manifest and icons are left out of the Vite bui
   assert.match(mark('<link rel="apple-touch-icon" href="apple-touch-icon.png"/>'), /vite-ignore/);
   assert.doesNotMatch(mark('<link rel="stylesheet" href="tokens.css" />'), /vite-ignore/);
   assert.doesNotMatch(mark('<script type="module" src="../web/app/main.tsx"></script>'), /vite-ignore/);
+});
+
+const sha = char => char.repeat(64);
+const SOURCE = {
+  id: 'noaa-ncei-morro', label: 'NOAA NCEI Morro Bay bathymetry', attribution: 'NOAA NCEI', vertical_datum: 'MLLW',
+  survey_dates: ['2019'], rights_class: 'public', review_status: 'approved', private: false, publication_allowed: true,
+  rights: {public_display: 'allowed', license: 'US Government work', redistribution_reviewed: true},
+};
+// A complete pointer that satisfies catalog/relief/pointer.schema.json; the tests below break one rule at a time.
+const POINTER = region => ({
+  schema: 'sc-relief-pointer/1', status: 'reviewed', private: false, region, generation: sha('a'),
+  release_sha256: sha('b'), envelope_sha256: sha('c'), sha256: sha('d'), bytes: 4096, digest_root_sha256: sha('e'),
+  previous: null, bounds: [-121.1, 35.2, -120.8, 35.5], minzoom: 10, maxzoom: 16, sources: [structuredClone(SOURCE)],
+  detail_summary: {mask: 'transparent-nodata', depth_bands: [{source_id: SOURCE.id, min_depth_m: 0, max_depth_m: 91.44, resolution_m: 2}]},
+  native_support_by_zoom: {10: {tiles: 4, sources: [{id: SOURCE.id, resolution_m: 2, tiles: 4}]}},
+});
+async function reliefDir(t, files) {
+  const dir = await mkdtemp(join(tmpdir(), 'relief-src-'));
+  t.after(() => rm(dir, {recursive: true, force: true}));
+  for (const [name, body] of Object.entries(files)) await writeFile(join(dir, name), body);
+  return dir;
+}
+
+test('relief pointers are published byte for byte at catalog/relief/, with nothing else from the directory', async t => {
+  // Bug caught: the browser and live-check fetch /catalog/relief/<region>.json, but the build never shipped it,
+  // so a merged pointer drew no relief (and no ft-v3 contours) and live-check could only report a missing pointer.
+  const morro = `${JSON.stringify(POINTER('morro-bay'), null, 2)}\n`;
+  const src = await reliefDir(t, {'morro-bay.json': morro, 'README.md': '# notes', 'pointer.schema.json': '{}'});
+  const out = await mkdtemp(join(tmpdir(), 'relief-out-'));
+  t.after(() => rm(out, {recursive: true, force: true}));
+  assert.deepEqual(await copyReliefPointers(src, out), ['morro-bay.json']);
+  assert.deepEqual(await readdir(join(out, 'catalog/relief')), ['morro-bay.json']);
+  assert.equal(await readFile(join(out, 'catalog/relief/morro-bay.json'), 'utf8'), morro, 'exact bytes: live-check compares SHA-256');
+  // No directory (the repository before any release) publishes nothing.
+  assert.deepEqual(await copyReliefPointers(join(src, 'missing'), out), []);
+});
+
+test('a relief pointer that is not public, reviewed and for its own region fails the build', async t => {
+  const cases = {
+    'wrong region': ['morro-bay.json', JSON.stringify(POINTER('big-sur-coast'))],
+    'private': ['morro-bay.json', JSON.stringify({...POINTER('morro-bay'), private: true})],
+    'unreviewed': ['morro-bay.json', JSON.stringify({...POINTER('morro-bay'), status: 'draft'})],
+    'other schema': ['morro-bay.json', JSON.stringify({...POINTER('morro-bay'), schema: 'sc-relief-release/1'})],
+    'not JSON': ['morro-bay.json', '{"schema": '],
+    'not UTF-8': ['morro-bay.json', Buffer.from([0x7b, 0xff, 0x7d])],
+    'bad name': ['Morro_Bay.json', JSON.stringify(POINTER('Morro_Bay'))],
+    'other file': ['morro-bay.geojson', '{}'],
+    'oversized': ['morro-bay.json', JSON.stringify({...POINTER('morro-bay'), pad: 'x'.repeat(1 << 20)})],
+  };
+  for (const [label, [name, body]] of Object.entries(cases)) {
+    const src = await reliefDir(t, {[name]: body});
+    const out = await mkdtemp(join(tmpdir(), 'relief-out-'));
+    t.after(() => rm(out, {recursive: true, force: true}));
+    await assert.rejects(copyReliefPointers(src, out), new RegExp(`refusing to publish catalog/relief/${name.replace('.', '\\.')}`), label);
+    await assert.rejects(readdir(join(out, 'catalog')), {code: 'ENOENT'}, label);
+  }
+  // A link could publish any file on the build machine under a pointer's name.
+  const elsewhere = await reliefDir(t, {'private.json': JSON.stringify(POINTER('morro-bay'))});
+  const linked = await reliefDir(t, {});
+  await symlink(join(elsewhere, 'private.json'), join(linked, 'morro-bay.json'));
+  await assert.rejects(copyReliefPointers(linked, await mkdtemp(join(tmpdir(), 'relief-out-'))),
+    /refusing to publish catalog\/relief\/morro-bay\.json: not a regular file/);
+});
+
+test('a relief pointer that breaks catalog/relief/pointer.schema.json fails the build, whatever its four headline fields say', async t => {
+  // Bug caught: copyReliefPointers once checked only schema, status, private and region, so a reviewed-looking file
+  // with no release hashes, no bytes, a malformed previous, wrong bounds, no sources, or a source whose rights are not
+  // public and reviewed was published as a pointer the relief layer and live-check then trusted.
+  const withSource = patch => { const doc = POINTER('morro-bay'); Object.assign(doc.sources[0], patch); return doc; };
+  const withRights = patch => { const doc = POINTER('morro-bay'); Object.assign(doc.sources[0].rights, patch); return doc; };
+  const without = key => { const doc = POINTER('morro-bay'); delete doc[key]; return doc; };
+  const dropped = (...path) => { const doc = POINTER('morro-bay'); let node = doc; for (const key of path.slice(0, -1)) node = node[key]; delete node[path.at(-1)]; return doc; };
+  const cases = {
+    'no release_sha256': without('release_sha256'),
+    'no envelope_sha256': without('envelope_sha256'),
+    'no sha256': without('sha256'),
+    'no digest_root_sha256': without('digest_root_sha256'),
+    'no bytes': without('bytes'),
+    'zero bytes': {...POINTER('morro-bay'), bytes: 0},
+    'fractional bytes': {...POINTER('morro-bay'), bytes: 10.5},
+    'upper-case hash': {...POINTER('morro-bay'), release_sha256: sha('B')},
+    'short hash': {...POINTER('morro-bay'), sha256: 'd'.repeat(63)},
+    'no previous': without('previous'),
+    'previous missing a hash': {...POINTER('morro-bay'), previous: {generation: sha('1'), release_sha256: sha('2'), envelope_sha256: sha('3')}},
+    'previous with an extra field': {...POINTER('morro-bay'), previous: {generation: sha('1'), release_sha256: sha('2'), envelope_sha256: sha('3'), sha256: sha('4'), note: 'x'}},
+    'no bounds': without('bounds'),
+    'three bounds': {...POINTER('morro-bay'), bounds: [-121.1, 35.2, -120.8]},
+    'bounds out of range': {...POINTER('morro-bay'), bounds: [-121.1, 95, -120.8, 35.5]},
+    'zoom out of range': {...POINTER('morro-bay'), maxzoom: 18},
+    'no sources': without('sources'),
+    'empty sources': {...POINTER('morro-bay'), sources: []},
+    'source not public': withSource({rights_class: 'restricted'}),
+    'source not approved': withSource({review_status: 'pending'}),
+    'source private': withSource({private: true}),
+    'source publication not allowed': withSource({publication_allowed: false}),
+    'source with an extra field': withSource({note: 'x'}),
+    'source without attribution': dropped('sources', 0, 'attribution'),
+    'source without rights': dropped('sources', 0, 'rights'),
+    'rights display not allowed': withRights({public_display: 'denied'}),
+    'rights redistribution not reviewed': withRights({redistribution_reviewed: false}),
+    'rights without license': dropped('sources', 0, 'rights', 'license'),
+    'rights with an extra field': withRights({note: 'x'}),
+    'no detail_summary': without('detail_summary'),
+    'unsupported zoom key': {...POINTER('morro-bay'), native_support_by_zoom: {7: {tiles: 1, sources: []}}},
+    'survey wire over its limit': {...POINTER('morro-bay'), survey_detail: {wire: {sha256: sha('f'), bytes: 5242881}, decoded: {sha256: sha('f'), bytes: 9}}},
+    'unknown top-level field': {...POINTER('morro-bay'), extra: true},
+  };
+  for (const [label, doc] of Object.entries(cases)) {
+    const src = await reliefDir(t, {'morro-bay.json': JSON.stringify(doc)});
+    const out = await mkdtemp(join(tmpdir(), 'relief-out-'));
+    t.after(() => rm(out, {recursive: true, force: true}));
+    await assert.rejects(copyReliefPointers(src, out), /refusing to publish catalog\/relief\/morro-bay\.json: violates catalog\/relief\/pointer\.schema\.json/, label);
+    await assert.rejects(readdir(join(out, 'catalog')), {code: 'ENOENT'}, label);
+  }
+  // The schema checked is the repository's, not a permissive copy placed beside the pointers.
+  const src = await reliefDir(t, {'morro-bay.json': JSON.stringify(without('sha256')), 'pointer.schema.json': '{}'});
+  await assert.rejects(copyReliefPointers(src, await mkdtemp(join(tmpdir(), 'relief-out-'))), /violates catalog\/relief\/pointer\.schema\.json/);
+  // A previous release and the optional style and survey_detail blocks are accepted when they follow the schema.
+  const full = {...POINTER('morro-bay'),
+    previous: {generation: sha('1'), release_sha256: sha('2'), envelope_sha256: sha('3'), sha256: sha('4')},
+    style: {baked: sha('5'), contours: null, habitat: sha('6'), built_with: 'v1.2'},
+    survey_detail: {wire: {sha256: sha('7'), bytes: 5242880}, decoded: {sha256: sha('8'), bytes: 16777216}}};
+  const okSrc = await reliefDir(t, {'morro-bay.json': JSON.stringify(full)});
+  const okOut = await mkdtemp(join(tmpdir(), 'relief-out-'));
+  t.after(() => rm(okOut, {recursive: true, force: true}));
+  assert.deepEqual(await copyReliefPointers(okSrc, okOut), ['morro-bay.json']);
+});
+
+test('the client build serves the reviewed relief pointers', async t => {
+  const root = await site(t);
+  const out = join(root, 'client');
+  const relief = await reliefDir(t, {'morro-bay.json': JSON.stringify(POINTER('morro-bay'))});
+  await buildClient({root, out, headers: '/*\n', relief});
+  assert.deepEqual(JSON.parse(await readFile(join(out, 'catalog/relief/morro-bay.json'), 'utf8')), POINTER('morro-bay'));
+  const precache = JSON.parse(await readFile(join(out, 'precache.json'), 'utf8'));
+  assert.ok(!JSON.stringify(precache).includes('catalog/relief'), 'a pointer is never precached; a rollback must reach the next load');
+  await rm(out, {recursive: true, force: true});
 });
