@@ -60,6 +60,17 @@ def test_production_extras_added_by_the_deploy_are_stripped():
     assert [b['bucket_name'] for b in config['r2_buckets']] == ['skippercast-feeds-stage']
 
 
+def test_resource_bindings_outside_the_safe_set_are_dropped_not_carried():
+    # Contract: only the reviewed safe keys survive. Bug caught: a denylist that misses a binding type
+    # (here KV with a production namespace id) lets the stage Worker read or write a production store.
+    base = preview.read_wrangler(base_text())
+    base['kv_namespaces'] = [{'binding': 'KV', 'id': 'f' * 32}]
+    base['vectorize'] = [{'binding': 'V', 'index_name': 'production'}]
+    config = preview.stage_config(base, worker='skippercast-morro-stage', bucket='skippercast-feeds-stage')
+    assert set(config) <= preview.SAFE_KEYS
+    assert 'kv_namespaces' not in config and 'vectorize' not in config and 'ratelimits' not in config
+
+
 @pytest.mark.parametrize('worker, bucket', [
     ('skippercast', 'skippercast-feeds-stage'),
     ('skippercast-morro', 'skippercast-feeds-stage'),
@@ -77,6 +88,9 @@ def test_production_worker_or_bucket_names_are_refused(worker, bucket):
     lambda c: c.update(triggers={'crons': ['*/15 * * * *']}),
     lambda c: c.update(d1_databases=[{'binding': 'DB', 'database_name': 'skippercast'}]),
     lambda c: c.update(queues={'consumers': [{'queue': 'skippercast-trip-checks'}]}),
+    lambda c: c.update(kv_namespaces=[{'binding': 'KV', 'id': 'f' * 32}]),
+    lambda c: c.update(hyperdrive=[{'binding': 'HD', 'id': 'f' * 32}]),
+    lambda c: c.update(ratelimits=[{'name': 'PUBLIC_LIMITER', 'namespace_id': '1001'}]),
     lambda c: c.update(workers_dev=False),
     lambda c: c['r2_buckets'].append({'binding': 'X', 'bucket_name': 'skippercast-feeds'}),
     lambda c: c['r2_buckets'][0].update(preview_bucket_name='skippercast-feeds'),
@@ -122,6 +136,13 @@ def test_plan_refuses_wrong_commit_dirty_tree_and_unreviewed_pointer(repo):
         preview.plan(repo, second, base_text(), pointer_sha256=digest, **kwargs)
     (repo / preview.POINTER).write_text('{}')
     with pytest.raises(preview.PreviewError, match='uncommitted'):
+        preview.plan(repo, second, base_text(), pointer_sha256=digest, **kwargs)
+    # Contract: the build inputs are exactly the candidate. Bug caught: an untracked source file
+    # (not ignored) passes the clean check and is built in while the receipt names only the commit.
+    git(repo, 'checkout', '--', preview.POINTER)
+    (repo / 'server').mkdir()
+    (repo / 'server' / 'extra.ts').write_text('export const x = 1\n')
+    with pytest.raises(preview.PreviewError, match='untracked'):
         preview.plan(repo, second, base_text(), pointer_sha256=digest, **kwargs)
 
 

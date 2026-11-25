@@ -37,9 +37,12 @@ PRODUCTION_BUCKETS = frozenset({'skippercast-feeds', 'skippercast-backups', 'ski
 PREVIEW_VARS = ('COST_CEILING_R2_READS_PER_DAY',)
 # server/auth.ts: any IDENTITY_PROVIDER other than `skippercast` closes every private route.
 CLOSED_IDENTITY = 'none'
-# Keys whose presence could write to, schedule on, or route traffic to production.
-FORBIDDEN_KEYS = ('routes', 'route', 'triggers', 'queues', 'd1_databases', 'durable_objects',
-                  'services', 'workflows', 'tail_consumers', 'analytics_engine_datasets', 'env')
+# The only top-level keys a preview config may carry. Everything else is dropped by
+# `stage_config` and refused by `refuse_production`, so a resource binding the review
+# never considered (KV, Hyperdrive, Vectorize, AI, ratelimits, ...) cannot ride along.
+# `r2_buckets` and `vars` are rebuilt from scratch and are checked further below.
+SAFE_KEYS = frozenset({'$schema', 'name', 'main', 'compatibility_date', 'compatibility_flags',
+                       'workers_dev', 'assets', 'r2_buckets', 'vars', 'observability'})
 _SHA = re.compile(r'[0-9a-f]{40}')
 _SHA256 = re.compile(r'[0-9a-f]{64}')
 _NAME = re.compile(r'[a-z0-9][a-z0-9-]{1,61}[a-z0-9]')
@@ -71,9 +74,7 @@ def stage_config(base: dict, *, worker: str, bucket: str) -> dict:
         raise PreviewError('preview Worker name must be a Worker name ending in -stage')
     if not _NAME.fullmatch(bucket) or not bucket.endswith('-stage'):
         raise PreviewError('preview bucket must be an R2 bucket name ending in -stage')
-    config = copy.deepcopy(base)
-    for key in FORBIDDEN_KEYS:
-        config.pop(key, None)
+    config = {key: copy.deepcopy(value) for key, value in base.items() if key in SAFE_KEYS}
     config['name'] = worker
     config['workers_dev'] = True
     feeds = [entry for entry in base.get('r2_buckets', []) if isinstance(entry, dict) and entry.get('binding') == 'FEEDS']
@@ -92,9 +93,9 @@ def refuse_production(config: dict) -> None:
     name = config.get('name')
     if not isinstance(name, str) or name == PRODUCTION_WORKER or not name.endswith('-stage'):
         raise PreviewError('preview would deploy the production Worker')
-    present = [key for key in FORBIDDEN_KEYS if config.get(key)]
-    if present:
-        raise PreviewError('preview config keeps production reach: ' + ', '.join(sorted(present)))
+    extra = sorted(str(key) for key in config if key not in SAFE_KEYS)
+    if extra:
+        raise PreviewError('preview config keeps bindings or settings outside the safe set: ' + ', '.join(extra))
     if config.get('workers_dev') is not True:
         raise PreviewError('preview must be served only on its own workers.dev address')
     buckets = config.get('r2_buckets')
@@ -122,13 +123,14 @@ def candidate(tree: Path, sha: str) -> dict:
         raise PreviewError('candidate must be a full lowercase commit SHA')
     try:
         head = _git(tree, 'rev-parse', '--verify', 'HEAD^{commit}').decode().strip()
-        dirty = _git(tree, 'status', '--porcelain', '--untracked-files=no')
+        # Untracked files that are not git-ignored could be built in while the receipt names only the commit.
+        dirty = _git(tree, 'status', '--porcelain', '--untracked-files=all')
     except (OSError, subprocess.SubprocessError):
         raise PreviewError('candidate checkout could not be read') from None
     if head != sha:
         raise PreviewError('checkout is not the candidate commit')
     if dirty:
-        raise PreviewError('candidate checkout has uncommitted changes')
+        raise PreviewError('candidate checkout has uncommitted or untracked files')
     found = {}
     for path in (POINTER, CONTOURS):
         try:
