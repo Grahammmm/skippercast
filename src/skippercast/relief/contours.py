@@ -353,7 +353,7 @@ def trace(job):
 
 def trace_v3(job, view):
     tool, region, sources, entries, native_ids, _, _ = job
-    listed, features = {}, []
+    listed, features, footprints = {}, [], {}
     for i, (row, path, sidecar, side_pin, support) in enumerate(entries):
         ident = row['source_id']
         source = sources[ident]
@@ -393,6 +393,12 @@ def trace_v3(job, view):
                 native = None
             lines = list(tool.v3_grid(grid, region, view, common, native, support=measured, certified=certified,
                                       positive_down=convention == 'depth_positive_down'))
+            # Every traceable tile of a survey adds its measured water to the survey's outline, even one that crosses
+            # no contour level; a tile whose contours are withheld adds nothing.
+            area = tool.v3_measured_support(grid, region, view, native, support=measured, certified=certified,
+                                            positive_down=convention == 'depth_positive_down')
+            if area is not None:
+                footprints.setdefault(ident, []).append((common['vertical_datum'], area))
             if not lines:
                 continue
             entry = listed.setdefault(ident, {**common, 'name': source['name'], 'url': source['documentation_url'],
@@ -411,6 +417,11 @@ def trace_v3(job, view):
         if len(hashes) > 1:
             entry['original_sha256s'] = hashes
     omitted = dc.omitted_selected_sources({row['source_id'] for row, *_ in entries}, sources, listed)
+    # Only surveys that draw contours bound them: a withheld or silent survey's water is not where they continue.
+    edges = [({key: listed[ident][key] for key in ('source_id', 'survey_date', 'vertical_datum')},
+              [area for datum, area in areas if datum == listed[ident]['vertical_datum']])
+             for ident, areas in footprints.items() if ident in listed]
+    features.extend(tool.v3_survey_edges(region, view, edges))
     return tool.v3_collection(region, view, features, list(listed.values()), omitted)
 
 
@@ -469,6 +480,10 @@ def _compact_morro(full, overview, budgets, sizes, view, drop_groups=False):
                     if size > cap)
     for i, feature in enumerate(full['features']):
         p, geometry = feature['properties'], feature['geometry']
+        if p.get('kind') == 'survey-edge' and geometry['type'] in ('LineString', 'MultiLineString'):
+            # Where the measured grids stop is kept whole, like a protected contour, never thinned to fit.
+            protected[i] = feature
+            continue
         if p.get('kind') != 'contour' or geometry['type'] not in ('LineString', 'MultiLineString'):
             raise receipts.ReceiptError(f'{overflow}; cannot compact protected feature {feature.get("id")}')
         group = _line_group(feature)
@@ -503,7 +518,8 @@ def _compact_morro(full, overview, budgets, sizes, view, drop_groups=False):
 
     for k, document in enumerate(floor_pair):
         if used[k] > budgets[k]:
-            groups = list(dict.fromkeys(_line_group(f) for f in document['features']))
+            groups = list(dict.fromkeys(_line_group(f) if f['properties'].get('kind') == 'contour' else f.get('id')
+                                        for f in document['features']))
             check(k, f'protected {groups}')
 
     choices = []

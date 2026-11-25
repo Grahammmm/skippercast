@@ -620,3 +620,124 @@ def test_derived_feet_factor_keeps_shoal_hint_rounding(tmp_path, monkeypatch):
     hints = [f['properties']['shoal_hint_ft'] for f in derived['features'] if f['properties']['kind'] == 'unresolved-area']
     assert hints == [10] and all(type(h) is int for h in hints)
     assert derived == control
+
+
+# ft-v3 survey edges (M29): the v3 producers used to emit contours only, so a v1 -> v3 swap dropped the default-view
+# "where the reviewed survey grid stops" line. These check the shared edge geometry directly.
+UTM = 'EPSG:32610'
+V3_REGION = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36]}
+
+
+def _v3_edges(areas):
+    from skippercast import style
+    tool = _load_builder()
+    view = style.load().view('contours')
+    footprints = [({'source_id': ident, 'survey_date': '2008', 'vertical_datum': 'MLLW'}, [(UTM, area)])
+                  for ident, area in areas]
+    return tool, view, tool.v3_survey_edges(V3_REGION, view, footprints)
+
+
+def _utm_lines(feature):
+    from pyproj import Transformer
+    to_utm = Transformer.from_crs('EPSG:4326', UTM, always_xy=True)
+    return [[to_utm.transform(x, y) for x, y in line] for line in feature['geometry']['coordinates']]
+
+
+def _vertical_runs_near(features, x, tolerance=20, least=100):
+    """Edge segments that run north-south within `tolerance` m of easting `x` for at least `least` m."""
+    hits = []
+    for feature in features:
+        for line in _utm_lines(feature):
+            for (x1, y1), (x2, y2) in zip(line, line[1:]):
+                if abs(x1 - x) < tolerance and abs(x2 - x) < tolerance and abs(y1 - y2) >= least:
+                    hits.append(feature['id'])
+    return hits
+
+
+@pytest.mark.parametrize('gap, seam_edge', [(0, False), (4, False), (60, True)])
+def test_v3_survey_edge_outlines_surveys_together_and_a_seam_is_not_an_edge(gap, seam_edge):
+    from shapely.geometry import box
+    x0, y0 = 690000, 3914000
+    a = box(x0, y0, x0 + 400, y0 + 400)
+    b = box(x0 + 400 + gap, y0, x0 + 800 + gap, y0 + 400)
+    _, view, features = _v3_edges([('survey-a', a), ('survey-b', b)])
+    assert [f['id'] for f in features] == ['survey-a-edge', 'survey-b-edge']
+    for f in features:
+        # The client's ft-v3 rule for a non-contour line: first tier's zoom, index false, no maxzoom.
+        assert f['properties'] == {'source_id': f['id'][:-5], 'survey_date': '2008', 'vertical_datum': 'MLLW',
+                                   'kind': 'survey-edge', 'minzoom': view['contours']['tiers'][0]['min_zoom'],
+                                   'index': False}
+        assert f['geometry']['type'] == 'MultiLineString'
+    # The outer sides are edges of their own survey; a seam (or a gap under the tolerance) is not.
+    assert _vertical_runs_near(features, x0) == ['survey-a-edge']
+    assert _vertical_runs_near(features, x0 + 800 + gap) == ['survey-b-edge']
+    seam = _vertical_runs_near(features, x0 + 400) + _vertical_runs_near(features, x0 + 400 + gap)
+    assert bool(seam) is seam_edge
+    if seam_edge:
+        assert set(seam) == {'survey-a-edge', 'survey-b-edge'}
+
+
+def test_v3_survey_edge_is_cut_at_the_region_and_short_parts_are_dropped():
+    from pyproj import Transformer
+    from shapely.geometry import box
+    to_ll = Transformer.from_crs(UTM, 'EPSG:4326', always_xy=True)
+    tool = _load_builder()
+    x0, y0 = 690000, 3914000
+    big = box(x0, y0, x0 + 2000, y0 + 2000)
+    hole = box(x0 + 900, y0 + 900, x0 + 1000, y0 + 1000)  # 400 m round: an edge
+    speck = box(x0 + 1500, y0 + 1500, x0 + 1540, y0 + 1540)  # 160 m round: shorter than EDGE_MIN_LENGTH_M
+    west, south = to_ll.transform(x0 + 500, y0 + 500)
+    east, north = to_ll.transform(x0 + 1600, y0 + 1600)
+    from skippercast import style
+    view = style.load().view('contours')
+    region = {'id': 'morro-bay', 'bounds': [round(west, 5), round(south, 5), round(east, 5), round(north, 5)]}
+    common = {'source_id': 'survey-a', 'survey_date': '2008', 'vertical_datum': 'MLLW'}
+    features = tool.v3_survey_edges(region, view, [(common, [(UTM, big.difference(hole).difference(speck))])])
+    assert [f['id'] for f in features] == ['survey-a-edge']
+    (line,) = features[0]['geometry']['coordinates']
+    w, s, e, n = region['bounds']
+    assert all(w < x < e and s < y < n for x, y in line)
+    # Only the hole's ring: the survey's own outline lies outside the region and the speck is too short.
+    xs, ys = zip(*_utm_lines(features[0])[0])
+    assert 900 - 13 < min(xs) - x0 and max(xs) - x0 < 1000 + 13 and 900 - 13 < min(ys) - y0 and max(ys) - y0 < 1000 + 13
+    assert line[0] == line[-1]
+    assert tool.v3_survey_edges(region, view, [(common, [(UTM, big)])]) == []
+    assert tool.v3_survey_edges(region, view, [(common, [])]) == []
+
+
+def test_v3_measured_support_counts_only_measured_water_and_never_past_the_grid(tmp_path):
+    import numpy as np
+    import rasterio
+    from shapely.geometry import box
+    from skippercast import style
+    tool = _load_builder()
+    view = style.load().view('contours')
+    values = np.tile(np.linspace(-1, -40, 150, dtype='float32'), (100, 1))
+    values[:, :10] = 3.0  # land is not survey water
+    values[40:60, 70:90] = -9999.0  # no data
+    grid = _tif(tmp_path / 'grid.tif', values, X0, Y0, cell=2.0)
+    classes = np.full(values.shape, 3, dtype='uint8')
+    classes[:, 120:] = 2  # unknown support beyond column 120
+    support = tmp_path / 'support.tif'
+    with rasterio.open(grid) as ds:
+        with rasterio.open(support, 'w', driver='GTiff', count=1, dtype='uint8', height=ds.height, width=ds.width,
+                           crs=ds.crs, transform=ds.transform) as out:
+            out.write(classes, 1)
+    with rasterio.open(grid) as ds, rasterio.open(support) as sup:
+        crs, area = tool.v3_measured_support(ds, V3_REGION, view, 2, support=sup)
+        assert tool.v3_measured_support(ds, V3_REGION, view, 4, support=sup) is None  # upsampled: never traced
+        _, plain = tool.v3_measured_support(ds, V3_REGION, view, 2)
+        # A strip cap smaller than the window must give the same outline.
+        _, strips = tool.v3_measured_support(ds, V3_REGION, view, 2, support=sup, block_max_pixels=150 * 7)
+    assert crs == UTM
+    left, bottom, right, top = area.bounds
+    assert (left, top) == (X0 + 18, Y0) and bottom == Y0 - 200
+    assert right == X0 + 240  # stops where support turns unknown, not at the grid's last column
+    assert plain.bounds[2] == X0 + 300  # without a support raster an original grid's water counts to its end
+    assert area.contains(area.centroid) and not area.intersects(box(X0 + 150, Y0 - 110, X0 + 170, Y0 - 90))
+    assert strips.symmetric_difference(area).area < 1e-6
+    unknown = np.full(values.shape, 2, dtype='uint8')
+    with rasterio.open(support, 'r+') as out:
+        out.write(unknown, 1)
+    with rasterio.open(grid) as ds, rasterio.open(support) as sup:
+        assert tool.v3_measured_support(ds, V3_REGION, view, 2, support=sup) is None

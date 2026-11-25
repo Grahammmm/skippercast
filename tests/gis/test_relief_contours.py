@@ -242,7 +242,7 @@ def test_standalone_v3_support_alone_does_not_certify_pier(builder, tmp_path, mo
                           {SOURCE: {'name': source['name'], 'survey_date': '2008',
                                     'vertical_datum': 'MLLW', 'native_cell_m': 1}},
                           {SOURCE: digest(grid)}, {SOURCE: support}, {}, False)
-    tiers = {feature['properties']['tier'] for feature in doc['features']}
+    tiers = {feature['properties']['tier'] for feature in doc['features'] if feature['properties']['kind'] == 'contour'}
     assert 'z15' in tiers
     assert 'pier' not in tiers
 
@@ -275,7 +275,7 @@ def test_selected_v3_pier_requires_attested_native_eligibility(builder, tmp_path
     job = (tool, region, {SOURCE: source}, [(row, grid, sidecar, digest(sidecar), support)],
            {'tile'} if native else set(), None, None)
     doc = contours.trace_v3(job, style.load().view('contours'))
-    tiers = {feature['properties']['tier'] for feature in doc['features']}
+    tiers = {feature['properties']['tier'] for feature in doc['features'] if feature['properties']['kind'] == 'contour'}
     assert 'z15' in tiers
     assert ('pier' in tiers) is expect_pier
 
@@ -339,8 +339,8 @@ def test_v3_positive_down_matches_positive_up(builder, tmp_path):
         docs[convention] = contours.trace_v3(job, view)
     up, down = (sorted(docs[c]['features'], key=lambda f: f['id']) for c in docs)
     assert up
-    assert [(f['id'], f['geometry'], f['properties']['depth_ft'], f['properties']['tier']) for f in up] == \
-           [(f['id'], f['geometry'], f['properties']['depth_ft'], f['properties']['tier']) for f in down]
+    assert [(f['id'], f['geometry'], f['properties'].get('depth_ft'), f['properties'].get('tier')) for f in up] == \
+           [(f['id'], f['geometry'], f['properties'].get('depth_ft'), f['properties'].get('tier')) for f in down]
 
 
 @pytest.mark.parametrize('dates, expected', [({'survey_year': None}, 'unstated'),
@@ -713,7 +713,7 @@ def test_region_stage_preserves_siblings_and_refuses_ineligible_mosaic_cells(tmp
         assert receipt['metrics']['style'] == {'built_with': base_version, 'sha256': default['sha256'], 'contours': c}
         assert all('style/' not in item['path'] for item in receipt['inputs'])
         v3 = json.loads((r.dir / 'layers/contours/contours.geojson').read_bytes())
-        props = [f['properties'] for f in v3['features']]
+        props = [f['properties'] for f in v3['features'] if f['properties']['kind'] == 'contour']
         assert {p['source_id'] for p in props if p['tier'] == 'z13' and p['depth_ft'] == 10} == {SOURCE, 'coarse'}
         assert {p['source_id'] for p in props if p['tier'] == 'z15' and p['depth_ft'] == 5} == {SOURCE}
         assert set(qa._contour_counts(r.dir, r.id)) == {'5', '10', '30', '60'}
@@ -815,3 +815,113 @@ def test_unreviewed_licence_term_needs_the_owner_display_decision(license_id):
     assert contours._metadata_refusal(plain) == 'licence mismatch'
     assert contours._metadata_refusal(cleared) is None
     assert contours._metadata_refusal({'rights': {'license': 'public-domain'}}) is None
+
+
+def test_v3_cli_restores_the_survey_edge_and_keeps_it_in_the_overview(builder, tmp_path):
+    # M29: ft-v3 used to emit contours only, so v1's default-view "where the reviewed grid stops" line vanished.
+    import numpy as np
+    from pyproj import Transformer
+    from rasterio.transform import from_origin
+    from skippercast import style
+    from skippercast.platform import depth_contours as dc
+    from skippercast.relief import contours
+
+    tool = contours.producer()
+    _, source = builder
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36], 'source_bindings': {'bathymetry': [SOURCE]}}
+    values = np.tile(np.linspace(-1, -100, 200, dtype='float32'), (150, 1))
+    values[50:90, 80:120] = -9999  # an 80 m square with no data inside the survey
+    grid = write_grid(tmp_path / 'grid.tif', values, 'EPSG:32610', from_origin(690000, 3915000, 2, 2))
+    with tool.open_geotiff(grid, normalized=False) as ds:
+        doc = tool.v3_cli(region, {SOURCE: source}, [SOURCE], [ds],
+                          {SOURCE: {'name': source['name'], 'survey_date': '2008', 'vertical_datum': 'MLLW',
+                                    'native_cell_m': 2}}, {SOURCE: digest(grid)}, {}, {}, False)
+    edges = [f for f in doc['features'] if f['properties']['kind'] == 'survey-edge']
+    assert [f['id'] for f in edges] == [f'{SOURCE}-edge']
+    assert any(f['properties']['kind'] == 'contour' for f in doc['features'])
+    view = style.load().view('contours')
+    assert edges[0]['properties'] == {'source_id': SOURCE, 'survey_date': '2008', 'vertical_datum': 'MLLW',
+                                      'kind': 'survey-edge', 'minzoom': view['contours']['tiers'][0]['min_zoom'],
+                                      'index': False}
+    assert doc['provenance']['edge']['tolerance_m'] == tool.EDGE_TOLERANCE_M
+    dc.check_contours(doc, region, {SOURCE: source})
+    to_utm = Transformer.from_crs('EPSG:4326', 'EPSG:32610', always_xy=True)
+    rings = [[to_utm.transform(x, y) for x, y in line] for line in edges[0]['geometry']['coordinates']]
+    # The survey's own outline (400 x 300 m) and the no-data square's ring, each within the edge tolerance.
+    boxes = sorted((min(x for x, _ in r) - 690000, max(x for x, _ in r) - 690000,
+                    3915000 - max(y for _, y in r), 3915000 - min(y for _, y in r)) for r in rings)
+    assert len(boxes) == 2
+    for got, want in zip(boxes, [(0, 400, 0, 300), (160, 240, 100, 180)]):
+        assert all(abs(g - w) <= tool.EDGE_TOLERANCE_M for g, w in zip(got, want)), (got, want)
+    overview = dc.overview_contours(doc)
+    assert [f for f in overview['features'] if f['properties']['kind'] == 'survey-edge'] == edges
+
+
+def test_v3_stage_edges_join_a_surveys_tiles_and_skip_withheld_surveys(builder, tmp_path):
+    import numpy as np
+    from pyproj import Transformer
+    from rasterio.transform import from_origin
+    from skippercast import style
+    from skippercast.platform import depth_contours as dc
+    from skippercast.relief import contours
+
+    tool = contours.producer()
+    _, source = builder
+    source['native_resolution_m'] = 2
+    region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36]}
+    values = np.tile(np.linspace(-1, -100, 100, dtype='float32'), (150, 1))
+    entries = []
+    for k, x0 in enumerate((690000, 690200)):  # two abutting 200 m tiles of one survey
+        grid = write_grid(tmp_path / f'tile{k}.tif', values, 'EPSG:32610', from_origin(x0, 3915000, 2, 2))
+        row = {'id': f'tile{k}', 'source_id': SOURCE, 'sha256': digest(grid), 'support_sha256': None,
+               'value_convention': 'elevation_positive_up', 'vertical_datum': 'MLLW'}
+        entries.append((row, grid, None, None, None))
+    view = style.load().view('contours')
+    doc = contours.trace_v3((tool, region, {SOURCE: source}, entries, set(), None, None), view)
+    edges = [f for f in doc['features'] if f['properties']['kind'] == 'survey-edge']
+    assert [f['id'] for f in edges] == [f'{SOURCE}-edge']
+    dc.check_selected_contours(doc, region, {SOURCE: source}, {SOURCE}, view=view)
+    to_utm = Transformer.from_crs('EPSG:4326', 'EPSG:32610', always_xy=True)
+    lines = [[to_utm.transform(x, y) for x, y in line] for line in edges[0]['geometry']['coordinates']]
+    xs = [x - 690000 for line in lines for x, _ in line]
+    # One outline round both tiles: the outer sides are edges, the seam at 200 m is not.
+    assert min(xs) < 15 and max(xs) > 385
+    assert not [(a, b) for line in lines for a, b in zip(line, line[1:])
+                if abs(a[0] - 690200) < 20 and abs(b[0] - 690200) < 20 and abs(a[1] - b[1]) > 100]
+    source.pop('native_resolution_m')  # unknown native resolution: contours and the edge are withheld alike
+    withheld = contours.trace_v3((tool, region, {SOURCE: source}, entries, set(), None, None), view)
+    assert withheld['features'] == []
+
+
+def test_morro_compaction_keeps_survey_edges_whole(monkeypatch):
+    # Before M29 the whole-line fitter refused any non-contour feature, so a restored edge would stop the stage.
+    pytest.importorskip('rasterio')
+    from skippercast import style
+    from skippercast.platform import depth_contours as dc
+    from skippercast.relief import contours
+
+    view = style.load('nearshore-v1.0.0').view('contours')
+    region = {'id': 'morro-bay', 'bounds': [0, 0, 1, 1]}
+    common = {'survey_date': '2020', 'vertical_datum': 'MLLW', 'source_id': 'a'}
+    tier, stop = list(dc.v3_tiers(view, 1, certified=True))[0]
+    depth, index = next(iter(dc.v3_levels(tier).items()))
+    wide, narrow = [[0.11, 0.1], [0.41, 0.1]], [[0.11, 0.7], [0.21, 0.7]]
+    contour = {'type': 'Feature', 'id': 'z', 'geometry': {'type': 'MultiLineString', 'coordinates': [narrow, wide]},
+               'properties': {**common, 'kind': 'contour', 'estimated': True, 'native_cell_m': 1, 'tier': tier['name'],
+                              'depth_ft': depth, 'index': index, 'minzoom': tier['min_zoom'],
+                              **({'maxzoom': stop} if stop is not None else {})}}
+    edge = {'type': 'Feature', 'id': 'a-edge',
+            'geometry': {'type': 'MultiLineString', 'coordinates': [[[0.5, 0.5], [0.6, 0.5], [0.6, 0.6]], wide]},
+            'properties': {**common, 'kind': 'survey-edge', 'minzoom': view['contours']['tiers'][0]['min_zoom'],
+                           'index': False}}
+    full = {'type': 'FeatureCollection', 'features': [contour, edge], 'provenance': {
+        'region_id': 'morro-bay', 'bounds': region['bounds'], 'units': 'ft', 'set': dc.FT_V3,
+        'contours': view.digest('contours'), 'shelf_limit_ft': dc.V2_SHELF_LIMIT_FT, 'features': 2,
+        'sources': [{**common, 'sha256': '0' * 64}]}}
+    sizes = [len(json.dumps(d, ensure_ascii=False, separators=(',', ':')).encode()) + 1
+             for d in (full, dc.overview_contours(full))]
+    monkeypatch.setattr(dc, 'size_budgets', lambda _: (sizes[0] - 1, sizes[1] - 1))
+    compacted, overview, _, metrics = contours._selected_pair(full, region, view)
+    assert metrics['compacted'] is True
+    assert compacted['features'][1] == edge and overview['features'][1] == edge
+    assert len(compacted['features'][0]['geometry']['coordinates']) == 1
