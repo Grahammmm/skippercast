@@ -200,6 +200,22 @@ def plan(tree: Path, sha: str, base_text: str, *, worker: str, bucket: str, poin
     return config, receipt
 
 
+def read_plan(data: bytes) -> dict:
+    """A saved plan receipt; anything damaged or not written by `plan` is held, never trusted."""
+    try:
+        receipt = json.loads(data)
+    except ValueError:
+        raise PreviewError('plan is not JSON') from None
+    if not isinstance(receipt, dict) or receipt.get('schema') != 'sc-morro-stage-preview/1' \
+            or receipt.get('region') != REGION:
+        raise PreviewError('plan is not a Morro stage preview plan')
+    if not isinstance(receipt.get('commit'), str) or not _SHA.fullmatch(receipt['commit']):
+        raise PreviewError('plan commit must be a full lowercase commit SHA')
+    if not isinstance(receipt.get('pointer_sha256'), str) or not _SHA256.fullmatch(receipt['pointer_sha256']):
+        raise PreviewError('plan pointer digest must be 64 lowercase hex digits')
+    return receipt
+
+
 def verify(receipt: dict, deploy_doc: object, served_pointer: bytes | None) -> list[dict]:
     """Checks for one preview origin's served commit and pointer; exact matches only."""
     commit = deploy_doc.get('commit') if isinstance(deploy_doc, dict) else None
@@ -249,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
             _write(args.out / 'plan.json', (json.dumps(receipt, indent=2, sort_keys=True) + '\n').encode())
             print(f"PLAN {receipt['worker']} commit={receipt['commit']} pointer={receipt['pointer_sha256']}")
             return 0
-        receipt = json.loads(args.plan.read_bytes())
+        receipt = read_plan(args.plan.read_bytes())
         try:
             deploy_doc = json.loads(args.deploy_json.read_bytes())
         except ValueError:
