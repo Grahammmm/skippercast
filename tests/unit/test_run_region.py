@@ -447,6 +447,18 @@ def test_through_stops_after_that_stage(box):
     assert box.ran() == ['select', 'mosaic', 'tiles']
 
 
+def test_exclude_source_goes_to_select_only(box):
+    # Contract: --exclude-source (repeatable) reaches select and no other stage. Bug caught: the
+    # option parsed but dropped, or leaked into mosaic/tiles/zone, which reject unknown flags.
+    assert box.run('--exclude-source', 'src-a', '--exclude-source', 'src-b', through='zone') == 0
+    for call in box.calls():
+        stage, tail = call[0], call[5:]
+        if stage == 'select':
+            assert tail == ['--cache', RR.DEFAULT_NORM, '--exclude-source', 'src-a', '--exclude-source', 'src-b']
+        else:
+            assert '--exclude-source' not in tail
+
+
 def test_scoped_stages_get_scope_config_and_zone_inputs_only(box):
     # Contract: select and the scoped stages get the same config, but no unrelated flags.
     assert box.run('--region-config', '/r/region.json', '--coarse-date', '2026-01-01', through='zone') == 0

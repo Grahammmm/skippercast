@@ -316,6 +316,9 @@ def add_parser():
     parser.add_argument('--provenance', type=Path, default=os.environ.get('SC_RELIEF_PROVENANCE',
                         'PROVENANCE-LABELS.json'))
     parser.add_argument('--region-config', type=Path, help='defaults to regions/<id>/region.json')
+    parser.add_argument('--exclude-source', action='append', default=[], metavar='REGISTRY_ID',
+                        help='skip every census row bound to this registry source id (repeatable); recorded in the '
+                             'selection report and pinned in the stage params')
     return parser
 
 
@@ -348,6 +351,10 @@ def main(argv=None):
             doc = read_json(census)
             bounds = box_of(read_json(config))
             index = rights_index(read_json(registry)['sources'])
+            excluded = sorted(set(args.exclude_source))
+            unknown = [s for s in excluded if index.get(s) is None]
+            if unknown:
+                raise ValueError(f'--exclude-source is not an unambiguous registry id: {", ".join(unknown)}')
             caps = caps_index(read_json(provenance))
             if doc['summary']['region'] != region.id:
                 raise ValueError('census region mismatch')
@@ -359,6 +366,9 @@ def main(argv=None):
                               rights_basis=basis, decision='skipped', reason=reason,
                               certified_area_m2_by_depth_band={'0-20m': 0, '20-91.44m': 0})
                 reports.append(report)
+                if bound and bound['id'] in excluded:
+                    report['reason'] = 'excluded_by_region_run_option'
+                    continue
                 if rights != 'public':
                     continue
                 if row.get('kind') not in {'elevation', 'archive'} or row.get('hold_reason') not in NORMALIZABLE:
@@ -387,8 +397,10 @@ def main(argv=None):
                 except (OSError, ValueError) as exc:
                     report['reason'] = str(exc)
             # Paths matter to a manifest even when content is identical.
-            return receipts.Plan(inputs=inputs, params={'scope': 'public', 'cache': str(cache),
-                                                       'input_paths': [str(i.path) for i in inputs]})
+            params = {'scope': 'public', 'cache': str(cache), 'input_paths': [str(i.path) for i in inputs]}
+            if excluded:  # absent when unused, so existing receipts stay valid
+                params['exclude_sources'] = excluded
+            return receipts.Plan(inputs=inputs, params=params)
 
         def produce(output):
             sources = []
