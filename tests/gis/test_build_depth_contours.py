@@ -726,14 +726,23 @@ def test_v3_measured_support_counts_only_measured_water_and_never_past_the_grid(
     with rasterio.open(grid) as ds, rasterio.open(support) as sup:
         crs, area = tool.v3_measured_support(ds, V3_REGION, view, 2, support=sup)
         assert tool.v3_measured_support(ds, V3_REGION, view, 4, support=sup) is None  # upsampled: never traced
-        _, plain = tool.v3_measured_support(ds, V3_REGION, view, 2)
+        # No support raster and no EC provenance raster: nothing demonstrates the water was measured (M29 return).
+        assert tool.v3_measured_support(ds, V3_REGION, view, 2) is None
+        # An EC provenance raster alone is affirmative evidence: its measured cells count, its other cells do not.
+        codes = np.full(values.shape, 10)
+        codes[:, 120:] = 20  # filled beyond column 120, where the support raster also stops
+        (tmp_path / 'ec').mkdir()
+        with rasterio.open(_ec(tmp_path / 'ec' / 'provenance.tif', codes)) as prov:
+            _, by_ec = tool.v3_measured_support(ds, V3_REGION, view, 2, provenance=prov)
+            assert by_ec.bounds[2] == X0 + 240
+            _, both = tool.v3_measured_support(ds, V3_REGION, view, 2, support=sup, provenance=prov)
+            assert both.symmetric_difference(area).area < 1e-6
         # A strip cap smaller than the window must give the same outline.
         _, strips = tool.v3_measured_support(ds, V3_REGION, view, 2, support=sup, block_max_pixels=150 * 7)
     assert crs == UTM
     left, bottom, right, top = area.bounds
     assert (left, top) == (X0 + 18, Y0) and bottom == Y0 - 200
     assert right == X0 + 240  # stops where support turns unknown, not at the grid's last column
-    assert plain.bounds[2] == X0 + 300  # without a support raster an original grid's water counts to its end
     assert area.contains(area.centroid) and not area.intersects(box(X0 + 150, Y0 - 110, X0 + 170, Y0 - 90))
     assert strips.symmetric_difference(area).area < 1e-6
     unknown = np.full(values.shape, 2, dtype='uint8')

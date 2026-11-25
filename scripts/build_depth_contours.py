@@ -679,8 +679,8 @@ def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=
 V3_EDGE_NOTE = ('Where the measured survey grids stop: one outline of the contributing surveys\' measured water together, '
                 'each part credited to the first survey (in order) it bounds; a seam or a gap narrower than the tolerance '
                 'between surveys is not an edge. A cell counts only as valid water that its own evidence calls measured '
-                '(an EC measured code and support class 3 where the grid carries them); unknown or interpolated support never '
-                'counts. Native cells are grouped into blocks of at most half the tolerance; a block counts when at least half '
+                '(an EC measured code and support class 3, whichever the grid carries); unknown or interpolated support never '
+                'counts, and a grid with neither has no edge. Native cells are grouped into blocks of at most half the tolerance; a block counts when at least half '
                 'of its cells count. The outline along the region clip is not an edge.')
 
 
@@ -694,8 +694,9 @@ def v3_measured_support(grid, region, view, native_cell, *, support=None, certif
     """The grid's demonstrably measured water near the region, as (crs, polygon in that crs), or None.
 
     Only a grid v3_grid would trace counts (the same native-resolution and tier gates). A cell is measured when it is
-    valid water and, where the grid carries evidence, its EC code is `measured` and its support class is 3; unknown or
-    interpolated cells never count, so a normalized grid without its support raster has no outline here. Cells are
+    valid water and every evidence raster the grid carries agrees: its EC code is `measured` (provenance) and its support
+    class is 3 (support). Unknown or interpolated cells never count, and a grid with neither a support raster nor an EC
+    provenance raster has no demonstrable measured water, so no outline here (None). Cells are
     grouped into v3_edge_block() blocks on the read window and a block counts when at least half of its cells inside
     the grid count. The read window is the region plus a margin, clipped to the grid, so the window's own border lies
     outside the region and never becomes an edge. Reads are row strips within the native pixel cap.
@@ -710,6 +711,8 @@ def v3_measured_support(grid, region, view, native_cell, *, support=None, certif
         raise ValueError('ft-v3 requires a north-up native metre lattice and unscaled elevations')
     if type(native_cell) not in (int, float) or not 0 < native_cell <= cell + 1e-9:
         return None
+    if support is None and provenance is None:
+        return None  # no measured evidence at all: valid water alone is not proof the survey measured it
     if not list(dc.v3_tiers(view, cell, certified=certified and support is not None)):
         return None
     if support is not None and (support.count != 1 or support.dtypes[0] != 'uint8' or support.shape != grid.shape

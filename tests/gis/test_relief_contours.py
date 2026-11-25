@@ -820,6 +820,7 @@ def test_unreviewed_licence_term_needs_the_owner_display_decision(license_id):
 def test_v3_cli_restores_the_survey_edge_and_keeps_it_in_the_overview(builder, tmp_path):
     # M29: ft-v3 used to emit contours only, so v1's default-view "where the reviewed grid stops" line vanished.
     import numpy as np
+    import rasterio
     from pyproj import Transformer
     from rasterio.transform import from_origin
     from skippercast import style
@@ -833,9 +834,21 @@ def test_v3_cli_restores_the_survey_edge_and_keeps_it_in_the_overview(builder, t
     values[50:90, 80:120] = -9999  # an 80 m square with no data inside the survey
     grid = write_grid(tmp_path / 'grid.tif', values, 'EPSG:32610', from_origin(690000, 3915000, 2, 2))
     with tool.open_geotiff(grid, normalized=False) as ds:
+        # M29 return: with neither a support raster nor an EC provenance raster nothing shows the water was measured.
+        bare = tool.v3_cli(region, {SOURCE: source}, [SOURCE], [ds],
+                           {SOURCE: {'name': source['name'], 'survey_date': '2008', 'vertical_datum': 'MLLW',
+                                     'native_cell_m': 2}}, {SOURCE: digest(grid)}, {}, {}, False)
+        assert any(f['properties']['kind'] == 'contour' for f in bare['features'])
+        assert not any(f['properties']['kind'] == 'survey-edge' for f in bare['features'])
+        assert 'edge' not in bare['provenance']
+    prov = tmp_path / 'provenance.tif'  # every cell EC-measured
+    with rasterio.open(prov, 'w', driver='GTiff', count=1, dtype='uint8', height=values.shape[0], width=values.shape[1],
+                       crs='EPSG:32610', transform=from_origin(690000, 3915000, 2, 2)) as out:
+        out.write(np.full(values.shape, 10, dtype='uint8'), 1)
+    with tool.open_geotiff(grid, normalized=False) as ds:
         doc = tool.v3_cli(region, {SOURCE: source}, [SOURCE], [ds],
                           {SOURCE: {'name': source['name'], 'survey_date': '2008', 'vertical_datum': 'MLLW',
-                                    'native_cell_m': 2}}, {SOURCE: digest(grid)}, {}, {}, False)
+                                    'native_cell_m': 2}}, {SOURCE: digest(grid)}, {}, {SOURCE: prov}, False)
     edges = [f for f in doc['features'] if f['properties']['kind'] == 'survey-edge']
     assert [f['id'] for f in edges] == [f'{SOURCE}-edge']
     assert any(f['properties']['kind'] == 'contour' for f in doc['features'])
@@ -870,12 +883,21 @@ def test_v3_stage_edges_join_a_surveys_tiles_and_skip_withheld_surveys(builder, 
     source['native_resolution_m'] = 2
     region = {'id': 'morro-bay', 'bounds': [-122, 34, -120, 36]}
     values = np.tile(np.linspace(-1, -100, 100, dtype='float32'), (150, 1))
-    entries = []
+    entries, bare = [], []
     for k, x0 in enumerate((690000, 690200)):  # two abutting 200 m tiles of one survey
-        grid = write_grid(tmp_path / f'tile{k}.tif', values, 'EPSG:32610', from_origin(x0, 3915000, 2, 2))
-        row = {'id': f'tile{k}', 'source_id': SOURCE, 'sha256': digest(grid), 'support_sha256': None,
+        transform = from_origin(x0, 3915000, 2, 2)
+        grid = write_grid(tmp_path / f'tile{k}.tif', values, 'EPSG:32610', transform)
+        support = write_support(tmp_path / f'support{k}.tif', grid)
+        sidecar = tmp_path / f'sidecar{k}.json'
+        sidecar.write_text(json.dumps({'schema': 'sc-relief-normalized/1', 'original_sha256': digest(grid),
+                                       'outputs': {'grid.tif': digest(grid), 'support.tif': digest(support)},
+                                       'units': 'm', 'value_convention': 'elevation_positive_up',
+                                       'vertical_datum': 'MLLW', 'crs': 'EPSG:32610', 'shape': list(values.shape),
+                                       'transform': list(transform)[:6], 'resolution_m': 2}))
+        row = {'id': f'tile{k}', 'source_id': SOURCE, 'sha256': digest(grid), 'support_sha256': digest(support),
                'value_convention': 'elevation_positive_up', 'vertical_datum': 'MLLW'}
-        entries.append((row, grid, None, None, None))
+        entries.append((row, grid, sidecar, digest(sidecar), support))
+        bare.append(({**row, 'support_sha256': None}, grid, None, None, None))
     view = style.load().view('contours')
     doc = contours.trace_v3((tool, region, {SOURCE: source}, entries, set(), None, None), view)
     edges = [f for f in doc['features'] if f['properties']['kind'] == 'survey-edge']
@@ -891,6 +913,12 @@ def test_v3_stage_edges_join_a_surveys_tiles_and_skip_withheld_surveys(builder, 
     source.pop('native_resolution_m')  # unknown native resolution: contours and the edge are withheld alike
     withheld = contours.trace_v3((tool, region, {SOURCE: source}, entries, set(), None, None), view)
     assert withheld['features'] == []
+    source['native_resolution_m'] = 2
+    # M29 return: a tile with no support raster still traces contours but nothing shows it was measured, so no edge.
+    unsupported = contours.trace_v3((tool, region, {SOURCE: source}, bare, set(), None, None), view)
+    assert any(f['properties']['kind'] == 'contour' for f in unsupported['features'])
+    assert not any(f['properties']['kind'] == 'survey-edge' for f in unsupported['features'])
+    assert 'edge' not in unsupported['provenance']
 
 
 def test_morro_compaction_keeps_survey_edges_whole(monkeypatch):
