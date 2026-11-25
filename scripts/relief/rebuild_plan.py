@@ -6,6 +6,7 @@ from importlib.util import find_spec
 import json
 import os
 from pathlib import Path
+import stat
 
 from skippercast.relief import rebuild_plan, receipts
 
@@ -48,7 +49,27 @@ def _stage_digests():
     return current
 
 
-def _region_plan(out, region, current, *, default=None, pin=None):
+def _input_hasher(location, memo):
+    """Read-only sha256 of a recorded input, ``None`` when it is no file; memoised by real path.
+
+    Only a genuinely absent path (or a non-file) is ``None``. Path.is_file() would also turn a
+    PermissionError into False, so stat directly and let access errors reach the CLI.
+    """
+    def hasher(recorded):
+        path = location.resolve(recorded)
+        if path not in memo:
+            try:
+                is_file = stat.S_ISREG(os.stat(path).st_mode)
+            except (FileNotFoundError, NotADirectoryError):
+                is_file = False
+            memo[path] = receipts.sha256_file(path) if is_file else None
+        return memo[path]
+    return hasher
+
+
+def _region_plan(out, region, current, memo=None, *, default=None, pin=None):
+    # run_region's dry run calls this without a memo; each call then hashes for itself.
+    memo = {} if memo is None else memo
     # Region.keys() globs, which can hide permission errors as an empty directory.
     # A missing stages directory is normal for a region that has not been run.
     location = receipts.Region(out, region)
@@ -66,7 +87,8 @@ def _region_plan(out, region, current, *, default=None, pin=None):
         stage = key.partition('.')[0]
         if stage in by_stage:
             digests[key] = by_stage[stage]
-    return rebuild_plan.plan(docs, {'stage_digest': digests, 'style': styles})
+    return rebuild_plan.plan(docs, {'stage_digest': digests, 'style': styles},
+                             _input_hasher(location, memo))
 
 
 def main(argv=None):
@@ -95,8 +117,9 @@ def main(argv=None):
         with os.scandir(out):
             pass
         current = _stage_digests()
+        memo = {}
         blocks = [
-            {'region': region, 'stages': _region_plan(out, region, current,
+            {'region': region, 'stages': _region_plan(out, region, current, memo,
                                                      default=args.style_default, pin=pins.get(region))}
             for region in args.regions
         ]

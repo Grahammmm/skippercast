@@ -4,13 +4,17 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable, Mapping, Sequence
 from hashlib import sha256
+import json
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
 from typing import Protocol
 
 from skippercast.relief.receipts import REGION_ID
+
+GENERATION_PREFIX = re.compile(r'[0-9a-f]{12,64}')
 
 
 class RollbackError(ValueError):
@@ -21,6 +25,10 @@ class GitHistory(Protocol):
     def log_paths(self, paths: Sequence[str]) -> list[str]: ...
     def show(self, commit: str, path: str) -> bytes | None: ...
     def parent(self, commit: str) -> str | None: ...
+
+
+class ReleaseHistory(GitHistory, Protocol):
+    def is_shallow(self) -> bool: ...
 
 
 def _region_paths(region: str) -> tuple[str, str]:
@@ -37,6 +45,43 @@ def previous_state(git: GitHistory, region: str) -> dict[str, bytes | None]:
         raise RollbackError(f'no catalog history for region {region}')
     parent = git.parent(commits[0])
     return {path: git.show(parent, path) if parent is not None else None for path in paths}
+
+
+def _generation(pointer: bytes | None) -> str | None:
+    """The pointer's generation, or None for an absent or unreadable historical pointer."""
+    if pointer is None:
+        return None
+    try:
+        document = json.loads(pointer.decode('utf-8'))
+    except ValueError:  # includes UnicodeDecodeError and JSONDecodeError
+        return None
+    generation = document.get('generation') if isinstance(document, dict) else None
+    return generation if isinstance(generation, str) else None
+
+
+def target_state(git: ReleaseHistory, region: str, prefix: str) -> dict[str, bytes | None]:
+    """Both files at the newest pointer commit whose generation starts with ``prefix``.
+
+    One generation can appear in several commits (a release restored later); the newest
+    wins. Two different generations sharing the prefix are ambiguous and refused.
+    """
+    pointer_path, contours_path = _region_paths(region)
+    if not isinstance(prefix, str) or not GENERATION_PREFIX.fullmatch(prefix):
+        raise RollbackError(f'invalid generation prefix: {prefix!r}')
+    if git.is_shallow():
+        raise RollbackError('--to needs the full history (not a shallow clone)')
+    matches: list[tuple[str, str]] = []
+    for commit in git.log_paths((pointer_path,)):
+        generation = _generation(git.show(commit, pointer_path))
+        if generation is not None and generation.startswith(prefix):
+            matches.append((commit, generation))
+    if not matches:
+        raise RollbackError(f'no release of region {region} has a generation starting with {prefix}')
+    generations = sorted({generation for _, generation in matches})
+    if len(generations) > 1:
+        raise RollbackError(f'ambiguous generation prefix {prefix}: matches {", ".join(generations)}')
+    commit = matches[0][0]
+    return {pointer_path: git.show(commit, pointer_path), contours_path: git.show(commit, contours_path)}
 
 
 class GitCli:
@@ -66,6 +111,9 @@ class GitCli:
         if kind != b'blob':
             raise RollbackError(f'not a file at {commit}: {path}')
         return self.run(['git', 'cat-file', 'blob', oid.decode('ascii')])
+
+    def is_shallow(self) -> bool:
+        return self.run(['git', 'rev-parse', '--is-shallow-repository']).strip() == b'true'
 
     def parent(self, commit: str) -> str | None:
         # Read the stored parent even in a shallow clone. A missing ancestor must
@@ -119,21 +167,36 @@ def write_branch(
     run(['git', 'commit', '-s', '--allow-empty', '-m', f'Roll back relief release for {region}'])
 
 
+def _generation_prefix(value: str) -> str:
+    if not GENERATION_PREFIX.fullmatch(value):
+        raise argparse.ArgumentTypeError('expected 12 to 64 lowercase hex digits')
+    return value
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog='region.py rollback', description=__doc__)
     parser.add_argument('--region', required=True, help='region id')
     parser.add_argument('--repo', required=True, type=Path, help='root of a clean clone')
-    parser.add_argument('--branch', help='new branch (default: rollback/<region>-<short HEAD sha>)')
+    parser.add_argument('--to', type=_generation_prefix, metavar='GENERATION',
+                        help='restore the newest release whose pointer generation starts with this '
+                             '(12+ hex) instead of the state before the last change')
+    parser.add_argument('--branch', help='new branch (default: rollback/<region>-<short HEAD sha>, '
+                                         'or rollback/<region>-to-<12 hex> with --to)')
     args = parser.parse_args(argv)
 
     git = GitCli(args.repo)
     try:
         if git.run(['git', 'rev-parse', '--show-prefix']) != b'\n':
             raise RollbackError('--repo must point to the root of the clone')
-        state = previous_state(git, args.region)
+        state = previous_state(git, args.region) if args.to is None else target_state(git, args.region, args.to)
         before = {path: git.show('HEAD', path) for path in state}
+        if args.to is not None and before == state:
+            raise RollbackError(f'generation prefix {args.to} already matches the current state of '
+                                f'region {args.region}')
         branch = args.branch
-        if branch is None:
+        if branch is None and args.to is not None:
+            branch = f'rollback/{args.region}-to-{args.to[:12]}'
+        elif branch is None:
             short = git.run(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
             branch = f'rollback/{args.region}-{short}'
         write_branch(args.repo, args.region, state, branch=branch, run=git.run)
