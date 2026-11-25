@@ -146,6 +146,11 @@ def test_every_action_is_pinned_to_a_full_commit():
     ({'CANDIDATE': 'abc123'}, 'full lowercase commit'),
     ({'CANDIDATE': 'A' * 40}, 'full lowercase commit'),
     ({'POINTER_SHA256': 'f' * 63}, '64 lowercase hex'),
+    # The same whole-value rule for the other two inputs: one valid line must not carry extra lines.
+    ({'CANDIDATE': 'a' * 40 + '\nnot-a-sha'}, 'full lowercase commit'),
+    ({'CANDIDATE': 'not-a-sha\n' + 'a' * 40}, 'full lowercase commit'),
+    ({'POINTER_SHA256': 'b' * 64 + '\nx'}, '64 lowercase hex'),
+    ({'POINTER_SHA256': 'x\n' + 'b' * 64}, '64 lowercase hex'),
     ({'STAGE_URL': ''}, 'origin must be'),
     ({'STAGE_URL': 'https://skippercast.fixture-account.workers.dev'}, 'origin must be'),
     ({'STAGE_URL': 'https://skippercast.com'}, 'origin must be'),

@@ -79,11 +79,13 @@ jobs:
             echo "::error::Morro stage preview held: dispatch from protected main only."
             exit 1
           fi
-          if ! printf '%s' "$CANDIDATE" | grep -Eqx '[0-9a-f]{40}'; then
+          # Whole-value matches (bash [[ =~ ]]), never line-oriented grep -x: a multi-line value with one
+          # valid line is held.
+          if ! [[ "$CANDIDATE" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::Morro stage preview held: candidate must be a full lowercase commit SHA."
             exit 1
           fi
-          if ! printf '%s' "$POINTER_SHA256" | grep -Eqx '[0-9a-f]{64}'; then
+          if ! [[ "$POINTER_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
             echo "::error::Morro stage preview held: pointer digest must be 64 lowercase hex digits."
             exit 1
           fi
