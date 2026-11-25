@@ -71,6 +71,31 @@ def test_tree_refuses_changed_bytes_wrong_regions_and_a_checkout(tmp_path):
     (tmp_path / 'repo' / '.git').mkdir(parents=True)
     with pytest.raises(ValueError, match='git checkout'):
         rec.build_tree(_bundle(tmp_path / 'x'), tmp_path / 'repo' / 'tree')
+    assert not (tmp_path / 'repo' / 'tree').exists()  # nothing (not even the marker) was written into the checkout
+
+
+def test_cli_refuses_a_checkout_work_dir_or_receipt_before_creating_anything(tmp_path):
+    # Contract: a refused destination leaves no trace. Bug caught: --work / the marker / --receipt created inside a
+    # checkout before the disposable-tree guard ran.
+    bundle = _bundle(tmp_path)
+    checkout = tmp_path / 'checkout'
+    (checkout / '.git').mkdir(parents=True)
+    outside = tmp_path / 'outside'
+    args = ['--bundle', str(bundle), '--region', CONTOUR]
+    assert rec.main(args + ['--work', str(checkout / 'run')]) == 1
+    assert sorted(p.name for p in checkout.iterdir()) == ['.git']  # no work dir, tree or marker
+    for receipt in (checkout / 'receipt.json', checkout / 'new-dir' / 'receipt.json'):
+        assert rec.main(args + ['--work', str(outside), '--receipt', str(receipt)]) == 1
+        assert not outside.exists()  # the rejected receipt stopped the run before the work dir was made
+        assert sorted(p.name for p in checkout.iterdir()) == ['.git']
+    link = tmp_path / 'link'
+    link.symlink_to(checkout)  # a symlink into a checkout is resolved, not trusted
+    assert rec.main(args + ['--work', str(link / 'run2')]) == 1
+    assert sorted(p.name for p in checkout.iterdir()) == ['.git']
+    existing = tmp_path / 'receipt.json'
+    existing.write_text('keep')
+    assert rec.main(args + ['--work', str(outside), '--receipt', str(existing)]) == 1
+    assert not outside.exists() and existing.read_text() == 'keep'
 
 
 def test_a_mixed_pair_or_unknown_bytes_never_pass(tmp_path):

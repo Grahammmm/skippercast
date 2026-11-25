@@ -100,6 +100,18 @@ def passes(state: str) -> bool:
     return state in ('prior', 'upgrade')
 
 
+def _refuse_checkout_destination(dest: Path, what: str) -> Path:
+    """Refuse a destination that is, or sits inside, a git checkout, BEFORE anything is created there.
+
+    ``dest`` need not exist yet: symlinks in its existing prefix are resolved, then it and every ancestor is checked
+    for a ``.git`` (lexists: a dangling link still marks a checkout)."""
+    resolved = dest.absolute().resolve()
+    for folder in (resolved, *resolved.parents):
+        if os.path.lexists(folder / '.git'):
+            raise ValueError(f'refusing a {what} inside a git checkout (nothing was written): {dest}')
+    return resolved
+
+
 def build_tree(bundle_path: Path, tree: Path) -> dict:
     """Lay the six regions' owned files from the pinned bundle into a NEW disposable tree."""
     raw = bundle_path.read_bytes()
@@ -108,6 +120,7 @@ def build_tree(bundle_path: Path, tree: Path) -> dict:
         raise ValueError('bundle is not the six Central regions')
     if tree.exists():
         raise ValueError(f'tree must be new: {tree}')
+    _refuse_checkout_destination(tree, 'tree')  # before mkdir or the marker file: a checkout is never written to
     tree.mkdir(parents=True)
     (tree / undo.MARKER).write_text(undo.MARKER_TEXT + '\n', encoding='utf-8')
     undo._require_disposable(tree)  # refuses a tree inside a checkout before anything is laid down
@@ -215,6 +228,15 @@ def main(argv=None) -> int:
         work = args.work.absolute()
         if work.exists():
             raise ValueError(f'work directory must be new: {work}')
+        # Validate every destination before creating anything (work, tree, marker, receipt).
+        _refuse_checkout_destination(work, 'work directory')
+        if args.receipt:
+            receipt_path = args.receipt.absolute()
+            if os.path.lexists(receipt_path):
+                raise ValueError(f'receipt must be new: {receipt_path}')
+            _refuse_checkout_destination(receipt_path, 'receipt file')
+            if not receipt_path.parent.is_dir():
+                raise ValueError(f'receipt directory must already exist: {receipt_path.parent}')
         work.mkdir(parents=True)
         laid = build_tree(args.bundle, work / 'tree')
         tree = work / 'tree'
