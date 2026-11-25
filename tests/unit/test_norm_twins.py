@@ -74,7 +74,7 @@ def test_apply_moves_only_the_newer_build_and_records_it(cache, tmp_path):
     (record,) = quarantine.glob('moved-*.json')
     doc = json.loads(record.read_text())
     assert doc['status'] == 'complete'
-    assert doc['moves'] == [{'from': str(cache / SOURCE_A / NEW), 'to': str(quarantine / SOURCE_A / NEW), 'moved': True}]
+    assert doc['moves'] == [{'from': str(cache / SOURCE_A / NEW), 'to': str(quarantine / SOURCE_A / NEW), 'state': 'moved'}]
     assert norm_twins.main(['--norm', str(cache)]) == 0  # nothing ambiguous remains
 
 
@@ -198,5 +198,107 @@ def test_a_failed_move_is_rolled_back_and_the_record_says_so(cache, tmp_path, mo
     assert tree(cache) == before
     (record,) = quarantine.glob('moved-*.json')
     doc = json.loads(record.read_text())
-    assert doc['status'] == 'rolled-back' and not any(m['moved'] for m in doc['moves'])
+    assert doc['status'] == 'rolled-back' and {m['state'] for m in doc['moves']} <= {'planned', 'rolled-back'}
     assert [p.name for p in quarantine.iterdir()] == [record.name]  # created bucket folders were removed again
+
+
+class FixedClock:
+    """Makes the record's name predictable, as an attacker (or an earlier crashed run) could rely on."""
+
+    @classmethod
+    def now(cls, tz):
+        return cls()
+
+    def strftime(self, fmt):
+        return 'fixed'
+
+
+@pytest.mark.parametrize('planted', ['moved-fixed.json.tmp', 'moved-fixed.json'])
+def test_a_planted_link_at_a_predictable_record_name_is_never_written_through(cache, tmp_path, monkeypatch, planted):
+    """The old predictable '<record>.tmp' was opened with write_text, so a link there overwrote a vault file."""
+    vault = tmp_path / 'vault'
+    vault.mkdir()
+    victim = vault / 'victim'
+    victim.write_text('original')
+    monkeypatch.setattr(norm_twins, 'PRIVATE', vault)
+    monkeypatch.setattr(norm_twins, 'datetime', FixedClock)
+    quarantine = tmp_path / 'q'
+    quarantine.mkdir()
+    (quarantine / planted).symlink_to(victim)
+    assert apply(cache, quarantine) == 0
+    assert victim.read_text() == 'original'
+    assert list(vault.iterdir()) == [victim]
+    assert (quarantine / SOURCE_A / NEW).is_dir()
+    assert not any(p.name.endswith('.tmp') and not p.is_symlink() for p in quarantine.iterdir())  # no stray temporaries
+
+
+def interrupted_run(cache, quarantine, monkeypatch, undo_works):
+    """A run whose record update fails right after the second rename; the undo may or may not work."""
+    two_repairable_buckets(cache)
+    real_write, real_rename = norm_twins._write_record, os.rename
+    renames = []
+
+    def write(path, status, moves):
+        if [m['state'] for m in moves] == ['moved', 'moved']:  # the update after the last rename
+            raise OSError('journal disk error')
+        return real_write(path, status, moves)
+
+    def rename(src, dst, *a, **k):
+        renames.append(src)
+        if len(renames) > 2 and not undo_works:
+            raise OSError('undo disk error')
+        return real_rename(src, dst, *a, **k)
+
+    monkeypatch.setattr(norm_twins, '_write_record', write)
+    monkeypatch.setattr(norm_twins.os, 'rename', rename)
+    return [(cache / SOURCE_A / NEW, quarantine / SOURCE_A / NEW), (cache / SOURCE_B / NEW, quarantine / SOURCE_B / NEW)]
+
+
+def test_a_failed_record_update_is_undone_when_the_undo_works(cache, tmp_path, monkeypatch):
+    """A record that cannot be written must not leave builds moved: the rename that already happened is undone too."""
+    quarantine = tmp_path / 'q'
+    interrupted_run(cache, quarantine, monkeypatch, undo_works=True)
+    before = tree(cache)
+    with pytest.raises(SystemExit, match='undone'):
+        apply(cache, quarantine)
+    assert tree(cache) == before
+
+
+def test_when_record_update_and_undo_both_fail_the_folders_decide_and_the_record_never_denies_a_move(
+        cache, tmp_path, monkeypatch):
+    """Review repro: moved folders while the record said 'moved: false' and the error claimed it listed them.
+
+    The record must not call a moved build 'planned', must not claim success, and the documented rule (source
+    gone + destination present = moved, rename it back) must restore the cache from the record's from/to pairs."""
+    quarantine = tmp_path / 'q'
+    pairs = interrupted_run(cache, quarantine, monkeypatch, undo_works=False)
+    before = tree(cache)
+    with pytest.raises(SystemExit, match='could not be undone') as raised:
+        apply(cache, quarantine)
+    assert 'decide from the folders' in str(raised.value)
+    monkeypatch.undo()  # the disk works again
+    (record,) = quarantine.glob('moved-*.json')
+    doc = json.loads(record.read_text())
+    assert doc['status'] == 'in-progress'  # neither complete nor rolled-back: the run did not finish
+    assert [(m['from'], m['to']) for m in doc['moves']] == [(str(s), str(t)) for s, t in pairs]
+    for source, target in pairs:
+        assert not source.exists() and target.is_dir()  # really moved ...
+    assert {m['state'] for m in doc['moves']} <= {'moving', 'undoing', 'moved'}  # ... and the record never says planned/rolled-back
+    for move in doc['moves']:  # the documented recovery: judge by the folders, rename moved pairs back
+        if not os.path.lexists(move['from']) and os.path.lexists(move['to']):
+            os.rename(move['to'], move['from'])
+    for folder in (quarantine / SOURCE_A, quarantine / SOURCE_B):
+        folder.rmdir()
+    assert tree(cache) == before
+
+
+def test_a_record_that_cannot_be_written_at_all_moves_nothing(cache, tmp_path, monkeypatch):
+    """The record must exist before the first move; if it cannot be written the cache must stay as it was."""
+    def broken(path, status, moves):
+        raise OSError('read-only')
+
+    monkeypatch.setattr(norm_twins, '_write_record', broken)
+    before = tree(cache)
+    with pytest.raises(SystemExit, match='nothing was moved'):
+        apply(cache, tmp_path / 'q')
+    assert tree(cache) == before

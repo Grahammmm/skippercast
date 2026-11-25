@@ -20,9 +20,18 @@ code is 1 so a person decides.
 ``--apply`` is all-or-nothing and undoable. Before any move it checks every destination (no existing
 target, no symlink at ``DIR/<bucket>``, every resolved destination inside the resolved ``DIR`` and
 outside the private vault, same filesystem so each move is one atomic rename), then writes
-``DIR/moved-<UTC time>.json`` listing every planned move, and flips each entry to ``moved`` as it
-happens. If a move fails the moves already made are renamed back and the record says ``rolled-back``;
-if the process dies midway the record still names exactly which builds moved, so they can be undone.
+``DIR/moved-<UTC time>.json`` listing every planned ``from``/``to`` pair. The record is written through
+a fresh randomly named temporary (created exclusively, never through an existing link) and swapped in
+atomically. Each move is written ahead as ``moving`` before its rename and ``moved`` after it. If a move
+(or a record write) fails, the moves already made are renamed back and the record ends ``rolled-back``.
+
+Recovery (the record is a write-ahead log, not the truth; the folders are). If the record's status is
+anything but ``complete`` or ``rolled-back`` (``in-progress`` after a crash, ``needs-recovery`` after an
+undo that failed), the run did not finish. Judge every ``from``/``to`` pair by the folders alone, whatever
+its ``state`` says: ``from`` present and ``to`` absent = not moved; ``to`` present and ``from`` absent =
+moved, and ``mv to from`` undoes it (the oldest build was never touched). ``planned`` always means the
+rename was never started; ``moving``, ``undoing`` and a ``moved`` that an unwritable record could not
+update are only hints. Rename a moved pair back, or leave it moved if you want the repair.
 
 Exit codes: 0 no bucket has twins (or all repaired), 1 conflict (or a refused path or failed move),
 2 repairable twins remain (audit mode). Nothing here normalizes, downloads or publishes.
@@ -35,6 +44,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import tempfile
 
 HEX64 = re.compile(r'[0-9a-f]{64}')
 OUTPUT_NAMES = ('grid.tif', 'support.tif')
@@ -131,9 +141,55 @@ def _plan(norm, repairable, root):
 
 
 def _write_record(path, status, moves):
-    tmp = path.with_name(path.name + '.tmp')
-    tmp.write_text(json.dumps({'status': status, 'moves': moves}, indent=1) + '\n')
-    os.replace(tmp, path)
+    """Replace the record atomically. The temporary has a random name and is created with O_EXCL, so a
+    pre-planted file or symlink can never be written through; os.replace swaps a link itself, never follows it."""
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + '.', suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w') as handle:
+            handle.write(json.dumps({'status': status, 'moves': moves}, indent=1) + '\n')
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _where(source, target):
+    """Where a planned build really is: 'source' (not moved), 'target' (moved) or 'unknown'."""
+    at_source, at_target = os.path.lexists(source), os.path.lexists(target)
+    if at_source and not at_target:
+        return 'source'
+    if at_target and not at_source:
+        return 'target'
+    return 'unknown'
+
+
+def _undo(plan, moves, attempted, journal):
+    """Rename every attempted move back, judging each by the filesystem. Returns [(target, why)] that stayed."""
+    stuck = []
+    for index in reversed(attempted):
+        source, target = plan[index]
+        where = _where(source, target)
+        if where == 'source':  # that rename never happened
+            moves[index]['state'] = 'planned'
+            continue
+        if where == 'target':
+            moves[index]['state'] = 'undoing'
+            journal('in-progress')  # best effort: the undo goes ahead even when the record cannot be written
+            try:
+                os.rename(target, source)
+                moves[index]['state'] = 'rolled-back'
+                continue
+            except OSError as back:
+                stuck.append((str(target), str(back)))
+                moves[index]['state'] = 'moved'
+                continue
+        stuck.append((str(target), 'neither or both of source and destination exist'))
+    return stuck
 
 
 def quarantine(norm, repairable, destination):
@@ -147,10 +203,23 @@ def quarantine(norm, repairable, destination):
     while os.path.lexists(record):
         count += 1
         record = root / f'moved-{stamp}-{count}.json'
-    moves = [{'from': str(s), 'to': str(t), 'moved': False} for s, t in plan]
-    _write_record(record, 'in-progress', moves)  # the record exists before the first move
-    made = []  # bucket folders this run created
-    done = []
+    moves = [{'from': str(s), 'to': str(t), 'state': 'planned'} for s, t in plan]
+    stale = []  # record writes that failed after the first move: the record may be out of date
+
+    def journal(status):
+        try:
+            _write_record(record, status, moves)
+            return True
+        except OSError:
+            stale.append(status)
+            return False
+
+    try:
+        _write_record(record, 'in-progress', moves)  # the record exists before the first move
+    except OSError as exc:
+        raise SystemExit(f'norm_twins: cannot write {record} ({exc}); nothing was moved') from exc
+    made = []       # bucket folders this run created
+    attempted = []  # moves whose rename was started: the record says 'moving' before each one
     try:
         for index, (source, target) in enumerate(plan):
             if not os.path.lexists(target.parent):
@@ -158,32 +227,30 @@ def quarantine(norm, repairable, destination):
                 made.append(target.parent)
             if target.parent.is_symlink() or not _inside(target.parent, root):
                 raise OSError(f'{target.parent} resolves outside the quarantine')
+            moves[index]['state'] = 'moving'
+            _write_record(record, 'in-progress', moves)  # intent first: if this fails nothing was renamed
+            attempted.append(index)
             os.rename(source, target)
-            done.append(index)
-            moves[index]['moved'] = True
+            moves[index]['state'] = 'moved'
             _write_record(record, 'in-progress', moves)
     except OSError as exc:
-        failed = []
-        for index in reversed(done):
-            try:
-                os.rename(plan[index][1], plan[index][0])
-                moves[index]['moved'] = False
-            except OSError as back:
-                failed.append(f'{plan[index][1]}: {back}')
+        stuck = _undo(plan, moves, attempted, journal)
         for folder in reversed(made):
             try:
                 folder.rmdir()
             except OSError:
                 pass
-        try:
-            _write_record(record, 'in-progress' if failed else 'rolled-back', moves)
-        except OSError:
-            pass
-        if failed:
-            raise SystemExit(f'norm_twins: move failed ({exc}) and could not be undone for {failed}; '
-                             f'{record} lists what moved') from exc
-        raise SystemExit(f'norm_twins: move failed ({exc}); earlier moves were undone, see {record}') from exc
-    _write_record(record, 'complete', moves)
+        journal('needs-recovery' if stuck else 'rolled-back')
+        note = (f'; the record {record} could not be brought up to date, so decide from the folders as '
+                'the module docstring says' if stale else f'; see {record}')
+        if stuck:
+            raise SystemExit(f'norm_twins: move failed ({exc}) and could not be undone for {stuck}{note}') from exc
+        raise SystemExit(f'norm_twins: move failed ({exc}); earlier moves were undone{note}') from exc
+    try:
+        _write_record(record, 'complete', moves)
+    except OSError as exc:  # every move is done and recorded as moved; only the final status is missing
+        raise SystemExit(f'norm_twins: all {len(moves)} moves were made but {record} could not be marked '
+                         f'complete ({exc}); its entries say moved, undo by the docstring rule if unwanted') from exc
     return [{'from': m['from'], 'to': m['to']} for m in moves]
 
 
