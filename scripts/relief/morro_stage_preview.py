@@ -43,6 +43,12 @@ CLOSED_IDENTITY = 'none'
 # `r2_buckets` and `vars` are rebuilt from scratch and are checked further below.
 SAFE_KEYS = frozenset({'$schema', 'name', 'main', 'compatibility_date', 'compatibility_flags',
                        'workers_dev', 'assets', 'r2_buckets', 'vars', 'observability'})
+# Git-ignored paths a candidate checkout may still hold: dependencies and build output only.
+# Any other ignored file (a `.git/info/exclude` or global-ignore entry, a stray ignored
+# source file) could be built in while the receipt names only the commit, so it is refused.
+GENERATED_PREFIXES = ('dist/client/', 'dist/server/', '.wrangler/', '.venv/', '.pytest_cache/', '.ruff_cache/',
+                      'test-results/', 'playwright-report/')
+GENERATED_DIRS = frozenset({'node_modules', '__pycache__'})
 _SHA = re.compile(r'[0-9a-f]{40}')
 _SHA256 = re.compile(r'[0-9a-f]{64}')
 _NAME = re.compile(r'[a-z0-9][a-z0-9-]{1,61}[a-z0-9]')
@@ -117,20 +123,49 @@ def _git(tree: Path, *args: str) -> bytes:
     return subprocess.run(['git', '-C', str(tree), *args], check=True, capture_output=True, timeout=30).stdout
 
 
+def _is_generated(path: str) -> bool:
+    """True for a git-ignored path that is only a dependency or build output."""
+    if path.startswith(GENERATED_PREFIXES):
+        return True
+    return any(part in GENERATED_DIRS for part in path.rstrip('/').split('/')[:-1]) or \
+        (path.endswith('/') and path.rstrip('/').split('/')[-1] in GENERATED_DIRS)
+
+
+def _unexpected_files(tree: Path) -> list[str]:
+    """Ignored-but-not-generated or index-hidden files in the checkout."""
+    out = []
+    # `status` lists ignored paths only on request; `matching` reports each at the ignore rule's own
+    # directory (dist/client/, node_modules/), not collapsed to an enclosing all-ignored parent.
+    for raw in _git(tree, 'status', '--porcelain', '-z', '--ignored=matching', '--untracked-files=all').split(b'\0'):
+        if raw[:3] == b'!! ':
+            path = raw[3:].decode(errors='replace')
+            if not _is_generated(path):
+                out.append(path)
+    # A tracked file marked assume-unchanged or skip-worktree hides edits from `status`.
+    for raw in _git(tree, 'ls-files', '-z', '-v').split(b'\0'):
+        if raw and raw[:1] != b'H':
+            out.append(raw[2:].decode(errors='replace'))
+    return out
+
+
 def candidate(tree: Path, sha: str) -> dict:
     """The exact clean candidate commit and the Morro data it carries."""
     if not _SHA.fullmatch(sha):
         raise PreviewError('candidate must be a full lowercase commit SHA')
     try:
         head = _git(tree, 'rev-parse', '--verify', 'HEAD^{commit}').decode().strip()
-        # Untracked files that are not git-ignored could be built in while the receipt names only the commit.
+        # Untracked files that are not git-ignored, ignored non-generated files, and index-hidden edits
+        # could be built in while the receipt names only the commit; see `_unexpected_files`.
         dirty = _git(tree, 'status', '--porcelain', '--untracked-files=all')
+        hidden = _unexpected_files(tree)
     except (OSError, subprocess.SubprocessError):
         raise PreviewError('candidate checkout could not be read') from None
     if head != sha:
         raise PreviewError('checkout is not the candidate commit')
     if dirty:
         raise PreviewError('candidate checkout has uncommitted or untracked files')
+    if hidden:
+        raise PreviewError('candidate checkout has ignored or hidden files outside build output: ' + ', '.join(sorted(hidden)[:5]))
     found = {}
     for path in (POINTER, CONTOURS):
         try:

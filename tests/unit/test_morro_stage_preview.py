@@ -146,6 +146,54 @@ def test_plan_refuses_wrong_commit_dirty_tree_and_unreviewed_pointer(repo):
         preview.plan(repo, second, base_text(), pointer_sha256=digest, **kwargs)
 
 
+def _planned(repo, sha, digest):
+    return preview.plan(repo, sha, base_text(), pointer_sha256=digest,
+                        worker='skippercast-morro-stage', bucket='skippercast-feeds-stage')
+
+
+@pytest.mark.parametrize('hide', ['server/extra.ts', 'server/gen/extra.ts', 'dist/client-extra.js', 'web/node_modules.ts'])
+def test_ignored_source_files_cannot_hide_from_the_clean_check(repo, hide):
+    # Contract: build inputs are exactly the candidate. Bug caught: a file hidden by .git/info/exclude
+    # (or a global ignore) is invisible to `git status`, so it was built in under the reviewed commit.
+    sha, data = commit_pointer(repo, POINTER, 'reviewed')
+    digest = preview._sha256(data)
+    (repo / '.git' / 'info' / 'exclude').write_text('/' + hide + '\n')
+    path = repo / hide
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('export const x = 1\n')
+    assert git(repo, 'status', '--porcelain', '--untracked-files=all') == ''
+    assert git(repo, 'check-ignore', '--', hide) == hide
+    with pytest.raises(preview.PreviewError, match='ignored or hidden'):
+        _planned(repo, sha, digest)
+
+
+def test_dependency_and_build_output_do_not_block_a_clean_candidate(repo):
+    # Control: only bounded generated paths (.gitignore'd dependencies and build output) are allowed.
+    _, data = commit_pointer(repo, POINTER, 'reviewed')
+    digest = preview._sha256(data)
+    (repo / '.gitignore').write_text('node_modules/\ndist/client/\ndist/server/\n__pycache__/\n')
+    git(repo, 'add', '--', '.gitignore')
+    git(repo, 'commit', '-q', '-m', 'ignore build output')
+    sha = git(repo, 'rev-parse', 'HEAD')
+    for generated in ('node_modules/pkg/index.js', 'dist/client/app.js', 'dist/server/index.js',
+                      'scripts/__pycache__/x.pyc'):
+        path = repo / generated
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('generated\n')
+    assert _planned(repo, sha, digest)[1]['commit'] == sha
+
+
+def test_index_hidden_edits_to_tracked_files_are_refused(repo):
+    # Bug caught: `update-index --skip-worktree` hides an edited tracked file from `git status`.
+    sha, data = commit_pointer(repo, POINTER, 'reviewed')
+    digest = preview._sha256(data)
+    git(repo, 'update-index', '--skip-worktree', '--', preview.POINTER)
+    (repo / preview.POINTER).write_text('{}')
+    assert git(repo, 'status', '--porcelain') == ''
+    with pytest.raises(preview.PreviewError, match='ignored or hidden'):
+        _planned(repo, sha, digest)
+
+
 def test_plan_refuses_a_candidate_without_a_morro_pointer(repo):
     sha, data = commit_pointer(repo, dict(POINTER, region='fixture-bay'), 'wrong region')
     with pytest.raises(preview.PreviewError, match='not for Morro Bay'):
