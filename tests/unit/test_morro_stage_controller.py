@@ -722,3 +722,15 @@ def test_basemap_binds_the_planned_stage_bucket(repo, base, tmp_path):
     step_ = STEPS[step('Copy the public basemap')]
     assert set(step_['env']) == {'STAGE_R2_PUBLISH_TOKEN', 'STAGE_CLOUDFLARE_ACCOUNT_ID'}
     assert step_['run'] == 'python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" basemap --plan-dir "$PLAN_DIR"'
+
+
+def test_job_and_workflow_env_use_only_contexts_github_allows_there():
+    # The runner context is unavailable in workflow/job-level env; one such value made GitHub reject the whole file
+    # (every push run failed with a workflow file issue), so no dispatch could ever have started.
+    allowed = {'github', 'inputs', 'matrix', 'needs', 'secrets', 'strategy', 'vars'}
+    for env in [WORKFLOW.get('env', {})] + [job.get('env', {}) for job in WORKFLOW['jobs'].values()]:
+        for value in env.values():
+            for expr in re.findall(r'\$\{\{(.*?)\}\}', str(value)):
+                assert {name for name in re.findall(r'\b([a-z_]+)\.', expr)} <= allowed, value
+    assert 'echo "PLAN_DIR=$RUNNER_TEMP/morro-stage-plan" >> "$GITHUB_ENV"' in STEPS[step('Move the controller')]['run']
+    assert step('Move the controller') < step('Plan the isolated stage config')

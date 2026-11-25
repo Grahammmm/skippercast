@@ -173,7 +173,6 @@ jobs:
       OVERVIEW_SHA256: ${{ inputs.overview_sha256 }}
       CATALOGUE_SHA256: ${{ inputs.catalogue_sha256 }}
       STAGE_URL: ${{ inputs.origin }}
-      PLAN_DIR: ${{ runner.temp }}/morro-stage-plan
     steps:
       - name: Reject a non-main dispatch or malformed inputs before checkout
         env:
@@ -230,6 +229,8 @@ jobs:
           rm -rf "$RUNNER_TEMP/preview-controller"
           mv .preview-controller "$RUNNER_TEMP/preview-controller"
           echo "CONTROLLER=$RUNNER_TEMP/preview-controller" >> "$GITHUB_ENV"
+          # The runner context is not available in job-level env (the whole file was invalid with it there).
+          echo "PLAN_DIR=$RUNNER_TEMP/morro-stage-plan" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.candidate }}
