@@ -11,6 +11,7 @@ from scripts.relief import morro_release_packet_check as cli
 
 ORIGIN = 'https://skippercast-morro-stage.example.workers.dev'
 COMMIT = '9' * 40
+MERGE = '4' * 40  # the earlier commit that merged the reviewed pointer
 ENVELOPE = 'a' * 64
 WIRE = 'b' * 64
 PINS = {'wire': {'bytes': 100, 'sha256': WIRE}, 'decoded': {'bytes': 250, 'sha256': 'c' * 64}}
@@ -39,7 +40,8 @@ def packet(tmp_path):
               [('deploy', 'equal'), ('pointer', 'identical'), ('contours', 'identical')]]
     checks.append({'check': 'survey', 'status': 'PASS', 'reason': 'identical', **PINS,
                    'key': f'feeds/tiles/relief/morro-bay/{ENVELOPE}/survey/{WIRE}.geojson.br'})
-    live = {'region': 'morro-bay', 'base': ORIGIN, 'deployed': COMMIT, 'verdict': 'PASS', 'checks': checks}
+    live = {'region': 'morro-bay', 'base': ORIGIN, 'merge': COMMIT, 'deployed': COMMIT, 'verdict': 'PASS',
+            'checks': checks}
     capture = {'schema': 'sc-morro-stage-phone/1', 'shots': []}
     for n, (theme, zoom) in enumerate((t, z) for t in ('light', 'dark') for z in (11, 13, 15)):
         data = _png(n)
@@ -50,9 +52,10 @@ def packet(tmp_path):
     return tmp_path, {'stage-plan': plan, 'live': live, 'capture': capture}
 
 
-def _run(packet, origin=ORIGIN):
+def _run(packet, origin=ORIGIN, merge=COMMIT):
     root, docs = packet
-    args = ['--stage-origin', origin, '--envelope-sha256', ENVELOPE, '--pointer', str(root / 'pointer.json')]
+    args = ['--stage-origin', origin, '--envelope-sha256', ENVELOPE, '--pointer-merge', merge,
+            '--pointer', str(root / 'pointer.json')]
     for key, doc in docs.items():
         path = root / f'{key}.json'
         path.write_text(json.dumps(doc), encoding='utf-8')
@@ -96,6 +99,80 @@ def test_verify_png_bytes_not_just_row_metadata(packet, case):
     (root / 'light-phone-z11.png').write_bytes(data)
     if case != 'bytes-replaced':
         row['png_sha256'] = _sha(data)
+    assert _run(packet) == 1
+
+
+def _ancestor(docs):
+    docs['live']['merge'] = MERGE
+    docs['live']['checks'][0]['reason'] = 'ancestor'
+
+
+def test_pointer_merged_before_the_deployed_commit_is_bound_to_its_receipt(packet):
+    _ancestor(packet[1])
+    assert _run(packet, merge=MERGE) == 0
+
+
+# Contract: a genuine live PASS for another pointer merge must not certify this candidate's pointer.
+# Bug caught: receipt `merge` ignored, so an ancestor PASS for a historical pointer was accepted.
+@pytest.mark.parametrize('case', ['other-receipt-merge', 'other-supplied-merge', 'equal-with-earlier-merge',
+                                  'ancestor-with-same-merge', 'short-merge'])
+def test_live_receipt_must_prove_this_candidates_pointer_merge(packet, case):
+    docs, merge = packet[1], MERGE
+    _ancestor(docs)
+    if case == 'other-receipt-merge':
+        docs['live']['merge'] = '5' * 40
+    elif case == 'other-supplied-merge':
+        merge = '5' * 40
+    elif case == 'equal-with-earlier-merge':
+        docs['live']['checks'][0]['reason'] = 'equal'
+    elif case == 'ancestor-with-same-merge':
+        docs['live']['merge'], merge = COMMIT, COMMIT
+    else:
+        merge = MERGE[:7]
+    assert _run(packet, merge=merge) == 1
+
+
+def _rechunk(png, edit):
+    """Rebuild a PNG's chunks (type, data) after `edit`, recomputing every CRC."""
+    chunks, pos = [], 8
+    while pos < len(png):
+        size = struct.unpack('>I', png[pos:pos + 4])[0]
+        chunks.append((png[pos + 4:pos + 8], png[pos + 8:pos + 8 + size]))
+        pos += 12 + size
+    return b'\x89PNG\r\n\x1a\n' + b''.join(
+        struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        for kind, data in edit(chunks))
+
+
+def _bad_crc(png):
+    return png[:41] + bytes([png[41] ^ 1]) + png[42:]  # first IDAT data byte
+
+
+# Contract: the six-view packet only accepts screenshots that decode as a whole image.
+# Bug caught: prefix/size/suffix-only check passed a PNG with junk chunks and no image data.
+@pytest.mark.parametrize('case', ['no-image-data', 'junk-between-header-and-end', 'bad-crc', 'bad-zlib',
+                                  'short-pixels', 'extra-pixels', 'trailing-bytes', 'truncated'])
+def test_png_must_be_a_decodable_image_not_just_a_matching_frame(packet, case):
+    root, docs = packet
+    good = (root / 'light-phone-z11.png').read_bytes()
+    if case == 'no-image-data':
+        data = _rechunk(good, lambda c: [c[0], c[-1]])
+    elif case == 'junk-between-header-and-end':
+        data = _rechunk(good, lambda c: [c[0], (b'abcd', b'junk'), c[-1]])
+    elif case == 'bad-crc':
+        data = _bad_crc(good)
+    elif case == 'bad-zlib':
+        data = _rechunk(good, lambda c: [c[0], (b'IDAT', b'not zlib'), c[-1]])
+    elif case == 'short-pixels':
+        data = _rechunk(good, lambda c: [c[0], (b'IDAT', zlib.compress(b'\0' * 390)), c[-1]])
+    elif case == 'extra-pixels':
+        data = _rechunk(good, lambda c: [c[0], (b'IDAT', zlib.compress(b'\0' * (391 * 845))), c[-1]])
+    elif case == 'trailing-bytes':
+        data = good + b'x'
+    else:
+        data = good[:-20]
+    (root / 'light-phone-z11.png').write_bytes(data)
+    docs['capture']['shots'][0]['png_sha256'] = _sha(data)
     assert _run(packet) == 1
 
 
