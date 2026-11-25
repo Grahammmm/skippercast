@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import stat
 import sys
 import tempfile
 
@@ -114,11 +115,14 @@ def make_plan(tree: Path, region: str, out: Path) -> dict:
         src = _walk_safe(tree, rel)
         if src.exists():
             data = src.read_bytes()
+            if stat.S_IMODE(src.stat().st_mode) & ~0o777:
+                # restore only applies plain 0ooo bits; a plan could never reproduce a setuid/setgid/sticky file
+                raise ValueError(f'owned file has special permission bits, cannot be planned: {rel}')
             dst = out / 'prior' / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_bytes(data)
             rows.append(dict(path=rel, state='present', sha256=_sha256(data), bytes=len(data),
-                             mode=format(src.stat().st_mode & 0o777, '04o'), prior=f'prior/{rel}'))
+                             mode=format(stat.S_IMODE(src.stat().st_mode), '04o'), prior=f'prior/{rel}'))
         else:
             rows.append(dict(path=rel, state='absent'))
             absent_dirs.update(_absent_parents(tree, rel))
@@ -216,7 +220,7 @@ def restore(plan_file: Path, tree: Path, *, dry_run: bool = False) -> dict:
     for row, dst in targets:
         if row['state'] == 'present':
             have = _sha256(dst.read_bytes()) if dst.exists() else None
-            same = have == row['sha256'] and dst.stat().st_mode & 0o777 == int(row['mode'], 8)
+            same = have == row['sha256'] and stat.S_IMODE(dst.stat().st_mode) == int(row['mode'], 8)
             actions.append(dict(path=row['path'], action='unchanged' if same else 'rewrite'))
         else:
             actions.append(dict(path=row['path'], action='remove' if dst.exists() else 'unchanged'))
@@ -225,7 +229,7 @@ def restore(plan_file: Path, tree: Path, *, dry_run: bool = False) -> dict:
             if row['state'] == 'present':
                 data = (base / row['prior']).read_bytes()
                 mode = int(row['mode'], 8)
-                if dst.exists() and dst.read_bytes() == data and dst.stat().st_mode & 0o777 == mode:
+                if dst.exists() and dst.read_bytes() == data and stat.S_IMODE(dst.stat().st_mode) == mode:
                     continue
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 # mkstemp creates a new file exclusively (O_EXCL) and never follows a pre-planted link.
@@ -251,7 +255,7 @@ def restore(plan_file: Path, tree: Path, *, dry_run: bool = False) -> dict:
         for row in doc['paths']:
             p = tree / row['path']
             if row['state'] == 'present':
-                if not p.is_file() or _sha256(p.read_bytes()) != row['sha256'] or p.stat().st_mode & 0o777 != int(row['mode'], 8):
+                if not p.is_file() or _sha256(p.read_bytes()) != row['sha256'] or stat.S_IMODE(p.stat().st_mode) != int(row['mode'], 8):
                     raise RuntimeError(f'restore did not reproduce prior bytes and mode: {row["path"]}')
             elif p.exists():
                 raise RuntimeError(f'restore left a file that was absent before: {row["path"]}')

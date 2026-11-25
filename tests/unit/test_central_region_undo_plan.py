@@ -1,6 +1,7 @@
 """Central per-region undo plan: exact prior bytes, one region only, disposable trees only."""
 import json
 import os
+import stat
 
 import pytest
 
@@ -296,3 +297,29 @@ def test_dangling_git_link_above_the_tree_still_counts_as_a_checkout(tmp_path):
     undo.make_plan(tree, CONTOUR, tmp_path / 'plan')
     with pytest.raises(ValueError, match='inside one'):
         undo.restore(tmp_path / 'plan' / 'undo-plan.json', tree)
+
+
+def test_special_bit_only_drift_is_undone_and_verified(tmp_path):
+    # Contract: restore compares and verifies ALL permission bits (S_IMODE), not just the low 0o777.
+    # Bug caught: masking with 0o777 reports 'unchanged' for 0644 vs setuid 04644 and leaves it behind.
+    tree = _make_tree(tmp_path)
+    target = tree / f'dist/regions/{CONTOUR}/depth-contours.geojson'
+    os.chmod(target, 0o644)
+    undo.make_plan(tree, CONTOUR, tmp_path / 'plan')
+    plan = tmp_path / 'plan' / 'undo-plan.json'
+    os.chmod(target, 0o4644)  # same bytes, only a special bit differs
+    dry = undo.restore(plan, tree, dry_run=True)
+    assert [a['action'] for a in dry['actions'] if a['path'] == f'dist/regions/{CONTOUR}/depth-contours.geojson'] == ['rewrite']
+    assert stat.S_IMODE(target.stat().st_mode) == 0o4644
+    undo.restore(plan, tree)
+    assert stat.S_IMODE(target.stat().st_mode) == 0o644
+    assert {a['action'] for a in undo.restore(plan, tree)['actions']} == {'unchanged'}
+
+
+def test_planning_a_file_with_special_bits_is_refused(tmp_path):
+    # Contract: a plan only records plain permission bits. Bug caught: the mode was masked to 0o777 at
+    # plan time, so a setuid prior was recorded as plain and restore silently changed its meaning.
+    tree = _make_tree(tmp_path)
+    os.chmod(tree / f'dist/regions/{CONTOUR}/depth-contours.geojson', 0o4644)
+    with pytest.raises(ValueError, match='special permission bits'):
+        undo.make_plan(tree, CONTOUR, tmp_path / 'plan')
