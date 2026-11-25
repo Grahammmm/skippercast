@@ -23,10 +23,11 @@ def visit(name, gen, zoom, contour, drawn, pointer=None):
     return {'name': name, 'build': gen['build'], 'zoom': zoom, 'fetches': fetches, 'contours_drawn': str(drawn)}
 
 
-def doc(direction, visits, sources=None, served=None):
+def doc(direction, visits, sources=None, served=None, after=None):
     target, previous = (V2, V1) if direction == 'update' else (V1, V2)
     return {'schema': ct.SCHEMA, 'direction': direction, 'target': dict(target), 'previous': dict(previous),
             'visits': visits, 'sources_sha256': target['sources'] if sources is None else sources,
+            'sources_after_visits': len(visits) if after is None else after,
             'served': dict(target) if served is None else served}
 
 
@@ -121,6 +122,47 @@ def test_rollback_target_must_not_serve_a_pointer():
     assert ct.judge(doc('rollback', leaked))['reasons'] == ['pointer-band:overview']
 
 
+@pytest.mark.parametrize('status', [403, 500, 302, 0])
+def test_rollback_pointer_absence_needs_exactly_404(status):
+    """RETURN #3777 item 2: only no pointer response or HTTP 404 proves the pointer is gone."""
+    odd = BACK[:3] + [visit('back_final2_z11', V1, 11, V1, 69, pointer=status)]
+    assert ct.judge(doc('rollback', odd))['reasons'] == ['pointer-band:overview']
+    ok = BACK[:3] + [visit('back_final2_z11', V1, 11, V1, 69, pointer=404)]
+    assert ct.judge(doc('rollback', ok))['verdict'] == 'ACCEPT'
+
+
+def test_unsafe_scan_reads_both_contour_files_of_a_visit():
+    """RETURN #3777 item 1: a visit that fetched both files counts as detail, but a pointer-bound overview it
+    drew without the pointer must still be caught, even when a later fresh pair would otherwise ACCEPT."""
+    mixed = visit('back_mixed', V1, 15, V1, 9, pointer=404)
+    mixed['fetches'].insert(0, {'path': OVR, 'status': 200, 'sha256': V2['overview']})
+    assert ct.visit_band(mixed) == 'detail'
+    result = ct.judge(doc('rollback', [mixed] + BACK))
+    assert result['reasons'] == ['unsafe:back_mixed:pointer-bound-overview-drawn-without-pointer']
+    held = dict(mixed, contours_drawn='0')  # nothing drawn: the "did not load" window is safe
+    assert ct.judge(doc('rollback', [held] + BACK))['verdict'] == 'ACCEPT'
+
+
+def test_timeline_counts_credits_only_after_they_were_read():
+    """RETURN #3777 item 3: the /sources readback is bound to its place in the timeline."""
+    rows = ct.timeline(doc('update', UP, after=len(UP) + 0))
+    assert rows[-1]['verdict'] == 'ACCEPT'
+    assert 'sources-not-read' not in rows[-1]['reasons']
+    late = doc('update', UP + [visit('up_more', V2, 11, V2, 5, pointer=200)], after=5)
+    rows = ct.timeline(late)
+    assert [r['verdict'] for r in rows] == ['REJECT', 'REJECT', 'REJECT', 'REJECT', 'ACCEPT']
+    assert rows[3]['reasons'] == ['sources-not-read']  # both bands fresh at visit 4, credits not read until after 5
+    assert ct.judge(late)['verdict'] == 'ACCEPT'
+
+
+@pytest.mark.parametrize('after', [None, -1, 5, True, '4'])
+def test_credits_readback_needs_its_position(after):
+    d = doc('update', UP)
+    d['sources_after_visits'] = after
+    with pytest.raises(ct.Unusable, match='sources_after_visits'):
+        ct.judge(d)
+
+
 def test_foreign_and_missing_contours_rejected():
     foreign = UP[:3] + [dict(visit('up_final_z11', V2, 11, V2, 5, pointer=200))]
     foreign[-1]['fetches'][-1]['sha256'] = 'e' * 64
@@ -200,3 +242,21 @@ def test_cli_exit_codes(tmp_path, capsys):
     assert ct.main([str(single)]) == 1
     assert ct.main([str(bad)]) == 2
     assert ct.main([str(tmp_path / 'missing.json')]) == 2
+
+
+@pytest.mark.parametrize('content', [[], {}, 'rows'])
+def test_cli_empty_m24_input_is_unusable(tmp_path, content):
+    """RETURN #3777 item 4: no theme rows is no evidence, not a pass."""
+    phone, receipt = tmp_path / 'phone.json', tmp_path / 'receipt.json'
+    phone.write_text(json.dumps(content))
+    receipt.write_text(json.dumps(RECEIPT))
+    assert ct.main([str(phone), '--m24', str(receipt)]) == 2
+
+
+def test_cli_m24_direction_without_visits_is_unusable(tmp_path):
+    row = _m24_row('light', BACK)
+    row['session']['visits'] = {k: v for k, v in row['session']['visits'].items() if not k.startswith('back')}
+    phone, receipt = tmp_path / 'phone.json', tmp_path / 'receipt.json'
+    phone.write_text(json.dumps([row]))
+    receipt.write_text(json.dumps(RECEIPT))
+    assert ct.main([str(phone), '--m24', str(receipt)]) == 2

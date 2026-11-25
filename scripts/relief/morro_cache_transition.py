@@ -14,27 +14,30 @@ band alone would call such a phone "updated" (or "rolled back") too early.
 
 ACCEPT requires all of:
 
-* the last visit is on the target build and the /sources credits read after the switch are the target's;
+* the last visit is on the target build, and the /sources credits read after the switch are the target's; the
+  credits count only once the timeline has reached the visit after which they were read
+  (``sources_after_visits``);
 * for BOTH zoom bands (``detail`` = ``depth-contours.geojson``, ``overview`` = ``depth-contours-overview.geojson``)
   the band's LAST visit is on the target build, received the target contour bytes, drew at least one line and
-  saw the target pointer (HTTP 200 with the exact pointer bytes when the target has one; absent or 404 when it
-  has none);
+  saw the target pointer (HTTP 200 with the exact pointer bytes when the target has one; no pointer response
+  or exactly 404 when it has none: 403, 5xx or a redirect is not proof of absence);
 * the served readback (what a cold client gets from the origin after the switch) equals the target identity
   for pointer, detail, overview and /sources, so the phone matched what is actually served;
-* no visit drew pointer-bound contour bytes (the generation that has a pointer, ft-v3 for Morro v2) without
-  first receiving that exact pointer.
+* no visit drew while holding pointer-bound contour bytes (the generation that has a pointer, ft-v3 for Morro
+  v2) in EITHER contour file it fetched, without having received that exact pointer.
 
 Anything else is REJECT with named reasons, e.g. ``stale-band:overview`` for the M24 rollback window where z15
 had recovered and z11 still drew nothing from the cached v2 overview. Input problems (unknown schema, a target
-identical to the previous generation in a band, so staleness would be undetectable) exit 2 without a verdict.
+identical to the previous generation in a band, so staleness would be undetectable, an empty M24 file) exit 2
+without a verdict.
 
 Exit status: 0 ACCEPT, 1 REJECT, 2 unusable input. The verdict is a reading of saved evidence, not an R8
 verdict, a deployment record or release authority.
 
 Usage:
-  morro_cache_transition.py OBSERVATIONS.json            one transition (schema sc-morro-cache-observations/1)
-  morro_cache_transition.py --m24 PHONE.json RECEIPT.json   every theme x {update, rollback} in an M24 run,
-                                                          with the verdict after each visit (timeline)
+  morro_cache_transition.py OBSERVATIONS.json              one transition (schema sc-morro-cache-observations/1)
+  morro_cache_transition.py PHONE.json --m24 RECEIPT.json  every theme x {update, rollback} in an M24 run,
+                                                            with the verdict after each visit (timeline)
 """
 from __future__ import annotations
 
@@ -118,7 +121,11 @@ def load(doc):
     served = doc.get('served')
     if served is not None:
         served = _identity(served, 'served')
-    return target, previous, visits, doc.get('sources_sha256'), served
+    sources, after = doc.get('sources_sha256'), doc.get('sources_after_visits')
+    if sources is not None:
+        if not (isinstance(after, int) and not isinstance(after, bool) and 0 <= after <= len(visits)):
+            raise Unusable('sources_after_visits must say how many visits preceded the /sources readback (0..len(visits))')
+    return target, previous, visits, (sources, after), served
 
 
 def _generation(sha, target, previous, band):
@@ -129,19 +136,33 @@ def _generation(sha, target, previous, band):
     return 'foreign'
 
 
-def judge(doc):
-    """Verdict for one transition: {'verdict': 'ACCEPT'|'REJECT', 'reasons': [...], 'bands': {...}}."""
-    target, previous, visits, sources, served = load(doc)
+def _exact_pointer(pointer, want):
+    """The pointer evidence a visit needs: exact bytes with 200 when ``want`` is set; else none or exactly 404."""
+    if want:
+        return bool(pointer) and pointer.get('status') == 200 and pointer.get('sha256') == want
+    return not pointer or pointer.get('status') == 404
+
+
+def judge(doc, upto=None):
+    """Verdict for one transition: {'verdict': 'ACCEPT'|'REJECT', 'reasons': [...], 'bands': {...}}.
+
+    ``upto`` judges only the first ``upto`` visits (the timeline); the /sources readback counts only if it was
+    taken after at most that many visits.
+    """
+    target, previous, visits, (sources, sources_after), served = load(doc)
+    if upto is not None:
+        visits = visits[:upto]
+        if sources is not None and sources_after > upto:
+            sources = None  # not read yet at this point of the timeline
     bound = target if target['pointer'] else previous  # the generation whose contours need the pointer
     reasons, bands = [], {}
 
-    for visit in visits:  # safety: pointer-bound bytes drawn without the exact pointer, on any visit
-        band = visit_band(visit)
-        contour = _last(visit, BAND_PATHS[band]) if band else None
-        pointer = _last(visit, POINTER_PATH)
-        if (_drawn(visit) > 0 and contour and contour.get('sha256') == bound[band]
-                and not (pointer and pointer.get('status') == 200 and pointer.get('sha256') == bound['pointer'])):
-            reasons.append(f'unsafe:{visit.get("name", "?")}:pointer-bound-{band}-drawn-without-pointer')
+    for visit in visits:  # safety: pointer-bound bytes in ANY contour file a drawing visit fetched, without the pointer
+        if _drawn(visit) <= 0 or _exact_pointer(_last(visit, POINTER_PATH), bound['pointer']):
+            continue
+        for band, path in BAND_PATHS.items():
+            if any(f.get('path') == path and f.get('sha256') == bound[band] for f in visit.get('fetches', [])):
+                reasons.append(f'unsafe:{visit.get("name", "?")}:pointer-bound-{band}-drawn-without-pointer')
 
     if not visits:
         reasons.append('no-visits')
@@ -167,10 +188,7 @@ def judge(doc):
             problems.append('stale')
         elif gen in ('foreign', 'missing'):
             problems.append(gen)
-        if target['pointer']:
-            if not (pointer and pointer.get('status') == 200 and pointer.get('sha256') == target['pointer']):
-                problems.append('pointer')
-        elif pointer and pointer.get('status') == 200:
+        if not _exact_pointer(pointer, target['pointer']):
             problems.append('pointer')
         if _drawn(visit) <= 0:
             problems.append('not-drawn')
@@ -190,7 +208,7 @@ def timeline(doc):
     """The verdict after each visit in order; the first ACCEPT is when the saved evidence first proves the switch."""
     rows = []
     for n in range(1, len(doc['visits']) + 1):
-        result = judge(dict(doc, visits=doc['visits'][:n]))
+        result = judge(doc, upto=n)
         visit = doc['visits'][n - 1]
         rows.append({'visit': visit.get('name'), 't_after_switch_s': visit.get('t_after_switch_s'),
                      'verdict': result['verdict'], 'reasons': result['reasons']})
@@ -219,9 +237,11 @@ def from_m24(row, receipt):
         for name, v in session['visits'].items():
             if name.startswith(prefix):
                 visits.append(dict(v, name=name, t_after_switch_s=round((v['at_ms'] - session[switch]) / 1000)))
+        # The M24 probe reads /sources once per direction, after that direction's last visit (m24_probe.mjs).
         docs.append({'schema': SCHEMA, 'direction': direction, 'label': f"{row['theme']}-{direction}",
                      'target': ident[new], 'previous': ident[old], 'visits': visits,
-                     'sources_sha256': (session['sources'].get(key) or {}).get('sha256'), 'served': served(new)})
+                     'sources_sha256': (session['sources'].get(key) or {}).get('sha256'),
+                     'sources_after_visits': len(visits), 'served': served(new)})
     return docs
 
 
@@ -234,7 +254,11 @@ def main(argv=None):
         raw = json.loads(args.observations.read_bytes())
         if args.m24:
             receipt = json.loads(args.m24.read_bytes())
+            if not isinstance(raw, list) or not raw:
+                raise Unusable('the M24 phone file holds no theme rows, so there is no transition to judge')
             docs = [d for row in raw for d in from_m24(row, receipt)]
+            if any(not d['visits'] for d in docs):
+                raise Unusable('an M24 direction has no session visits')
             out = [{'label': d['label'], 'final': judge(d), 'timeline': timeline(d)} for d in docs]
             ok = all(r['final']['verdict'] == 'ACCEPT' for r in out)
         else:
