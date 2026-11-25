@@ -17,7 +17,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
-from skippercast.relief import package
+from skippercast.relief import package, survey_delivery
 
 REPOSITORY = 'Grahammmm/skippercast'
 BUCKET = 'skippercast-feeds'
@@ -28,7 +28,7 @@ CHUNK_LIMIT = 1 << 20
 BLOCK = 1 << 20
 REGION = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*')
 _CHUNK = re.compile(r'([89]|1[0-7])/(0|[1-9][0-9]{0,3})_(0|[1-9][0-9]{0,3})\.json')
-_ASSET = re.compile(r'[0-9a-f]{64}\.(?:pmtiles|json)')
+_ASSET = re.compile(r'[0-9a-f]{64}\.(?:pmtiles|json|geojson\.br)')
 _API = 'https://api.github.com'
 _REPO_API = f'{_API}/repos/{REPOSITORY}'
 
@@ -46,6 +46,8 @@ class Object:
 
     @property
     def name(self):
+        if self.key.endswith('.geojson.br'):
+            return self.sha + '.geojson.br'
         return self.sha + ('.pmtiles' if self.key.endswith('.pmtiles') else '.json')
 
 
@@ -60,13 +62,21 @@ def _objects(pointer):
             Object(f'{stem}.digests/{sha}/root.json', sha, ROOT_LIMIT))
 
 
+def _survey(pointer):
+    if 'survey_detail' not in pointer:
+        return ()
+    wire = pointer['survey_detail']['wire']
+    key = survey_delivery.key(pointer['region'], pointer['envelope_sha256'], wire['sha256'])
+    return (Object(key, wire['sha256'], survey_delivery.WIRE_LIMIT, wire['bytes']),)
+
+
 def _chunks(pointer, root_obj, path):
     try:
         doc = package.decode_document(path.read_bytes())
     except ValueError:
         raise StageError('invalid digest root JSON') from None
     chunks = doc.get('chunks')
-    if doc.keys() != {'chunks'} or not isinstance(chunks, dict) or not 1 <= len(chunks) <= MAX_ASSETS - 2:
+    if doc.keys() != {'chunks'} or not isinstance(chunks, dict) or not 1 <= len(chunks) <= MAX_ASSETS - 2 - len(_survey(pointer)):
         raise StageError('invalid digest root inventory')
     for name, sha in sorted(chunks.items()):
         match = _CHUNK.fullmatch(name)
@@ -148,10 +158,12 @@ def prepare_release(release_dir, envelope, *, scope_path, pointer,
         stage_one(archive, rows[archive.key])
         root_file = stage_one(root, rows[root.key])
         chunks = tuple(_chunks(pointer, root, root_file))
-        if rows.keys() != {obj.key for obj in (archive, root, *chunks)}:
+        if rows.keys() != {obj.key for obj in (archive, root, *chunks, *_survey(pointer))}:
             raise StageError('approved inventory differs from pointer digest chain')
         for obj in chunks:
             stage_one(obj, rows[obj.key])
+        for obj in _survey(pointer):
+            survey_delivery.check_decoded(stage_one(obj, rows[obj.key]), pointer['survey_detail'])
         _require_new_stage_directory(output)
         stage.rename(output)
     return release_tag(pointer)
@@ -296,7 +308,9 @@ class R2:
 
         try:
             self.client.put_object(Bucket=BUCKET, Key=key, Body=body, ContentLength=size, IfNoneMatch='*',
-                                   ContentType='application/json' if key.endswith('.json') else 'application/octet-stream',
+                                   **({'ContentEncoding': 'br'} if key.endswith('.geojson.br') else {}),
+                                   ContentType='application/geo+json' if key.endswith('.geojson.br') else
+                                   'application/json' if key.endswith('.json') else 'application/octet-stream',
                                    CacheControl='public, max-age=31536000, immutable')
         except ClientError as error:
             if (error.response.get('Error', {}).get('Code') != 'PreconditionFailed'
@@ -326,11 +340,13 @@ def copy_release(pointer, github, r2, *, allow_create, recheck):
             return path
 
         root_file = download(root)
-        objects = (*_chunks(pointer, root, root_file), root, archive)
+        objects = (*_chunks(pointer, root, root_file), root, archive, *_survey(pointer))
         if assets.keys() != {obj.name for obj in objects}:
             raise StageError('GitHub release asset list differs from the pointer digest chain')
         for obj in objects:
-            download(obj)
+            path = download(obj)
+            if obj.key.endswith('.geojson.br'):
+                survey_delivery.check_decoded(path, pointer['survey_detail'])
 
         for obj in objects:
             size = assets[obj.name].size
