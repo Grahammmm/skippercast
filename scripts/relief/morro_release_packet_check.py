@@ -161,7 +161,8 @@ def _png_size(png):
         _require(len(parts[b'bKGD']) == {0: 2, 4: 2, 2: 6, 6: 6, 3: 1}[color], 'invalid PNG background')
         _require(color != 3 or parts[b'bKGD'][0] < palette, 'invalid PNG background')
     if b'hIST' in parts:
-        _require(color == 3 and len(parts[b'hIST']) == 2 * palette, 'invalid PNG histogram')
+        # A histogram has one 2-byte count per palette entry; truecolor images may carry one for a suggested palette.
+        _require(palette and len(parts[b'hIST']) == 2 * palette, 'invalid PNG histogram')
     bits = PNG_COLOR[color][1] * depth
     passes = ADAM7 if interlace else ((0, 0, 1, 1),)
     sizes = []  # (columns, rows) for each non-empty pass

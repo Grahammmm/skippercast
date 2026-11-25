@@ -290,6 +290,13 @@ VALID = {
     'palette4-full': lambda: _image(_header(5, 2, 4, 3), _scanlines([(5, 2)], 4), [(b'PLTE', bytes(3 * 16))]),
     'palette2-in-range': lambda: _image(_header(4, 2, 2, 3), _scanlines([(4, 2)], 2, fill=b'\x55'), [PALETTE3]),
     'rgb-with-suggested-palette': lambda: _image(_header(2, 2, 8, 2), _scanlines([(2, 2)], 24), [PALETTE3]),
+    # PNG 11.3.5.6: a histogram may describe a suggested palette in a truecolor image.
+    'rgb-with-suggested-palette-histogram': lambda: _image(
+        _header(2, 2, 8, 2), _scanlines([(2, 2)], 24), [PALETTE3, (b'hIST', b'\0' * 6)]),
+    'rgba-with-two-entry-palette-histogram': lambda: _image(
+        _header(2, 2, 8, 6), _scanlines([(2, 2)], 32), [(b'PLTE', bytes(6)), (b'hIST', b'\0\1\0\2')]),
+    'palette-with-histogram': lambda: _image(
+        _header(2, 2, 2, 3), _scanlines([(2, 2)], 2), [PALETTE3, (b'hIST', b'\0' * 6)]),
     'adam7-rgb': lambda: _image(_header(5, 5, 8, 2, 1), _scanlines(ADAM7_5X5, 24, (0, 1, 2, 3, 4))),
     'adam7-narrow': lambda: _image(_header(1, 1, 8, 0, 1), _scanlines([(1, 1)], 8)),
     'ancillary-and-split-idat': lambda: _image(
@@ -334,6 +341,14 @@ BAD = {
     'two-palettes': lambda: _image(_header(2, 2, 8, 2), _scanlines([(2, 2)], 24), [PALETTE3, PALETTE3]),
     'palette-after-background': lambda: _image(_header(2, 2, 8, 2), _scanlines([(2, 2)], 24),
                                                [(b'bKGD', b'\0' * 6), PALETTE3]),
+    'histogram-shorter-than-truecolor-palette': lambda: _image(
+        _header(2, 2, 8, 2), _scanlines([(2, 2)], 24), [PALETTE3, (b'hIST', b'\0' * 4)]),
+    'histogram-longer-than-palette': lambda: _image(
+        _header(2, 2, 2, 3), _scanlines([(2, 2)], 2), [PALETTE3, (b'hIST', b'\0' * 8)]),
+    'histogram-without-palette': lambda: _image(
+        _header(2, 2, 8, 2), _scanlines([(2, 2)], 24), [(b'hIST', b'\0' * 6)]),
+    'histogram-before-palette': lambda: _image(
+        _header(2, 2, 8, 2), _scanlines([(2, 2)], 24), [(b'hIST', b'\0' * 6), PALETTE3]),
     'transparency-on-rgba': lambda: _image(_header(2, 2, 8, 6), _scanlines([(2, 2)], 32), [(b'tRNS', b'\0' * 6)]),
     'transparency-longer-than-palette': lambda: _image(_header(2, 2, 2, 3), _scanlines([(2, 2)], 2),
                                                        [PALETTE3, (b'tRNS', b'\xff' * 4)]),
