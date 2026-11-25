@@ -269,3 +269,30 @@ def test_a_mode_only_release_change_is_undone(tmp_path):
     assert target.stat().st_mode & 0o777 == 0o644
     again = undo.restore(tmp_path / 'plan' / 'undo-plan.json', tree)
     assert {a['action'] for a in again['actions']} == {'unchanged'}
+
+
+def test_non_permission_mode_in_a_resigned_plan_is_refused_before_any_write(tmp_path):
+    # Contract: restore only applies plain 0ooo permission bits from a plan. Bug caught: a resigned
+    # plan with mode '4755' (setuid) or junk reached os.fchmod, or failed midway after other writes.
+    tree, plan = _plan(tmp_path)
+    _apply_release(tree, CONTOUR)
+    changed = _snapshot(tree)
+    _edit(plan, lambda d: d['paths'][1].update(mode='4755'))
+    with pytest.raises(ValueError, match='mode'):
+        undo.restore(plan, tree)
+    _edit(plan, lambda d: d['paths'][1].update(mode='zz'))
+    with pytest.raises(ValueError, match='mode'):
+        undo.restore(plan, tree)
+    assert _snapshot(tree) == changed
+
+
+def test_dangling_git_link_above_the_tree_still_counts_as_a_checkout(tmp_path):
+    # Contract: any .git entry, even a dangling symlink, marks a checkout. Bug caught: .exists()
+    # follows the link and misses it.
+    checkout = tmp_path / 'checkout'
+    checkout.mkdir()
+    (checkout / '.git').symlink_to(tmp_path / 'missing')
+    tree = _make_tree(checkout, 'scratch-tree')
+    undo.make_plan(tree, CONTOUR, tmp_path / 'plan')
+    with pytest.raises(ValueError, match='inside one'):
+        undo.restore(tmp_path / 'plan' / 'undo-plan.json', tree)

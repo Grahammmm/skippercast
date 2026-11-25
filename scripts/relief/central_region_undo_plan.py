@@ -165,6 +165,9 @@ def load_plan(plan_file: Path) -> tuple[dict, Path]:
             data = prior.read_bytes()
             if _sha256(data) != row.get('sha256') or len(data) != row.get('bytes'):
                 raise ValueError(f'prior bytes do not match the plan: {row["path"]}')
+            mode = row.get('mode')
+            if not isinstance(mode, str) or len(mode) != 4 or mode[0] != '0' or any(c not in '01234567' for c in mode):
+                raise ValueError(f'plan mode is not a plain permission value: {row["path"]}')
         else:
             raise ValueError(f'bad row state for {row.get("path")}')
     allowed_dirs = {d for rel in expected for i in range(1, rel.count('/') + 1)
@@ -177,7 +180,7 @@ def load_plan(plan_file: Path) -> tuple[dict, Path]:
 def _require_disposable(tree: Path) -> Path:
     tree = _real_dir(tree, 'tree')
     for folder in (tree, *tree.parents):  # the tree itself or any ancestor being a checkout is refused
-        if (folder / '.git').exists():
+        if os.path.lexists(folder / '.git'):  # lexists: a dangling .git link still marks a checkout
             raise ValueError('refusing a git checkout or a tree inside one: restore works on disposable trees only')
     if os.path.ismount(tree) or tree == Path(tree.anchor) or tree == Path.home():
         raise ValueError('refusing a mount point, filesystem root or home directory')
