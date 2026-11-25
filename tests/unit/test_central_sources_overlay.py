@@ -174,6 +174,52 @@ def test_tree_changed_while_rendering_is_refused(candidate, capsys, monkeypatch)
     assert not out.exists()
 
 
+# Contract: no symlink may hide collector inputs from the tree pin. Bug caught: a symlinked directory (here `regions`,
+# present before the tree is pinned) pointing outside the tree is hashed by target string only, so editing the real
+# files behind it leaves the digest, and so every pin, valid while the collector and the page output change.
+@pytest.mark.parametrize('link', ['regions', 'page', 'git'])
+def test_symlink_leaving_the_tree_cannot_be_pinned_or_rendered(candidate, capsys, link):
+    root, out, page, _ = candidate
+    outside = root.parent / 'outside'
+    (outside / 'cambria-san-simeon').mkdir(parents=True)
+    config = outside / 'cambria-san-simeon/region.json'
+    config.write_text('{"name": "Reviewed"}')
+    (outside / 'sources.html').write_bytes(page.read_bytes())
+    clean = _args(candidate)  # pin file for the clean tree
+    if link == 'regions':
+        (root / 'regions').symlink_to(outside, target_is_directory=True)
+    elif link == 'git':
+        (root / '.git').symlink_to(outside, target_is_directory=True)
+    else:
+        page.unlink()
+        page.symlink_to(outside / 'sources.html')
+    with pytest.raises(ValueError, match='symlink leaves the reviewed tree'):
+        overlay.tree_digest(root)  # no pin can be produced for a tree with such a link
+    config.write_text('{"name": "Edited"}')  # the real bytes behind the link change after review
+    (outside / 'sources.html').write_text('<p>Injected</p>' + (outside / 'sources.html').read_text(encoding='utf-8'))
+    assert overlay.main(clean) == 2
+    assert 'symlink leaves the reviewed tree' in capsys.readouterr().err
+    assert not out.exists()
+    assert overlay.main(['--tree', str(root), '--print-tree-digest']) == 2
+    assert capsys.readouterr().out == ''
+
+
+def test_symlink_inside_the_tree_is_bound_through_its_real_target(candidate):
+    # Bug caught: refusing every link would break a normal checkout; accepting one must still bind what it reaches.
+    root, _, _, docs = candidate
+    _write(root, docs)
+    (root / 'regions/cambria-san-simeon').mkdir(parents=True)
+    config = root / 'regions/cambria-san-simeon/region.json'
+    config.write_text('{"name": "Reviewed"}')
+    (root / 'dist/regions-copy').symlink_to('../regions', target_is_directory=True)
+    before = overlay.tree_digest(root)
+    config.write_text('{"name": "Edited"}')
+    assert overlay.tree_digest(root) != before
+    (root / 'dist/dangling').symlink_to('nowhere')
+    with pytest.raises(ValueError, match='symlink does not resolve'):
+        overlay.tree_digest(root)
+
+
 def test_reviewed_tree_digest_is_printed_for_release_preparation(candidate, capsys):
     # Bug caught: no way to record the tree pin from the reviewed tree, so it would be calculated from the render input.
     root, _, _, docs = candidate

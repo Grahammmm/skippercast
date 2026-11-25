@@ -51,12 +51,16 @@ def _path(region, name):
 def tree_digest(tree):
     """SHA-256 over every path and content below tree (symlinks by target); the root `.git` directory is not content.
 
-    Refuses anything that is not a regular file, directory or symlink, so no entry can hide from the pin.
+    Refuses anything that is not a regular file, directory or symlink, and any symlink that does not resolve to a
+    path inside the tree (outside it, into the root `.git`, dangling or looping): the contents behind such a link are
+    not hashed here, so an edit there would change the render while the digest stayed the same. A link that stays
+    inside the tree is safe because the real file or directory it reaches is walked and hashed at its own path.
     """
-    tree = Path(tree)
+    tree = Path(tree).resolve(strict=True)
+    git = tree / '.git'
     lines = []
     for here, dirs, files in os.walk(tree, followlinks=False):
-        if Path(here) == tree and '.git' in dirs:
+        if Path(here) == tree and '.git' in dirs and not git.is_symlink():
             dirs.remove('.git')
         dirs.sort()
         for name in sorted(files) + [d for d in dirs if (Path(here) / d).is_symlink()]:
@@ -64,6 +68,12 @@ def tree_digest(tree):
             relative = path.relative_to(tree).as_posix()
             mode = path.lstat().st_mode
             if stat.S_ISLNK(mode):
+                try:
+                    target = path.resolve(strict=True)
+                except (OSError, RuntimeError):
+                    raise ValueError(f'{relative}: symlink does not resolve') from None
+                if not target.is_relative_to(tree) or target == git or target.is_relative_to(git):
+                    raise ValueError(f'{relative}: symlink leaves the reviewed tree (its target is not pinned)')
                 lines.append(f'l {sha256(os.readlink(path).encode()).hexdigest()} {relative}\n')
             elif stat.S_ISREG(mode):
                 lines.append(f'f {sha256(path.read_bytes()).hexdigest()} {relative}\n')
