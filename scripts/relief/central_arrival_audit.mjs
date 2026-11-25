@@ -4,12 +4,20 @@
 // Opens each Central region once in a phone-size browser at a FIXED camera (by default the C41 preview profile for a contour
 // region and the region's own map camera for a terrain-only one; `region` uses every region's own map camera, i.e. where the
 // picker lands) and sorts what the Chart actually did into one class:
-//   rendered         the region's own contour pair was read (manifest bytes) and the Chart drew at least one line;
-//   out-of-view      the pair was read, nothing was drawn, and no line visible at that zoom crosses the phone viewport;
-//   terrain-only     a terrain-only region: no contour file listed, read or drawn;
-//   never-requested  a contour region whose pair the Chart never read (C35: chart_files omitted it)            -> HOLD;
-//   unexplained-zero the pair was read and lines visible at that zoom cross the viewport, but none was drawn  -> HOLD;
-//   terrain-leak     a terrain-only region that lists, reads or draws contours                                   -> HOLD.
+//   rendered          the region's own contour pair was read (manifest bytes) and ACCEPTED (the legend shows the drawn
+//                     contour credit stamp), the Chart's hit count is > 0, a contour line visible at that zoom crosses the
+//                     viewport and no survey edge or unresolved outline does (the hit count includes those, so it is
+//                     only attributed to contours when nothing else is in view);
+//   out-of-view       the pair was read and accepted and no contour line visible at that zoom crosses the viewport (any
+//                     hits are explained by an edge or unresolved outline in view);
+//   terrain-only      a terrain-only region: no contour file listed, read, accepted or drawn;
+// and HOLD classes:
+//   never-requested   a contour region whose pair the Chart never read (C35: chart_files omitted it);
+//   not-accepted      the pair was read but the Chart withheld or failed it (no credit stamp; its reason is kept);
+//   unexplained-zero  accepted, visible contour lines cross the viewport, but the Chart drew no hit;
+//   unattributed-draw accepted, hits drawn, but edges/outlines are also in view, so the count cannot prove a contour;
+//   unexplained-draw  accepted, hits drawn, but nothing visible crosses the viewport;
+//   terrain-leak      a terrain-only region that lists, reads, accepts or draws contours.
 // A foreign region's contour read or bytes that differ from the build manifest are problems in any class.
 import {createHash} from 'node:crypto';
 import {readFile, realpath, writeFile} from 'node:fs/promises';
@@ -22,6 +30,7 @@ import {PHONE, PROFILE, TERRAIN_ONLY, linesInView} from './central_preview_camer
 export const REGIONS = Object.freeze([...Object.keys(PROFILE), ...TERRAIN_ONLY]);
 export const PAIR = Object.freeze(['depth-contours-overview.geojson', 'depth-contours.geojson']);
 export const OK = Object.freeze(['rendered', 'out-of-view', 'terrain-only']);
+export const HOLD = Object.freeze(['never-requested', 'not-accepted', 'unexplained-zero', 'unattributed-draw', 'unexplained-draw', 'terrain-leak']);
 // The Chart's `?view=` zoom is the map library's zoom plus this (web/map/engine.ts ZOOM_OFFSET).
 export const ZOOM_OFFSET = 1;
 const contourPath = /^\/regions\/([^/]+)\/(depth-contours(?:-overview)?\.geojson)$/;
@@ -34,15 +43,28 @@ const mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.c
 export const visibleAt = (p, viewZoom) =>
   (p?.minzoom === undefined || viewZoom >= p.minzoom) && (p?.maxzoom === undefined || viewZoom < p.maxzoom);
 
-// Contour lines (kind contour, or no kind) eligible at the `?view=` zoom that cross the phone viewport at the camera.
-export function visibleLinesInView(docs, center, viewZoom, size = PHONE) {
+// Lines of the given kinds eligible at the `?view=` zoom that cross the phone viewport at the camera. Polygon outlines
+// count as lines: the Chart's hit layer is a line layer over every feature.
+const outlines = f => {
+  const g = f.geometry || {};
+  if (g.type === 'Polygon') return {...f, geometry: {type: 'MultiLineString', coordinates: g.coordinates}};
+  if (g.type === 'MultiPolygon') return {...f, geometry: {type: 'MultiLineString', coordinates: g.coordinates.flat()}};
+  return f;
+};
+function kindInView(docs, center, viewZoom, size, wantContour) {
   return docs.reduce((n, doc) => n + linesInView({features: (doc.features || []).filter(f =>
-    (f.properties?.kind ?? 'contour') === 'contour' && visibleAt(f.properties, viewZoom))}, center, viewZoom - ZOOM_OFFSET, size), 0);
+    ((f.properties?.kind ?? 'contour') === 'contour') === wantContour && visibleAt(f.properties, viewZoom)).map(outlines)},
+  center, viewZoom - ZOOM_OFFSET, size), 0);
 }
+// Contour lines (kind contour, or no kind).
+export const visibleLinesInView = (docs, center, viewZoom, size = PHONE) => kindInView(docs, center, viewZoom, size, true);
+// Survey edges and unresolved-area outlines: also click targets, so also in the Chart's hit count.
+export const visibleOthersInView = (docs, center, viewZoom, size = PHONE) => kindInView(docs, center, viewZoom, size, false);
 
 // obs: {region, terrainOnly, listed:[file names in chart_files], reads:[{path,status,sha256}], expected:{path: sha256},
-//       drawn: number from data-contours-drawn (undefined when the diagnostic never appeared), inView: visibleLinesInView of
-//       the files the Chart read (null when it read none)}.
+//       accepted: the legend shows the drawn-contour credit stamp, reason: the legend's withheld/failed note if any,
+//       drawn: number from data-contours-drawn (undefined when the diagnostic never appeared), inView / othersInView:
+//       visibleLinesInView / visibleOthersInView of the files the Chart read (null when it read none)}.
 export function classify(obs) {
   const problems = [];
   const reads = obs.reads.filter(r => contourPath.test(r.path));
@@ -55,21 +77,32 @@ export function classify(obs) {
   const drawn = Number.isFinite(obs.drawn) ? obs.drawn : 0;
   let result;
   if (obs.terrainOnly) {
-    result = obs.listed.length || own.length || drawn > 0 ? 'terrain-leak' : 'terrain-only';
-    if (result === 'terrain-leak') problems.push('terrain-only region lists, reads or draws contours');
+    result = obs.listed.length || own.length || drawn > 0 || obs.accepted ? 'terrain-leak' : 'terrain-only';
+    if (result === 'terrain-leak') problems.push('terrain-only region lists, reads, accepts or draws contours');
   } else if (!fetched.length) {
     result = 'never-requested';
     problems.push(obs.listed.length ? 'contour pair listed but never read' : 'contour pair missing from region chart_files');
+  } else if (!obs.accepted) {
+    // A withheld, expired or invalid pair is not "valid but out of view", whatever its geometry.
+    result = 'not-accepted';
+    problems.push(`the Chart read the pair but did not accept it${obs.reason ? `: ${obs.reason}` : ''}`);
   } else if (!Number.isFinite(obs.drawn)) {
     result = 'unexplained-zero';
     problems.push('contour diagnostic never reported a draw count');
-  } else if (drawn > 0) {
+  } else if (obs.inView > 0 && drawn === 0) {
+    result = 'unexplained-zero';
+    problems.push(`${obs.inView} visible contour line(s) cross the viewport but none was drawn`);
+  } else if (obs.inView > 0 && obs.othersInView > 0) {
+    // The hit count includes survey edges and unresolved outlines; with those in view it cannot prove a contour.
+    result = 'unattributed-draw';
+    problems.push(`${obs.othersInView} survey edge/unresolved outline(s) are also in view; the hit count cannot prove a contour line`);
+  } else if (obs.inView > 0) {
     result = 'rendered';
-  } else if (obs.inView === 0) {
+  } else if (drawn === 0 || obs.othersInView > 0) {
     result = 'out-of-view';
   } else {
-    result = 'unexplained-zero';
-    problems.push(`${obs.inView} visible line(s) cross the viewport but none was drawn`);
+    result = 'unexplained-draw';
+    problems.push(`${drawn} hit(s) drawn but no visible line crosses the viewport`);
   }
   return {result, ok: OK.includes(result) && !problems.length, problems};
 }
@@ -164,6 +197,8 @@ async function run(root, bundlePath, basemapPath, basemapSha, output, cameras = 
         await page.getByRole('button', {name: 'Layers', exact: true}).first().click();
         await page.locator('li.app-legend-relief:visible').waitFor({timeout: 22000}).catch(() => {});
         if (p.listed.length) {
+          // The legend row appears once the Chart has judged the pair: a credit stamp when drawn, a reason when not.
+          await page.locator('li.app-legend-depth-contours').first().waitFor({state: 'attached', timeout: 10000}).catch(() => {});
           await page.locator('[data-contours-drawn]').first().waitFor({state: 'attached', timeout: 10000}).catch(() => {});
           await page.locator('[data-contours-drawn]:not([data-contours-drawn="0"])').first().waitFor({state: 'attached', timeout: 6000}).catch(() => {});
         }
@@ -171,7 +206,9 @@ async function run(root, bundlePath, basemapPath, basemapSha, output, cameras = 
           const marks = Array.from(document.querySelectorAll('[data-contours-drawn]'), el => Number(el.dataset.contoursDrawn) || 0);
           return {appliedView: new URL(location.href).searchParams.get('view'), drawn: marks.length ? Math.max(0, ...marks) : null,
             shading: !!document.querySelector('li.app-legend-relief')?.getClientRects().length,
-            contourRows: Array.from(document.querySelectorAll('.app-legend-depth-contours')).filter(el => el.getClientRects().length).length};
+            contourRows: Array.from(document.querySelectorAll('.app-legend-depth-contours')).filter(el => el.getClientRects().length).length,
+            accepted: !!document.querySelector('li.app-legend-depth-contours [data-stamp="depth-contours"]'),
+            reason: document.querySelector('li.app-legend-depth-contours [data-reason="depth-contours"]')?.textContent?.trim() || null};
         });
         Object.assign(row, seen);
       } catch (error) { pageErrors.push(String(error)); }
@@ -180,15 +217,17 @@ async function run(root, bundlePath, basemapPath, basemapSha, output, cameras = 
       const read = new Set(row.reads.filter(r => r.status === 200).map(r => r.path));
       const fetchedDocs = Object.entries(p.docs).filter(([path]) => read.has(path)).map(([, doc]) => doc);
       row.inView = fetchedDocs.length ? visibleLinesInView(fetchedDocs, p.camera.center, p.camera.zoom) : null;
+      row.othersInView = fetchedDocs.length ? visibleOthersInView(fetchedDocs, p.camera.center, p.camera.zoom) : null;
       row.pairInView = visibleLinesInView(Object.values(p.docs), p.camera.center, p.camera.zoom);
       const verdict = classify({region: p.id, terrainOnly: p.terrainOnly, listed: p.listed, reads: row.reads, expected: p.expected,
-        drawn: row.drawn ?? undefined, inView: row.inView});
+        accepted: row.accepted === true, reason: row.reason ?? null, drawn: row.drawn ?? undefined, inView: row.inView,
+        othersInView: row.othersInView});
       if (row.appliedView !== view) verdict.problems.push('camera query changed');
       if (!row.reads.some(r => r.path === pointer(p.id) && r.status === 200)) verdict.problems.push('no own-region relief pointer read');
       if (pageErrors.length) verdict.problems.push(...pageErrors.map(e => `page: ${e}`));
       Object.assign(row, verdict, {ok: verdict.ok && !verdict.problems.length});
       rows.push(row);
-      console.log(`${row.ok ? 'ok  ' : 'HOLD'} ${p.id} ${view} ${row.result} drawn=${row.drawn} inView=${row.inView} pairInView=${row.pairInView} ${row.problems.join('; ')}`);
+      console.log(`${row.ok ? 'ok  ' : 'HOLD'} ${p.id} ${view} ${row.result} accepted=${row.accepted} drawn=${row.drawn} inView=${row.inView} othersInView=${row.othersInView} pairInView=${row.pairInView} ${row.problems.join('; ')}`);
     }
   } catch (error) { errors.push(String(error)); }
   finally {
