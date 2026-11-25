@@ -5,8 +5,15 @@ Companion of morro_sources_overlay.py (same register, same credit checks), for t
 reviewed, isolated candidate tree and independent SHA-256 pins (a JSON file written from the release preparation
 records, not hashes calculated from the inputs here):
 
-  {"catalogue": "<sha256 of catalog/sources.json>",
+  {"tree": "<tree digest of the whole reviewed candidate tree>",
+   "catalogue": "<sha256 of catalog/sources.json>",
    "regions": {"<region id>": {"pointer": "<sha256>", "overview": "<sha256>", "detail": "<sha256>"}, ...}}
+
+The `tree` pin binds every file the render can read: the register collector reads region configs, other pointers,
+contours and runtime assets, and `dist/sources.html` is spliced verbatim outside the generated block, so a per-input
+pin alone would let an edit elsewhere in the tree change the output. The digest is recorded when the candidate tree is
+reviewed (`--print-tree-digest` on that reviewed tree), never taken from the tree being rendered. Any file added,
+removed or changed (the `.git` directory at the tree root aside) makes the render refuse without writing output.
 
 A region with `overview` and `detail` pins is rendered with shading and contour credits from its published contour pair.
 A region with only a `pointer` pin is terrain only: shading credits, and no contour row. Giving only one of the two
@@ -18,7 +25,9 @@ from __future__ import annotations
 import argparse
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
+import stat
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,6 +46,30 @@ def _path(region, name):
     return {'pointer': f'catalog/relief/{region}.json',
             'overview': f'dist/regions/{region}/depth-contours-overview.geojson',
             'detail': f'dist/regions/{region}/depth-contours.geojson'}[name]
+
+
+def tree_digest(tree):
+    """SHA-256 over every path and content below tree (symlinks by target); the root `.git` directory is not content.
+
+    Refuses anything that is not a regular file, directory or symlink, so no entry can hide from the pin.
+    """
+    tree = Path(tree)
+    lines = []
+    for here, dirs, files in os.walk(tree, followlinks=False):
+        if Path(here) == tree and '.git' in dirs:
+            dirs.remove('.git')
+        dirs.sort()
+        for name in sorted(files) + [d for d in dirs if (Path(here) / d).is_symlink()]:
+            path = Path(here) / name
+            relative = path.relative_to(tree).as_posix()
+            mode = path.lstat().st_mode
+            if stat.S_ISLNK(mode):
+                lines.append(f'l {sha256(os.readlink(path).encode()).hexdigest()} {relative}\n')
+            elif stat.S_ISREG(mode):
+                lines.append(f'f {sha256(path.read_bytes()).hexdigest()} {relative}\n')
+            else:
+                raise ValueError(f'{relative}: not a regular file or symlink')
+    return sha256(''.join(sorted(lines)).encode()).hexdigest()
 
 
 def _pinned(tree, relative, expected, label):
@@ -59,6 +92,8 @@ def _contour_rows(doc, region, name, style):
 def render(tree, pins):
     """Return (overlay bytes, local receipt); never write to the candidate tree."""
     regions = pins['regions']
+    if not package.is_sha256(pins.get('tree')) or tree_digest(tree) != pins['tree']:
+        raise ValueError('tree: SHA-256 differs from the reviewed pin (or no tree pin was given)')
     if not isinstance(regions, dict) or not regions or not set(regions) <= set(CENTRAL_RELEASES):
         raise ValueError('pins must name Central Coast regions only')
     catalogue = _pinned(tree, CATALOGUE, pins['catalogue'], 'catalogue')
@@ -95,19 +130,29 @@ def render(tree, pins):
     block, _ = register.render(data)
     source_page = package.artifact_path(tree, register.PAGE.as_posix()).read_text(encoding='utf-8')
     html = register.splice(source_page, block).encode('utf-8')
+    if tree_digest(tree) != pins['tree']:
+        raise ValueError('tree: changed while the overlay was rendered')
     return html, {'schema': 'sc-central-sources-overlay/1', 'scope': 'stage-local only',
-                  'catalogue_sha256': pins['catalogue'], 'html_sha256': sha256(html).hexdigest(),
+                  'tree_sha256': pins['tree'], 'catalogue_sha256': pins['catalogue'], 'html_sha256': sha256(html).hexdigest(),
                   'regions': receipt_rows}
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--tree', type=Path, required=True, help='reviewed isolated candidate tree')
-    parser.add_argument('--out', type=Path, required=True, help='new output directory outside both checkouts')
-    parser.add_argument('--pins', type=Path, required=True, help='independently supplied pin file (JSON)')
+    parser.add_argument('--out', type=Path, help='new output directory outside both checkouts')
+    parser.add_argument('--pins', type=Path, help='independently supplied pin file (JSON)')
+    parser.add_argument('--print-tree-digest', action='store_true',
+                        help='print the tree digest of the reviewed tree (release preparation) and stop')
     args = parser.parse_args(argv)
     try:
-        tree, out = args.tree.resolve(strict=True), args.out.resolve()
+        tree = args.tree.resolve(strict=True)
+        if args.print_tree_digest:
+            print(tree_digest(tree))
+            return 0
+        if args.out is None or args.pins is None:
+            parser.error('--out and --pins are required to render')
+        out = args.out.resolve()
         if any(out.is_relative_to(root) for root in (tree, ROOT)):
             raise ValueError('output must be outside the controller and candidate trees')
         html, receipt = render(tree, json.loads(args.pins.read_text(encoding='utf-8')))

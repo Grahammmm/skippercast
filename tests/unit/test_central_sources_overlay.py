@@ -76,6 +76,7 @@ def _write(root, docs):
             pins['catalogue'] = sha256(raw).hexdigest()
         else:
             pins['regions'].setdefault(region, {})[name] = sha256(raw).hexdigest()
+    pins['tree'] = overlay.tree_digest(root)  # the page, region configs and every file the collector may read
     return pins
 
 
@@ -87,6 +88,14 @@ def _args(candidate, pins_edit=None):
     pin_file = root.parent / 'pins.json'
     pin_file.write_text(json.dumps(pins))
     return ['--tree', str(root), '--out', str(output), '--pins', str(pin_file)]
+
+
+def _repin_tree(root):
+    """Re-pin the whole tree after a deliberate edit, so only the per-input pins can still refuse."""
+    pin_file = root.parent / 'pins.json'
+    pins = json.loads(pin_file.read_text())
+    pins['tree'] = overlay.tree_digest(root)
+    pin_file.write_text(json.dumps(pins))
 
 
 def test_stage_page_replaces_only_pinned_central_regions(candidate, capsys):
@@ -120,9 +129,57 @@ def test_edited_inputs_are_refused_without_output(candidate, capsys, key):
     name, _, region = key.partition(':')
     path = root / (overlay.CATALOGUE if name == 'catalogue' else overlay._path(region, name))
     path.write_bytes(path.read_bytes() + b' ')
+    _repin_tree(root)
     assert overlay.main(args) == 2
     assert 'SHA-256 differs' in capsys.readouterr().err
     assert not out.exists()
+
+
+# Contract: every file that can change the output is bound by the reviewed pins, not only the five named inputs.
+# Bug caught: the page (spliced verbatim outside the generated block) or a collector-read file (region config, other
+# pointer, asset) is edited, every per-input pin still matches, and an altered page is produced instead of a refusal.
+@pytest.mark.parametrize('edit', ['page_before_register', 'region_config', 'other_pointer', 'new_file', 'symlink'])
+def test_edit_outside_the_named_inputs_is_refused_without_output(candidate, capsys, edit):
+    root, out, page, _ = candidate
+    args = _args(candidate)
+    if edit == 'page_before_register':
+        page.write_text('<p>Injected</p>' + page.read_text(encoding='utf-8'), encoding='utf-8')
+    elif edit == 'region_config':
+        (root / 'regions/elsewhere').mkdir(parents=True)
+        (root / 'regions/elsewhere/region.json').write_text('{"status": "active"}')
+    elif edit == 'other_pointer':
+        (root / 'catalog/relief/big-sur-coast.json').write_text('{}')
+    elif edit == 'new_file':
+        (root / 'dist/extra.js').write_text('fetch("https://example.invalid")')
+    else:
+        (root / 'dist/link').symlink_to('sources.html')
+    assert overlay.main(args) == 2
+    assert 'tree: SHA-256 differs from the reviewed pin' in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_tree_changed_while_rendering_is_refused(candidate, capsys, monkeypatch):
+    # Bug caught: an input rewritten between the pin check and the splice still reaches the output.
+    root, out, page, _ = candidate
+    args = _args(candidate)
+    collect = overlay.register.collect
+
+    def edit_then_collect(tree):
+        page.write_text('<p>Late</p>' + page.read_text(encoding='utf-8'), encoding='utf-8')
+        return collect(tree)
+
+    monkeypatch.setattr(overlay.register, 'collect', edit_then_collect)
+    assert overlay.main(args) == 2
+    assert 'changed while the overlay was rendered' in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_reviewed_tree_digest_is_printed_for_release_preparation(candidate, capsys):
+    # Bug caught: no way to record the tree pin from the reviewed tree, so it would be calculated from the render input.
+    root, _, _, docs = candidate
+    pins = _write(root, docs)
+    assert overlay.main(['--tree', str(root), '--print-tree-digest']) == 0
+    assert capsys.readouterr().out.strip() == pins['tree']
 
 
 @pytest.mark.parametrize('problem,expected', [
@@ -170,6 +227,13 @@ def test_only_central_regions_with_whole_pins_are_accepted(candidate, capsys):
         del pins['regions'][TERRAIN_REGION]['pointer']
 
     assert overlay.main(_args(candidate, no_pointer)) == 2
+    assert not out.exists()
+
+    def no_tree(pins):
+        del pins['tree']
+
+    assert overlay.main(_args(candidate, no_tree)) == 2
+    assert 'no tree pin was given' in capsys.readouterr().err
     assert not out.exists()
 
 
