@@ -223,7 +223,7 @@ def check_survey(root: Path, rows: list[dict]) -> None:
 
     Releases without the companion are unchanged. With it, both wires must decode to their pinned
     representations and the companion must equal the detail's tier-none subset (survey_delivery.gap_document)."""
-    survey = {row['path']: row for row in rows if row['path'].startswith(survey_delivery.PREFIX)}
+    survey = {row['path']: row for row in rows if survey_delivery.is_survey_path(row['path'])}
     try:
         members = survey_delivery.pointer_members(survey)
         if 'survey_gap' not in members:

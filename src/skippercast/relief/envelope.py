@@ -137,7 +137,7 @@ def survey_pointer_member(release: dict) -> dict:
 
     Original releases have no survey-detail pair; others have the detail pair, optionally with its derived
     no-survey companion (``survey_gap``, checked against the detail at package time)."""
-    rows = {r['path']: r for r in package.release_layers(release) if r['path'].startswith(survey_delivery.PREFIX)}
+    rows = {r['path']: r for r in package.release_layers(release) if survey_delivery.is_survey_path(r['path'])}
     try:
         return survey_delivery.pointer_members(rows)
     except ValueError as exc:
