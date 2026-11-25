@@ -23,7 +23,13 @@ name: Morro stage preview
 #      production name, route, schedule and bucket and binds the candidate commit and
 #      the reviewed pointer digest; the plan is re-run after the build;
 #   4. relief objects go only to the *-stage bucket (create-only, full read-back);
-#   5. the preview must then serve exactly the planned commit and pointer bytes.
+#   5. the preview must then serve exactly the planned commit and pointer bytes, the
+#      pinned detail and overview contour bytes, and the /sources page this run built.
+# The /sources credits are rendered from the candidate's pinned files BEFORE the build
+# (scripts/relief/morro_sources_overlay.py), because the build names the page the Worker
+# serves; a copy after the build is never served (M9 receipt 230aecce).
+# Every dispatch is held at the second step until G's PREVIEWSITE approval is recorded
+# by a separate reviewed change that removes that step. Merging this file deploys nothing.
 # Receipts (plan, config digest, served check) are kept as a run artifact. They are
 # hosted evidence for the release packet, not an R8 verdict and not a go-live.
 on:
@@ -35,6 +41,18 @@ on:
         required: true
       pointer_sha256:
         description: "SHA-256 of the reviewed catalog/relief/morro-bay.json bytes"
+        type: string
+        required: true
+      detail_sha256:
+        description: "SHA-256 of the reviewed dist/regions/morro-bay/depth-contours.geojson bytes"
+        type: string
+        required: true
+      overview_sha256:
+        description: "SHA-256 of the reviewed dist/regions/morro-bay/depth-contours-overview.geojson bytes"
+        type: string
+        required: true
+      catalogue_sha256:
+        description: "SHA-256 of the release rights pin, the candidate's catalog/sources.json bytes"
         type: string
         required: true
       origin:
@@ -66,6 +84,9 @@ jobs:
     env:
       CANDIDATE: ${{ inputs.candidate }}
       POINTER_SHA256: ${{ inputs.pointer_sha256 }}
+      DETAIL_SHA256: ${{ inputs.detail_sha256 }}
+      OVERVIEW_SHA256: ${{ inputs.overview_sha256 }}
+      CATALOGUE_SHA256: ${{ inputs.catalogue_sha256 }}
       STAGE_URL: ${{ inputs.origin }}
       PLAN_DIR: ${{ runner.temp }}/morro-stage-plan
     steps:
@@ -85,10 +106,12 @@ jobs:
             echo "::error::Morro stage preview held: candidate must be a full lowercase commit SHA."
             exit 1
           fi
-          if ! [[ "$POINTER_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
-            echo "::error::Morro stage preview held: pointer digest must be 64 lowercase hex digits."
-            exit 1
-          fi
+          for pin in "$POINTER_SHA256" "$DETAIL_SHA256" "$OVERVIEW_SHA256" "$CATALOGUE_SHA256"; do
+            if ! [[ "$pin" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::Morro stage preview held: every digest (pointer, detail, overview, catalogue) must be 64 lowercase hex digits."
+              exit 1
+            fi
+          done
           # The whole value, not line by line (a multi-line value is held), with the same DNS-label rule as
           # the controller's check_origin.
           origin_re='^https://'"$STAGE_WORKER"'\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.workers\.dev$'
@@ -100,11 +123,12 @@ jobs:
             echo "::error::Morro stage preview held: Cloudflare credentials are not configured."
             exit 1
           fi
-      - name: Hold until the /sources credits overlay is built in
+      - name: Hold every dispatch until G approves the preview site (PREVIEWSITE)
         run: |
-          # A plain build names a /sources page without the candidate's shading and contour credits, and a copy
-          # after the build is not what the Worker serves. Until the overlay runs before the build, nothing deploys.
-          echo "::error::Morro stage preview held: the /sources credits overlay is not wired into the build yet."
+          # Hosting a preview uses the Cloudflare key, so it needs G's explicit PREVIEWSITE approval. That approval
+          # is recorded by a separate reviewed change that removes this step; until then nothing checks out,
+          # builds or deploys, whether or not this file is on main.
+          echo "::error::Morro stage preview held: G's PREVIEWSITE approval is not recorded yet."
           exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -140,6 +164,25 @@ jobs:
           python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" plan --tree . --sha "$CANDIDATE"
           --pointer-sha256 "$POINTER_SHA256" --wrangler "$CONTROLLER/wrangler.jsonc"
           --worker "$STAGE_WORKER" --bucket "$STAGE_BUCKET" --out "$PLAN_DIR"
+      - name: Render the candidate's /sources credits from its pinned files
+        run: |
+          # Reviewed main's own overlay script: the scope guard proved the candidate's code equals the controller
+          # commit. It refuses unless the four files match the dispatch pins, and writes only outside both trees.
+          python3 -I scripts/relief/morro_sources_overlay.py --tree . --out "$RUNNER_TEMP/sources-overlay" \
+            --pointer-sha256 "$POINTER_SHA256" --detail-sha256 "$DETAIL_SHA256" \
+            --overview-sha256 "$OVERVIEW_SHA256" --catalogue-sha256 "$CATALOGUE_SHA256" > "$PLAN_DIR/sources-overlay.json"
+      - name: Feed the /sources overlay into the build input
+        run: |
+          # Only the page whose hash the overlay receipt names, and only as the build's input page: the build
+          # then names and fingerprints it. A copy after the build is never what the Worker serves.
+          want=$(jq -er '.html_sha256 | select(test("^[0-9a-f]{64}$"))' "$PLAN_DIR/sources-overlay.json") || {
+            echo "::error::Morro stage preview held: the /sources overlay receipt has no page digest."; exit 1; }
+          got=$(sha256sum "$RUNNER_TEMP/sources-overlay/sources.html" | cut -d' ' -f1)
+          if [ "$got" != "$want" ]; then
+            echo "::error::Morro stage preview held: the /sources overlay page differs from its receipt."
+            exit 1
+          fi
+          cp "$RUNNER_TEMP/sources-overlay/sources.html" dist/sources.html
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
@@ -152,6 +195,11 @@ jobs:
         run: |
           pnpm build
           node scripts/check_client.mjs
+          # Keep the page the Worker will serve at /sources: the build-named shell made from the overlay.
+          build_id=$(jq -er '.build | select(test("^[0-9a-f]{10}$"))' dist/client/precache.json)
+          cp "dist/client/sources.$build_id.html" "$PLAN_DIR/sources-shell.html"
+          # The overlay was a build input only; the re-plan below sees the candidate exactly as checked out.
+          git checkout -- dist/sources.html
           # The served receipt names the candidate commit only (no production switches).
           node "$CONTROLLER/scripts/wrangler_config.mjs" --snapshot "$CANDIDATE" dist/client/deploy.json
       - name: Re-plan after the build (only dependencies and build output may have appeared)
@@ -187,23 +235,32 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: $WRANGLER deploy --config wrangler.stage.json --message "Morro stage preview ${CANDIDATE} (run ${GITHUB_RUN_ID})"
-      - name: Require the preview to serve exactly the planned commit and pointer
+      - name: Require the preview to serve exactly the planned commit, pointer, contours and /sources
         run: |
           mkdir -p "$PLAN_DIR/served"
+          served="$PLAN_DIR/served"
           # Edge caches can lag a fresh deploy: up to 6 reads 10 s apart, then the last verdict stands.
           for attempt in 1 2 3 4 5 6; do
-            rm -f "$PLAN_DIR/served/deploy.json" "$PLAN_DIR/served/pointer.json"
-            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/deploy.json" -o "$PLAN_DIR/served/deploy.json" || echo '{}' > "$PLAN_DIR/served/deploy.json"
-            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/catalog/relief/morro-bay.json" -o "$PLAN_DIR/served/pointer.json" || rm -f "$PLAN_DIR/served/pointer.json"
-            if python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" verify --plan "$PLAN_DIR/plan.json" \
-                 --deploy-json "$PLAN_DIR/served/deploy.json" --pointer "$PLAN_DIR/served/pointer.json" > "$PLAN_DIR/served/verify.json"; then
-              cat "$PLAN_DIR/served/verify.json"
+            rm -f "$served/deploy.json" "$served/pointer.json" "$served/detail.geojson" "$served/overview.geojson" "$served/sources.html"
+            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/deploy.json" -o "$served/deploy.json" || echo '{}' > "$served/deploy.json"
+            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/catalog/relief/morro-bay.json" -o "$served/pointer.json" || rm -f "$served/pointer.json"
+            curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/morro-bay/depth-contours.geojson" -o "$served/detail.geojson" || rm -f "$served/detail.geojson"
+            curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/morro-bay/depth-contours-overview.geojson" -o "$served/overview.geojson" || rm -f "$served/overview.geojson"
+            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/sources" -o "$served/sources.html" || rm -f "$served/sources.html"
+            ok=1
+            python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" verify --plan "$PLAN_DIR/plan.json" \
+              --deploy-json "$served/deploy.json" --pointer "$served/pointer.json" > "$served/verify.json" || ok=0
+            [ "$(sha256sum "$served/detail.geojson" 2>/dev/null | cut -d' ' -f1)" = "$DETAIL_SHA256" ] || { ok=0; echo "served detail contours differ from the pin"; }
+            [ "$(sha256sum "$served/overview.geojson" 2>/dev/null | cut -d' ' -f1)" = "$OVERVIEW_SHA256" ] || { ok=0; echo "served overview contours differ from the pin"; }
+            cmp -s "$served/sources.html" "$PLAN_DIR/sources-shell.html" || { ok=0; echo "served /sources is not the page this run built"; }
+            if [ "$ok" = 1 ]; then
+              cat "$served/verify.json"
               exit 0
             fi
             if [ "$attempt" -lt 6 ]; then sleep 10; fi
           done
-          cat "$PLAN_DIR/served/verify.json"
-          echo "::error::Morro stage preview does not serve the planned commit and pointer."
+          cat "$served/verify.json"
+          echo "::error::Morro stage preview does not serve the planned commit, pointer, contours and /sources page."
           exit 1
       - name: Keep the stage receipts
         if: always()
@@ -214,6 +271,8 @@ jobs:
           path: |
             ${{ runner.temp }}/morro-stage-plan/plan.json
             ${{ runner.temp }}/morro-stage-plan/wrangler.stage.json
+            ${{ runner.temp }}/morro-stage-plan/sources-overlay.json
+            ${{ runner.temp }}/morro-stage-plan/sources-shell.html
             ${{ runner.temp }}/morro-stage-plan/served/
           if-no-files-found: warn
           retention-days: 90

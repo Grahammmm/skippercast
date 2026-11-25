@@ -24,6 +24,7 @@ WORKFLOW = yaml.safe_load(WORKFLOW_TEXT)
 STEPS = WORKFLOW['jobs']['preview']['steps']
 POINTER = {'schema': 'sc-relief-pointer/1', 'region': 'morro-bay', 'generation': 'a' * 64}
 ORIGIN = 'https://skippercast-morro-stage.fixture-account.workers.dev'
+PINS = {'DETAIL_SHA256': 'c' * 64, 'OVERVIEW_SHA256': 'd' * 64, 'CATALOGUE_SHA256': 'e' * 64}
 
 
 def git(repo, *args):
@@ -74,7 +75,8 @@ def step(name_prefix):
 def test_workflow_runs_only_on_manual_dispatch_from_protected_main():
     triggers = WORKFLOW[True]  # YAML 1.1 reads the `on:` key as a boolean
     assert list(triggers) == ['workflow_dispatch']
-    assert set(triggers['workflow_dispatch']['inputs']) == {'candidate', 'pointer_sha256', 'origin'}
+    assert set(triggers['workflow_dispatch']['inputs']) == {'candidate', 'pointer_sha256', 'detail_sha256',
+                                                            'overview_sha256', 'catalogue_sha256', 'origin'}
     assert WORKFLOW['permissions'] == {'contents': 'read'}
     job = WORKFLOW['jobs']['preview']
     assert list(WORKFLOW['jobs']) == ['preview']
@@ -116,7 +118,8 @@ def test_guards_run_from_the_controller_before_dependencies_build_or_any_credent
     assert 'scripts/relief/morro_stage_preview.py' in sparse and 'scripts/relief/morro_stage_controller.py' in sparse
     order = [step('Reject a non-main dispatch'), STEPS.index(controller_checkout), step('Move the controller'),
              STEPS.index(candidate_checkout), step('Require the candidate to change only Morro data'),
-             step('Plan the isolated stage config'), step('Install locked web dependencies'),
+             step('Plan the isolated stage config'), step("Render the candidate's /sources credits"),
+             step('Feed the /sources overlay into the build input'), step('Install locked web dependencies'),
              step('Build Worker and fingerprinted site'), step('Re-plan after the build'),
              step('Create the stage bucket'), step('Copy the candidate'), step('Place the checked stage config'),
              step('Deploy the stage Worker only'), step('Require the preview to serve exactly')]
@@ -126,18 +129,65 @@ def test_guards_run_from_the_controller_before_dependencies_build_or_any_credent
         assert '"$CONTROLLER/scripts/relief/' in STEPS[step(name)]['run']
     assert '--worker "$STAGE_WORKER" --bucket "$STAGE_BUCKET"' in STEPS[step('Plan the isolated')]['run']
     assert 'cmp "$PLAN_DIR/plan.json" "$PLAN_DIR.rebuilt/plan.json"' in STEPS[step('Re-plan after')]['run']
-    # No credential reaches the candidate's own dependency install or build scripts.
-    for name in ('Install locked web dependencies', 'Build Worker and fingerprinted site'):
+    # No credential reaches the candidate's own dependency install, overlay or build scripts.
+    for name in ('Install locked web dependencies', 'Build Worker and fingerprinted site',
+                 "Render the candidate's /sources credits", 'Feed the /sources overlay'):
         assert 'env' not in STEPS[step(name)]
     assert 'secrets.' not in json.dumps(WORKFLOW['jobs']['preview']['env'])
 
 
-def test_nothing_deploys_until_the_sources_overlay_runs_before_the_build():
-    # Interim fail-closed hold: a plain build serves stale /sources credits (M9 receipt 230aecce).
-    hold = STEPS[step('Hold until the /sources credits overlay')]
+def test_nothing_runs_until_g_approves_the_preview_site():
+    # PREVIEWSITE hold: merging the workflow deploys nothing; a separate reviewed change removes this step.
+    hold = STEPS[step('Hold every dispatch until G approves the preview site (PREVIEWSITE)')]
     assert hold['run'].rstrip().endswith('exit 1') and 'env' not in hold
-    assert step('Reject a non-main dispatch') < step('Hold until the /sources credits overlay') < min(
+    assert step('Reject a non-main dispatch') < step('Hold every dispatch until G approves') < min(
         i for i, s in enumerate(STEPS) if str(s.get('uses', '')).startswith('actions/checkout@'))
+
+
+def test_sources_credits_are_a_build_input_and_the_served_page_is_the_built_one():
+    # M9 receipt 230aecce: a plain build serves stale credits and a copy after the build is never served, so the
+    # overlay (pinned to all four dispatch digests) feeds dist/sources.html before the build names the page.
+    render = STEPS[step("Render the candidate's /sources credits")]['run']
+    for flag in ('--pointer-sha256 "$POINTER_SHA256"', '--detail-sha256 "$DETAIL_SHA256"',
+                 '--overview-sha256 "$OVERVIEW_SHA256"', '--catalogue-sha256 "$CATALOGUE_SHA256"'):
+        assert flag in render
+    assert '--out "$RUNNER_TEMP/sources-overlay"' in render
+    assert step('Feed the /sources overlay') < step('Build Worker and fingerprinted site')
+    build = STEPS[step('Build Worker and fingerprinted site')]['run']
+    assert build.index('pnpm build') < build.index('sources-shell.html') < build.index('git checkout -- dist/sources.html')
+    served = STEPS[step('Require the preview to serve exactly')]['run']
+    for check in ('"$STAGE_URL/sources"', 'cmp -s "$served/sources.html" "$PLAN_DIR/sources-shell.html"',
+                  '= "$DETAIL_SHA256"', '= "$OVERVIEW_SHA256"'):
+        assert check in served
+
+
+def feed(tmp_path, receipt, page=b'<html>credits</html>\n'):
+    (tmp_path / 'sources-overlay').mkdir()
+    (tmp_path / 'sources-overlay/sources.html').write_bytes(page)
+    plan = tmp_path / 'plan'
+    plan.mkdir()
+    (plan / 'sources-overlay.json').write_text(json.dumps(receipt))
+    tree = tmp_path / 'tree'
+    (tree / 'dist').mkdir(parents=True)
+    (tree / 'dist/sources.html').write_bytes(b'stale\n')
+    env = {'PATH': os.environ['PATH'], 'RUNNER_TEMP': str(tmp_path), 'PLAN_DIR': str(plan)}
+    result = subprocess.run(['bash', '-e', '-o', 'pipefail'], input=STEPS[step('Feed the /sources overlay')]['run'],
+                            env=env, cwd=tree, capture_output=True, text=True)
+    return result, (tree / 'dist/sources.html').read_bytes()
+
+
+def test_feed_places_only_the_page_its_receipt_names(tmp_path):
+    page = b'<html>credits</html>\n'
+    result, placed = feed(tmp_path, {'html_sha256': hashlib.sha256(page).hexdigest()}, page)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert placed == page
+
+
+@pytest.mark.parametrize('receipt', [{'html_sha256': 'f' * 64}, {'html_sha256': 'F' * 64}, {}, {'html_sha256': None}])
+def test_feed_holds_a_page_that_differs_from_its_receipt(tmp_path, receipt):
+    result, placed = feed(tmp_path, receipt)
+    assert result.returncode == 1 and 'held' in result.stdout
+    assert placed == b'stale\n'
 
 
 def test_every_action_is_pinned_to_a_full_commit():
@@ -159,6 +209,11 @@ def test_every_action_is_pinned_to_a_full_commit():
     ({'CANDIDATE': 'not-a-sha\n' + 'a' * 40}, 'full lowercase commit'),
     ({'POINTER_SHA256': 'b' * 64 + '\nx'}, '64 lowercase hex'),
     ({'POINTER_SHA256': 'x\n' + 'b' * 64}, '64 lowercase hex'),
+    # The overlay pins get the same whole-value rule (missing, short, uppercase or multi-line all hold).
+    ({'DETAIL_SHA256': ''}, '64 lowercase hex'),
+    ({'OVERVIEW_SHA256': 'c' * 63}, '64 lowercase hex'),
+    ({'CATALOGUE_SHA256': 'D' * 64}, '64 lowercase hex'),
+    ({'DETAIL_SHA256': 'c' * 64 + '\nx'}, '64 lowercase hex'),
     ({'STAGE_URL': ''}, 'origin must be'),
     ({'STAGE_URL': 'https://skippercast.fixture-account.workers.dev'}, 'origin must be'),
     ({'STAGE_URL': 'https://skippercast.com'}, 'origin must be'),
@@ -179,7 +234,7 @@ def test_the_first_step_holds_bad_dispatches_before_checkout(change, held):
     env = {'PATH': os.environ['PATH'], 'GITHUB_REF': 'refs/heads/main', 'GITHUB_REF_PROTECTED': 'true',
            'STAGE_WORKER': WORKFLOW['env']['STAGE_WORKER'],
            'CANDIDATE': 'a' * 40, 'POINTER_SHA256': 'b' * 64, 'HAS_TOKEN': 'true', 'HAS_ACCOUNT': 'true',
-           'HAS_R2': 'true', 'STAGE_URL': ORIGIN, **change}
+           'HAS_R2': 'true', 'STAGE_URL': ORIGIN, **PINS, **change}
     result = subprocess.run(['bash', '-e', '-o', 'pipefail'], input=script, env=env, capture_output=True, text=True)
     if held is None:
         assert result.returncode == 0, result.stdout + result.stderr
@@ -199,7 +254,7 @@ def test_the_first_step_and_place_config_agree_on_every_origin():
     for origin in origins:
         env = {'PATH': os.environ['PATH'], 'GITHUB_REF': 'refs/heads/main', 'GITHUB_REF_PROTECTED': 'true',
                'STAGE_WORKER': worker, 'CANDIDATE': 'a' * 40, 'POINTER_SHA256': 'b' * 64, 'HAS_TOKEN': 'true',
-               'HAS_ACCOUNT': 'true', 'HAS_R2': 'true', 'STAGE_URL': origin}
+               'HAS_ACCOUNT': 'true', 'HAS_R2': 'true', 'STAGE_URL': origin, **PINS}
         step_ok = subprocess.run(['bash', '-e', '-o', 'pipefail'], input=script, env=env, capture_output=True,
                                  text=True).returncode == 0
         try:
