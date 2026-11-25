@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {signal} from '@preact/signals';
 import {attachBottomRelief} from '../web/map/bottom-relief.ts';
+import {chartMark} from '../web/map/chart.ts';
 import {contoursOverlay} from '../web/map/depth-contours.ts';
 import {PALETTE_TOKENS, readPalette} from '../web/map/palette.ts';
 import {assertThemePaintOracle} from './theme-paint-oracle.mjs';
@@ -80,4 +81,54 @@ test('both contour generations restyle to fresh paint in both directions', () =>
     const build = p => contoursOverlay(p, data);
     assertThemePaintOracle({palettes, build, provider: build(palettes.dark)});
   }
+});
+
+// Contract: survey detail is opt-in, and "off" means off. The transparent hit layer stays mounted after the toggle,
+// so a tap on open water must not open a survey reading while detail is off, and switching off must close a survey
+// reading that is already open (and take the survey line back off a coastline card). Bug caught: a tap after
+// on -> off still opens "Survey detail" because show() never checked the toggle.
+test('survey hit layer answers only while detail is on, and switching off closes its reading', async t => {
+  const dataset = {theme: 'dark'}, canvas = {
+    scale() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
+    getImageData(_x, _y, width, height) { return {width, height, ink: this.strokeStyle, widthPx: this.lineWidth}; },
+  };
+  const tokens = new Map(Object.entries(PALETTE_TOKENS).map(([key, token]) => [`--${token}`, key]));
+  const globals = {
+    document: {documentElement: {dataset}, createElement: tag => tag === 'canvas' ? {getContext: () => canvas} : {append() {}, setAttribute() {}}},
+    getComputedStyle: () => ({getPropertyValue: name => palettes[dataset.theme][tokens.get(name)]}),
+    MutationObserver: class { observe() {} },
+  };
+  const old = Object.fromEntries(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  Object.assign(globalThis, globals);
+  t.after(() => { chartMark.value = null; for (const [key, desc] of Object.entries(old)) { if (desc) Object.defineProperty(globalThis, key, desc); else delete globalThis[key]; } });
+  let overlay, view;
+  const installed = new Promise((ready, unavailable) => {
+    const handle = attachBottomRelief({region, surveyDetail, ready, unavailable, page: 'https://fixture.test/map',
+      surveyView: next => { view = next; },
+      engine: {setOverlay: (_, next) => { overlay = next; }, setVisible() {}, renderedValues: () => [], view: {on: () => () => {}}},
+      library: {addProtocol() {}}, seafloorOn: () => false, fieldOn: () => false, fetchFn: async () => Response.json(pointer)});
+    t.after(() => handle.destroy());
+  });
+  await installed;
+  const tap = () => overlay.inspect.show({tier: 'none'});
+  const surveyOpen = () => chartMark.peek()?.id.endsWith('-survey');
+
+  tap();
+  assert.equal(chartMark.peek(), null, 'detail never switched on: no survey reading');
+  view.toggle();
+  tap();
+  assert.ok(surveyOpen(), 'detail on: open water opens the survey reading');
+  view.toggle();
+  assert.equal(chartMark.peek(), null, 'switching off closes the open survey reading');
+  tap();
+  assert.equal(chartMark.peek(), null, 'detail off again: the still-mounted hit layer must stay silent');
+
+  const coast = {id: 'coastline:fixture', name: 'Shore', kind: 'coast', reading: 'Shoreline', source: '', basis: ''};
+  chartMark.value = coast;
+  view.toggle();
+  tap();
+  assert.notEqual(chartMark.peek(), coast, 'detail on: the coastline card gains the survey line');
+  assert.match(chartMark.peek().reading, /^Shoreline · /);
+  view.toggle();
+  assert.equal(chartMark.peek(), coast, 'switching off restores the plain coastline card');
 });

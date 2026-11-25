@@ -186,7 +186,17 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
     const available = () => !!detail.peek()?.features.length && !!surveyHatchPattern(pattern, readPalette(), isLight()).length;
     let pending = false, refused = false, detailOn = false, detailIds: string[] = [];
     const control = available() && !o.surveyView ? document.createElement('div') : null;
-    const setDetail = () => { for (const id of detailIds) o.engine.setVisible(id, detailOn); };
+    // The coastline card with the survey line appended, and the card it was before that.
+    let merged: ReturnType<typeof chartMark.peek>, original: ReturnType<typeof chartMark.peek>;
+    const setDetail = () => {
+      for (const id of detailIds) o.engine.setVisible(id, detailOn);
+      if (detailOn) return;
+      // Off means off: close an open survey reading, and take the survey line back off a coastline card.
+      const open = chartMark.peek();
+      if (open?.id === survey) chartMark.value = null;
+      else if (open && open === merged) chartMark.value = original ?? null;
+      merged = original = null;
+    };
     const updateView = () => {
       if (!o.surveyView || signal.aborted) return;
       if (!available() && (!binding || refused)) { o.surveyView(null); return; }
@@ -263,10 +273,13 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
               if (detailOn && picked.id.startsWith('coastline:') && properties.tier === 'none') {
                 const key = 'legend.surveyDetail.chip.none' as const;
                 const title = 'legend.surveyDetail.title' as const;
-                chartMark.value = {...picked, reading: `${picked.reading} · ${t(title, 'en')}: ${t(key, 'en')}`, copy: {...picked.copy, reading: [...(picked.copy?.reading ?? [picked.reading]), ' · ', {id:title}, ': ', {id:key}]}};
+                if (picked !== merged) original = picked;
+                chartMark.value = merged = {...picked, reading: `${picked.reading} · ${t(title, 'en')}: ${t(key, 'en')}`, copy: {...picked.copy, reading: [...(picked.copy?.reading ?? [picked.reading]), ' · ', {id:title}, ': ', {id:key}]}};
               }
               return;
             }
+            // The transparent hit layer stays mounted while detail is off; it must not answer open-water taps then.
+            if (!detailOn) return;
             const lang = language.peek();
             const reading = properties.tier === 'estimated' && typeof properties.grid_m === 'number'
               ? t('legend.surveyDetail.estimateGrid', lang, {grid: properties.grid_m})
