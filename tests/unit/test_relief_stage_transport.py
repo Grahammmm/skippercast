@@ -577,3 +577,16 @@ def test_workflow_requires_stage_success_and_isolates_the_secret_step():
     assert {k for k, v in copy_step['env'].items() if 'secrets.' in v} == {'R2_PUBLISH_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'}
     assert all('secrets.' not in repr(value) for value in (job['env'], job['steps'][:-1]))
     assert '.stage-controller/scripts/relief/stage_release.py' in copy_step['run']
+
+
+def test_survey_controller_decoder(tmp_path, monkeypatch):
+    # A hosted runner missing libbrotlidec cannot verify the survey's second pin.
+    from skippercast.relief import survey_delivery as sd
+    body = tmp_path / 'sample.br'
+    body.write_bytes(bytes.fromhex('0b018061626303'))  # Brotli for abc
+    sd.check_decoded(body, {'decoded': {'bytes': 3, 'sha256': digest(b'abc')}})
+    def missing(_):
+        raise OSError('fixture: absent')
+    monkeypatch.setattr(sd.ctypes, 'CDLL', missing)
+    with pytest.raises(ValueError, match='requires libbrotlidec'):
+        sd.decoder()

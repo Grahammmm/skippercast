@@ -95,7 +95,7 @@ export interface Overlay extends Provider {
   readonly pattern?: {readonly id: string; readonly image: ImageData; readonly pixelRatio: number};
   readonly control?: HTMLElement;
   /** Open-water fallback, after the existing Chart pick and its waypoint handling. */
-  readonly inspect?: {readonly layer: string; show(properties: Record<string, unknown>): void};
+  readonly inspect?: {readonly layer: string; readonly alongside?: string; show(properties: Record<string, unknown>): void};
   /** RF1935-3: the first source error removes this overlay's layers and sources and is reported once; nothing re-adds the same object. */
   readonly stopOnError?: boolean;
 }
@@ -273,7 +273,8 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
       const feature = query(options.pickFirst?.() ?? []) ?? query(options.pickLayers ?? []);
       const layer = feature?.layer.id ?? null, properties = feature ? feature.properties as Record<string, unknown> : null;
       let inspect: (() => void) | undefined;
-      if (!feature) for (const [owner, {inspect: candidate}] of overlays) {
+      for (const [owner, {inspect: candidate}] of overlays) {
+        if (feature && candidate?.alongside !== layer) continue;
         const hit = candidate && query([candidate.layer]);
         if (hit) {
           inspect = () => { if (overlays.get(owner)?.inspect === candidate) candidate.show(hit.properties); };

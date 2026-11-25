@@ -102,10 +102,12 @@ def site(release, checkout):
     responses = {key: (200, {}, body) for key, body in release.objects.items()}
     responses['deploy.json'] = 200, {}, encoded({'commit': checkout.deployed})
     requests = []
+    encodings = {}
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             requests.append((self.command, self.path, self.headers.get('Range')))
+            encodings[self.path] = self.headers.get('Accept-Encoding')
             status, headers, body = responses.get(self.path.removeprefix('/'), (404, {}, b''))
             self.send_response(status)
             for key, value in headers.items():
@@ -124,7 +126,7 @@ def site(release, checkout):
         thread.start()
         try:
             yield SimpleNamespace(base=f'http://127.0.0.1:{server.server_port}',
-                                  responses=responses, requests=requests)
+                                  responses=responses, requests=requests, encodings=encodings)
         finally:
             server.shutdown()
             thread.join()
@@ -160,6 +162,44 @@ def test_C1_dispatch_fetches_new_descendant_and_proves_merge_not_head(checkout, 
     assert json.loads(checkout.report.read_bytes()) == report(
         checkout, site, checkout.deployed, verified(release) + [row('contours', 'none-merged', key=CONTOURS)], 'PASS', 8)
     assert site.requests == trace('deploy.json', POINTER, release.archive, release.root, *release.chunks, CONTOURS)
+
+
+@pytest.mark.parametrize('case, reason', [
+    ('match', 'identical'), ('missing', 'missing'), ('redirect', 'redirect'),
+    ('encoding', 'content-encoding'), ('length', 'content-length'), ('type', 'content-type'),
+    ('wire', 'wire-sha256'), ('decoded', 'decoded-mismatch'),
+])
+def test_survey_delivery_proves_the_browser_feed(checkout, release, site, case, reason):
+    """A matching pointer and legacy assets alone cannot prove usable survey delivery."""
+    wire = bytes.fromhex('8b00807b7d03')  # Brotli stream for b'{}'
+    pins = {'wire': {'bytes': len(wire), 'sha256': sha256(wire).hexdigest()},
+            'decoded': {'bytes': 2, 'sha256': sha256(b'[]' if case == 'decoded' else b'{}').hexdigest()}}
+    envelope = 'b' * 64
+    raw = encoded(dict(release.pointer, envelope_sha256=envelope, survey_detail=pins))
+    (checkout.repo / POINTER).write_bytes(raw)
+    merge = commit(checkout.repo, 'Candidate survey pointer (unmerged)')
+    site.responses['deploy.json'] = 200, {}, encoded({'commit': merge})
+    site.responses[POINTER] = 200, {}, raw
+    key = f'feeds/tiles/relief/{REGION}/{envelope}/survey/{pins["wire"]["sha256"]}.geojson.br'
+    if case == 'redirect':
+        site.responses[key] = 302, {'Location': '/wrong-origin'}, b''
+    elif case != 'missing':
+        body = {'length': wire + b'x', 'wire': b'x' + wire[1:]}.get(case, wire)
+        site.responses[key] = 200, {'Content-Encoding': 'gzip' if case == 'encoding' else 'br',
+                                    'Content-Type': 'text/html' if case == 'type' else 'application/geo+json'}, body
+
+    if case == 'match':
+        # The extra survey GET lowers the safe polling limit for a two-zoom pointer.
+        assert live_check.main([*argv(checkout, site), '--wait', '12'], sleeper=pytest.fail) == 2
+        assert site.requests == []
+    passed = case == 'match'
+    assert live_check.main(argv(checkout, site)) == (0 if passed else 1)
+    result = json.loads(checkout.report.read_bytes())
+    key_check = row('survey', reason, fail=not passed, key=key)
+    assert result['checks'][-1] == (dict(key_check, **pins) if passed else key_check)
+    assert (result['verdict'], result['requests']) == ('PASS' if passed else 'FAIL', 9)
+    assert site.requests == trace('deploy.json', POINTER, release.archive, release.root, *release.chunks, CONTOURS, key)
+    assert site.encodings['/' + key] == 'br'
 
 
 @pytest.mark.parametrize('which, reason', [('merge', 'equal'), ('stale', 'stale'),
@@ -317,7 +357,7 @@ def test_C2_failed_fetch_removes_disposable_repo(checkout, site, monkeypatch, ca
 
 
 @pytest.mark.parametrize('case', ['region', 'base', 'dirty', 'repo-subdir', 'missing-pointer',
-                                  'invalid-generation', 'inside-clone', 'escaped-out'])
+                                  'invalid-generation', 'invalid-survey', 'inside-clone', 'escaped-out'])
 def test_C2_local_refusals_never_fetch_or_write(checkout, release, site, case):
     """C2: Bad local input is exit 2, not a deployment verdict or an unsafe path write."""
     args = argv(checkout, site)
@@ -334,6 +374,12 @@ def test_C2_local_refusals_never_fetch_or_write(checkout, release, site, case):
     elif case == 'invalid-generation':
         (checkout.repo / POINTER).write_bytes(encoded(dict(release.pointer, generation='../../escape')))
         commit(checkout.repo, 'Malformed local pointer')
+    elif case == 'invalid-survey':
+        pins = {kind: {'bytes': 1, 'sha256': 'a' * 64} for kind in ('wire', 'decoded')}
+        pins['decoded']['bytes'] = (16 << 20) + 1
+        (checkout.repo / POINTER).write_bytes(encoded(dict(
+            release.pointer, survey_detail=pins, envelope_sha256='b' * 64)))
+        commit(checkout.repo, 'Malformed local survey binding')
     elif case == 'inside-clone':
         args = argv(checkout, site, out=checkout.repo / 'forbidden')
     else:

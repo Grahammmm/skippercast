@@ -107,6 +107,12 @@ def run(env, *, probe):
     for pointer in selected:
         package.validate_schema(pointer, schema)
         package.validate_metadata(pointer, schema, registry)
+    if any('survey_detail' in pointer for pointer in selected):
+        from skippercast.relief import survey_delivery
+        try:
+            survey_delivery.decoder()
+        except ValueError as exc:
+            raise stage.StageError(str(exc)) from None
     gh = stage.GitHubRelease(env['STAGE_GITHUB_READ_TOKEN'])
 
     def recheck():

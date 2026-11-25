@@ -110,3 +110,12 @@ test('C3: the no-survey hatch is the always-on first layer in either theme', () 
     assert.deepEqual(tint.filter, ['in', ['get', 'tier'], ['literal', ['1m-measured', '2m', '5m']]]);
   }
 });
+
+// R8 phone QA: on the light theme the 1.4 px estimated outline merged with the
+// shoreline at z15. Only the light estimated boundary is wider; dark and measured stay put.
+test('C3: the light-theme estimated boundary is drawn wider than measured outlines', () => {
+  const outline = light => layers(light).find(({id}) => id === 'detail-outline');
+  assert.deepEqual(outline(true).paint['line-width'], ['case', ['==', ['get', 'tier'], 'estimated'], 2.8, 1.4]);
+  assert.equal(outline(false).paint['line-width'], 1.4);
+  for (const light of [false, true]) assert.deepEqual(outline(light).paint['line-dasharray'], [4, 3]);
+});
