@@ -79,7 +79,7 @@ def test_workflow_runs_only_on_manual_dispatch_from_protected_main():
                                                             'overview_sha256', 'catalogue_sha256', 'origin'}
     assert WORKFLOW['permissions'] == {'contents': 'read'}
     job = WORKFLOW['jobs']['preview']
-    assert list(WORKFLOW['jobs']) == ['preview']
+    assert list(WORKFLOW['jobs']) == ['fetch', 'preview']
     for clause in ("github.event_name == 'workflow_dispatch'", "github.repository == 'Grahammmm/skippercast'",
                    "github.ref == 'refs/heads/main'", 'github.ref_protected'):
         assert clause in job['if']
@@ -136,12 +136,37 @@ def test_guards_run_from_the_controller_before_dependencies_build_or_any_credent
     assert 'secrets.' not in json.dumps(WORKFLOW['jobs']['preview']['env'])
 
 
-def test_nothing_runs_until_g_approves_the_preview_site():
-    # PREVIEWSITE hold: merging the workflow deploys nothing; a separate reviewed change removes this step.
-    hold = STEPS[step('Hold every dispatch until G approves the preview site (PREVIEWSITE)')]
-    assert hold['run'].rstrip().endswith('exit 1') and 'env' not in hold
-    assert step('Reject a non-main dispatch') < step('Hold every dispatch until G approves') < min(
-        i for i, s in enumerate(STEPS) if str(s.get('uses', '')).startswith('actions/checkout@'))
+def test_previewsite_is_recorded_and_only_the_fetch_job_can_read_drafts():
+    # G approved PREVIEWSITE (2026-11-25): the hold step is gone, the header records the approval's limits.
+    assert not [s for s in STEPS if 'PREVIEWSITE' in s.get('name', '')]
+    assert 'not recorded yet' not in WORKFLOW_TEXT
+    for limit in ('PREVIEWSITE', 'does NOT approve go-live', 'no custom domain', 'existing Cloudflare key'):
+        assert limit in WORKFLOW_TEXT
+    fetch_job, preview_job = WORKFLOW['jobs']['fetch'], WORKFLOW['jobs']['preview']
+    assert fetch_job['permissions'] == {'contents': 'write'} and 'permissions' not in preview_job
+    assert preview_job['needs'] == 'fetch' and fetch_job['if'] == preview_job['if']
+    assert 'environment' not in fetch_job
+    steps = fetch_job['steps']
+    body = json.dumps(steps)
+    # No Cloudflare secret, candidate code, dependency install from the candidate or build in the write job.
+    assert 'secrets.' not in body and 'pnpm' not in body and 'npm ' not in body and 'wrangler' not in body.lower()
+    checkouts = [s for s in steps if str(s.get('uses', '')).startswith('actions/checkout@')]
+    assert [c['with']['ref'] for c in checkouts] == ['${{ github.workflow_sha }}', '${{ inputs.candidate }}']
+    assert checkouts[1]['with']['sparse-checkout'].split() == ['catalog/relief/morro-bay.json']
+    assert all(c['with']['persist-credentials'] is False for c in checkouts)
+    runs = [s.get('run', '') for s in steps]
+    assert runs[0].count('exit 1') == 2 and 'refs/heads/main' in runs[0]
+    fetch_step = next(s for s in steps if s.get('name', '').startswith('Fetch the candidate pointer'))
+    assert fetch_step['env'] == {'PREVIEW_RELEASE_READ_TOKEN': '${{ github.token }}'}
+    assert fetch_step['run'].startswith('python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" fetch')
+    # The copy reads only the fetched files; no GitHub token reaches the preview job.
+    assert 'github.token' not in json.dumps(preview_job)
+    download = [i for i, s in enumerate(STEPS) if str(s.get('uses', '')).startswith('actions/download-artifact@')]
+    assert len(download) == 1 and step('Create the stage bucket') < download[0] < step('Copy the candidate')
+    upload = next(s for s in steps if str(s.get('uses', '')).startswith('actions/upload-artifact@'))
+    assert upload['with']['name'] == STEPS[download[0]]['with']['name']
+    assert '--assets-dir "$RUNNER_TEMP/preview-assets"' in STEPS[step('Copy the candidate')]['run']
+    assert STEPS[download[0]]['with']['path'] == '${{ runner.temp }}/preview-assets'
 
 
 def test_sources_credits_are_a_build_input_and_the_served_page_is_the_built_one():
@@ -191,10 +216,11 @@ def test_feed_holds_a_page_that_differs_from_its_receipt(tmp_path, receipt):
 
 
 def test_every_action_is_pinned_to_a_full_commit():
-    for s in STEPS:
-        if 'uses' in s:
-            ref = s['uses'].split('@', 1)[1]
-            assert len(ref) == 40 and all(c in '0123456789abcdef' for c in ref), s['uses']
+    for job in WORKFLOW['jobs'].values():
+        for s in job['steps']:
+            if 'uses' in s:
+                ref = s['uses'].split('@', 1)[1]
+                assert len(ref) == 40 and all(c in '0123456789abcdef' for c in ref), s['uses']
 
 
 @pytest.mark.parametrize(('change', 'held'), [
@@ -431,3 +457,189 @@ def test_copy_holds_when_the_candidate_pointer_is_not_the_planned_bytes(repo, ba
     receipt['pointer_sha256'] = '0' * 64
     with pytest.raises(controller.HoldError, match='differs from the planned pointer'):
         controller.candidate_pointer(repo, receipt)
+
+
+def test_copy_holds_without_the_fetched_preview_assets(repo, base, tmp_path, monkeypatch):
+    _, out = planned(repo, base, tmp_path)
+    monkeypatch.setattr(controller, 'candidate_pointer', lambda tree, receipt: {'region': 'morro-bay'})
+    with pytest.raises(controller.HoldError, match='fetched preview assets'):
+        controller.copy(out, repo, {}, r2=controller.StageR2(FakeClient(), 'skippercast-feeds-stage'))
+
+
+# --- draft preview release objects -----------------------------------------------------------------
+# Producer/consumer replay on the reviewed relief fixture: the box writes the assets, the fetch job
+# hands over files, and the unchanged stage_transport.copy_release accepts exactly those bytes.
+
+from tests.unit.test_relief_package import assembly  # noqa: E402,F401
+from tests.unit.test_relief_stage_transport import reviewed  # noqa: E402,F401
+
+
+@pytest.fixture
+def released(reviewed, tmp_path):
+    pointer = tmp_path / 'pointer.json'
+    pointer.write_bytes(pointer_bytes(reviewed.pointer))
+    return reviewed, pointer, hashlib.sha256(pointer.read_bytes()).hexdigest()
+
+
+def stage_client():
+    return FakeClient(), 'skippercast-feeds-stage'
+
+
+def copy_from(directory, pointer):
+    from skippercast.relief import stage_transport as stage
+
+    client, bucket = stage_client()
+    count = stage.copy_release(pointer, controller.LocalRelease(directory), controller.StageR2(client, bucket),
+                               allow_create=True, recheck=None)
+    return count, client.objects
+
+
+def test_preview_assets_round_trip_through_the_unchanged_stage_copy(released, tmp_path):
+    reviewed, pointer, sha = released
+    out = tmp_path / 'assets'
+    result = controller.prepare_assets(pointer, sha, tmp_path / 'out', out)
+    tag = f"relief-preview-morro-bay-{reviewed.pointer['envelope_sha256']}"
+    assert result == {'tag': tag, 'assets': len(reviewed.objects), 'bytes': sum(map(len, reviewed.objects.values()))}
+    manifest = json.loads((out / controller.ASSET_MANIFEST).read_text())
+    assert manifest['schema'] == controller.ASSET_SCHEMA and manifest['tag'] == tag
+    count, objects = copy_from(out, reviewed.pointer)
+    assert count == len(reviewed.objects) and objects == reviewed.objects
+    # The production reader never sees this: a different tag name, and the CLI writes a new directory only.
+    assert not tag.startswith(f"relief-morro-bay-")
+    with pytest.raises(controller.HoldError, match='new assets directory'):
+        controller.prepare_assets(pointer, sha, tmp_path / 'out', out)
+
+
+def test_preview_assets_hold_a_wrong_pointer_digest_or_a_missing_object(released, tmp_path):
+    reviewed, pointer, sha = released
+    with pytest.raises(controller.HoldError, match='pinned pointer digest'):
+        controller.prepare_assets(pointer, '0' * 64, tmp_path / 'out', tmp_path / 'a')
+    archive = next(p for p in (tmp_path / 'out').rglob('*') if p.is_file() and p.read_bytes() ==
+                   reviewed.objects[next(k for k in reviewed.objects if k.endswith('.pmtiles'))])
+    archive.write_bytes(archive.read_bytes() + b'x')
+    with pytest.raises(controller.HoldError, match='lacks object'):
+        controller.prepare_assets(pointer, sha, tmp_path / 'out', tmp_path / 'b')
+    other = dict(reviewed.pointer, region='cambria-san-simeon')
+    pointer.write_bytes(pointer_bytes(other))
+    with pytest.raises(Exception):
+        controller.prepare_assets(pointer, hashlib.sha256(pointer.read_bytes()).hexdigest(), tmp_path / 'out',
+                                  tmp_path / 'c')
+    assert not (tmp_path / 'b').exists() or not any(p.suffix == '.pmtiles' for p in (tmp_path / 'b').iterdir())
+
+
+@pytest.mark.parametrize(('mutate', 'match'), [
+    (lambda d, m: m.update(tag='relief-preview-morro-bay-' + 'f' * 64), 'not fetched for this pointer'),
+    (lambda d, m: m.update(schema='other'), 'not fetched for this pointer'),
+    (lambda d, m: (d / ('1' * 64 + '.json')).write_text('{}'), 'differ from their manifest'),
+    (lambda d, m: (d / 'notes.txt').write_text('x'), 'unexpected entry'),
+    (lambda d, m: (d / ('2' * 64 + '.json')).symlink_to(d / controller.ASSET_MANIFEST), 'unexpected entry'),
+])
+def test_local_release_answers_only_for_its_own_pointer_and_files(released, tmp_path, mutate, match):
+    reviewed, pointer, sha = released
+    out = tmp_path / 'assets'
+    controller.prepare_assets(pointer, sha, tmp_path / 'out', out)
+    manifest = json.loads((out / controller.ASSET_MANIFEST).read_text())
+    mutate(out, manifest)
+    (out / controller.ASSET_MANIFEST).write_text(json.dumps(manifest))
+    with pytest.raises(controller.HoldError, match=match):
+        copy_from(out, reviewed.pointer)
+
+
+def test_local_release_bytes_are_still_checked_by_the_stage_copy(released, tmp_path):
+    from skippercast.relief import stage_transport as stage
+
+    reviewed, pointer, sha = released
+    out = tmp_path / 'assets'
+    controller.prepare_assets(pointer, sha, tmp_path / 'out', out)
+    archive = out / f"{reviewed.pointer['sha256']}.pmtiles"
+    data = bytearray(archive.read_bytes())
+    data[0] ^= 1
+    archive.write_bytes(bytes(data))
+    client, bucket = stage_client()
+    with pytest.raises(stage.StageError, match='SHA-256 or size mismatch'):
+        stage.copy_release(reviewed.pointer, controller.LocalRelease(out), controller.StageR2(client, bucket),
+                           allow_create=True, recheck=None)
+    assert not [c for c in client.calls if c[0] == 'put']
+    with pytest.raises(controller.HoldError, match='unexpected release tag'):
+        controller.LocalRelease(out).assets(f"relief-preview-morro-bay-{reviewed.pointer['envelope_sha256']}")
+
+
+API = 'https://api.github.com/repos/Grahammmm/skippercast'
+TAG = 'relief-preview-morro-bay-' + 'e' * 64
+
+
+def draft(**changes):
+    row = {'id': 7, 'tag_name': TAG, 'draft': True, 'prerelease': False, 'url': f'{API}/releases/7',
+           'assets_url': f'{API}/releases/7/assets',
+           'assets': [{'id': 9, 'name': 'a' * 64 + '.pmtiles', 'size': 4, 'state': 'uploaded',
+                       'url': f'{API}/releases/assets/9'}]}
+    row.update(changes)
+    return row
+
+
+@pytest.mark.parametrize(('pages', 'match'), [
+    ([[draft(draft=False)]], 'same-repo draft'),
+    ([[draft(prerelease=True)]], 'same-repo draft'),
+    ([[draft(url=f'{API}/releases/8')]], 'same-repo draft'),
+    ([[draft(), draft(id=8)]], 'exactly one'),
+    ([[draft(tag_name='relief-morro-bay-' + 'e' * 64)]], 'exactly one'),
+    ([[]], 'exactly one'),
+    ([{'message': 'Not Found'}], 'invalid GitHub release listing'),
+    ([[draft(assets=[])]], 'asset inventory'),
+    ([[draft(assets=[dict(draft()['assets'][0], name='../x.pmtiles')])]], 'invalid preview release asset'),
+    ([[draft(assets=[dict(draft()['assets'][0], state='new')])]], 'invalid preview release asset'),
+    ([[draft(assets=[dict(draft()['assets'][0], url='https://example.invalid/9')])]], 'invalid preview release asset'),
+])
+def test_draft_release_reader_accepts_only_one_same_repo_draft(pages, match):
+    reader = controller.DraftRelease('offline', opener=lambda page: pages[page - 1])
+    with pytest.raises(controller.HoldError, match=match):
+        reader.assets(TAG)
+
+
+def test_draft_release_reader_pages_and_refuses_the_production_tag():
+    filler = [{'id': i, 'tag_name': f'v{i}'} for i in range(100)]
+    reader = controller.DraftRelease('offline', opener=lambda page: [filler, [draft()]][page - 1])
+    assert reader.assets(TAG) == {'a' * 64 + '.pmtiles': controller_stage().Asset(9, 4)}
+    with pytest.raises(controller.HoldError, match='only a preview release'):
+        reader.assets('relief-morro-bay-' + 'e' * 64)
+
+
+def controller_stage():
+    from skippercast.relief import stage_transport as stage
+    return stage
+
+
+class FakeDraft:
+    def __init__(self, files):
+        self.files = files
+
+    def assets(self, tag):
+        self.tag = tag
+        return {name: controller_stage().Asset(i, size) for i, (name, (size, _)) in enumerate(sorted(self.files.items()), 1)}
+
+    def download(self, asset):
+        name = sorted(self.files)[asset.id - 1]
+        return io.BytesIO(self.files[name][1])
+
+
+def test_fetch_writes_the_draft_assets_and_a_manifest_the_copy_accepts(released, tmp_path):
+    reviewed, pointer, sha = released
+    files = {controller_stage().Object(k, hashlib.sha256(v).hexdigest(), 1 << 30).name: (len(v), v)
+             for k, v in reviewed.objects.items()}
+    fake = FakeDraft(files)
+    result = controller.fetch(pointer, sha, tmp_path / 'fetched', release=fake)
+    assert fake.tag == f"relief-preview-morro-bay-{reviewed.pointer['envelope_sha256']}" == result['tag']
+    count, objects = copy_from(tmp_path / 'fetched', reviewed.pointer)
+    assert count == len(reviewed.objects) and objects == reviewed.objects
+
+
+@pytest.mark.parametrize(('delta', 'match'), [(b'x', 'exceeds its listed size'), (None, 'shorter than')])
+def test_fetch_holds_an_asset_whose_bytes_disagree_with_its_listed_size(released, tmp_path, delta, match):
+    reviewed, pointer, sha = released
+    key, data = next(iter(reviewed.objects.items()))
+    name = controller_stage().Object(key, hashlib.sha256(data).hexdigest(), 1 << 30).name
+    body = data + delta if delta else data[:-1]
+    with pytest.raises(controller.HoldError, match=match):
+        controller.fetch(pointer, sha, tmp_path / 'fetched', release=FakeDraft({name: (len(data), body)}))
+    with pytest.raises(controller.HoldError, match='pinned pointer digest'):
+        controller.fetch(pointer, '0' * 64, tmp_path / 'other', release=FakeDraft({}))

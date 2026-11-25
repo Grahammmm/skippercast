@@ -8,8 +8,20 @@ never touches production: no production Worker, bucket, route, schedule or secre
                 Morro's data files (DATA_PATHS), so the code built is exactly reviewed code
   place-config  put the planned stage Wrangler config into the built candidate tree,
                 after re-checking its digest, its isolation and the preview origin
-  copy          copy the candidate pointer's published release objects into the
-                separate stage bucket (create-only, full read-back), never production
+  copy          copy the candidate pointer's release objects into the separate stage
+                bucket (create-only, full read-back), never production
+  assets        (box, offline) write the pointer's exact release objects, named as
+                GitHub release assets, from a local release directory, for upload to
+                the preview-only DRAFT release relief-preview-<region>-<envelope>
+  fetch         (workflow fetch job) download that draft release's assets into a
+                directory; the copy step then reads them with LocalRelease and
+                stage_transport.copy_release re-checks every name, size and digest
+
+Why a draft preview release: the production copy reads only a PUBLISHED release
+relief-<region>-<envelope>, which the box stages only after the exact R8 approval
+(stage_transport.stage). The preview exists so R8 can judge served bytes, so it
+cannot depend on that approval. A draft is not public, never creates a tag and is
+invisible to the production reader (it refuses drafts and the preview tag name).
 
 The candidate's data is inert here: nothing in this file writes the repository,
 the production bucket or the production Worker. A hosted run needs G's explicit
@@ -192,7 +204,236 @@ def candidate_pointer(tree: Path, receipt: dict) -> dict:
     return pointer
 
 
-def copy(plan_dir: Path, tree: Path, env, *, github=None, r2=None) -> int:
+PREVIEW_PREFIX = 'relief-preview-'
+ASSET_MANIFEST = 'preview-assets.json'
+ASSET_SCHEMA = 'sc-morro-preview-assets/1'
+_ASSET_NAME = re.compile(r'[0-9a-f]{64}\.(?:pmtiles|json|geojson\.br)')
+_MAX_PAGES = 10
+
+
+def preview_tag(pointer: dict) -> str:
+    """The draft release name for this pointer; never the production relief-<region>-<envelope> tag."""
+    region, envelope = pointer.get('region'), pointer.get('envelope_sha256')
+    if region != preview.REGION or not isinstance(envelope, str) or not _SHA256.fullmatch(envelope):
+        raise HoldError('pointer is not a Morro Bay pointer with an envelope digest')
+    return f'{PREVIEW_PREFIX}{region}-{envelope}'
+
+
+def _pointer_file(path: Path, pointer_sha256: str) -> dict:
+    from skippercast.relief import package
+
+    if not _SHA256.fullmatch(pointer_sha256 or ''):
+        raise HoldError('pointer digest must be 64 lowercase hex digits')
+    if path.is_symlink() or not path.is_file():
+        raise HoldError('pointer is not a regular file')
+    data = path.read_bytes()
+    if hashlib.sha256(data).hexdigest() != pointer_sha256:
+        raise HoldError('pointer differs from the pinned pointer digest')
+    pointer = package.decode_document(data)
+    package.validate_schema(pointer, package.pointer_schema())
+    preview_tag(pointer)
+    return pointer
+
+
+def _write_manifest(out: Path, tag: str, sizes: dict) -> None:
+    doc = {'schema': ASSET_SCHEMA, 'tag': tag, 'assets': dict(sorted(sizes.items()))}
+    (out / ASSET_MANIFEST).write_text(json.dumps(doc, indent=1, sort_keys=True) + '\n')
+
+
+def _new_dir(out: Path) -> None:
+    if out.exists() or out.is_symlink():
+        raise HoldError('choose a new assets directory')
+    out.mkdir(parents=True)
+
+
+def prepare_assets(pointer_path: Path, pointer_sha256: str, region_dir: Path, out: Path) -> dict:
+    """Box only, offline: write exactly the pointer's release objects from a local release directory.
+
+    Every object is located by its SHA-256 among regular files under ``region_dir``, copied under its
+    GitHub asset name and checked for size and digest; the survey wires are decoded against their pins
+    and the companion against the detail. Grants nothing: the stage copy re-checks everything.
+    """
+    from skippercast.relief import stage_transport as stage
+
+    pointer = _pointer_file(pointer_path, pointer_sha256)
+    tag = preview_tag(pointer)
+    if region_dir.is_symlink() or not region_dir.is_dir():
+        raise HoldError('release directory is not a directory')
+    by_sha: dict[str, Path] = {}
+    for path in sorted(region_dir.rglob('*')):
+        if path.is_symlink() or not path.is_file():
+            continue
+        h = hashlib.sha256()
+        with path.open('rb') as stream:
+            while block := stream.read(1 << 20):
+                h.update(block)
+        by_sha.setdefault(h.hexdigest(), path)
+    _new_dir(out)
+    sizes: dict[str, int] = {}
+
+    def put(obj):
+        source = by_sha.get(obj.sha)
+        if source is None:
+            raise HoldError(f'release directory lacks object {obj.name}')
+        size = source.stat().st_size
+        dest = out / obj.name
+        if obj.name not in sizes:
+            with source.open('rb') as stream, dest.open('xb') as target:
+                stage._checked(stream, obj, size, phase='preview asset', output=target)
+            sizes[obj.name] = size
+        return dest
+
+    archive, root = stage._objects(pointer)
+    put(archive)
+    root_file = put(root)
+    chunks = tuple(stage._chunks(pointer, root, root_file))
+    for obj in chunks:
+        put(obj)
+    survey = {obj.sha: put(obj) for obj in stage._survey(pointer)}
+    stage._check_survey(pointer, survey)
+    _write_manifest(out, tag, sizes)
+    return {'tag': tag, 'assets': len(sizes), 'bytes': sum(sizes.values())}
+
+
+class LocalRelease:
+    """The GitHub-release interface of stage_transport.copy_release over a fetched preview-assets directory.
+
+    copy_release asks for the production tag relief-<region>-<envelope>; this answers only when the
+    directory was fetched from the matching relief-preview-<region>-<envelope> draft, and lists exactly
+    the files on disk. copy_release still requires that list to equal the pointer's digest chain and
+    checks every size and SHA-256 before any stage write.
+    """
+
+    def __init__(self, directory: Path):
+        self.directory = directory
+        self._names: dict[int, str] = {}
+
+    def assets(self, tag):
+        from skippercast.relief import stage_transport as stage
+
+        if not isinstance(tag, str) or not tag.startswith('relief-') or tag.startswith(PREVIEW_PREFIX):
+            raise HoldError('unexpected release tag')
+        try:
+            doc = json.loads((self.directory / ASSET_MANIFEST).read_bytes())
+        except (OSError, ValueError):
+            raise HoldError('preview assets manifest is missing or not JSON') from None
+        if (not isinstance(doc, dict) or doc.get('schema') != ASSET_SCHEMA
+                or doc.get('tag') != PREVIEW_PREFIX + tag.removeprefix('relief-')
+                or not isinstance(doc.get('assets'), dict)):
+            raise HoldError('preview assets were not fetched for this pointer')
+        on_disk = {}
+        for path in self.directory.iterdir():
+            if path.name == ASSET_MANIFEST:
+                continue
+            if path.is_symlink() or not path.is_file() or not _ASSET_NAME.fullmatch(path.name):
+                raise HoldError('preview assets directory holds an unexpected entry')
+            on_disk[path.name] = path.stat().st_size
+        if on_disk != doc['assets'] or not 1 <= len(on_disk) <= stage.MAX_ASSETS:
+            raise HoldError('preview assets differ from their manifest')
+        result = {}
+        for number, (name, size) in enumerate(sorted(on_disk.items()), start=1):
+            self._names[number] = name
+            result[name] = stage.Asset(number, size)
+        return result
+
+    def download(self, asset):
+        name = self._names.get(asset.id)
+        if name is None:
+            raise HoldError('unknown preview asset')
+        return (self.directory / name).open('rb')
+
+
+class DraftRelease:
+    """Fetch-job reader for the one same-repo DRAFT release named relief-preview-<region>-<envelope>.
+
+    Drafts are listed only to a token with push access, which is why only the separate fetch job,
+    which runs no candidate code, gets contents: write. Asset downloads reuse the reviewed
+    stage_transport.GitHubRelease hop rules (one trusted media redirect, token never forwarded).
+    """
+
+    def __init__(self, token: str, opener=None):
+        from skippercast.relief import stage_transport as stage
+
+        self._reader = stage.GitHubRelease(token)
+        self._open = opener
+
+    def release(self, tag: str) -> dict:
+        from skippercast.relief import stage_transport as stage
+
+        if not tag.startswith(PREVIEW_PREFIX):
+            raise HoldError('only a preview release can be fetched')
+        found = []
+        for page in range(1, _MAX_PAGES + 1):
+            rows = self._list(page)
+            if not isinstance(rows, list):
+                raise HoldError('invalid GitHub release listing')
+            found += [row for row in rows if isinstance(row, dict) and row.get('tag_name') == tag]
+            if len(rows) < 100:
+                break
+        if len(found) != 1:
+            raise HoldError('expected exactly one preview release for this pointer')
+        release = found[0]
+        rid = release.get('id')
+        if (type(rid) is not int or rid <= 0 or release.get('draft') is not True or release.get('prerelease') is not False
+                or release.get('url') != f'{stage._REPO_API}/releases/{rid}'
+                or release.get('assets_url') != f'{stage._REPO_API}/releases/{rid}/assets'):
+            raise HoldError('preview release is not a same-repo draft')
+        return release
+
+    def _list(self, page):
+        from skippercast.relief import stage_transport as stage
+
+        if self._open is not None:
+            return self._open(page)
+        return self._reader.metadata(f'/repos/{stage.REPOSITORY}/releases?per_page=100&page={page}')
+
+    def assets(self, tag):
+        from skippercast.relief import stage_transport as stage
+
+        rows = self.release(tag).get('assets')
+        if not isinstance(rows, list) or not 1 <= len(rows) <= stage.MAX_ASSETS:
+            raise HoldError('invalid preview release asset inventory')
+        assets = {}
+        for row in rows:
+            aid, name, size = (row.get(k) if isinstance(row, dict) else None for k in ('id', 'name', 'size'))
+            if (type(aid) is not int or aid <= 0 or not isinstance(name, str) or not _ASSET_NAME.fullmatch(name)
+                    or type(size) is not int or not 0 < size <= stage.ARCHIVE_LIMIT or name in assets
+                    or row.get('state') != 'uploaded' or row.get('url') != f'{stage._REPO_API}/releases/assets/{aid}'):
+                raise HoldError('invalid preview release asset')
+            assets[name] = stage.Asset(aid, size)
+        return assets
+
+    def download(self, asset):
+        return self._reader.download(asset)
+
+
+def fetch(pointer_path: Path, pointer_sha256: str, out: Path, *, release=None, env=None) -> dict:
+    """Fetch job: download the pinned pointer's draft preview assets (bounded) into a new directory."""
+    from skippercast.relief import stage_transport as stage
+
+    pointer = _pointer_file(pointer_path, pointer_sha256)
+    tag = preview_tag(pointer)
+    if release is None:
+        release = DraftRelease((env or os.environ).get('PREVIEW_RELEASE_READ_TOKEN', ''))
+    assets = release.assets(tag)
+    _new_dir(out)
+    sizes = {}
+    for name, asset in sorted(assets.items()):
+        count = 0
+        with closing(release.download(asset)) as stream, (out / name).open('xb') as target:
+            while block := stream.read(min(stage.BLOCK, asset.size - count + 1)):
+                count += len(block)
+                if count > asset.size:
+                    raise HoldError('preview asset exceeds its listed size')
+                target.write(block)
+        if count != asset.size:
+            raise HoldError('preview asset is shorter than its listed size')
+        sizes[name] = count
+    _write_manifest(out, tag, sizes)
+    return {'tag': tag, 'assets': len(sizes), 'bytes': sum(sizes.values())}
+
+
+def copy(plan_dir: Path, tree: Path, env, *, github=None, r2=None, assets_dir: Path | None = None) -> int:
     """Copy the pointer's release objects into the planned stage bucket; returns the object count."""
     from skippercast.relief import stage_transport as stage
 
@@ -204,8 +445,10 @@ def copy(plan_dir: Path, tree: Path, env, *, github=None, r2=None) -> int:
             survey_delivery.decoder()
         except ValueError as error:
             raise HoldError(str(error)) from None
+    if assets_dir is not None:
+        github = LocalRelease(assets_dir)
     if github is None:
-        github = stage.GitHubRelease(env.get('STAGE_GITHUB_READ_TOKEN', ''))
+        raise HoldError('stage copy needs the fetched preview assets directory')
     if r2 is None:
         r2 = StageR2.connect(env.get('STAGE_R2_PUBLISH_TOKEN', ''), env.get('STAGE_CLOUDFLARE_ACCOUNT_ID', ''),
                              bucket=receipt['bucket'])
@@ -228,6 +471,16 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument('--tree', type=Path, required=True)
         if name == 'place-config':
             p.add_argument('--origin', required=True, help='the preview Worker workers.dev origin')
+        else:
+            p.add_argument('--assets-dir', type=Path, required=True, help='the fetched preview assets directory')
+    for name, text in (('assets', 'box only: write the pointer release objects for the draft preview release'),
+                       ('fetch', 'fetch job: download the draft preview release assets')):
+        p = sub.add_parser(name, help=text)
+        p.add_argument('--pointer', type=Path, required=True, help='the candidate catalog/relief/morro-bay.json')
+        p.add_argument('--pointer-sha256', required=True)
+        p.add_argument('--out', type=Path, required=True, help='a new directory')
+        if name == 'assets':
+            p.add_argument('--release-dir', type=Path, required=True, help='the local Morro region release directory')
     args = parser.parse_args(argv)
     try:
         if args.command == 'scope':
@@ -235,13 +488,22 @@ def main(argv: list[str] | None = None) -> int:
             print('SCOPE data-only: ' + (', '.join(changed) or 'no change from the reviewed base'))
         elif args.command == 'place-config':
             print(f'CONFIG {place_config(args.plan_dir, args.tree, args.origin).name}')
+        elif args.command == 'assets':
+            print(json.dumps(prepare_assets(args.pointer, args.pointer_sha256, args.release_dir, args.out), sort_keys=True))
+        elif args.command == 'fetch':
+            print(json.dumps(fetch(args.pointer, args.pointer_sha256, args.out), sort_keys=True))
         else:
-            print(f'COPIED {copy(args.plan_dir, args.tree, os.environ)} objects to the stage bucket')
+            count = copy(args.plan_dir, args.tree, os.environ, assets_dir=args.assets_dir)
+            print(f'COPIED {count} objects to the stage bucket')
         return 0
     except (HoldError, preview.PreviewError) as error:
         print(f'::error::Morro stage preview held: {error}', file=sys.stderr)
         return 2
     except Exception as error:
+        if type(error).__name__ in ('StageError', 'ReleaseError'):
+            # stage_transport/package diagnostics are written to be safe to log (no URL, response or path).
+            print(f'::error::Morro stage preview held: {error}', file=sys.stderr)
+            return 2
         # SDK and transport errors may carry headers or signed URLs; never log their bodies.
         print(f'::error::Morro stage preview held ({type(error).__name__}); nothing promoted.', file=sys.stderr)
         return 2

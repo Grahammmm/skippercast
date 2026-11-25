@@ -28,8 +28,21 @@ name: Morro stage preview
 # The /sources credits are rendered from the candidate's pinned files BEFORE the build
 # (scripts/relief/morro_sources_overlay.py), because the build names the page the Worker
 # serves; a copy after the build is never served (M9 receipt 230aecce).
-# Every dispatch is held at the second step until G's PREVIEWSITE approval is recorded
-# by a separate reviewed change that removes that step. Merging this file deploys nothing.
+# G approved PREVIEWSITE on 2026-11-25 (~14:0x PST; decisions/G-DECISIONS.log on the box):
+# one separate Cloudflare test site for Morro v2 only, own workers.dev address and own
+# storage, no sign-in, no schedule, no custom domain, started by hand only from reviewed
+# main, existing Cloudflare key, free tier. It does NOT approve go-live, merging the data
+# change or deploying the live site. Merging this file deploys nothing; only a manual
+# dispatch from main does.
+#
+# Relief objects: the production copy reads only a PUBLISHED release relief-<region>-<envelope>,
+# which the box stages only after the exact R8 approval. The preview is what R8 judges, so its
+# objects come from a DRAFT release relief-preview-<region>-<envelope> (not public, no tag),
+# uploaded by the box with `morro_stage_controller.py assets`. The separate `fetch` job, which
+# runs only controller code and never the candidate's, is the only job with contents: write
+# (drafts are listed only to a token with push access). It hands the files over as an
+# artifact; the copy step re-checks every name, size and SHA-256 against the candidate pointer
+# (stage_transport.copy_release) before any stage write.
 # Receipts (plan, config digest, served check) are kept as a run artifact. They are
 # hosted evidence for the release packet, not an R8 verdict and not a go-live.
 on:
@@ -73,7 +86,79 @@ env:
   STAGE_BUCKET: skippercast-feeds-stage
 
 jobs:
+  fetch:
+    # Only this job may list drafts (contents: write). It checks out the controller from this
+    # workflow's own revision and nothing of the candidate but its pointer file, and never runs
+    # candidate code, a dependency install or a build. No Cloudflare secret reaches it.
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'Grahammmm/skippercast' &&
+      github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      CANDIDATE: ${{ inputs.candidate }}
+      POINTER_SHA256: ${{ inputs.pointer_sha256 }}
+    steps:
+      - name: Reject a non-main dispatch or a malformed candidate before checkout
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ] || [ "$GITHUB_REF_PROTECTED" != "true" ]; then
+            echo "::error::Morro stage preview held: dispatch from protected main only."
+            exit 1
+          fi
+          if ! [[ "$CANDIDATE" =~ ^[0-9a-f]{40}$ ]] || ! [[ "$POINTER_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::Morro stage preview held: candidate and pointer digest must be full lowercase hex."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .preview-controller
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/__init__.py
+            scripts/relief/__init__.py
+            scripts/relief/morro_stage_preview.py
+            scripts/relief/morro_stage_controller.py
+            src/skippercast/
+            catalog/relief/pointer.schema.json
+            catalog/sources.json
+            requirements-publish.txt
+          sparse-checkout-cone-mode: false
+      - name: Move the controller out of the candidate tree
+        run: |
+          rm -rf "$RUNNER_TEMP/preview-controller"
+          mv .preview-controller "$RUNNER_TEMP/preview-controller"
+          echo "CONTROLLER=$RUNNER_TEMP/preview-controller" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.candidate }}
+          persist-credentials: false
+          sparse-checkout: catalog/relief/morro-bay.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install pinned controller dependencies
+        run: python3 -Im pip install -r "$CONTROLLER/requirements-publish.txt"
+      - name: Fetch the candidate pointer's draft preview release assets
+        env:
+          PREVIEW_RELEASE_READ_TOKEN: ${{ github.token }}
+        run: >-
+          python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" fetch
+          --pointer catalog/relief/morro-bay.json --pointer-sha256 "$POINTER_SHA256"
+          --out "$RUNNER_TEMP/preview-assets"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: morro-preview-assets-${{ inputs.candidate }}
+          path: ${{ runner.temp }}/preview-assets/
+          if-no-files-found: error
+          retention-days: 1
+
   preview:
+    needs: fetch
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.repository == 'Grahammmm/skippercast' &&
@@ -123,13 +208,6 @@ jobs:
             echo "::error::Morro stage preview held: Cloudflare credentials are not configured."
             exit 1
           fi
-      - name: Hold every dispatch until G approves the preview site (PREVIEWSITE)
-        run: |
-          # Hosting a preview uses the Cloudflare key, so it needs G's explicit PREVIEWSITE approval. That approval
-          # is recorded by a separate reviewed change that removes this step; until then nothing checks out,
-          # builds or deploys, whether or not this file is on main.
-          echo "::error::Morro stage preview held: G's PREVIEWSITE approval is not recorded yet."
-          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.workflow_sha }}
@@ -222,12 +300,17 @@ jobs:
           # Outside the candidate tree, so Wrangler reads no project config. Only a *-stage name.
           case "$STAGE_BUCKET" in *-stage) ;; *) echo "::error::Morro stage preview held: not a stage bucket."; exit 1;; esac
           $WRANGLER r2 bucket info "$STAGE_BUCKET" > /dev/null 2>&1 || $WRANGLER r2 bucket create "$STAGE_BUCKET"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: morro-preview-assets-${{ inputs.candidate }}
+          path: ${{ runner.temp }}/preview-assets
       - name: Copy the candidate's relief release into the stage bucket only
         env:
-          STAGE_GITHUB_READ_TOKEN: ${{ github.token }}
           STAGE_R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
           STAGE_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" copy --plan-dir "$PLAN_DIR" --tree .
+        run: >-
+          python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" copy --plan-dir "$PLAN_DIR" --tree .
+          --assets-dir "$RUNNER_TEMP/preview-assets"
       - name: Place the checked stage config
         run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" place-config --plan-dir "$PLAN_DIR" --tree . --origin "$STAGE_URL"
       - name: Deploy the stage Worker only
