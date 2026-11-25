@@ -74,7 +74,7 @@ def step(name_prefix):
 def test_workflow_runs_only_on_manual_dispatch_from_protected_main():
     triggers = WORKFLOW[True]  # YAML 1.1 reads the `on:` key as a boolean
     assert list(triggers) == ['workflow_dispatch']
-    assert set(triggers['workflow_dispatch']['inputs']) == {'candidate', 'pointer_sha256'}
+    assert set(triggers['workflow_dispatch']['inputs']) == {'candidate', 'pointer_sha256', 'origin'}
     assert WORKFLOW['permissions'] == {'contents': 'read'}
     job = WORKFLOW['jobs']['preview']
     assert list(WORKFLOW['jobs']) == ['preview']
@@ -85,17 +85,25 @@ def test_workflow_runs_only_on_manual_dispatch_from_protected_main():
     assert WORKFLOW['env']['STAGE_WORKER'].endswith('-stage') and WORKFLOW['env']['STAGE_BUCKET'].endswith('-stage')
 
 
-def test_workflow_reads_only_stage_secrets_and_never_names_production_stores():
+def test_workflow_reads_only_the_cloudflare_secrets_and_only_after_every_guard():
     secrets = set(re.findall(r'secrets\.([A-Z0-9_]+)', WORKFLOW_TEXT))
-    assert secrets == {'STAGE_CLOUDFLARE_API_TOKEN', 'STAGE_CLOUDFLARE_ACCOUNT_ID', 'STAGE_R2_PUBLISH_TOKEN'}
+    assert secrets == {'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID', 'R2_PUBLISH_TOKEN'}
     body = '\n'.join(line for line in WORKFLOW_TEXT.splitlines() if not line.lstrip().startswith('#'))
     for production in ("'skippercast-feeds'", 'skippercast-feeds ', 'skippercast-backups', 'skippercast-advisor-media',
-                       'cloudflare_deploy.sh', 'd1 ', 'CUSTOM_DOMAINS', 'pull_request_target'):
+                       'cloudflare_deploy.sh', 'd1 ', 'CUSTOM_DOMAINS', 'pull_request_target', 'vars.'):
         assert production not in body
+    # Credentials reach only the bucket, copy and deploy steps, all after the re-plan (the first step
+    # only learns whether each is set).
+    holders = [i for i, s in enumerate(STEPS) if 'secrets.' in json.dumps(s.get('env', {}))]
+    assert holders == [step('Reject a non-main dispatch'), step('Create the stage bucket'), step('Copy the candidate'),
+                       step('Deploy the stage Worker only')]
+    assert all(value.endswith("!= '' }}") for value in STEPS[holders[0]]['env'].values())
+    assert min(holders[1:]) > step('Re-plan after the build')
+    bucket = STEPS[step('Create the stage bucket')]
+    assert bucket['working-directory'] == '${{ runner.temp }}' and '*-stage)' in bucket['run']
     deploy = STEPS[step('Deploy the stage Worker only')]
     assert deploy['run'].startswith('$WRANGLER deploy --config wrangler.stage.json ')
     assert set(deploy['env']) == {'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'}
-    assert all('secrets.STAGE_' in value for value in deploy['env'].values())
 
 
 def test_guards_run_from_the_controller_before_dependencies_build_or_any_credential():
@@ -110,8 +118,8 @@ def test_guards_run_from_the_controller_before_dependencies_build_or_any_credent
              STEPS.index(candidate_checkout), step('Require the candidate to change only Morro data'),
              step('Plan the isolated stage config'), step('Install locked web dependencies'),
              step('Build Worker and fingerprinted site'), step('Re-plan after the build'),
-             step('Copy the candidate'), step('Place the checked stage config'), step('Deploy the stage Worker only'),
-             step('Require the preview to serve exactly')]
+             step('Create the stage bucket'), step('Copy the candidate'), step('Place the checked stage config'),
+             step('Deploy the stage Worker only'), step('Require the preview to serve exactly')]
     assert order == sorted(order)
     # Controller copies, never the candidate's, run every guard.
     for name in ('Require the candidate', 'Plan the isolated', 'Re-plan after', 'Copy the candidate', 'Place the checked'):
@@ -138,12 +146,17 @@ def test_every_action_is_pinned_to_a_full_commit():
     ({'CANDIDATE': 'abc123'}, 'full lowercase commit'),
     ({'CANDIDATE': 'A' * 40}, 'full lowercase commit'),
     ({'POINTER_SHA256': 'f' * 63}, '64 lowercase hex'),
+    ({'STAGE_URL': ''}, 'origin must be'),
+    ({'STAGE_URL': 'https://skippercast.fixture-account.workers.dev'}, 'origin must be'),
+    ({'STAGE_URL': 'https://skippercast.com'}, 'origin must be'),
+    ({'STAGE_URL': ORIGIN + '/x'}, 'origin must be'),
     ({'HAS_R2': 'false'}, 'not configured'),
-    ({'STAGE_URL': ''}, 'not configured'),
+    ({'HAS_TOKEN': 'false'}, 'not configured'),
 ])
 def test_the_first_step_holds_bad_dispatches_before_checkout(change, held):
     script = STEPS[step('Reject a non-main dispatch')]['run']
     env = {'PATH': os.environ['PATH'], 'GITHUB_REF': 'refs/heads/main', 'GITHUB_REF_PROTECTED': 'true',
+           'STAGE_WORKER': WORKFLOW['env']['STAGE_WORKER'],
            'CANDIDATE': 'a' * 40, 'POINTER_SHA256': 'b' * 64, 'HAS_TOKEN': 'true', 'HAS_ACCOUNT': 'true',
            'HAS_R2': 'true', 'STAGE_URL': ORIGIN, **change}
     result = subprocess.run(['bash', '-e', '-o', 'pipefail'], input=script, env=env, capture_output=True, text=True)
