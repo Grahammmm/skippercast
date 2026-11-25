@@ -3,6 +3,9 @@
 // activity row) or the presentation notes under it can no longer sit on Zoom in or the Sources link. Measured on the real
 // Chart at 390x844 and 430x932 (finish/morro/central-header-hit-target, agent-work): Morro Zoom in went from 97% covered
 // (a tap did not zoom) to uncovered, the Sources link from fully covered to tappable; the desktop rules are unchanged.
+// M23: the group sits on the LEFT edge on phones. Measured on the real Chart (finish/morro/short-phone-composition):
+// at 375x667 the right-hand group left Zoom in 97% under the "Zoom in to use 3D" note and the Sources link under the
+// depth notice; at 414x736 the Sources link was 75% covered. On the left: both uncovered, taps land, notice unchanged.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
@@ -40,12 +43,29 @@ const peek = selector => {
 
 test('phone: the map control group is fixed to the bottom, above the Readings peek and the tab bar', () => {
   const decls = one(chartRules, PHONE);
-  assert.deepEqual(Object.keys(decls).sort(), ['bottom', 'position', 'top']);
+  assert.deepEqual(Object.keys(decls).sort(), ['align-items', 'bottom', 'left', 'position', 'right', 'top']);
   assert.equal(decls.position, 'fixed', 'viewport-anchored: the stage box can extend below the screen');
   assert.equal(decls.top, 'auto', 'no offset from the top strip, whose height grows with a preview card');
   assert.equal(decls.bottom, `calc(var(--app-tabs) + ${peek('.app-sheet')}px + var(--space-3))`, 'clears the tab bar and the sheet peek');
   assert.match(app, /\.app-mobile \{ --app-tabs: /, 'the phone shell defines --app-tabs');
   assert.match(tokens, /--space-3:/, '--space-3 is a token');
+});
+
+test('phone: the map control group is on the LEFT edge, opposite the presentation stack (M23 short phones)', () => {
+  const decls = one(chartRules, PHONE);
+  assert.equal(decls.left, 'var(--space-4)', 'the same 16 px inset the desktop group keeps on the right');
+  assert.equal(decls.right, 'auto', 'released from the right column');
+  assert.equal(decls['align-items'], 'flex-start', 'Sources, scale and zoom line up on the left edge');
+  // The presentation stack (Chart/2D/3D, the depth notice, "Zoom in to use 3D") stays right-anchored in the phone
+  // shell and at most 280 px wide; on a 375 px phone that leaves 375 - 16 - 280 = 79 px on the left, enough for the
+  // 16 px inset plus the Sources link (54 px) and the zoom buttons (44 px) without touching the stack.
+  const pres = appRules.filter(r => r.selector === '.app-presentation' && r.at === '' && 'right' in r.decls);
+  assert.equal(pres.length, 1, 'one base .app-presentation placement');
+  assert.equal(pres[0].decls.right, 'var(--space-4)');
+  assert.equal(pres[0].decls['max-width'], 'min(280px, calc(100% - 2 * var(--space-4)))');
+  const phonePres = appRules.filter(r => r.selector === '.app-mobile .app-presentation');
+  assert.ok(phonePres.length >= 1 && phonePres.every(r => !('left' in r.decls) && !('right' in r.decls)),
+    'the phone shell does not move the presentation stack off the right edge');
 });
 
 test('phone: a mark card raises the group above its taller peek', () => {
