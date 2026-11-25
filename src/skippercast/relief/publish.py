@@ -117,10 +117,11 @@ def plan(release_dir: Path, approval: Path, envelope: Path, *, scope_path: Path)
         raise ReleaseError(f'cannot plan relief digest index: {exc}') from exc
     paths = [(package.ARCHIVE, f'{stem}.pmtiles')]
     paths.extend((name, f'{stem}.digests/{root_sha}/{name.removeprefix(_DIGEST_DIR)}') for name in members)
-    survey = survey_pointer_member(release).get('survey_detail')
-    if survey:
-        paths.append((survey_delivery.WIRE_PATH, survey_delivery.key(
-            release['region'], verified.envelope_sha256, survey['wire']['sha256'])))
+    survey = survey_pointer_member(release)
+    for path, member in ((survey_delivery.WIRE_PATH, 'survey_detail'), (survey_delivery.GAP_WIRE_PATH, 'survey_gap')):
+        if member in survey:
+            paths.append((path, survey_delivery.key(
+                release['region'], verified.envelope_sha256, survey[member]['wire']['sha256'])))
     objects = tuple(PublishObject(path, key, layers[path]['sha256'], layers[path]['bytes']) for path, key in paths)
     return PublishPlan(release_dir, approval, envelope, scope_path, verified.region_dir,
                        verified.envelope_sha256, objects)

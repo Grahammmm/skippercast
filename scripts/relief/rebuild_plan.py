@@ -34,7 +34,7 @@ def _stage_digests():
             continue
         module = import_module(f'skippercast.relief.{stage}')
         if stage == 'package':
-            files = [package_file]
+            files = package.code_files()
         elif stage in ('digests', 'envelope'):
             files = [(f'{stage}.py', module.__file__), package_file]
         elif stage == 'qa':

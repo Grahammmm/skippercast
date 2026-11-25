@@ -146,24 +146,32 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
     });
 
     const b = pointer.survey_detail;
+    type Pair = {wire: {bytes: number; sha256: string}; decoded: {bytes: number; sha256: string}};
     const rep = (r: unknown, max: number): r is {bytes: number; sha256: string} => {
       if (!r || typeof r !== 'object') return false;
       const {bytes, sha256} = r as {bytes: number; sha256: unknown};
       return Object.keys(r).sort().join() === 'bytes,sha256' && Number.isSafeInteger(bytes) && bytes > 0 && bytes <= max &&
         typeof sha256 === 'string' && /^[a-f0-9]{64}$/.test(sha256);
     };
-    const binding = pointer.status === 'reviewed' && b && Object.keys(b).sort().join() === 'decoded,wire' &&
-      rep(b.wire, 5 * 1024 * 1024) && rep(b.decoded, 16 * 1024 * 1024) ? b as {wire: {bytes:number; sha256:string}; decoded: {bytes:number; sha256:string}} : null;
-    async function verifiedSurvey(): Promise<unknown> {
-      if (!binding) return undefined;
+    const pair = (v: unknown, wire: number, decoded: number): Pair | null => {
+      const p = v as Pair | null | undefined;
+      return p && typeof p === 'object' && Object.keys(p).sort().join() === 'decoded,wire' &&
+        rep(p.wire, wire) && rep(p.decoded, decoded) ? p : null;
+    };
+    const binding = pointer.status === 'reviewed' ? pair(b, 5 * 1024 * 1024, 16 * 1024 * 1024) : null;
+    // M32: the reviewed no-survey companion (the detail's tier-none areas only, byte-derived from it at package time) is
+    // small, so it loads at start and the hatch shows with Layers closed. Only bound next to the detail it came from.
+    const gapBinding = binding ? pair(pointer.survey_gap, 256 * 1024, 2 * 1024 * 1024) : null;
+    async function verifiedSurvey(bound: Pair | null = binding): Promise<unknown> {
+      if (!bound) return undefined;
       try {
-        const response = await fetchFn(new URL(`feeds/tiles/relief/${o.region}/${a.envelope_sha256}/survey/${binding.wire.sha256}.geojson.br`, page),
+        const response = await fetchFn(new URL(`feeds/tiles/relief/${o.region}/${a.envelope_sha256}/survey/${bound.wire.sha256}.geojson.br`, page),
           {signal, redirect: 'error'});
         if (!response.ok || !response.body || response.headers.get('Content-Encoding') !== 'br' ||
-            response.headers.get('Content-Length') !== String(binding.wire.bytes)) {
+            response.headers.get('Content-Length') !== String(bound.wire.bytes)) {
           void response.body?.cancel(); return undefined;
         }
-        const stream = response.body.getReader(), bytes = new Uint8Array(binding.decoded.bytes);
+        const stream = response.body.getReader(), bytes = new Uint8Array(bound.decoded.bytes);
         let size = 0;
         try {
           while (true) {
@@ -177,13 +185,17 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
         const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
           n => n.toString(16).padStart(2, '0')).join('');
         signal.throwIfAborted();
-        if (digest !== binding.decoded.sha256) return undefined;
+        if (digest !== bound.decoded.sha256) return undefined;
         return JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(bytes));
       } catch { return undefined; }
     }
     const decode = (raw: unknown) => raw === undefined ? null : decodeSurveyDetail(o.region, raw, new Set(a.sources.map(s => s.id)));
     const detail = cell(decode(o.surveyDetail));
-    const available = () => !!detail.peek()?.features.length && !!surveyHatchPattern(pattern, readPalette(), isLight()).length;
+    const hatchable = () => !!surveyHatchPattern(pattern, readPalette(), isLight()).length;
+    const available = () => !!detail.peek()?.features.length && hatchable();
+    // Only the companion's hatch draws, and only until the full detail is loaded (which carries the same areas).
+    const gap = cell<ReturnType<typeof decode>>(null);
+    const gapShown = () => !available() && !!gap.peek()?.features.length && hatchable();
     let pending = false, refused = false, detailOn = false, detailIds: string[] = [];
     const control = available() && !o.surveyView ? document.createElement('div') : null;
     // The coastline card with the survey line appended, and the card it was before that.
@@ -219,6 +231,14 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       });
     }
     if ((available() || binding) && o.surveyView) disposeSurvey = o.engine.view.on('idle', updateView);
+    if (gapBinding && !available()) {
+      void verifiedSurvey(gapBinding).then(raw => {
+        if (signal.aborted || available()) return;
+        const parsed = decode(raw), raws = (raw as {features?: {properties?: {tier?: unknown}}[]} | undefined)?.features;
+        // The companion may only say "no survey": any other tier refuses the whole file and nothing extra is drawn.
+        if (parsed && Array.isArray(raws) && raws.length && raws.every(f => f?.properties?.tier === 'none')) gap.value = parsed;
+      });
+    }
     if (control) {
       control.className = 'maplibregl-ctrl';
       const button = document.createElement('button');
@@ -240,6 +260,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       const hasDetail = available();
       const detailLayers = hasDetail ? surveyDetailLayers(survey, survey, pattern, p, light) : [];
       if (hasDetail) layers.push(...detailLayers, {id: hit, type: 'fill', source: survey, paint: {'fill-opacity': 0}});
+      else if (gapShown()) layers.push(surveyDetailLayers(survey, survey, pattern, p, light)[0]!); // the hatch alone
       layers.push(...land.map(l => ({...l, id: `${source}-${l.id}`} as LayerSpecification)),
       {id: `${source}-coast`, type: 'line', source: BASEMAP_SOURCE, 'source-layer': 'earth',
         paint: {'line-color': p.mapCoast, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, light ? 0.7 : 0.5, 13, light ? 1.8 : 1.4],
@@ -251,7 +272,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
     disposePaint = effect(() => {
       if (signal.aborted) return;
       const seafloor = seafloorOn.value, field = fieldOn.value;
-      const current = detail.value, hasDetail = available();
+      const current = detail.value, gapData = gap.value, hasDetail = available(), hasGap = gapShown();
       const {layers, detailLayers} = buildLayers(readPalette(), isLight(), seafloor, field);
       detailIds = detailLayers.slice(1).map(l => l.id); // The hatch stays visible.
       drawn = true;
@@ -260,9 +281,11 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       // No source or attribution text on the map (G 2026-11-18); credits live on the sources page.
       o.engine.setOverlay(BOTTOM_RELIEF, {stopOnError: true, sources: {[source]: {type: 'raster', tileSize: 256,
         tiles: [`${SCHEME}://${token}/{z}/{x}/{y}`], minzoom: a.minzoom, maxzoom: a.maxzoom, bounds: [...a.bounds]},
-        ...hasDetail && current ? {[survey]: {type: 'geojson', data: current}} : {}}, layers,
+        ...hasDetail && current ? {[survey]: {type: 'geojson', data: current}}
+          : hasGap && gapData ? {[survey]: {type: 'geojson', data: gapData}} : {}}, layers,
         themePaint: p => paintEdits(buildLayers(p, isLight(), seafloor, field).layers),
         ...control ? {control} : {},
+        ...hasGap ? {themePatterns: p => surveyHatchPattern(pattern, p, isLight())} : {},
         ...hasDetail ? {themePatterns: p => surveyHatchPattern(pattern, p, isLight()),
           inspect: {layer: hit, alongside: COASTLINE_PICK, show(properties) {
             // Refused waypoints remain armed; successful ones change the

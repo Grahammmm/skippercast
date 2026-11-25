@@ -202,6 +202,37 @@ def test_survey_delivery_proves_the_browser_feed(checkout, release, site, case, 
     assert site.encodings['/' + key] == 'br'
 
 
+@pytest.mark.parametrize('case', ['match', 'missing'])
+def test_survey_gap_companion_is_proved_after_the_detail(checkout, release, site, case):
+    """M32: a bound no-survey companion is a second served representation; its absence fails the live proof."""
+    from skippercast.relief import survey_delivery
+
+    def pins(wire, raw):
+        return {'wire': {'bytes': len(wire), 'sha256': sha256(wire).hexdigest()},
+                'decoded': {'bytes': len(raw), 'sha256': sha256(raw).hexdigest()}}
+
+    detail_wire, gap_wire = bytes.fromhex('8b00807b7d03'), survey_delivery.encode(b'[1]')
+    detail, gap = pins(detail_wire, b'{}'), pins(gap_wire, b'[1]')
+    envelope = 'b' * 64
+    raw = encoded(dict(release.pointer, envelope_sha256=envelope, survey_detail=detail, survey_gap=gap))
+    (checkout.repo / POINTER).write_bytes(raw)
+    merge = commit(checkout.repo, 'Candidate survey pointer with its no-survey companion (unmerged)')
+    site.responses['deploy.json'] = 200, {}, encoded({'commit': merge})
+    site.responses[POINTER] = 200, {}, raw
+    keys = [f'feeds/tiles/relief/{REGION}/{envelope}/survey/{p["wire"]["sha256"]}.geojson.br' for p in (detail, gap)]
+    headers = {'Content-Encoding': 'br', 'Content-Type': 'application/geo+json'}
+    site.responses[keys[0]] = 200, headers, detail_wire
+    if case == 'match':
+        site.responses[keys[1]] = 200, headers, gap_wire
+    assert live_check.main(argv(checkout, site)) == (0 if case == 'match' else 1)
+    result = json.loads(checkout.report.read_bytes())
+    assert result['checks'][-2] == dict(row('survey', 'identical', key=keys[0]), **detail)
+    assert result['checks'][-1] == (dict(row('survey-gap', 'identical', key=keys[1]), **gap) if case == 'match'
+                                    else row('survey-gap', 'missing', fail=True, key=keys[1]))
+    assert (result['verdict'], result['requests']) == ('PASS' if case == 'match' else 'FAIL', 10)
+    assert site.requests == trace('deploy.json', POINTER, release.archive, release.root, *release.chunks, CONTOURS, *keys)
+
+
 @pytest.mark.parametrize('which, reason', [('merge', 'equal'), ('stale', 'stale'),
                                            ('unknown', 'unknown-commit'), ('side', 'diverged')])
 def test_C1_deploy_commit_relations(checkout, release, site, which, reason):

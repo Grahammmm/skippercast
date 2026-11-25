@@ -258,16 +258,18 @@ def _check(site, history, merge, key, raw, pointer, contours, *, survey, tail, p
     if checks[-1]['status'] == 'PASS':
         try:
             checks.extend(live_archive.check_archive(pointer, site.fetch,
-                                                     budget=_LIMIT - site.requests - 1 - int(survey is not None)))
+                                                     budget=_LIMIT - site.requests - 1 - len(survey)))
             if all(row['status'] == 'PASS' for row in checks):
                 checks.append(_contours_check(site, pointer['region'], contours))
         except FetchError as exc:
             checks.append({**_failure('fetch', exc.reason), 'key': exc.key})
-    if survey is not None and all(row['status'] == 'PASS' for row in checks):
+    for member, pins in survey:
+        if not all(row['status'] == 'PASS' for row in checks):
+            break
         try:
-            checks.append(live_survey.check(pointer, survey, site.fetch))
+            checks.append(live_survey.check(pointer, pins, site.fetch, member))
         except FetchError as exc:
-            checks.append({**_failure('survey', exc.reason), 'key': exc.key})
+            checks.append({**_failure(live_survey.CHECKS[member], exc.reason), 'key': exc.key})
     return deployed, checks
 
 
@@ -299,10 +301,10 @@ def _run(args, *, polls=None, interval=300, sleeper=sleep):
     repo, out = args.repo.resolve(), args.out.resolve()
     key = f'catalog/relief/{args.region}.json'
     head, raw, merge, pointer = _reviewed(repo, args.region, key)
-    survey = live_survey.binding(pointer)
+    survey = live_survey.bindings(pointer)
     # Owed after deploy: pointer, archive, root, one chunk per zoom, contours,
-    # and one survey representation if pinned. Git fetch and deploy cost two more.
-    tail = 5 + pointer['maxzoom'] - pointer['minzoom'] + int(survey is not None)
+    # and each pinned survey representation. Git fetch and deploy cost two more.
+    tail = 5 + pointer['maxzoom'] - pointer['minzoom'] + len(survey)
     if polls is not None:
         max_polls = _LIMIT - 2 - tail
         if polls > max_polls:
