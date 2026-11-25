@@ -63,6 +63,14 @@ def _output(root, stage, relative):
     return package.decode_document(raw), matches[0]['sha256']
 
 
+def _outputs_current(root, stage):
+    """Re-hash every output a receipt pins, as the receipt done rule does."""
+    for row in stage['outputs']:
+        raw = package.artifact_path(root, row['path']).read_bytes()
+        if len(raw) != row['bytes'] or receipts.sha256_bytes(raw) != row['sha256']:
+            raise ValueError(f'{stage["stage"]}: output bytes changed: {row["path"]}')
+
+
 def _phone(root, verified, qa):
     lo, hi = (verified.release[field] for field in ('minzoom', 'maxzoom'))
     cameras = sorted({z for z in (lo, 10, 13, 15, hi) if lo <= z <= hi})
@@ -97,6 +105,7 @@ def _packet(root, rights_digest):
                           (qa_stage, mosaic_stage), (qa_stage, contours), (packed, contours),
                           (mosaic_stage, selected)):
         _link(child, parent)
+    _outputs_current(root, contours)  # changed contour bytes under an unchanged receipt are stale too
     if [row['sha256'] for row in packed['inputs'] if row['role'] == 'rights'] != [rights_digest]:
         raise ValueError('package rights catalogue digest does not match the current reviewed catalogue')
     gen = packed['generation']

@@ -40,7 +40,8 @@ def make_packet(tmp_path, monkeypatch, *, empty=False, wrong_rights=False, swapp
     mosaic = write(root, 'mosaic/public/manifest.json', {'stats': {'valid_cells': 12},
                     'band_0_300ft': {'contributor_cells': {'1': 0 if empty else 3}}})
     mosaic_stage = stage(root, 'mosaic', '2' * 64, [select_stage], [mosaic], scope='public')
-    contour_stage = stage(root, 'contours', '5' * 64)
+    contour_output = write(root, 'contours/result.json', {'version': 1})
+    contour_stage = stage(root, 'contours', '5' * 64, outputs=[contour_output])
     package_stage = stage(root, 'package', GEN, [contour_stage],
                           inputs=[{'role': 'rights', 'sha256': 'b' * 64 if wrong_rights else rights}])
     shots = []
@@ -99,6 +100,22 @@ def test_contours_rebuilt_after_qa_make_the_packet_stale(tmp_path, monkeypatch):
     root, rights = make_packet(tmp_path, monkeypatch, contours=True, stale_contours=True)
     with pytest.raises(ValueError, match='current contours does not match its pinned input'):
         comparator._packet(root, rights)
+
+
+@pytest.mark.parametrize('change', ['bytes', 'size', 'removed'])
+def test_changed_contour_output_makes_the_packet_stale(tmp_path, monkeypatch, change):
+    # Contract: the receipt done rule re-hashes pinned outputs; the comparator must do so for contours.
+    # Bug caught: a matching generation link alone passed while result.json changed under an unchanged receipt.
+    root, rights = make_packet(tmp_path, monkeypatch, contours=True)
+    assert comparator._packet(root, rights)['status'] == 'local-ready'
+    output = root / 'contours/result.json'
+    if change == 'removed':
+        output.unlink()
+    else:
+        output.write_bytes(output.read_bytes().replace(b'1', b'2' if change == 'bytes' else b'11'))
+    with pytest.raises(ValueError, match='contours: output bytes changed|artifact is missing'):
+        comparator._packet(root, rights)
+    assert comparator.compare(tmp_path)['regions']['big-sur-coast']['status'] == 'invalid'
 
 
 def test_missing_contours_receipt_is_incomplete(tmp_path, monkeypatch):
