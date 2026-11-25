@@ -146,8 +146,8 @@ test('a spec must not carry its own pins, on any row, whatever their value', () 
 
 // The real rehearsal pairs (C20/C21, synthetic approvals) live outside the repository: this check runs where they are
 // present (CENTRAL_REHEARSAL_PAIRS=<dir holding one directory per contour region>) and skips otherwise.
-const REAL = process.env.CENTRAL_REHEARSAL_PAIRS || '/home/user/agent-work/finish/sc-central/c20/published';
-test('the real rehearsal pair of each contour region is accepted by the committed table, and a swap between regions is not', { skip: !existsSync(REAL) && 'real rehearsal pairs not present' }, () => {
+const REAL = process.env.CENTRAL_REHEARSAL_PAIRS || '';
+test('the real rehearsal pair of each contour region is accepted by the committed table, and a swap between regions is not', { skip: (!REAL || !existsSync(REAL)) && 'real rehearsal pairs not present (set CENTRAL_REHEARSAL_PAIRS)' }, () => {
   const read = region => CONTOUR_PAIR.map(name => ({name, bytes: readFileSync(join(REAL, region, name))}));
   const contourRegions = CENTRAL_REGIONS.filter(r => !TERRAIN.has(r));
   for (const region of contourRegions) {
