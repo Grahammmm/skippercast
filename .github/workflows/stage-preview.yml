@@ -311,6 +311,11 @@ jobs:
         run: >-
           python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" copy --plan-dir "$PLAN_DIR" --tree .
           --assets-dir "$RUNNER_TEMP/preview-assets"
+      - name: Copy the public basemap into the stage bucket only
+        env:
+          STAGE_R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
+          STAGE_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" basemap --plan-dir "$PLAN_DIR"
       - name: Place the checked stage config
         run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" place-config --plan-dir "$PLAN_DIR" --tree . --origin "$STAGE_URL"
       - name: Deploy the stage Worker only

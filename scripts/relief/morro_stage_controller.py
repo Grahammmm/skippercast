@@ -32,12 +32,14 @@ from __future__ import annotations
 import argparse
 from contextlib import closing, contextmanager
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 
 CONTROLLER = Path(__file__).resolve().parents[2]
 if __name__ == '__main__':
@@ -457,6 +459,90 @@ def copy(plan_dir: Path, tree: Path, env, *, github=None, r2=None, assets_dir: P
     return stage.copy_release(pointer, github, r2, allow_create=True, recheck=None)
 
 
+# The Chart draws land, water and coast labels from the statewide basemap named by
+# feeds/tiles/basemap/manifest.json. The stage bucket starts empty, so the preview copies the
+# exact public production bytes (read over HTTPS from the public site, never with production
+# credentials) into the stage bucket: archive first, then the manifest that names it, each
+# create-only with a full read-back. A different existing stage copy holds.
+PUBLIC_SITE = 'https://skippercast.g4651.workers.dev'
+BASEMAP_MANIFEST_KEY = 'tiles/basemap/manifest.json'
+_BASEMAP_KEY = re.compile(r'tiles/basemap/ca-coast-[0-9]{8}\.pmtiles')
+BASEMAP_LIMIT = 1 << 30
+_MANIFEST_LIMIT = 1 << 16
+
+
+def _public_get(url: str):
+    from urllib.request import Request
+    from skippercast.relief import stage_transport as stage
+
+    response = stage._open(Request(url, headers={'User-Agent': 'SkipperCast-morro-stage-preview'}))
+    if response.status != 200 or response.headers.get('Content-Range') is not None:
+        response.close()
+        raise HoldError('public basemap did not return a full GET')
+    return response
+
+
+def basemap_manifest(get=_public_get) -> tuple[bytes, dict]:
+    with closing(get(f'{PUBLIC_SITE}/feeds/{BASEMAP_MANIFEST_KEY}')) as stream:
+        data = stream.read(_MANIFEST_LIMIT + 1)
+    if len(data) > _MANIFEST_LIMIT:
+        raise HoldError('basemap manifest exceeds its byte limit')
+    try:
+        doc = json.loads(data)
+    except ValueError:
+        raise HoldError('basemap manifest is not JSON') from None
+    if (not isinstance(doc, dict) or doc.get('schema_version') != 1 or not isinstance(doc.get('key'), str)
+            or not _BASEMAP_KEY.fullmatch(doc['key']) or type(doc.get('bytes')) is not int
+            or not 0 < doc['bytes'] <= BASEMAP_LIMIT or not isinstance(doc.get('sha256'), str)
+            or not _SHA256.fullmatch(doc['sha256'])):
+        raise HoldError('basemap manifest does not name one pinned basemap archive')
+    return data, doc
+
+
+def copy_basemap(r2, *, get=_public_get) -> dict:
+    """Copy the public basemap archive and its manifest into the stage bucket (create-only, read back)."""
+    from skippercast.relief import stage_transport as stage
+
+    manifest, doc = basemap_manifest(get)
+    archive = stage.Object(doc['key'], doc['sha256'], BASEMAP_LIMIT, doc['bytes'])
+    listed = stage.Object(BASEMAP_MANIFEST_KEY, hashlib.sha256(manifest).hexdigest(), _MANIFEST_LIMIT, len(manifest))
+    with tempfile.TemporaryDirectory(prefix='stage-basemap-') as temp:
+        path = Path(temp) / 'archive.pmtiles'
+        with r2.get(archive.key) as stream:
+            present = stream is not None
+            if present:
+                stage._checked(stream, archive, archive.size, phase='stage basemap read-back')
+        if not present:
+            with closing(get(f'{PUBLIC_SITE}/feeds/{archive.key}')) as stream, path.open('xb') as out:
+                stage._checked(stream, archive, archive.size, phase='public basemap', output=out)
+            with path.open('rb') as body:
+                r2.create(archive.key, body, archive.size)
+            with r2.get(archive.key) as stream:
+                if stream is None:
+                    raise HoldError('stage basemap read-back missing')
+                stage._checked(stream, archive, archive.size, phase='stage basemap read-back')
+        with r2.get(listed.key) as stream:
+            if stream is not None:
+                stage._checked(stream, listed, listed.size, phase='stage basemap manifest (a different copy holds)')
+                return {'archive': archive.key, 'sha256': archive.sha, 'created': not present}
+        r2.create(listed.key, io.BytesIO(manifest), listed.size)
+        with r2.get(listed.key) as stream:
+            if stream is None:
+                raise HoldError('stage basemap manifest read-back missing')
+            stage._checked(stream, listed, listed.size, phase='stage basemap manifest read-back')
+    return {'archive': archive.key, 'sha256': archive.sha, 'created': not present}
+
+
+def basemap(plan_dir: Path, env, *, r2=None, get=_public_get) -> dict:
+    receipt, _ = load_plan(plan_dir)
+    if r2 is None:
+        r2 = StageR2.connect(env.get('STAGE_R2_PUBLISH_TOKEN', ''), env.get('STAGE_CLOUDFLARE_ACCOUNT_ID', ''),
+                             bucket=receipt['bucket'])
+    if getattr(r2, 'bucket', None) != receipt['bucket']:
+        raise HoldError('stage basemap copy is not bound to the planned bucket')
+    return copy_basemap(r2, get=get)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description='Controller steps for the manual Morro stage preview.')
     sub = parser.add_subparsers(dest='command', required=True)
@@ -473,6 +559,8 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument('--origin', required=True, help='the preview Worker workers.dev origin')
         else:
             p.add_argument('--assets-dir', type=Path, required=True, help='the fetched preview assets directory')
+    b = sub.add_parser('basemap', help='copy the public basemap archive and manifest into the stage bucket')
+    b.add_argument('--plan-dir', type=Path, required=True)
     for name, text in (('assets', 'box only: write the pointer release objects for the draft preview release'),
                        ('fetch', 'fetch job: download the draft preview release assets')):
         p = sub.add_parser(name, help=text)
@@ -492,6 +580,8 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(prepare_assets(args.pointer, args.pointer_sha256, args.release_dir, args.out), sort_keys=True))
         elif args.command == 'fetch':
             print(json.dumps(fetch(args.pointer, args.pointer_sha256, args.out), sort_keys=True))
+        elif args.command == 'basemap':
+            print('BASEMAP ' + json.dumps(basemap(args.plan_dir, os.environ), sort_keys=True))
         else:
             count = copy(args.plan_dir, args.tree, os.environ, assets_dir=args.assets_dir)
             print(f'COPIED {count} objects to the stage bucket')

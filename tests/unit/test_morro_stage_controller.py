@@ -98,7 +98,7 @@ def test_workflow_reads_only_the_cloudflare_secrets_and_only_after_every_guard()
     # only learns whether each is set).
     holders = [i for i, s in enumerate(STEPS) if 'secrets.' in json.dumps(s.get('env', {}))]
     assert holders == [step('Reject a non-main dispatch'), step('Create the stage bucket'), step('Copy the candidate'),
-                       step('Deploy the stage Worker only')]
+                       step('Copy the public basemap'), step('Deploy the stage Worker only')]
     assert all(value.endswith("!= '' }}") for value in STEPS[holders[0]]['env'].values())
     assert min(holders[1:]) > step('Re-plan after the build')
     bucket = STEPS[step('Create the stage bucket')]
@@ -121,11 +121,13 @@ def test_guards_run_from_the_controller_before_dependencies_build_or_any_credent
              step('Plan the isolated stage config'), step("Render the candidate's /sources credits"),
              step('Feed the /sources overlay into the build input'), step('Install locked web dependencies'),
              step('Build Worker and fingerprinted site'), step('Re-plan after the build'),
-             step('Create the stage bucket'), step('Copy the candidate'), step('Place the checked stage config'),
+             step('Create the stage bucket'), step('Copy the candidate'), step('Copy the public basemap'),
+             step('Place the checked stage config'),
              step('Deploy the stage Worker only'), step('Require the preview to serve exactly')]
     assert order == sorted(order)
     # Controller copies, never the candidate's, run every guard.
-    for name in ('Require the candidate', 'Plan the isolated', 'Re-plan after', 'Copy the candidate', 'Place the checked'):
+    for name in ('Require the candidate', 'Plan the isolated', 'Re-plan after', 'Copy the candidate', 'Copy the public basemap',
+                 'Place the checked'):
         assert '"$CONTROLLER/scripts/relief/' in STEPS[step(name)]['run']
     assert '--worker "$STAGE_WORKER" --bucket "$STAGE_BUCKET"' in STEPS[step('Plan the isolated')]['run']
     assert 'cmp "$PLAN_DIR/plan.json" "$PLAN_DIR.rebuilt/plan.json"' in STEPS[step('Re-plan after')]['run']
@@ -643,3 +645,80 @@ def test_fetch_holds_an_asset_whose_bytes_disagree_with_its_listed_size(released
         controller.fetch(pointer, sha, tmp_path / 'fetched', release=FakeDraft({name: (len(data), body)}))
     with pytest.raises(controller.HoldError, match='pinned pointer digest'):
         controller.fetch(pointer, '0' * 64, tmp_path / 'other', release=FakeDraft({}))
+
+
+# --- public basemap into the stage bucket -----------------------------------------------------------
+
+BASEMAP = b'synthetic basemap archive bytes'
+
+
+def basemap_doc(**changes):
+    doc = {'schema_version': 1, 'key': 'tiles/basemap/ca-coast-20261011.pmtiles', 'bytes': len(BASEMAP),
+           'sha256': hashlib.sha256(BASEMAP).hexdigest(), 'license': 'ODbL-1.0'}
+    doc.update(changes)
+    return json.dumps(doc).encode()
+
+
+def public(manifest=None, archive=BASEMAP):
+    seen = []
+
+    def get(url):
+        seen.append(url)
+        if url == f'{controller.PUBLIC_SITE}/feeds/tiles/basemap/manifest.json':
+            return io.BytesIO(basemap_doc() if manifest is None else manifest)
+        if url == f'{controller.PUBLIC_SITE}/feeds/tiles/basemap/ca-coast-20261011.pmtiles':
+            return io.BytesIO(archive)
+        raise AssertionError(url)
+    get.seen = seen
+    return get
+
+
+def test_basemap_copies_the_public_archive_then_its_manifest_into_the_stage_bucket():
+    client = FakeClient()
+    get = public()
+    result = controller.copy_basemap(controller.StageR2(client, 'skippercast-feeds-stage'), get=get)
+    assert result == {'archive': 'tiles/basemap/ca-coast-20261011.pmtiles', 'sha256': hashlib.sha256(BASEMAP).hexdigest(),
+                      'created': True}
+    puts = [key for op, _, key in client.calls if op == 'put']
+    assert puts == ['tiles/basemap/ca-coast-20261011.pmtiles', 'tiles/basemap/manifest.json']
+    assert client.objects['tiles/basemap/manifest.json'] == basemap_doc()
+    assert {bucket for _, bucket, _ in client.calls} == {'skippercast-feeds-stage'}
+    assert all(url.startswith('https://skippercast.g4651.workers.dev/feeds/') for url in get.seen)
+    # A repeat reads back both and writes nothing.
+    again = controller.copy_basemap(controller.StageR2(client, 'skippercast-feeds-stage'), get=public())
+    assert again['created'] is False and [k for op, _, k in client.calls if op == 'put'] == puts
+
+
+@pytest.mark.parametrize('manifest', [
+    b'not json', basemap_doc(key='tiles/basemap/../x.pmtiles'), basemap_doc(key='tiles/relief/morro-bay/x.pmtiles'),
+    basemap_doc(schema_version=2), basemap_doc(bytes=0), basemap_doc(bytes=2 << 30), basemap_doc(sha256='A' * 64),
+    b' ' * (1 << 17),
+])
+def test_basemap_holds_a_manifest_that_does_not_name_one_pinned_archive(manifest):
+    client = FakeClient()
+    with pytest.raises(controller.HoldError, match='basemap manifest'):
+        controller.copy_basemap(controller.StageR2(client, 'skippercast-feeds-stage'), get=public(manifest))
+    assert not client.objects
+
+
+def test_basemap_holds_wrong_bytes_and_a_different_existing_stage_copy():
+    from skippercast.relief import stage_transport as stage
+
+    client = FakeClient()
+    with pytest.raises(stage.StageError, match='SHA-256 or size mismatch'):
+        controller.copy_basemap(controller.StageR2(client, 'skippercast-feeds-stage'), get=public(archive=b'x' * len(BASEMAP)))
+    assert not client.objects
+    client.objects['tiles/basemap/ca-coast-20261011.pmtiles'] = BASEMAP
+    client.objects['tiles/basemap/manifest.json'] = basemap_doc(license='other')
+    with pytest.raises(stage.StageError, match='SHA-256 or size mismatch'):
+        controller.copy_basemap(controller.StageR2(client, 'skippercast-feeds-stage'), get=public())
+
+
+def test_basemap_binds_the_planned_stage_bucket(repo, base, tmp_path):
+    _, out = planned(repo, base, tmp_path)
+    assert controller.basemap(out, {}, r2=controller.StageR2(FakeClient(), 'skippercast-feeds-stage'), get=public())['created']
+    with pytest.raises(controller.HoldError, match='planned bucket'):
+        controller.basemap(out, {}, r2=controller.StageR2(FakeClient(), 'other-feeds-stage'), get=public())
+    step_ = STEPS[step('Copy the public basemap')]
+    assert set(step_['env']) == {'STAGE_R2_PUBLISH_TOKEN', 'STAGE_CLOUDFLARE_ACCOUNT_ID'}
+    assert step_['run'] == 'python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" basemap --plan-dir "$PLAN_DIR"'
