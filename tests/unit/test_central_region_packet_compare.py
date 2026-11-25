@@ -29,7 +29,8 @@ def stage(root, name, generation, parents=(), outputs=(), scope=None, inputs=())
     return result
 
 
-def make_packet(tmp_path, monkeypatch, *, empty=False, wrong_rights=False, swapped=False, contours=False):
+def make_packet(tmp_path, monkeypatch, *, empty=False, wrong_rights=False, swapped=False, contours=False,
+                stale_contours=False, missing_contours=False):
     region = 'big-sur-coast'
     root = tmp_path / region
     rights = 'a' * 64
@@ -39,7 +40,8 @@ def make_packet(tmp_path, monkeypatch, *, empty=False, wrong_rights=False, swapp
     mosaic = write(root, 'mosaic/public/manifest.json', {'stats': {'valid_cells': 12},
                     'band_0_300ft': {'contributor_cells': {'1': 0 if empty else 3}}})
     mosaic_stage = stage(root, 'mosaic', '2' * 64, [select_stage], [mosaic], scope='public')
-    package_stage = stage(root, 'package', GEN,
+    contour_stage = stage(root, 'contours', '5' * 64)
+    package_stage = stage(root, 'package', GEN, [contour_stage],
                           inputs=[{'role': 'rights', 'sha256': 'b' * 64 if wrong_rights else rights}])
     shots = []
     # End cameras are selected from this release's zoom range; the deeper build must include z15.
@@ -54,7 +56,11 @@ def make_packet(tmp_path, monkeypatch, *, empty=False, wrong_rights=False, swapp
     qa = write(root, f'qa/{GEN}/qa.json', {'region': region,
                'shots': {'cameras': [8, 10, 13, 15], 'entries': shots},
                'metrics': {'contour_count_by_interval_ft': {'10': 2} if contours else {}}})
-    qa_stage = stage(root, 'qa', '3' * 64, [package_stage, mosaic_stage], [qa])
+    qa_stage = stage(root, 'qa', '3' * 64, [package_stage, mosaic_stage, contour_stage], [qa])
+    if stale_contours:
+        stage(root, 'contours', '6' * 64)  # contours rebuilt after package and QA pinned the old receipt
+    if missing_contours:
+        (root / 'stages/contours.json').unlink()
     doc = {'schema': 'sc-relief-envelope/1', 'region': 'monterey-point-sur' if swapped else region,
            'generation': GEN, 'release': {}, 'qa': {}, 'layers': []}
     env = write(root, f'review/{GEN}/envelope.json', doc)
@@ -84,6 +90,22 @@ def test_region_rejects_empty_coverage_wrong_rights_or_swapped_envelope(tmp_path
     # Each input is correctly rehashed in its stage receipt, so a mere byte check cannot catch the mismatch.
     root, rights = make_packet(tmp_path, monkeypatch, **{problem: True})
     with pytest.raises(ValueError, match=reason):
+        comparator._packet(root, rights)
+
+
+def test_contours_rebuilt_after_qa_make_the_packet_stale(tmp_path, monkeypatch):
+    # Contract: QA and package pin the contours receipt, so a later contours rebuild invalidates them.
+    # Bug caught: only select/mosaic/package links were checked, so stale contour evidence stayed local-ready.
+    root, rights = make_packet(tmp_path, monkeypatch, contours=True, stale_contours=True)
+    with pytest.raises(ValueError, match='current contours does not match its pinned input'):
+        comparator._packet(root, rights)
+
+
+def test_missing_contours_receipt_is_incomplete(tmp_path, monkeypatch):
+    root, rights = make_packet(tmp_path, monkeypatch, contours=True, missing_contours=True)
+    result = comparator.compare(tmp_path)  # compare() reads the big-sur-coast packet; others are absent
+    assert result['regions']['big-sur-coast']['status'] == 'incomplete'
+    with pytest.raises(FileNotFoundError):
         comparator._packet(root, rights)
 
 

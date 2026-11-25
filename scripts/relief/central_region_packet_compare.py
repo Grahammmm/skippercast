@@ -92,8 +92,10 @@ def _packet(root, rights_digest):
     qa_stage = _read_stage(root, 'qa')
     mosaic_stage = _read_stage(root, 'mosaic', 'public')
     selected = _read_stage(root, 'select')
+    contours = _read_stage(root, 'contours')  # package and QA pin it; a rebuild after QA makes both stale
     for child, parent in ((review, packed), (review, qa_stage), (qa_stage, packed),
-                          (qa_stage, mosaic_stage), (mosaic_stage, selected)):
+                          (qa_stage, mosaic_stage), (qa_stage, contours), (packed, contours),
+                          (mosaic_stage, selected)):
         _link(child, parent)
     if [row['sha256'] for row in packed['inputs'] if row['role'] == 'rights'] != [rights_digest]:
         raise ValueError('package rights catalogue digest does not match the current reviewed catalogue')
