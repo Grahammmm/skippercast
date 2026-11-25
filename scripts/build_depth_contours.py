@@ -676,14 +676,160 @@ def v3_grid(grid, region, view, common, native_cell, *, support=None, certified=
                                   'minzoom': tier['min_zoom'], **({'maxzoom': stop} if stop is not None else {})}}
 
 
+V3_EDGE_NOTE = ('Where the measured survey grids stop: one outline of the contributing surveys\' measured water together, '
+                'each part credited to the first survey (in order) it bounds; a seam or a gap narrower than the tolerance '
+                'between surveys is not an edge. A cell counts only as valid water that its own evidence calls measured '
+                '(an EC measured code and support class 3, whichever the grid carries); unknown or interpolated support never '
+                'counts, and a grid with neither has no edge. Native cells are grouped into blocks of at most half the tolerance; a block counts when at least half '
+                'of its cells count. The outline along the region clip is not an edge.')
+
+
+def v3_edge_block(cell):
+    """Native cells per side of an edge block: at most half the edge tolerance, at least one cell."""
+    return max(1, int(EDGE_TOLERANCE_M / 2 // cell))
+
+
+def v3_measured_support(grid, region, view, native_cell, *, support=None, certified=False, provenance=None,
+                        positive_down=False, block_max_pixels=None):
+    """The grid's demonstrably measured water near the region, as (crs, polygon in that crs), or None.
+
+    Only a grid v3_grid would trace counts (the same native-resolution and tier gates). A cell is measured when it is
+    valid water and every evidence raster the grid carries agrees: its EC code is `measured` (provenance) and its support
+    class is 3 (support). Unknown or interpolated cells never count, and a grid with neither a support raster nor an EC
+    provenance raster has no demonstrable measured water, so no outline here (None). Cells are
+    grouped into v3_edge_block() blocks on the read window and a block counts when at least half of its cells inside
+    the grid count. The read window is the region plus a margin, clipped to the grid, so the window's own border lies
+    outside the region and never becomes an edge. Reads are row strips within the native pixel cap.
+    """
+    from shapely.geometry import box
+
+    crs = horizontal_crs(grid)
+    cell = grid.res[0]
+    if (not crs.is_projected or any(a.unit_name != 'metre' for a in crs.axis_info[:2])
+            or (grid.transform.b, grid.transform.d, grid.transform.a, grid.transform.e) != (0, 0, cell, -cell)
+            or grid.scales[0] != 1 or grid.offsets[0] != 0):
+        raise ValueError('ft-v3 requires a north-up native metre lattice and unscaled elevations')
+    if type(native_cell) not in (int, float) or not 0 < native_cell <= cell + 1e-9:
+        return None
+    if support is None and provenance is None:
+        return None  # no measured evidence at all: valid water alone is not proof the survey measured it
+    if not list(dc.v3_tiers(view, cell, certified=certified and support is not None)):
+        return None
+    if support is not None and (support.count != 1 or support.dtypes[0] != 'uint8' or support.shape != grid.shape
+                                or support.crs != grid.crs or support.transform != grid.transform):
+        raise ValueError('support raster must be single-band uint8 aligned with the native grid')
+    n = v3_edge_block(cell)
+    margin = 2 * n + int(np.ceil(2 * EDGE_TOLERANCE_M / cell))
+    clip = from_bounds(*transform_bounds('EPSG:4326', crs, *region['bounds'], densify_pts=21), transform=grid.transform)
+    x, y = max(0, int(np.floor(clip.col_off)) - margin), max(0, int(np.floor(clip.row_off)) - margin)
+    w = min(grid.width, int(np.ceil(clip.col_off + clip.width)) + margin) - x
+    h = min(grid.height, int(np.ceil(clip.row_off + clip.height)) + margin) - y
+    if w < 1 or h < 1:
+        return None
+    cap = preflight.MAX_PIXELS if block_max_pixels is None else min(preflight.MAX_PIXELS, block_max_pixels)
+    if n * w > cap:
+        raise ValueError(f'ft-v3 native window exceeds {cap} pixels; use a smaller region window')
+    step = max(n, (cap // w) // n * n)
+    parts = []
+    for top in range(y, y + h, step):
+        window = Window(x, top, w, min(step, y + h - top))
+        values = grid.read(1, window=window, masked=True).astype('float64').filled(np.nan)
+        if positive_down:
+            values = -values
+        counted = np.isfinite(values) & (values < 0) & (values >= -3000)
+        if provenance is not None:
+            counted &= provenance.read(1, window=window, masked=True).filled(PAD) == ec.CODES['measured']
+        if support is not None:
+            counted &= support.read(1, window=window, masked=True).filled(0) == MEASURED_SUPPORT
+        if not counted.any():
+            continue
+        rows, cols = counted.shape
+        shape = (-(-rows // n), n, -(-cols // n), n)
+        padded = np.zeros((shape[0] * n, shape[2] * n), dtype='int32')
+        padded[:rows, :cols] = counted
+        inside = np.zeros_like(padded)
+        inside[:rows, :cols] = 1
+        hits, cells = padded.reshape(shape).sum(axis=(1, 3)), inside.reshape(shape).sum(axis=(1, 3))
+        blocks = (hits > 0) & (2 * hits >= cells)
+        if not blocks.any():
+            continue
+        # A part block on the window's right or bottom edge must not reach past the cells it was counted from.
+        area = polygons(blocks, grid.window_transform(window) @ Affine.scale(n))
+        parts.append(area.intersection(box(*rasterio.windows.bounds(window, grid.transform))))
+    if not parts:
+        return None
+    # Strips share exact lattice edges; the millimetre grid only removes floating-point noise along them.
+    return crs, unary_union(parts, grid_size=1e-3)
+
+
+def v3_survey_edges(region, view, footprints):
+    """survey-edge features from [(common, [(crs, polygon), ...]), ...] in source order.
+
+    The edge is the outline of all the surveys' measured water together: the union is closed by half the edge tolerance
+    so a seam or a gap narrower than the tolerance between surveys is not an edge. Each part is credited to the first
+    survey whose measured water lies within the tolerance of it. Parts outside the region (including the read margin's
+    own border) are cut away; parts shorter than EDGE_MIN_LENGTH_M are dropped; the rest are simplified to
+    EDGE_TOLERANCE_M and rounded to dc.DECIMALS. Properties follow the client's ft-v3 rule for a non-contour line:
+    the style's first tier's min_zoom, index false and no maxzoom.
+    """
+    import shapely
+    from shapely.geometry import box
+
+    footprints = [(common, parts) for common, parts in footprints if parts]
+    if not footprints:
+        return []
+    west, south, east, north = region['bounds']
+    local = CRS.from_proj4(f'+proj=aeqd +lat_0={(south + north) / 2} +lon_0={(west + east) / 2} '
+                           '+datum=WGS84 +units=m +no_defs')
+    to_lonlat_t = Transformer.from_crs(local, 'EPSG:4326', always_xy=True)
+    projections = {}
+
+    def project(crs, geometry):
+        key = CRS.from_user_input(crs).to_wkt()
+        if key not in projections:
+            projections[key] = Transformer.from_crs(crs, local, always_xy=True)
+        return shapely.transform(geometry, projections[key].transform, interleaved=False)
+
+    surveys = [(common, unary_union([project(crs, polygon) for crs, polygon in parts])) for common, parts in footprints]
+    half = EDGE_TOLERANCE_M / 2
+    union = unary_union([area for _, area in surveys]).buffer(half, quad_segs=2).buffer(-half, quad_segs=2)
+    # Keep coordinates strictly inside the region so rounding cannot move an endpoint across its bounds.
+    eps = 10 ** -dc.DECIMALS
+    inner = shapely.segmentize(box(west + eps, south + eps, east - eps, north - eps), 0.001)
+    outline = union.boundary.intersection(project('EPSG:4326', inner))
+    taken, features = None, []
+    first_zoom = view['contours']['tiers'][0]['min_zoom']
+    for common, area in surveys:
+        zone = area.buffer(EDGE_TOLERANCE_M, quad_segs=2)
+        mine = zone if taken is None else zone.difference(taken)
+        taken = zone if taken is None else taken.union(zone)
+        merged = line_merge(unary_union(list(line_parts(outline.intersection(mine)))))
+        lines = []
+        for piece in line_parts(merged):
+            if piece.length < EDGE_MIN_LENGTH_M:
+                continue
+            points = to_lonlat(to_lonlat_t, list(piece.simplify(EDGE_TOLERANCE_M).coords), dc.DECIMALS)
+            points = dedupe([[min(max(x, west), east), min(max(y, south), north)] for x, y in points])
+            if len(points) >= 2:
+                lines.append(points)
+        if lines:
+            features.append({'type': 'Feature', 'id': f"{common['source_id']}-edge",
+                             'geometry': {'type': 'MultiLineString', 'coordinates': sorted(lines)},
+                             'properties': {**common, 'kind': 'survey-edge', 'minzoom': first_zoom, 'index': False}})
+    return features
+
+
 def v3_collection(region, view, features, sources, omitted):
+    provenance = {'region_id': region['id'], 'bounds': region['bounds'], 'units': 'ft', 'set': dc.FT_V3,
+                  'contours': view.digest('contours'), 'shelf_limit_ft': dc.V2_SHELF_LIMIT_FT,
+                  'features': len(features), 'sources': sources, 'sources_omitted': omitted,
+                  'method': ('Marching squares on Gaussian-smoothed native water cells (measured or unknown '
+                             'support; unknown-support cells never drawn deeper than their own value); no resampling.'),
+                  'limitations': 'Estimated display contours. Not for navigation. No datum conversion.'}
+    if any(f['properties'].get('kind') == 'survey-edge' for f in features):
+        provenance['edge'] = {'tolerance_m': EDGE_TOLERANCE_M, 'min_length_m': EDGE_MIN_LENGTH_M, 'note': V3_EDGE_NOTE}
     return {'type': 'FeatureCollection', 'schema_version': dc.SCHEMA_VERSION, 'features': features,
-            'provenance': {'region_id': region['id'], 'bounds': region['bounds'], 'units': 'ft', 'set': dc.FT_V3,
-                           'contours': view.digest('contours'), 'shelf_limit_ft': dc.V2_SHELF_LIMIT_FT,
-                           'features': len(features), 'sources': sources, 'sources_omitted': omitted,
-                           'method': ('Marching squares on Gaussian-smoothed native water cells (measured or unknown '
-                                      'support; unknown-support cells never drawn deeper than their own value); no resampling.'),
-                           'limitations': 'Estimated display contours. Not for navigation. No datum conversion.'}}
+            'provenance': provenance}
 
 
 def v3_cli(region, sources, order, opened, identity, hashes, supports, provs, held):
@@ -693,7 +839,7 @@ def v3_cli(region, sources, order, opened, identity, hashes, supports, provs, he
     if style is None:
         raise SystemExit('--set v3 needs a kit render style')
     view = style.view('contours')
-    features, listed = [], []
+    features, listed, footprints = [], [], []
     with ExitStack() as stack:
         for ident, grid in zip(order, opened):
             source, known = sources[ident], identity[ident]
@@ -710,6 +856,10 @@ def v3_cli(region, sources, order, opened, identity, hashes, supports, provs, he
                                'attribution': source['rights']['attribution'], 'sha256': hashes[ident],
                                'native_cell_m': grid.res[0]})
                 features.extend(lines)
+                area = v3_measured_support(grid, region, view, known['native_cell_m'], support=measured,
+                                           certified=False, provenance=ec_grid)
+                footprints.append((common, [area] if area is not None else []))
+    features.extend(v3_survey_edges(region, view, footprints))
     doc = v3_collection(region, view, features, listed, dc.omitted_sources(region, sources, (s['source_id'] for s in listed)))
     if held:
         doc['provenance'].update(publication_held=True, held_sources=dc.held_sources(doc, sources))
