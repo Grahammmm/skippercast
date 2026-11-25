@@ -61,9 +61,11 @@ export function reliefVerifier(archive: {object_key: string; digest_root_sha256:
   }
 
   return async (z: number, x: number, y: number, data: ArrayBuffer | undefined) => {
+    signal.throwIfAborted();
     const blockX = Math.floor(x / blockSize), blockY = Math.floor(y / blockSize);
     const path = `${z}/${blockX}_${blockY}.json`;
     const doc = await (root ??= loadRoot());
+    signal.throwIfAborted();
     let digest: string | undefined;
     if (Object.hasOwn(doc, path)) {
       const expected = doc[path];
@@ -73,7 +75,9 @@ export function reliefVerifier(archive: {object_key: string; digest_root_sha256:
         chunk = loadChunk(path, expected, z, blockX, blockY);
         chunks.set(path, chunk);
       }
-      digest = (await chunk).get(`${x}/${y}`);
+      const entries = await chunk;
+      signal.throwIfAborted();
+      digest = entries.get(`${x}/${y}`);
     }
     // Sparse holes are normal only if the authenticated index agrees. A
     // directory change must not turn an indexed tile into an apparent hole.
@@ -81,5 +85,6 @@ export function reliefVerifier(archive: {object_key: string; digest_root_sha256:
     if (digest === undefined) throw new Error('Missing relief tile digest');
     if (data === undefined) throw new Error('Indexed relief tile missing from archive');
     if (await hash(data) !== digest) throw new Error('Relief tile hash mismatch');
+    signal.throwIfAborted();
   };
 }
