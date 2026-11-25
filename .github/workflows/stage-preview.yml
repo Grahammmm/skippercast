@@ -1,0 +1,192 @@
+name: Morro stage preview
+
+# Manual, stage-only preview of one Morro data candidate (the unmerged data-pointer
+# PR head) on its own Worker and its own feeds bucket. Never runs on a push, a
+# schedule or a PR, never touches the production Worker, bucket, routes, D1,
+# queues or secrets, and never merges or publishes anything.
+#
+# Dispatch needs G's explicit preview approval (the "Morro preview site" card). The
+# run uses only the stage credentials in the `morro-stage-preview` environment
+# (STAGE_CLOUDFLARE_API_TOKEN, STAGE_CLOUDFLARE_ACCOUNT_ID, STAGE_R2_PUBLISH_TOKEN)
+# and the MORRO_STAGE_URL variable (https://skippercast-morro-stage.<account>.workers.dev);
+# while any is unset the run holds before building.
+#
+# Guards, all from this workflow's own reviewed revision (the controller), never the
+# candidate's copies:
+#   1. dispatch only from protected main of this repository;
+#   2. the candidate may differ from the controller commit only in Morro's pointer
+#      and contour files, so the code built and deployed is exactly reviewed main;
+#   3. scripts/relief/morro_stage_preview.py plans a config that refuses every
+#      production name, route, schedule and bucket and binds the candidate commit and
+#      the reviewed pointer digest; the plan is re-run after the build;
+#   4. relief objects go only to the *-stage bucket (create-only, full read-back);
+#   5. the preview must then serve exactly the planned commit and pointer bytes.
+# Receipts (plan, config digest, served check) are kept as a run artifact. They are
+# hosted evidence for the release packet, not an R8 verdict and not a go-live.
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: "exact 40-character commit of the Morro data candidate (the data-pointer PR head)"
+        type: string
+        required: true
+      pointer_sha256:
+        description: "SHA-256 of the reviewed catalog/relief/morro-bay.json bytes"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: morro-stage-preview
+  cancel-in-progress: false
+
+env:
+  WRANGLER: npx --yes wrangler@4.142.0
+  STAGE_WORKER: skippercast-morro-stage
+  STAGE_BUCKET: skippercast-feeds-stage
+
+jobs:
+  preview:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'Grahammmm/skippercast' &&
+      github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: morro-stage-preview
+    env:
+      CANDIDATE: ${{ inputs.candidate }}
+      POINTER_SHA256: ${{ inputs.pointer_sha256 }}
+      PLAN_DIR: ${{ runner.temp }}/morro-stage-plan
+    steps:
+      - name: Reject a non-main dispatch or malformed inputs before checkout
+        env:
+          STAGE_URL: ${{ vars.MORRO_STAGE_URL }}
+          HAS_TOKEN: ${{ secrets.STAGE_CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ACCOUNT: ${{ secrets.STAGE_CLOUDFLARE_ACCOUNT_ID != '' }}
+          HAS_R2: ${{ secrets.STAGE_R2_PUBLISH_TOKEN != '' }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ] || [ "$GITHUB_REF_PROTECTED" != "true" ]; then
+            echo "::error::Morro stage preview held: dispatch from protected main only."
+            exit 1
+          fi
+          if ! printf '%s' "$CANDIDATE" | grep -Eqx '[0-9a-f]{40}'; then
+            echo "::error::Morro stage preview held: candidate must be a full lowercase commit SHA."
+            exit 1
+          fi
+          if ! printf '%s' "$POINTER_SHA256" | grep -Eqx '[0-9a-f]{64}'; then
+            echo "::error::Morro stage preview held: pointer digest must be 64 lowercase hex digits."
+            exit 1
+          fi
+          if [ "$HAS_TOKEN" != "true" ] || [ "$HAS_ACCOUNT" != "true" ] || [ "$HAS_R2" != "true" ] || [ -z "$STAGE_URL" ]; then
+            echo "::error::Morro stage preview held: stage credentials or MORRO_STAGE_URL are not configured for the morro-stage-preview environment."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .preview-controller
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/__init__.py
+            scripts/relief/__init__.py
+            scripts/relief/morro_stage_preview.py
+            scripts/relief/morro_stage_controller.py
+            scripts/wrangler_config.mjs
+            src/skippercast/
+            catalog/relief/pointer.schema.json
+            catalog/sources.json
+            requirements-publish.txt
+            wrangler.jsonc
+          sparse-checkout-cone-mode: false
+      - name: Move the controller out of the candidate tree
+        run: |
+          rm -rf "$RUNNER_TEMP/preview-controller"
+          mv .preview-controller "$RUNNER_TEMP/preview-controller"
+          echo "CONTROLLER=$RUNNER_TEMP/preview-controller" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.candidate }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require the candidate to change only Morro data against the controller
+        run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" scope --tree . --base "$GITHUB_WORKFLOW_SHA" --sha "$CANDIDATE"
+      - name: Plan the isolated stage config before any dependency or build runs
+        run: >-
+          python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" plan --tree . --sha "$CANDIDATE"
+          --pointer-sha256 "$POINTER_SHA256" --wrangler "$CONTROLLER/wrangler.jsonc"
+          --worker "$STAGE_WORKER" --bucket "$STAGE_BUCKET" --out "$PLAN_DIR"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10
+      - name: Install locked web dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Worker and fingerprinted site
+        run: |
+          pnpm build
+          node scripts/check_client.mjs
+          # The served receipt names the candidate commit only (no production switches).
+          node "$CONTROLLER/scripts/wrangler_config.mjs" --snapshot "$CANDIDATE" dist/client/deploy.json
+      - name: Re-plan after the build (only dependencies and build output may have appeared)
+        run: >-
+          python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" plan --tree . --sha "$CANDIDATE"
+          --pointer-sha256 "$POINTER_SHA256" --wrangler "$CONTROLLER/wrangler.jsonc"
+          --worker "$STAGE_WORKER" --bucket "$STAGE_BUCKET" --out "$PLAN_DIR.rebuilt" &&
+          cmp "$PLAN_DIR/plan.json" "$PLAN_DIR.rebuilt/plan.json"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install pinned controller dependencies
+        run: python3 -Im pip install -r "$CONTROLLER/requirements-publish.txt"
+      - name: Copy the candidate's relief release into the stage bucket only
+        env:
+          STAGE_GITHUB_READ_TOKEN: ${{ github.token }}
+          STAGE_R2_PUBLISH_TOKEN: ${{ secrets.STAGE_R2_PUBLISH_TOKEN }}
+          STAGE_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.STAGE_CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" copy --plan-dir "$PLAN_DIR" --tree .
+      - name: Place the checked stage config
+        env:
+          STAGE_URL: ${{ vars.MORRO_STAGE_URL }}
+        run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" place-config --plan-dir "$PLAN_DIR" --tree . --origin "$STAGE_URL"
+      - name: Deploy the stage Worker only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.STAGE_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.STAGE_CLOUDFLARE_ACCOUNT_ID }}
+        run: $WRANGLER deploy --config wrangler.stage.json --message "Morro stage preview ${CANDIDATE} (run ${GITHUB_RUN_ID})"
+      - name: Require the preview to serve exactly the planned commit and pointer
+        env:
+          STAGE_URL: ${{ vars.MORRO_STAGE_URL }}
+        run: |
+          mkdir -p "$PLAN_DIR/served"
+          # Edge caches can lag a fresh deploy: up to 6 reads 10 s apart, then the last verdict stands.
+          for attempt in 1 2 3 4 5 6; do
+            rm -f "$PLAN_DIR/served/deploy.json" "$PLAN_DIR/served/pointer.json"
+            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/deploy.json" -o "$PLAN_DIR/served/deploy.json" || echo '{}' > "$PLAN_DIR/served/deploy.json"
+            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/catalog/relief/morro-bay.json" -o "$PLAN_DIR/served/pointer.json" || rm -f "$PLAN_DIR/served/pointer.json"
+            if python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" verify --plan "$PLAN_DIR/plan.json" \
+                 --deploy-json "$PLAN_DIR/served/deploy.json" --pointer "$PLAN_DIR/served/pointer.json" > "$PLAN_DIR/served/verify.json"; then
+              cat "$PLAN_DIR/served/verify.json"
+              exit 0
+            fi
+            if [ "$attempt" -lt 6 ]; then sleep 10; fi
+          done
+          cat "$PLAN_DIR/served/verify.json"
+          echo "::error::Morro stage preview does not serve the planned commit and pointer."
+          exit 1
+      - name: Keep the stage receipts
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: morro-stage-preview-${{ inputs.candidate }}
+          path: |
+            ${{ runner.temp }}/morro-stage-plan/plan.json
+            ${{ runner.temp }}/morro-stage-plan/wrangler.stage.json
+            ${{ runner.temp }}/morro-stage-plan/served/
+          if-no-files-found: warn
+          retention-days: 90
