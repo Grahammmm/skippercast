@@ -352,9 +352,10 @@ def main(argv=None):
             bounds = box_of(read_json(config))
             index = rights_index(read_json(registry)['sources'])
             excluded = sorted(set(args.exclude_source))
-            unknown = [s for s in excluded if index.get(s) is None]
+            registry_ids = {r['id'] for r in read_json(registry)['sources']}
+            unknown = [s for s in excluded if s not in registry_ids or index.get(s) is None or index[s]['id'] != s]
             if unknown:
-                raise ValueError(f'--exclude-source is not an unambiguous registry id: {", ".join(unknown)}')
+                raise ValueError(f'--exclude-source needs an unambiguous registry id (not an alias): {", ".join(unknown)}')
             caps = caps_index(read_json(provenance))
             if doc['summary']['region'] != region.id:
                 raise ValueError('census region mismatch')
@@ -366,9 +367,6 @@ def main(argv=None):
                               rights_basis=basis, decision='skipped', reason=reason,
                               certified_area_m2_by_depth_band={'0-20m': 0, '20-91.44m': 0})
                 reports.append(report)
-                if bound and bound['id'] in excluded:
-                    report['reason'] = 'excluded_by_region_run_option'
-                    continue
                 if rights != 'public':
                     continue
                 if row.get('kind') not in {'elevation', 'archive'} or row.get('hold_reason') not in NORMALIZABLE:
@@ -378,7 +376,10 @@ def main(argv=None):
                     raw = local_path(row['path'])
                     if raw in seen_paths:
                         raise ValueError('duplicate_census_path')
-                    seen_paths.add(raw)
+                    seen_paths.add(raw)  # an excluded row still claims its path, so exclusion cannot widen selection
+                    if bound is not None and bound['id'] in excluded:
+                        report['reason'] = 'excluded_by_region_run_option'
+                        continue
                     if not raw.is_file():
                         raise ValueError('original_missing')
                     sha = row.get('sha256_receipt') or row.get('sha256') or receipts.sha256_file(raw)

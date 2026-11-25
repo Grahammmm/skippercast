@@ -227,3 +227,30 @@ def test_exclude_source_skips_only_that_registry_source_and_rebuilds(tmp_path):
     with pytest.raises(SystemExit) as refused:
         main([*argv, '--exclude-source', 'not-in-registry'])
     assert refused.value.code == 1
+
+
+def test_exclude_source_cannot_widen_selection_or_use_aliases(tmp_path):
+    # Contract: an excluded row still claims its census path, so a duplicate-path row bound to another
+    # source stays skipped; aliases (acquisition id, URL) are refused, only real registry ids count.
+    # Bug caught: excluding the first duplicate let the second one in; an alias that excluded nothing.
+    region, cache, argv = fixture(tmp_path)
+    values = np.full((2, 2), -5, dtype='float32')
+    raw = raster(tmp_path / 'shared.tif', values)
+    normalized(cache, raw, values, np.full(values.shape, 3, dtype='uint8'))
+    rows = [row_for(raw, 'dup-a'), row_for(raw, 'dup-b')]
+    put(region / 'census.json', dict(summary={'region': region.name}, files=rows))
+    put(tmp_path / 'registry.json', {'sources': [registry_row('dup-a', acquisition_id='acq-a', data_url='https://example.org/a.tif'),
+                                                 registry_row('dup-b')]})
+
+    assert main(argv) == 0
+    assert {s['source_id'] for s in read(region / 'select/sources.json')['sources']} == {'dup-a'}
+
+    assert main([*argv, '--exclude-source', 'dup-a']) == 0
+    assert read(region / 'select/sources.json')['sources'] == []
+    reasons = sorted((s['source_id'], s['reason']) for s in read(region / 'select/selection.json')['files'])
+    assert reasons == [('dup-a', 'excluded_by_region_run_option'), ('dup-b', 'duplicate_census_path')]
+
+    for alias in ('acq-a', 'https://example.org/a.tif'):
+        with pytest.raises(SystemExit) as refused:
+            main([*argv, '--exclude-source', alias])
+        assert refused.value.code == 1
