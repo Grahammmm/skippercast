@@ -1,0 +1,37 @@
+{
+  "custodian": "Central lead (SkipperCast second lead); authenticated by PR review",
+  "regions": {
+    "big-sur-coast": {
+      "detail": "1fd672d7c6593001f9c9fa4592476c075119b61f76f48ac3aeca827b4053ff1e",
+      "overview": "45fed194cc13f6b33f48056cfddf7697946e2556258da2c5627758f0cd30e298",
+      "pointer": "309800ea04beb6d4824324082d86b7558c7b17023186626889c9552c38fbca1c"
+    },
+    "cambria-san-simeon": {
+      "detail": "48f59065739929cb2720491aa853ab8d0b3dbd9bd550f181f06386ad5c6f60c4",
+      "overview": "50f03662c76b286ecd00b38c3cc80e4e6fb64c27deef7ad47d4f330279d01a74",
+      "pointer": "184e71ff45b9d42360543d48b9a1d173777918ad013fe1cee95d3284bc378028"
+    },
+    "monterey-point-sur": {
+      "pointer": "37b9cd9e228b14f19e5c2f1d610c36250b909f11027846533a95ba04f090d15e",
+      "terrain_only": true
+    },
+    "point-arguello-conception": {
+      "detail": "1607899d3e3c6533b4868e8847c8a4e32d59a77dfddebd73d395f6bf890e6124",
+      "overview": "681eb124b5080658ea3710dd1c252ad04aab5a14646c65451c9219c45fd4eee8",
+      "pointer": "a2db31f5b832ceb83de7afc195009cbadbfd245188a8dd00250555058175abdd"
+    },
+    "santa-cruz-monterey-bay": {
+      "pointer": "187f106644e6f8f95bb14230149d1742d3e35545862828f6324dc28711eee2b5",
+      "terrain_only": true
+    },
+    "south-big-sur-san-simeon": {
+      "detail": "1490ab6b35505b6e9e50a37cb684b917d9989b1e6a61a234c69256f747b9b59a",
+      "overview": "060368f304813b2a7af1f66d36da412084aa602077ba437ebc1669a3de71e8d7",
+      "pointer": "ffbee6e1ead397f615da526cd2114a0773300f16546234a6bb055c8eee48d0f0"
+    }
+  },
+  "replace_when": "Cdata1-6 data PRs merge: read catalog/depth-contours and dist/regions from the merged tree instead",
+  "schema": "central-rehearsal-pins/1",
+  "source": "finish/sc-central/c21/pins-tree.json (every digest re-hashed against the C21 tree 2026-11-25, 14/14 files found)",
+  "status": "REHEARSAL candidate pins (C20/C21 stamped pairs, synthetic approvals); NOT a publication record"
+}
