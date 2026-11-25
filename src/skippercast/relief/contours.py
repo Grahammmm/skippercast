@@ -445,10 +445,21 @@ def _budget_error(filename, size, budget):
 
 
 _PAIR_NAMES = ('contours.geojson', 'contours-overview.geojson')
+# Regions whose ft-v3 pair may be fitted to the byte budget by retaining whole estimated lines. Morro Bay
+# was first; the Central Coast release regions trace lidar-dense shelves (Cambria: 36 MB against a 3 MB
+# budget) and otherwise stop the whole release chain at `contours`. Any other region still fails closed.
+WHOLE_LINE_BUDGET_REGIONS = frozenset({
+    'morro-bay', 'big-sur-coast', 'cambria-san-simeon', 'monterey-point-sur',
+    'point-arguello-conception', 'santa-cruz-monterey-bay', 'south-big-sur-san-simeon'})
 
 
-def _compact_morro(full, overview, budgets, sizes, view):
-    """Reserve one original part per uncovered group before preferring wider parts."""
+def _compact_morro(full, overview, budgets, sizes, view, drop_groups=False):
+    """Reserve one original part per uncovered group before preferring wider parts.
+
+    With ``drop_groups`` (the Central Coast regions) a group whose shortest whole line no longer fits is
+    left out instead of failing the stage; Morro Bay keeps the refusal. Dropped groups show in the
+    retention metrics.
+    """
     # The ft-v3 projection keeps the original feature objects, unmodified.
     visible = {id(feature) for feature in overview['features']}
     pier = view['pier_view']['contours_tier']
@@ -500,12 +511,16 @@ def _compact_morro(full, overview, budgets, sizes, view):
         least = min(parts, key=lambda part: part[-1])
         _, _, _, i, cost = least
         indices = (1, 0) if id(full['features'][i]) in visible else (0,)
+        adds = {k: cost + int(counts[k] > 0) + len(str(counts[k] + 1)) - len(str(counts[k])) for k in indices}
+        if drop_groups and any(used[k] + adds[k] > budgets[k] for k in indices):
+            continue  # this group's shortest whole line no longer fits: drop it (the retention metrics list it)
         for k in indices:
-            n = counts[k]
-            used[k] += cost + int(n > 0) + len(str(n + 1)) - len(str(n))
+            used[k] += adds[k]
             counts[k] += 1
             check(k, _line_group(full['features'][i]))
         choices.append((parts, least, indices))
+    if not choices and not protected:
+        raise receipts.ReceiptError(f'{overflow}; no contour group fits the budget')
 
     # Share the remaining bytes among the groups, without spending a later
     # group's reserved minimum. Stable span/ID/part order breaks ties.
@@ -538,13 +553,14 @@ def _selected_pair(collection, region, view):
     overview = dc.overview_contours(collection)
     budgets = dc.size_budgets(collection)
     metrics = {}
-    if (view is not None and region.get('id') == 'morro-bay'
+    if (view is not None and region.get('id') in WHOLE_LINE_BUDGET_REGIONS
             and collection['provenance'].get('set') == dc.FT_V3):
         original = (collection, overview)
         sizes = tuple(_json_bytes(document) + 1 for document in original)
         compacted = any(size > cap for size, cap in zip(sizes, budgets))
         if compacted:
-            collection = _compact_morro(collection, overview, budgets, sizes, view)
+            collection = _compact_morro(collection, overview, budgets, sizes, view,
+                                        drop_groups=region.get('id') != 'morro-bay')
             overview = dc.overview_contours(collection)
         metrics['compacted'] = compacted
         for name, before, after in zip(('full', 'overview'), original, (collection, overview)):
