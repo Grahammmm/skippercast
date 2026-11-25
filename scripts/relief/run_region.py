@@ -307,6 +307,8 @@ def stage_extras(args, out):
     if args.region_config:
         for stage in ('select', *SCOPED_STAGES):
             extra[stage] += ['--region-config', args.region_config]
+    for source_id in args.exclude_source or ():
+        extra['select'] += ['--exclude-source', source_id]
     for name in ('coarse', 'water', 'coarse-source', 'coarse-date'):
         if value := getattr(args, name.replace('-', '_')):
             extra['zone'] += [f'--{name}', value]
@@ -819,6 +821,8 @@ def parse(argv):
                         help='qa option: fine-support raster for zoom 16 or 17 (z16/z17 also accepted; qa receives 16/17); repeat per zoom')
     parser.add_argument('--region-config', help='region config file for select, mosaic, tiles and zone (default: regions/<id>/region.json)')
     parser.add_argument('--census', help='local census to bind before select')
+    parser.add_argument('--exclude-source', action='append', default=[], metavar='REGISTRY_ID',
+                        help='select option: skip census rows bound to this registry source id (repeatable)')
     parser.add_argument('--census-sha256', help='expected SHA-256 of --census (required with --census)')
     parser.add_argument('--coarse', help='zone input: EPSG:3310 elevation TIFF (defaults to done coarse output)')
     parser.add_argument('--water', help='zone input: WGS84 ocean-water GeoJSON (defaults to done water output)')
