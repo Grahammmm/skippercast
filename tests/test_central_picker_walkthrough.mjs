@@ -2,20 +2,30 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import test from 'node:test';
-import {CENTRAL_REGIONS, CONTOUR_PAIR, checkContourPair, checkSpec, expectedFor, judgeArrival, pickerReach, planWalk} from '../scripts/relief/central_picker_walkthrough.mjs';
+import {existsSync, readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {CENTRAL_REGIONS, CONTOUR_PAIR, PIN_TABLE_PATH, REHEARSAL_PINS, checkContourPair, checkPinTable, checkSpec, expectedFor, judgeArrival, loadPinTable, pickerReach, planWalk} from '../scripts/relief/central_picker_walkthrough.mjs';
 
 const TERRAIN = new Set(['monterey-point-sur', 'santa-cruz-monterey-bay']);
 const STYLE = 'c'.repeat(64);
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
-/** The published pair of a region, shaped as the ft-v3 contour documents are (provenance names region, set, style, role). */
+/** A synthetic pair of a region, shaped as the ft-v3 contour documents are (provenance names region, set, style, role). */
 const publishedPair = (region, style = STYLE) => {
   const make = overview => Buffer.from(JSON.stringify({type: 'FeatureCollection', features: [{type: 'Feature'}, {type: 'Feature'}],
     provenance: {region_id: region, set: 'ft-v3', units: 'ft', contours: style, features: 2, ...(overview ? {overview: {max_zoom: 12}} : {})}}));
   return [{name: CONTOUR_PAIR[0], bytes: make(true)}, {name: CONTOUR_PAIR[1], bytes: make(false)}];
 };
-const pinsOf = files => ({overview: sha(files.find(f => f.name === CONTOUR_PAIR[0]).bytes), detail: sha(files.find(f => f.name === CONTOUR_PAIR[1]).bytes)});
+/** A pin table (as the committed one is shaped) built for the given synthetic pairs: the trust root a test chooses, never the caller's. */
+const tableFor = pairs => {
+  const regions = {};
+  for (const region of CENTRAL_REGIONS) {
+    const files = pairs[region] ?? (TERRAIN.has(region) ? null : publishedPair(region));
+    regions[region] = files ? {overview: sha(files.find(f => f.name === CONTOUR_PAIR[0]).bytes), detail: sha(files.find(f => f.name === CONTOUR_PAIR[1]).bytes)} : {terrain_only: true};
+  }
+  return loadPinTable(JSON.stringify({schema: 'central-rehearsal-pins/1', regions}));
+};
 const spec = CENTRAL_REGIONS.map((region, i) => ({region, release: `/x/${region}/release.json`, lat: 35 + i / 10, lon: -121 - i / 10,
-  contours: TERRAIN.has(region) ? null : `/x/c20/${region}`, contourPins: TERRAIN.has(region) ? null : pinsOf(publishedPair(region))}));
+  contours: TERRAIN.has(region) ? null : `/x/c20/${region}`}));
 const seenOk = (region, extra = {}) => ({urlRegion: region, shownRegion: region, contoursDrawn: 5, contourRows: 1,
   creditLines: ['surveyed unstated · NAVD88 · not for navigation'], contourFilesRequested: 1, contourFilesRequestedAnyRegion: 1, pageErrors: [], ...extra});
 const seenTerrain = (region, extra = {}) => ({urlRegion: region, shownRegion: region, contoursDrawn: 0, contourRows: 0, creditLines: [],
@@ -56,8 +66,8 @@ test('a spec row must carry the canonical contours value: a directory for contou
   assert.equal(checkSpec(spec).length, 6);
 });
 
-test('a contour directory must be the region\'s published pair: exact names, pinned bytes, own provenance', () => {
-  const region = 'big-sur-coast', good = publishedPair(region), ok = {pins: pinsOf(good), style: STYLE};
+test('a contour directory must be the region\'s pinned pair: exact names, table-pinned bytes, own provenance', () => {
+  const region = 'big-sur-coast', good = publishedPair(region), ok = {table: tableFor({[region]: good}), style: STYLE};
   assert.deepEqual([...checkContourPair(region, good, ok).keys()].sort(), [...CONTOUR_PAIR]);
   const [overview, detail] = good;
   // Names: a missing or extra file is refused (the route must never serve anything but the pair).
@@ -71,34 +81,81 @@ test('a contour directory must be the region\'s published pair: exact names, pin
   assert.throws(() => checkContourPair(region, publishedPair('cambria-san-simeon'), ok), /differs from its published pin/);
   // ... and, even if someone pinned those bytes, its own provenance names the wrong region.
   const other = publishedPair('cambria-san-simeon');
-  assert.throws(() => checkContourPair(region, other, {pins: pinsOf(other), style: STYLE}), /not the published ft-v3 overview contours for this region/);
-  // Swapped overview/detail bytes under the right names fail both the pins and (with swapped pins) the role.
+  assert.throws(() => checkContourPair(region, other, {table: tableFor({[region]: other}), style: STYLE}), /not the published ft-v3 overview contours for this region/);
+  // Swapped overview/detail bytes under the right names fail the pins and (with swapped pins) the role.
   const swapped = [{name: CONTOUR_PAIR[0], bytes: detail.bytes}, {name: CONTOUR_PAIR[1], bytes: overview.bytes}];
   assert.throws(() => checkContourPair(region, swapped, ok), /differs from its published pin/);
-  assert.throws(() => checkContourPair(region, swapped, {pins: pinsOf(swapped), style: STYLE}), /overview contours for this region/);
+  assert.throws(() => checkContourPair(region, swapped, {table: tableFor({[region]: swapped}), style: STYLE}), /overview contours for this region/);
   // Stale: bytes pinned but built under another contour style than this release's.
   const stale = publishedPair(region, 'd'.repeat(64));
-  assert.throws(() => checkContourPair(region, stale, {pins: pinsOf(stale), style: STYLE}), /this region and release/);
+  assert.throws(() => checkContourPair(region, stale, {table: tableFor({[region]: stale}), style: STYLE}), /this region and release/);
   // Held, empty or count-mismatched documents are not the published pair even when pinned.
   const variant = patch => good.map(f => { const d = JSON.parse(f.bytes); patch(d); return {name: f.name, bytes: Buffer.from(JSON.stringify(d))}; });
   for (const patch of [d => { d.provenance.publication_held = true; }, d => { d.features = []; d.provenance.features = 0; }, d => { d.provenance.features = 9; }]) {
     const bad = variant(patch);
-    assert.throws(() => checkContourPair(region, bad, {pins: pinsOf(bad), style: STYLE}), /this region and release/);
+    assert.throws(() => checkContourPair(region, bad, {table: tableFor({[region]: bad}), style: STYLE}), /this region and release/);
   }
-  assert.throws(() => checkContourPair(region, [overview, {name: CONTOUR_PAIR[1], bytes: Buffer.from('nope')}], {pins: pinsOf([overview, {bytes: Buffer.from('nope')}].map((f, i) => ({...f, name: CONTOUR_PAIR[i]}))), style: STYLE}), /not JSON/);
-  // No pins, malformed pins or no release style: refused rather than trusted.
-  assert.throws(() => checkContourPair(region, good, {style: STYLE}), /contourPins/);
-  assert.throws(() => checkContourPair(region, good, {pins: ok.pins}), /contour style/);
+  const notJson = [overview, {name: CONTOUR_PAIR[1], bytes: Buffer.from('nope')}];
+  assert.throws(() => checkContourPair(region, notJson, {table: tableFor({[region]: notJson}), style: STYLE}), /not JSON/);
+  // No release style: refused rather than trusted. A terrain-only region has no pair to bind at all.
+  assert.throws(() => checkContourPair(region, good, {table: ok.table}), /contour style/);
+  assert.throws(() => checkContourPair('monterey-point-sur', good, ok), /no contour pair/);
+  assert.throws(() => checkContourPair('morro-bay', good, ok), /no contour pair/);
 });
 
-test('a spec row must carry independent contour pins: two distinct SHA-256 for a contour region, none for terrain-only', () => {
-  const edit = (region, change) => spec.map(r => r.region === region ? {...r, ...change} : r);
-  for (const bad of [undefined, null, {}, {overview: 'x'.repeat(64), detail: 'y'.repeat(64)}, {overview: 'a'.repeat(64)},
-    {overview: 'a'.repeat(64), detail: 'a'.repeat(64)}, {...spec[0].contourPins, extra: 'b'.repeat(64)}]) {
-    assert.throws(() => checkSpec(edit('big-sur-coast', {contourPins: bad})), /contourPins/);
-  }
-  assert.throws(() => checkSpec(edit('monterey-point-sur', {contourPins: spec[0].contourPins})), /terrain-only: spec contourPins must be null/);
+test('the trust root is the committed pin table: a fabricated pair with self-computed digests is refused, the table is validated', () => {
+  const region = 'big-sur-coast', fake = publishedPair(region);
+  // Believable bug (the previous design): pins came from the same caller-supplied spec, so a fabricated same-region,
+  // same-style pair with provenance that looks right and digests computed from its own bytes passed.
+  assert.throws(() => checkContourPair(region, fake, {style: STYLE}), /differs from its published pin/);
+  assert.throws(() => checkContourPair(region, fake, {style: STYLE, table: REHEARSAL_PINS}), /differs from its published pin/);
+  // Control: the same bytes ARE accepted when a table that names them is the reviewed trust root, so the refusal above is the table's.
+  assert.equal(checkContourPair(region, fake, {style: STYLE, table: tableFor({[region]: fake})}).size, 2);
+  // The committed table is the six Central regions, canonical availability, no contour entry for the terrain-only two.
+  assert.equal(checkPinTable(JSON.parse(readFileSync(PIN_TABLE_PATH, 'utf8'))).schema, 'central-rehearsal-pins/1');
+  assert.equal(REHEARSAL_PINS.schema, 'central-rehearsal-pins/1');
+  assert.match(REHEARSAL_PINS.status, /REHEARSAL.*NOT a publication record/);
+  for (const r of CENTRAL_REGIONS) assert.equal(TERRAIN.has(r), REHEARSAL_PINS.regions[r].terrain_only === true, r);
+  // A bad table is refused: a terrain-only region with a contour entry (in either direction), shared or malformed digests, missing or extra regions.
+  const edit = change => { const t = structuredClone(REHEARSAL_PINS); change(t.regions); return t; };
+  const digest = 'e'.repeat(64);
+  assert.throws(() => checkPinTable(edit(r => { r['monterey-point-sur'].detail = digest; })), /terrain-only/);
+  assert.throws(() => checkPinTable(edit(r => { r['santa-cruz-monterey-bay'].overview = digest; })), /terrain-only/);
+  assert.throws(() => checkPinTable(edit(r => { r['santa-cruz-monterey-bay'] = {overview: digest, detail: 'f'.repeat(64)}; })), /terrain-only/);
+  assert.throws(() => checkPinTable(edit(r => { r['big-sur-coast'] = {terrain_only: true}; })), /publishes contours/);
+  assert.throws(() => checkPinTable(edit(r => { r['big-sur-coast'].detail = r['big-sur-coast'].overview; })), /distinct/);
+  assert.throws(() => checkPinTable(edit(r => { r['big-sur-coast'].detail = 'xyz'; })), /distinct/);
+  assert.throws(() => checkPinTable(edit(r => { delete r['cambria-san-simeon']; })), /exactly the six/);
+  assert.throws(() => checkPinTable(edit(r => { r['morro-bay'] = {overview: digest, detail: 'f'.repeat(64)}; })), /exactly the six/);
+  assert.throws(() => checkPinTable({...REHEARSAL_PINS, schema: 'other'}), /not a central-rehearsal-pins/);
+  // A table with a terrain-only entry cannot be used to bind a pair for that region, whatever the spec says.
+  assert.throws(() => checkContourPair('monterey-point-sur', fake, {style: STYLE}), /no contour pair/);
+});
+
+test('a spec must not carry its own pins, on any row, whatever their value', () => {
+  const add = (region, change) => spec.map(r => r.region === region ? {...r, ...change} : r);
+  const own = {overview: 'a'.repeat(64), detail: 'b'.repeat(64)};
+  assert.throws(() => checkSpec(add('big-sur-coast', {contourPins: own})), /must not carry pins/);
+  assert.throws(() => checkSpec(add('big-sur-coast', {pins: own})), /must not carry pins/);
+  assert.throws(() => checkSpec(add('big-sur-coast', {contourPins: null})), /must not carry pins/);
+  assert.throws(() => checkSpec(add('big-sur-coast', {contourPins: undefined})), /must not carry pins/);
+  assert.throws(() => checkSpec(add('monterey-point-sur', {contourPins: own})), /must not carry pins/);
+  assert.throws(() => checkSpec(add('santa-cruz-monterey-bay', {contourPins: null})), /must not carry pins/);
   assert.equal(checkSpec(spec).length, 6);
+});
+
+// The real rehearsal pairs (C20/C21, synthetic approvals) live outside the repository: this check runs where they are
+// present (CENTRAL_REHEARSAL_PAIRS=<dir holding one directory per contour region>) and skips otherwise.
+const REAL = process.env.CENTRAL_REHEARSAL_PAIRS || '/home/user/agent-work/finish/sc-central/c20/published';
+test('the real rehearsal pair of each contour region is accepted by the committed table, and a swap between regions is not', { skip: !existsSync(REAL) && 'real rehearsal pairs not present' }, () => {
+  const read = region => CONTOUR_PAIR.map(name => ({name, bytes: readFileSync(join(REAL, region, name))}));
+  const contourRegions = CENTRAL_REGIONS.filter(r => !TERRAIN.has(r));
+  for (const region of contourRegions) {
+    const files = read(region), style = JSON.parse(files[0].bytes).provenance.contours;
+    assert.equal(checkContourPair(region, files, {style}).size, 2, region);
+    const other = contourRegions.find(r => r !== region);
+    assert.throws(() => checkContourPair(other, files, {style}), /differs from its published pin/, `${region} bytes under ${other}`);
+  }
 });
 
 test('a correct contour arrival and a correct terrain-only arrival pass', () => {

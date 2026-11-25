@@ -3,14 +3,19 @@
 // "Browse California regions and coverage" -> region list -> Open), not through history injection. LOCAL loopback,
 // synthetic pointers (envelope 'a'*64): NOT hosted evidence, NOT an R8 verdict, no change to the shared Chart.
 // Usage: central_picker_walkthrough.mjs REPO BASEMAP_PMTILES NEW_OUT_DIR SPEC.json
-//   SPEC = six rows {region, release (release.json path), lon, lat, contours (dir with the published pair, or null),
-//   contourPins ({overview, detail} SHA-256 of the published pair, written from the release preparation records, never
-//   computed from the directory; null for a terrain-only region)}.
+//   SPEC = six rows {region, release (release.json path), lon, lat, contours (dir holding the pair, or null)}.
+// TRUST ROOT: this is a local rehearsal harness. Which bytes a contour region may serve is decided by the reviewed,
+// committed table central_rehearsal_pins.json next to this script (REHEARSAL candidate pins, synthetic approvals, NOT a
+// publication record; custodian: the Central lead). It is never read from the spec or the served directory, and a spec
+// that carries its own pins is refused. When the Cdata1-6 data PRs merge, the authoritative record becomes the merged
+// catalog/depth-contours + dist/regions files and this table is to be replaced by reading them. Nothing is published
+// and no approval is implied by a pass.
 // Per theme: open the first region by URL, pick each next region in the picker, then real Back through them. On arrival
 // (and after every Back) it records the region the Chart shows, contour availability and the credit line, judges them
 // against the spec, and stops forward travel at the FIRST broken navigation, keeping that shot and the reason.
 import {createHash} from 'node:crypto';
-import {pathToFileURL} from 'node:url';
+import {readFileSync} from 'node:fs';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
 export const CENTRAL_REGIONS = [
   'cambria-san-simeon', 'big-sur-coast', 'south-big-sur-san-simeon', 'monterey-point-sur', 'point-arguello-conception', 'santa-cruz-monterey-bay',
@@ -43,38 +48,53 @@ export function checkSpec(spec) {
     if (typeof r.release !== 'string' || !Number.isFinite(r.lat) || !Number.isFinite(r.lon)) throw new Error(`incomplete spec row: ${r.region}`);
     if (CENTRAL_AVAILABILITY[r.region] === 'contours') {
       if (typeof r.contours !== 'string' || !r.contours) throw new Error(`${r.region} publishes contours: spec needs its contour directory`);
-      checkPins(r.region, r.contourPins);
-    } else {
-      if (r.contours !== null) throw new Error(`${r.region} is terrain-only: spec contours must be null`);
-      if (r.contourPins != null) throw new Error(`${r.region} is terrain-only: spec contourPins must be null`);
-    }
+    } else if (r.contours !== null) throw new Error(`${r.region} is terrain-only: spec contours must be null`);
+    // Fail closed: pins are never taken from the spec, whatever their value, on any row.
+    if ('contourPins' in r || 'pins' in r) throw new Error(`${r.region}: a spec must not carry pins; the walkthrough reads only its committed pin table`);
   }
   return spec;
 }
 
 const SHA256 = /^[0-9a-f]{64}$/;
 
-/** The independent pins of a contour region's published pair: exactly {overview, detail}, two distinct SHA-256 digests. */
-export function checkPins(region, pins) {
-  const keys = pins && typeof pins === 'object' ? Object.keys(pins).sort().join() : '';
-  if (keys !== 'detail,overview' || !SHA256.test(pins.overview) || !SHA256.test(pins.detail) || pins.overview === pins.detail) {
-    throw new Error(`${region} publishes contours: spec needs contourPins {overview, detail} as two distinct SHA-256 digests`);
+/** Validate a pin table (central-rehearsal-pins/1) against the canonical availability and return it: exactly the six
+ * Central regions; a contour region holds two distinct SHA-256 digests {overview, detail} and no terrain_only flag; a
+ * terrain-only region holds terrain_only true and no overview/detail entry at all. */
+export function checkPinTable(table) {
+  if (table?.schema !== 'central-rehearsal-pins/1' || !table.regions || typeof table.regions !== 'object') throw new Error('pin table: not a central-rehearsal-pins/1 table');
+  const ids = Object.keys(table.regions).sort();
+  if (ids.join() !== [...CENTRAL_REGIONS].sort().join()) throw new Error('pin table: must name exactly the six Central regions');
+  for (const [region, entry] of Object.entries(table.regions)) {
+    if (CENTRAL_AVAILABILITY[region] === 'contours') {
+      if (entry.terrain_only !== undefined || !SHA256.test(entry.overview) || !SHA256.test(entry.detail) || entry.overview === entry.detail) {
+        throw new Error(`pin table: ${region} publishes contours: it needs two distinct SHA-256 digests {overview, detail}`);
+      }
+    } else if (entry.terrain_only !== true || 'overview' in entry || 'detail' in entry) {
+      throw new Error(`pin table: ${region} is terrain-only: it must be terrain_only with no contour entry`);
+    }
   }
-  return pins;
+  return table;
 }
 
-/** Bind a contour directory to the region's published pair. `files` is [{name, bytes}] as read from the directory,
- * `pins` the independent SHA-256 of each published file, `style` the release's pinned contour style digest. The
- * directory must hold exactly the two pair files; each must match its pin byte for byte (so a fabricated, stale,
- * swapped or other-region file is refused), and its own provenance must name this region, the ft-v3 set, this
- * release's contour style and its own overview/detail role, with a feature count that matches and no publication
- * hold (the same checks central_sources_overlay.py makes before a contour credit is rendered). Returns Map name -> bytes. */
-export function checkContourPair(region, files, {pins, style} = {}) {
+/** The reviewed, committed pin table; loaded relative to this script, never from the spec or a served directory. */
+export const PIN_TABLE_PATH = fileURLToPath(new URL('./central_rehearsal_pins.json', import.meta.url));
+export const loadPinTable = (text = readFileSync(PIN_TABLE_PATH)) => checkPinTable(JSON.parse(text));
+export const REHEARSAL_PINS = loadPinTable();
+
+/** Bind a contour directory to the region's pinned pair. `files` is [{name, bytes}] as read from the directory,
+ * `table` the committed pin table, `style` the release's pinned contour style digest. The directory must hold exactly
+ * the two pair files; each must match the table's digest for this region byte for byte (so a fabricated, stale,
+ * swapped or other-region file is refused, even one whose digests its supplier computed itself), and its own
+ * provenance must name this region, the ft-v3 set, this release's contour style and its own overview/detail role, with
+ * a feature count that matches and no publication hold (the same checks central_sources_overlay.py makes before a
+ * contour credit is rendered). Returns Map name -> bytes. */
+export function checkContourPair(region, files, {style, table = REHEARSAL_PINS} = {}) {
+  if (CENTRAL_AVAILABILITY[region] !== 'contours') throw new Error(`${region}: terrain-only or not a Central region: it has no contour pair`);
+  const pins = checkPinTable(table).regions[region];
   const names = files.map(f => f.name).sort();
   if (names.length !== CONTOUR_PAIR.length || !CONTOUR_PAIR.every((n, i) => names[i] === n)) {
     throw new Error(`${region}: contour directory must hold exactly ${CONTOUR_PAIR.join(' and ')}, found ${names.join(', ') || 'nothing'}`);
   }
-  checkPins(region, pins);
   if (!SHA256.test(style ?? '')) throw new Error(`${region}: its release does not pin a contour style`);
   const pinOf = {'depth-contours-overview.geojson': pins.overview, 'depth-contours.geojson': pins.detail};
   for (const f of files) {
@@ -167,7 +187,7 @@ async function main() {
       const entries = await readdir(dir, {withFileTypes: true});
       if (entries.some(e => !e.isFile())) throw new Error(`${row.region}: contour directory holds more than regular files`);
       pair = checkContourPair(row.region, await Promise.all(entries.map(async e => ({name: e.name, bytes: await readFile(join(dir, e.name))}))),
-        {pins: row.contourPins, style: release.style?.contours});
+        {style: release.style?.contours});
     }
     regions.set(row.region, {...row, pair, pointer, object, digestBase: `${object}.digests/${release.digest_root_sha256}/`, pinnedBytes, fd,
       size: archiveRef.bytes, digestRoot: await pinnedBytes(`${index}root.json`), indexPrefix: index});
@@ -371,8 +391,10 @@ async function main() {
   } finally { await browser.close(); }
   await writeFile(join(folder, 'walkthrough.json'), JSON.stringify({
     scope: 'LOCAL loopback walkthrough of the app\'s own region picker (C31); synthetic pointers; not hosted evidence, not a release decision',
-    regions: spec.map(r => ({region: r.region, release: r.release, contours: r.contours, contourPins: r.contourPins ?? null,
-      contourPair: regions.get(r.region).pair && Object.fromEntries([...regions.get(r.region).pair].map(([n, b]) => [n, sha(b)]))})), pickerReach: reach, requested, results}, null, 2) + '\n', {flag: 'wx'});
+    regions: spec.map(r => ({region: r.region, release: r.release, contours: r.contours,
+      contourPair: regions.get(r.region).pair && Object.fromEntries([...regions.get(r.region).pair].map(([n, b]) => [n, sha(b)]))})),
+    pinTable: {path: 'scripts/relief/central_rehearsal_pins.json', sha256: sha(readFileSync(PIN_TABLE_PATH)), status: REHEARSAL_PINS.status},
+    pickerReach: reach, requested, results}, null, 2) + '\n', {flag: 'wx'});
   for (const r of regions.values()) await r.fd.close();
   await baseFile.close();
   console.log('DONE ' + join(folder, 'walkthrough.json'));
