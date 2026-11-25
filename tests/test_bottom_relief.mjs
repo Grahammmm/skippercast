@@ -26,12 +26,15 @@ const pointer = region => ({region, status: 'reviewed', private: false, sha256: 
   native_support_by_zoom: {10: {tiles: 1, limit_m: 91.44, sources: []}}});
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-function chart(t, surveyView) {
+function chart(t, surveyView, surveys = new Map()) {
   const root = {dataset: {}};
   const old = Object.fromEntries(['document', 'getComputedStyle', 'MutationObserver'].map(k => [k, globalThis[k]]));
   let themeChanged;
+  const canvas = {scale() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
+    getImageData(_x, _y, width, height) { return {width, height}; }};
   Object.assign(globalThis, {
-    document: {documentElement: root},
+    document: {documentElement: root,
+      createElement: tag => tag === 'canvas' ? {getContext: () => canvas} : {append() {}, setAttribute() {}}},
     getComputedStyle: () => ({getPropertyValue: key => key.endsWith('opacity') ? '1' : `${root.dataset.theme ?? 'dark'}:${key}`}),
     MutationObserver: class { constructor(cb) { themeChanged = cb; } observe() {} disconnect() { themeChanged = null; } },
   });
@@ -55,7 +58,7 @@ function chart(t, surveyView) {
         if (url.pathname === digestPath + 'root.json') return new Response(digestRoot);
         if (url.pathname === digestPath + chunkPath) return new Response(chunk);
         if (url.pathname === `/catalog/relief/${region}.json`) { const body = await reply; return body instanceof Response ? body : Response.json(body); }
-        if (url.pathname.includes('/survey/')) return new Response('not a bound response');
+        if (url.pathname.includes('/survey/')) return surveys.get(url.pathname)?.() ?? new Response('not a bound response');
         if (breakRange) return new Response(bytes); // full response must never be mistaken for a range
         const [, start, end] = /^bytes=(\d+)-(\d+)$/.exec(init.headers.Range).map(Number);
         return new Response(bytes.subarray(start, end + 1), {status: 206,
@@ -223,5 +226,60 @@ test('reviewed survey opt-in is lazy and a bad delivery preserves relief', async
     `/feeds/tiles/relief/north/${p.envelope_sha256}/survey/${p.survey_detail.wire.sha256}.geojson.br`]);
   assert.equal(c.template, template);
   assert.deepEqual(Buffer.from((await c.tile(template)).data), bytes.subarray(payloadOffset));
+  assert.deepEqual(c.errors, []);
+});
+
+// M32 contract: with Layers closed the Chart shows where there is no reviewed survey. A pointer may bind, next to the
+// survey detail, a small companion holding only the detail's tier-none areas; it loads at start (never the multi-MB
+// detail) and draws only the existing hatch. Believable bugs: eagerly fetching the full detail; drawing the companion's
+// outline/labels or a measured tint; trusting a companion that carries any other tier, fails its digest, or is bound
+// without the reviewed detail it was derived from; losing the hatch when the opt-in detail is refused.
+test('a bound no-survey companion draws only the hatch at start and never fetches the detail early', async t => {
+  const square = [[[-121, 35], [-120, 35], [-120, 36], [-121, 35]]];
+  const doc = (features, region = 'north') => Buffer.from(JSON.stringify({type: 'FeatureCollection', region, navigation: 'NOT FOR NAVIGATION',
+    features: features.map(properties => ({type: 'Feature', properties, geometry: {type: 'Polygon', coordinates: square}}))}));
+  const none = {tier: 'none', sources: []};
+  const estimated = {tier: 'estimated', sources: [id], source: 'Synthetic survey', grid_m: 10};
+  const surveys = new Map(), detail = {wire: {bytes: 15, sha256: 'a'.repeat(64)}, decoded: {bytes: 27, sha256: 'd'.repeat(64)}};
+  const bound = (region, body, pins = {wire: {bytes: 40, sha256: sha(`wire:${body}`)}, decoded: {bytes: body.length, sha256: sha(body)}}) => {
+    surveys.set(`/feeds/tiles/relief/${region}/${'c'.repeat(64)}/survey/${pins.wire.sha256}.geojson.br`,
+      () => new Response(body, {headers: {'Content-Encoding': 'br', 'Content-Length': String(pins.wire.bytes)}}));
+    return {...pointer(region), survey_detail: detail, survey_gap: pins};
+  };
+  let view;
+  const c = chart(t, next => { view = next; }, surveys);
+  const layerIds = () => c.overlay.layers.map(l => l.id.replace(/^bottom-relief-\d+/, ''));
+  const gapBody = doc([none]), p = bound('north', gapBody);
+  c.start('north', p);
+  await tick(); await tick(); await tick();
+  assert.deepEqual(c.fetches.map(([url]) => url), ['/catalog/relief/north.json',
+    `/feeds/tiles/relief/north/${'c'.repeat(64)}/survey/${p.survey_gap.wire.sha256}.geojson.br`]);
+  assert.deepEqual(layerIds(), ['', '-survey-hatch', '-earth', '-parks', '-coast']);
+  const [, data] = Object.entries(c.overlay.sources).find(([key]) => key.endsWith('-survey'));
+  assert.deepEqual(data.data.features.map(f => f.properties.tier), ['none']);
+  assert.equal(typeof c.overlay.themePatterns, 'function');
+  assert.equal(c.overlay.inspect, undefined, 'the companion alone never answers a tap');
+  // Opting in still fetches the detail lazily; a refused detail removes the control but keeps the default cue.
+  view.toggle();
+  await tick(); await tick(); await tick();
+  assert.equal(c.fetches.at(-1)[0], `/feeds/tiles/relief/north/${'c'.repeat(64)}/survey/${detail.wire.sha256}.geojson.br`);
+  assert.equal(view, null);
+  assert.deepEqual(layerIds(), ['', '-survey-hatch', '-earth', '-parks', '-coast']);
+
+  // Refusals: any other tier, a digest mismatch, a companion without its detail binding, an oversized pin.
+  const refusals = {
+    mixed: bound('mixed', doc([none, estimated], 'mixed')),
+    digest: bound('digest', doc([none], 'digest'), {wire: {bytes: 40, sha256: 'e'.repeat(64)}, decoded: {bytes: doc([none], 'digest').length, sha256: 'f'.repeat(64)}}),
+    orphan: (({survey_detail: _, ...rest}) => rest)(bound('orphan', gapBody)),
+    oversized: bound('oversized', gapBody, {wire: {bytes: 256 * 1024 + 1, sha256: sha('big')}, decoded: {bytes: gapBody.length, sha256: sha(gapBody)}}),
+  };
+  for (const [region, body] of Object.entries(refusals)) {
+    c.start(region, body);
+    await tick(); await tick(); await tick();
+    assert.ok(!layerIds().includes('-survey-hatch'), `${region}: no hatch`);
+    assert.ok(!Object.keys(c.overlay.sources).some(key => key.endsWith('-survey')), `${region}: no survey source`);
+  }
+  assert.ok(!c.fetches.some(([url]) => url.startsWith('/feeds/tiles/relief/orphan/') || url.startsWith('/feeds/tiles/relief/oversized/')),
+    'an unbound or oversized companion is never requested');
   assert.deepEqual(c.errors, []);
 });

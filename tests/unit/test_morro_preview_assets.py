@@ -12,6 +12,7 @@ GENERATION = 'a' * 63 + 'd'
 CATALOGUE = 'c' * 63 + 'd'
 CREDITS = b'<main>Credits: NOAA topobathy, BlueTopo</main>'
 SURVEY = {'decoded': {'bytes': 10, 'sha256': '1' * 63 + '2'}, 'wire': {'bytes': 5, 'sha256': '3' * 63 + '4'}}
+GAP = {'decoded': {'bytes': 4, 'sha256': '5' * 63 + '6'}, 'wire': {'bytes': 3, 'sha256': '7' * 63 + '8'}}
 
 
 def _sha(raw):
@@ -22,7 +23,7 @@ def _sha(raw):
 def case(tmp_path, monkeypatch):
     tree = tmp_path / 'candidate'
     pointer = dict(region='morro-bay', status='reviewed', private=False, envelope_sha256=ENVELOPE,
-                   release_sha256=RELEASE, generation=GENERATION, survey_detail=SURVEY)
+                   release_sha256=RELEASE, generation=GENERATION, survey_detail=SURVEY, survey_gap=GAP)
     docs = {'pointer': pointer, 'catalog_contours': {'type': 'FeatureCollection', 'features': [1]},
             'detail': {'type': 'FeatureCollection', 'features': [2]},
             'overview': {'type': 'FeatureCollection', 'features': [3]}}
@@ -77,6 +78,7 @@ def test_assembles_pinned_candidate_with_credits_fed_before_fingerprinting(case)
     out = case['out']
     assert manifest['build'] == '0123456789' and manifest['publication_signature'] is None
     assert manifest['envelope_sha256'] == ENVELOPE and manifest['survey_detail'] == SURVEY
+    assert manifest['survey_gap'] == GAP
     # The Worker-named shell was made from the rendered credits, not the stale input page.
     shell = (out / manifest['sources_shell']).read_bytes()
     assert CREDITS in shell and b'stale v1' not in shell
@@ -105,6 +107,8 @@ def test_cli_reports_and_verifies(case, capsys, monkeypatch):
     ('fixture_pointer', 'placeholder fixture pointer'),
     ('placeholder_envelope', 'placeholder digest'),
     ('no_survey_pair', 'no survey-detail pair'),
+    ('no_gap_companion', 'no survey-gap companion'),
+    ('gap_repeats_detail', 'repeats the survey detail'),
     ('other_envelope', 'envelope_sha256 differs'),
     ('signed', 'publication signature'),
     ('credits', 'rendered /sources page differs'),
@@ -121,6 +125,10 @@ def test_refused_before_build_and_without_output(case, problem, message):
         changes = {'envelope_sha256': 'a' * 64}
     elif problem == 'no_survey_pair':
         del pointer['survey_detail']
+    elif problem == 'no_gap_companion':
+        del pointer['survey_gap']
+    elif problem == 'gap_repeats_detail':
+        pointer['survey_gap'] = dict(GAP, wire=SURVEY['wire'])
     elif problem == 'other_envelope':
         pointer['envelope_sha256'] = '9' * 63 + '8'
     elif problem == 'signed':

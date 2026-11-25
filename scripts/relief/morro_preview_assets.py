@@ -7,7 +7,8 @@ candidate checkout that already holds the four candidate files, plus the preview
 
 1. refuses the identity unless it is a preview-only identity for the real envelope (no publication
    signature), the four candidate files match its pins, and the pointer is not the placeholder
-   fixture (placeholder envelope, missing survey-detail pair, or the known fixture bytes);
+   fixture (placeholder envelope, missing survey-detail pair, or the known fixture bytes) and binds the
+   survey-gap companion that draws the no-survey cue with Layers closed (M32);
 2. renders the /sources credits from those exact files and refuses them unless they equal the
    identity's pinned page, all before any output exists;
 3. feeds the page into the build input, runs the client build (which fingerprints the shells),
@@ -112,6 +113,11 @@ def check_candidate(tree: Path, ident: dict) -> dict:
     detail = pointer.get('survey_detail')
     if not isinstance(detail, dict) or set(detail) != {'decoded', 'wire'}:
         raise Held('pointer: no survey-detail pair; the gap cue would not draw')
+    gap = pointer.get('survey_gap')
+    if not isinstance(gap, dict) or set(gap) != {'decoded', 'wire'}:
+        raise Held('pointer: no survey-gap companion; the no-survey cue would not draw with Layers closed')
+    if any(gap[kind] == detail[kind] for kind in ('decoded', 'wire')):
+        raise Held('pointer: survey-gap companion repeats the survey detail')
     return pointer
 
 
@@ -191,7 +197,7 @@ def assemble(tree: Path, identity: Path, catalogue_sha256: str, out: Path, build
             'identity_sha256': ident['identity_sha256'],
             **{key: ident[key] for key in ('envelope_sha256', 'release_sha256', 'generation')},
             'candidate': dict(ident['files']), 'catalogue_sha256': catalogue_sha256,
-            'survey_detail': pointer['survey_detail'],
+            'survey_detail': pointer['survey_detail'], 'survey_gap': pointer['survey_gap'],
             'sources_overlay_html_sha256': credits['html_sha256'],
             'shading_sources': credits['shading_sources'], 'contour_sources': credits['contour_sources'],
             'build': build_id, 'sources_shell': f'client/sources.{build_id}.html',
