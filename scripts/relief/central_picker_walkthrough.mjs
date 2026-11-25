@@ -3,7 +3,9 @@
 // "Browse California regions and coverage" -> region list -> Open), not through history injection. LOCAL loopback,
 // synthetic pointers (envelope 'a'*64): NOT hosted evidence, NOT an R8 verdict, no change to the shared Chart.
 // Usage: central_picker_walkthrough.mjs REPO BASEMAP_PMTILES NEW_OUT_DIR SPEC.json
-//   SPEC = six rows {region, release (release.json path), lon, lat, contours (dir with the published pair, or null)}.
+//   SPEC = six rows {region, release (release.json path), lon, lat, contours (dir with the published pair, or null),
+//   contourPins ({overview, detail} SHA-256 of the published pair, written from the release preparation records, never
+//   computed from the directory; null for a terrain-only region)}.
 // Per theme: open the first region by URL, pick each next region in the picker, then real Back through them. On arrival
 // (and after every Back) it records the region the Chart shows, contour availability and the credit line, judges them
 // against the spec, and stops forward travel at the FIRST broken navigation, keeping that shot and the reason.
@@ -41,22 +43,50 @@ export function checkSpec(spec) {
     if (typeof r.release !== 'string' || !Number.isFinite(r.lat) || !Number.isFinite(r.lon)) throw new Error(`incomplete spec row: ${r.region}`);
     if (CENTRAL_AVAILABILITY[r.region] === 'contours') {
       if (typeof r.contours !== 'string' || !r.contours) throw new Error(`${r.region} publishes contours: spec needs its contour directory`);
-    } else if (r.contours !== null) throw new Error(`${r.region} is terrain-only: spec contours must be null`);
+      checkPins(r.region, r.contourPins);
+    } else {
+      if (r.contours !== null) throw new Error(`${r.region} is terrain-only: spec contours must be null`);
+      if (r.contourPins != null) throw new Error(`${r.region} is terrain-only: spec contourPins must be null`);
+    }
   }
   return spec;
 }
 
-/** Bind a contour directory to the published pair: exactly the two pair files, each a non-empty GeoJSON
- * FeatureCollection. `files` is [{name, bytes}] as read from the directory. Returns Map name -> bytes. */
-export function checkContourPair(region, files) {
+const SHA256 = /^[0-9a-f]{64}$/;
+
+/** The independent pins of a contour region's published pair: exactly {overview, detail}, two distinct SHA-256 digests. */
+export function checkPins(region, pins) {
+  const keys = pins && typeof pins === 'object' ? Object.keys(pins).sort().join() : '';
+  if (keys !== 'detail,overview' || !SHA256.test(pins.overview) || !SHA256.test(pins.detail) || pins.overview === pins.detail) {
+    throw new Error(`${region} publishes contours: spec needs contourPins {overview, detail} as two distinct SHA-256 digests`);
+  }
+  return pins;
+}
+
+/** Bind a contour directory to the region's published pair. `files` is [{name, bytes}] as read from the directory,
+ * `pins` the independent SHA-256 of each published file, `style` the release's pinned contour style digest. The
+ * directory must hold exactly the two pair files; each must match its pin byte for byte (so a fabricated, stale,
+ * swapped or other-region file is refused), and its own provenance must name this region, the ft-v3 set, this
+ * release's contour style and its own overview/detail role, with a feature count that matches and no publication
+ * hold (the same checks central_sources_overlay.py makes before a contour credit is rendered). Returns Map name -> bytes. */
+export function checkContourPair(region, files, {pins, style} = {}) {
   const names = files.map(f => f.name).sort();
   if (names.length !== CONTOUR_PAIR.length || !CONTOUR_PAIR.every((n, i) => names[i] === n)) {
     throw new Error(`${region}: contour directory must hold exactly ${CONTOUR_PAIR.join(' and ')}, found ${names.join(', ') || 'nothing'}`);
   }
+  checkPins(region, pins);
+  if (!SHA256.test(style ?? '')) throw new Error(`${region}: its release does not pin a contour style`);
+  const pinOf = {'depth-contours-overview.geojson': pins.overview, 'depth-contours.geojson': pins.detail};
   for (const f of files) {
+    if (createHash('sha256').update(f.bytes).digest('hex') !== pinOf[f.name]) throw new Error(`${region}: ${f.name} differs from its published pin`);
     let doc;
     try { doc = JSON.parse(f.bytes); } catch { throw new Error(`${region}: ${f.name} is not JSON`); }
-    if (doc?.type !== 'FeatureCollection' || !Array.isArray(doc.features) || !doc.features.length) throw new Error(`${region}: ${f.name} is not a non-empty FeatureCollection`);
+    const p = doc?.provenance, overview = f.name === CONTOUR_PAIR[0];
+    if (doc?.type !== 'FeatureCollection' || !Array.isArray(doc.features) || !doc.features.length || !p || typeof p !== 'object' ||
+        p.region_id !== region || p.set !== 'ft-v3' || p.units !== 'ft' || p.contours !== style || ('overview' in p) !== overview ||
+        'publication_held' in doc || 'publication_held' in p || p.features !== doc.features.length) {
+      throw new Error(`${region}: ${f.name} is not the published ft-v3 ${overview ? 'overview' : 'detail'} contours for this region and release`);
+    }
   }
   return new Map(files.map(f => [f.name, f.bytes]));
 }
@@ -84,7 +114,9 @@ export function judgeArrival(expected, seen) {
       notes.push(`published contours loaded and credited but none in view at the arrival camera (${seen.camera ?? 'no camera in address'}${seen.drawnReadable === false ? '; drawn count not readable' : ''})`);
     } else if (!(seen.contoursDrawn > 0)) problems.push('published contours not drawn');
   } else {
-    if (seen.contourFilesRequested !== 0) problems.push(`terrain-only region requested ${seen.contourFilesRequested} contour files`);
+    // Judged against every contour request of the arrival interval, any region's: a stale request for the neighbor's
+    // file is still a terrain-only region asking for contours. Missing count fails closed.
+    if (seen.contourFilesRequestedAnyRegion !== 0) problems.push(`terrain-only region arrival requested ${seen.contourFilesRequestedAnyRegion ?? 'an unknown number of'} contour files${seen.contourFilesSeen?.length ? ` (${seen.contourFilesSeen.join(', ')})` : ''}`);
     if (seen.contoursDrawn > 0) problems.push(`terrain-only region draws ${seen.contoursDrawn} contour features`);
     if (seen.contourRows > 0) problems.push('terrain-only region shows a contour legend row');
     if (seen.creditLines.length) problems.push('terrain-only region shows a contour credit line');
@@ -134,7 +166,8 @@ async function main() {
       if (await realpath(dir) !== dir) throw new Error(`unbound contour directory: ${row.region}`);
       const entries = await readdir(dir, {withFileTypes: true});
       if (entries.some(e => !e.isFile())) throw new Error(`${row.region}: contour directory holds more than regular files`);
-      pair = checkContourPair(row.region, await Promise.all(entries.map(async e => ({name: e.name, bytes: await readFile(join(dir, e.name))}))));
+      pair = checkContourPair(row.region, await Promise.all(entries.map(async e => ({name: e.name, bytes: await readFile(join(dir, e.name))}))),
+        {pins: row.contourPins, style: release.style?.contours});
     }
     regions.set(row.region, {...row, pair, pointer, object, digestBase: `${object}.digests/${release.digest_root_sha256}/`, pinnedBytes, fd,
       size: archiveRef.bytes, digestRoot: await pinnedBytes(`${index}root.json`), indexPrefix: index});
@@ -263,7 +296,11 @@ async function main() {
     await layersBtn.click();
     seen.pageErrors = [...errors];
     seen.href = seen.href ?? null;
-    seen.contourFilesRequested = requested.contours.slice(mark).filter(f => f.startsWith(expected.region + '/')).length;
+    // Own-region count proves a contour region asked for its published file; the any-region list judges a terrain-only arrival.
+    const inInterval = requested.contours.slice(mark);
+    seen.contourFilesRequested = inInterval.filter(f => f.startsWith(expected.region + '/')).length;
+    seen.contourFilesRequestedAnyRegion = inInterval.length;
+    seen.contourFilesSeen = [...inInterval];
     seen.camera = seen.camera ?? null;
     return {name, shot: `shots/${name}.png`, sha256: sha(bytes), expected, seen, verdict: judgeArrival(expected, seen)};
   }
@@ -334,7 +371,7 @@ async function main() {
   } finally { await browser.close(); }
   await writeFile(join(folder, 'walkthrough.json'), JSON.stringify({
     scope: 'LOCAL loopback walkthrough of the app\'s own region picker (C31); synthetic pointers; not hosted evidence, not a release decision',
-    regions: spec.map(r => ({region: r.region, release: r.release, contours: r.contours,
+    regions: spec.map(r => ({region: r.region, release: r.release, contours: r.contours, contourPins: r.contourPins ?? null,
       contourPair: regions.get(r.region).pair && Object.fromEntries([...regions.get(r.region).pair].map(([n, b]) => [n, sha(b)]))})), pickerReach: reach, requested, results}, null, 2) + '\n', {flag: 'wx'});
   for (const r of regions.values()) await r.fd.close();
   await baseFile.close();
