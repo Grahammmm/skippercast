@@ -213,6 +213,11 @@ def is_sha256(value: object) -> bool:
     return isinstance(value, str) and receipts.HEX64.fullmatch(value) is not None
 
 
+def code_files() -> list[tuple[str, Path]]:
+    """The package stage's receipt code identity; rebuild_plan hashes the same labelled files."""
+    return [('package.py', Path(__file__)), ('survey_delivery.py', Path(survey_delivery.__file__))]
+
+
 def check_survey(root: Path, rows: list[dict]) -> None:
     """A survey gap companion ships only with, and byte-derived from, the packaged survey detail.
 
@@ -292,7 +297,7 @@ def main(argv=None) -> int:
         catalog = root / 'catalog/sources.json'
         contract = root / 'regions' / region.id / 'region.json'
         schema = root / 'catalog/relief/pointer.schema.json'
-        code = receipts.stage_digest([('package.py', Path(__file__)), ('survey_delivery.py', Path(survey_delivery.__file__))])
+        code = receipts.stage_digest(code_files())
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
 
