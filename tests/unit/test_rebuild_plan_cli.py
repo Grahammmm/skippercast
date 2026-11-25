@@ -21,7 +21,7 @@ KEYS = ('select', 'mosaic.public', 'tiles.public', 'zone.public', 'digests',
 STAMP = '1' * 64
 
 
-def record(out, region, key, digest, *, params=None, upstream=()):
+def record(out, region, key, digest, *, params=None, upstream=(), inputs=()):
     stage, _, scope = key.partition('.')
     path = receipts.Region(out, region).receipt_path(stage, scope or None)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -29,6 +29,7 @@ def record(out, region, key, digest, *, params=None, upstream=()):
         schema=receipts.SCHEMA, region=region, stage=stage, scope=scope or None,
         status='ok', attempt=1, generation=STAMP, outputs=[],
         code={'stage_digest': digest}, params=params or {},
+        inputs=[{'path': str(where), 'role': role, 'sha256': sha} for where, role, sha in inputs],
         upstream=[{'stage': name, 'scope': scope, 'generation': STAMP} for name, scope in upstream],
     )))
 
@@ -297,3 +298,132 @@ def test_cli_style_proposal_errors(tmp_path, monkeypatch, capsys, args, message)
     monkeypatch.setattr(cli.rebuild_plan, 'repo_root', lambda: tmp_path)
     monkeypatch.setattr(render_config, 'repo_root', lambda: tmp_path)
     assert_error(['--out', str(tmp_path), 'west-test', *args, 'east-test'], message, capsys)
+
+
+# RMSC-40 data inputs. C1 (core reasons) lives in test_relief_rebuild_plan.py;
+# these pin C2: the CLI hashes recorded inputs read-only and shows the reasons.
+RECORDED_STAGES = ('select', 'mosaic.public', 'tiles.public', 'digests')
+LINKS = {'select': (), 'mosaic.public': (('select', None),),
+         'tiles.public': (('select', None), ('mosaic', 'public')), 'digests': (('tiles', 'public'),)}
+REGION_FILE = 'inputs/region.json'
+
+
+def region_rows(select=(), mosaic=(), tiles=(), digests=()):
+    """Every KEYS row: the four recorded stages with given reasons, all others never built."""
+    given = {'select': select, 'mosaic.public': mosaic, 'tiles.public': tiles, 'digests': digests}
+    return [row(key, *given[key]) if key in given else row(key, 'missing') for key in KEYS]
+
+
+def seed(tmp_path):
+    """Three regions; west and east hashed the shared registry, north only the census."""
+    data = tmp_path / 'data'
+    data.mkdir()
+    registry, census = data / 'registry.json', data / 'census.json'
+    registry.write_text('{"rows":1}', encoding='utf-8')
+    census.write_text('{"rows":2}', encoding='utf-8')
+    current = cli._stage_digests()
+    out = tmp_path / 'out'
+    for region in ('west-test', 'east-test', 'north-test'):
+        region_file = out / region / REGION_FILE
+        region_file.parent.mkdir(parents=True)
+        region_file.write_text(f'{{"region":"{region}"}}', encoding='utf-8')
+        inputs = [(census, 'census', receipts.sha256_file(census))]
+        if region != 'north-test':
+            inputs = [(registry, 'registry', receipts.sha256_file(registry)),
+                      (REGION_FILE, 'region', receipts.sha256_file(region_file))]
+        for key in RECORDED_STAGES:
+            record(out, region, key, current[key], upstream=LINKS[key],
+                   inputs=inputs if key == 'select' else ())
+    return out, registry, census
+
+
+def run_json(out, capsys, *regions):
+    assert cli.main(['--out', str(out), '--json', *regions]) == 0
+    output = capsys.readouterr()
+    assert output.err == ''
+    return json.loads(output.out)
+
+
+REGIONS = ('west-test', 'east-test', 'north-test')
+
+
+def test_c2_unchanged_inputs_reuse_everything_recorded(tmp_path, capsys):
+    """C2: Inputs that still hash as recorded must not rebuild anything (bug: always flag inputs)."""
+    out, _, _ = seed(tmp_path)
+    before = snapshot(tmp_path)
+    assert run_json(out, capsys, *REGIONS) == report([(region, region_rows()) for region in REGIONS], 0)
+    assert snapshot(tmp_path) == before
+
+
+def test_c2_changed_registry_rebuilds_select_and_downstream_where_it_was_recorded(
+        tmp_path, capsys, monkeypatch):
+    """C2: Changed registry -> select and downstream in west and east only; north reuses; hashed once."""
+    out, registry, _ = seed(tmp_path)
+    registry.write_text('{"rows":3}', encoding='utf-8')
+    before = snapshot(tmp_path)
+    hashed = []
+    sha256_file = receipts.sha256_file
+    monkeypatch.setattr(receipts, 'sha256_file',
+                        lambda path: hashed.append(Path(path)) or sha256_file(path))
+    changed = region_rows(select=('input:registry',), mosaic=('upstream:select',),
+                          tiles=('upstream:mosaic.public', 'upstream:select'),
+                          digests=('upstream:tiles.public',))
+    assert run_json(out, capsys, *REGIONS) == report(
+        [('west-test', changed), ('east-test', changed), ('north-test', region_rows())], 4)
+    assert hashed.count(registry.resolve()) == 1
+    assert snapshot(tmp_path) == before
+
+
+def test_c2_region_relative_input_is_resolved_inside_its_own_region(tmp_path, capsys):
+    """C2: 'inputs/region.json' means that region's file; a bug resolves it against the cwd/out root."""
+    out, _, _ = seed(tmp_path)
+    (out / 'east-test' / REGION_FILE).write_text('{"region":"edited"}', encoding='utf-8')
+    assert run_json(out, capsys, *REGIONS) == report([
+        ('west-test', region_rows()),
+        ('east-test', region_rows(select=('input:region',), mosaic=('upstream:select',),
+                                  tiles=('upstream:mosaic.public', 'upstream:select'),
+                                  digests=('upstream:tiles.public',))),
+        ('north-test', region_rows()),
+    ], 2)
+
+
+def test_c2_missing_input_is_shown_in_text_beside_a_changed_one(tmp_path, capsys):
+    """C2: A deleted input prints input-missing:<role> next to input:<role>, read-only."""
+    out, registry, _ = seed(tmp_path)
+    record(out, 'lost-test', 'select', cli._stage_digests()['select'], inputs=[
+        (tmp_path / 'data/gone.json', 'registry', STAMP), (registry, 'census', STAMP)])
+    before = snapshot(tmp_path)
+    assert cli.main(['--out', str(out), 'lost-test']) == 0
+    output = capsys.readouterr()
+    assert output.err == ''
+    assert output.out == '\n'.join([
+        'region lost-test',
+        '  select  rebuild  input-missing:registry, input:census',
+        *(f'  {key}  rebuild  missing' for key in KEYS[1:]),
+        'regions=1 rebuild_heavy=2', '',
+    ])
+    assert snapshot(tmp_path) == before
+
+
+def test_c2_recorded_path_leaving_the_region_is_refused(tmp_path, capsys):
+    """C2: A tampered receipt cannot make the CLI hash files outside its region; no partial report."""
+    out, _, _ = seed(tmp_path)
+    record(out, 'evil-test', 'select', cli._stage_digests()['select'],
+           inputs=[('../escape.json', 'registry', STAMP)])
+    assert_error(['--out', str(out), 'west-test', 'evil-test'],
+                 "recorded path '../escape.json' leaves the region directory", capsys)
+
+
+def test_c2_unreadable_input_is_an_error_not_a_missing_file(tmp_path, monkeypatch, capsys):
+    """C2: A permission failure must not be reported as input-missing (it would hide the real cause)."""
+    out, registry, _ = seed(tmp_path)
+    sha256_file = receipts.sha256_file
+
+    def denied(path):
+        if Path(path) == registry.resolve():
+            raise PermissionError(13, 'Permission denied', str(path))
+        return sha256_file(path)
+
+    monkeypatch.setattr(receipts, 'sha256_file', denied)
+    assert_error(['--out', str(out), 'west-test'],
+                 f"[Errno 13] Permission denied: '{registry.resolve()}'", capsys)
