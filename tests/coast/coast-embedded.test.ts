@@ -5,6 +5,9 @@ import {CoastViewer} from '../../packages/coast/src/coast3d/viewer.ts';
 
 // Exercise real state methods without constructing WebGL, fetching or scheduling
 // data refreshes. Private TypeScript methods remain callable in this test harness.
+// Fixed clock for every case that compares a literal receipt date with Date.now(): it lies after the 2000 and before the 2027
+// receipt dates, so these cases give the same result whatever day CI runs.
+const FIXED_NOW=Date.parse('2026-10-07T00:00:00Z');
 function harness(){
  const nodes=new Map<string,any>();
  const node=(id:string)=>{if(!nodes.has(id))nodes.set(id,{value:'all',textContent:'',hidden:false,checked:true,dataset:{},replaceChildren(){this.replaced=true;},setAttribute(key:string,value:string){this[key]=value;}});return nodes.get(id);};
@@ -33,9 +36,9 @@ test('unsupported target clears habitat and selection rather than falling back t
  assert.equal(v.setSpecies('lingcod'),true);assert.equal(node('species').value,'lingcod');
 });
 test('selected reef callbacks keep the original point, identity and published region',()=>{
- const {v}=harness();let point:any;v.options.onSelection=(p:any)=>point=p;
+ const originalNow=Date.now;Date.now=()=>FIXED_NOW;try{const {v}=harness();let point:any;v.options.onSelection=(p:any)=>point=p;
  const reef={id:'source-reef',properties:{waypoint_latitude:35.9,waypoint_longitude:-121.5,region:'cambria-san-simeon',terrain_grade:'B',depth_min_ft:40,depth_max_ft:70,terrain_score:60,resolution_m:2,source_year:2020,metric_support_fraction:.9,screen_expires_at:'2027-01-01T00:00:00Z'}};
- forbidAddress(()=>v.selectFeature(reef,false));assert.deepEqual(point,{latitude:35.9,longitude:-121.5,region:'cambria-san-simeon',id:'source-reef'});
+ forbidAddress(()=>v.selectFeature(reef,false));assert.deepEqual(point,{latitude:35.9,longitude:-121.5,region:'cambria-san-simeon',id:'source-reef'});}finally{Date.now=originalNow;}
 });
 test('host hour is copied and invalid input cannot silently change selected time',()=>{
  const {v}=harness(),at=new Date('2026-10-06T15:00:00Z');v.setHour(at);at.setUTCDate(7);assert.equal(v.currentAt.toISOString(),'2026-10-06T15:00:00.000Z');v.setHour(new Date(NaN));assert.ok(Number.isNaN(v.currentAt.getTime()));v.setHour(null);assert.equal(v.currentAt,null);
@@ -48,11 +51,11 @@ test('hidden rendering stops and zero-size resize leaves camera projection finit
 });
 
 test('public habitat restoration queues exact identity and never emits a host selection',()=>{
- const {v,node}=harness();let calls=0;v.options.onSelection=()=>calls++;v.drawPins=()=>{};
+ const originalNow=Date.now;Date.now=()=>FIXED_NOW;try{const {v,node}=harness();let calls=0;v.options.onSelection=()=>calls++;v.drawPins=()=>{};
  v.selectHabitat('123');assert.equal(v.selectedTarget,null);assert.equal(v.requestedHabitat,'123');
  const feature={id:123,properties:{waypoint_latitude:35.9,waypoint_longitude:-121.5,region:'cambria-san-simeon',terrain_grade:'B',depth_min_ft:40,depth_max_ft:70,terrain_score:60,resolution_m:2,source_year:2020,metric_support_fraction:.9,screen_expires_at:'2027-01-01T00:00:00Z'}};
  v.features=[feature];v.restoreHabitatSelection();assert.equal(v.selectedTarget,'123');assert.equal(calls,0);assert.equal(node('target-detail').hidden,false);
- v.selectHabitat('0123');assert.equal(v.selectedTarget,null);assert.equal(node('target-detail').hidden,true);assert.equal(calls,0);v.selectHabitat(null);assert.equal(v.requestedHabitat,null);
+ v.selectHabitat('0123');assert.equal(v.selectedTarget,null);assert.equal(node('target-detail').hidden,true);assert.equal(calls,0);v.selectHabitat(null);assert.equal(v.requestedHabitat,null);}finally{Date.now=originalNow;}
 });
 
 test('managed binding never reads browser geography and native handlers retain root ownership',()=>{
@@ -78,12 +81,12 @@ test('native perspective callback fires once per actual camera change without a 
 });
 
 test('hide and delayed rejected revalidation cannot reveal cached habitat, details or current vectors',async()=>{
- const {v,node}=harness();let invalidated=0,restored=0;v.options.onSelectionInvalidated=()=>invalidated++;v.options.onRestoredSelection=()=>restored++;v.manifest={};v.requestedHabitat='old';v.reviewed={manifest:{screenExpiresAt:'2000-01-01T00:00:00Z'}};v.allFeatures=[{id:'old'}];v.features=v.allFeatures;v.shoreFeatures=[{properties:{id:'old-shore'}}];v.selectedTarget='old';v.habitat.add(new T.Group());v.currents.add(new T.Group());let removed=0;v.pins=[{el:{remove(){removed++;}}}];node('target-detail').hidden=false;
+ const originalNow=Date.now;Date.now=()=>FIXED_NOW;try{const {v,node}=harness();let invalidated=0,restored=0;v.options.onSelectionInvalidated=()=>invalidated++;v.options.onRestoredSelection=()=>restored++;v.manifest={};v.requestedHabitat='old';v.reviewed={manifest:{screenExpiresAt:'2000-01-01T00:00:00Z'}};v.allFeatures=[{id:'old'}];v.features=v.allFeatures;v.shoreFeatures=[{properties:{id:'old-shore'}}];v.selectedTarget='old';v.habitat.add(new T.Group());v.currents.add(new T.Group());let removed=0;v.pins=[{el:{remove(){removed++;}}}];node('target-detail').hidden=false;
  const previousFetch=globalThis.fetch,cancel=globalThis.cancelAnimationFrame,request=globalThis.requestAnimationFrame;
  const pending:{path:string;reject:(error:Error)=>void}[]=[];globalThis.fetch=((path:string)=>new Promise((_resolve,reject)=>pending.push({path,reject}))) as typeof fetch;globalThis.cancelAnimationFrame=()=>{};globalThis.requestAnimationFrame=()=>0;
  let task:Promise<void>|undefined;const refresh=(CoastViewer.prototype as any).refreshHabitat;v.refreshHabitat=()=>task=refresh.call(v);v.loadShore=()=>{};
  const empty=()=>{assert.equal(v.habitat.children.length,0);assert.equal(v.currents.children.length,0);assert.equal(v.pins.length,0);assert.equal(node('target-detail').hidden,true);assert.equal(v.reviewed,null);assert.deepEqual(v.features,[]);assert.deepEqual(v.shoreFeatures,[]);};
- try{v.setVisible(false);empty();assert.equal(removed,1);assert.equal(v.requestedHabitat,'old');v.setVisible(true);empty();assert.equal(pending.length,1);assert.match(pending[0].path,/skippercast-manifest/);v.animate();empty();pending[0].reject(Error('Expired source screen'));await task;empty();assert.equal(v.requestedHabitat,'old');assert.match(node('habitat-status').textContent,/withheld/);assert.equal(invalidated,1,'expired hidden selection is withdrawn once before resumed validation');assert.equal(restored,0,'rejected expired source cannot republish binding metadata');}finally{globalThis.fetch=previousFetch;globalThis.cancelAnimationFrame=cancel;globalThis.requestAnimationFrame=request;}
+ try{v.setVisible(false);empty();assert.equal(removed,1);assert.equal(v.requestedHabitat,'old');v.setVisible(true);empty();assert.equal(pending.length,1);assert.match(pending[0].path,/skippercast-manifest/);v.animate();empty();pending[0].reject(Error('Expired source screen'));await task;empty();assert.equal(v.requestedHabitat,'old');assert.match(node('habitat-status').textContent,/withheld/);assert.equal(invalidated,1,'expired hidden selection is withdrawn once before resumed validation');assert.equal(restored,0,'rejected expired source cannot republish binding metadata');}finally{globalThis.fetch=previousFetch;globalThis.cancelAnimationFrame=cancel;globalThis.requestAnimationFrame=request;}}finally{Date.now=originalNow;}
 });
 test('managed keyboard Home executes the host reset once without an intermediate native view',()=>{
  const {v,node}=harness();node('species').options=[];const events=new Map<string,(e:any)=>void>();v.renderer.domElement={addEventListener(key:string,fn:(e:any)=>void){events.set(key,fn);}};
@@ -98,14 +101,14 @@ test('a late current response from the hidden admission cannot restore old vecto
  try{const old=refresh.call(v);assert.equal(pending.length,1);v.setVisible(false);assert.equal(v.currents.children.length,0);v.setVisible(true);assert.equal(v.currents.children.length,0);pending[0](new Response(JSON.stringify({currents:[]}),{headers:{'Content-Type':'application/json'}}));await old;assert.equal(v.currents.children.length,0);assert.match(node('current-status').textContent,/withheld/);const current=refresh.call(v);assert.equal(pending.length,2);pending[1](new Response(JSON.stringify({currents:[]}),{headers:{'Content-Type':'application/json'}}));await current;assert.equal(v.currents.children.length,0);assert.match(node('current-status').textContent,/No reviewed current field/);}finally{globalThis.fetch=previousFetch;globalThis.cancelAnimationFrame=cancel;globalThis.requestAnimationFrame=request;}
 });
 test('restored reef metadata reports only exact admitted source identity without user callback, address or camera changes',()=>{
- const {v,node}=harness(),restored:any[]=[];let selected=0,moved=0;v.options.onRestoredSelection=(p:any)=>restored.push(p);v.options.onSelection=()=>selected++;v.moveTo=()=>moved++;v.drawPins=()=>{};
+ const originalNow=Date.now;Date.now=()=>FIXED_NOW;try{const {v,node}=harness(),restored:any[]=[];let selected=0,moved=0;v.options.onRestoredSelection=(p:any)=>restored.push(p);v.options.onSelection=()=>selected++;v.moveTo=()=>moved++;v.drawPins=()=>{};
  const reef={id:123,properties:{id:'different-property-id',waypoint_latitude:35.9,waypoint_longitude:-121.5,region:'cambria-san-simeon',terrain_grade:'B',depth_min_ft:40,depth_max_ft:70,terrain_score:60,resolution_m:2,source_year:2020,metric_support_fraction:.9,screen_expires_at:'2027-01-01T00:00:00Z'}};
  forbidAddress(()=>{v.selectHabitat('123');assert.deepEqual(restored,[]);v.features=[reef];v.restoreHabitatSelection();});
  assert.deepEqual(restored,[{latitude:35.9,longitude:-121.5,region:'cambria-san-simeon',id:'123'}]);assert.equal(selected,0);assert.equal(moved,0);assert.equal(node('target-detail').hidden,false);
  v.selectHabitat('0123');assert.equal(restored.length,1,'similar numeric ID cannot restore another feature');
  v.withholdOverlays();v.selectHabitat('123');v.restoreHabitatSelection();assert.equal(restored.length,1,'held/rejected source has no admitted feature callback');assert.equal(node('target-detail').hidden,true);
  v.features=[reef];forbidAddress(()=>v.restoreHabitatSelection());assert.equal(restored.length,2,'a newly admitted exact feature restores its source metadata');
- v.selectFeature(reef,false);assert.equal(selected,1);assert.equal(restored.length,2,'user callback remains distinct');
+ v.selectFeature(reef,false);assert.equal(selected,1);assert.equal(restored.length,2,'user callback remains distinct');}finally{Date.now=originalNow;}
 });
 test('restored shore callbacks retain original access/vertex coordinates and never infer a region from area',()=>{
  const {v,node}=harness(),restored:any[]=[];let selected=0;v.options.onRestoredSelection=(p:any)=>restored.push(p);v.options.onSelection=()=>selected++;v.drawPins=()=>{};v.moveTo=()=>{throw Error('Restoration must not pan');};node('species').value='surfperch';
@@ -115,7 +118,7 @@ test('restored shore callbacks retain original access/vertex coordinates and nev
  v.withholdOverlays();v.selectHabitat('published-shore');v.restoreHabitatSelection();assert.equal(restored.length,2,'withheld shore source cannot restore cached publication identity');
 });
 test('selection invalidation clears restored host proof on expiry, rejection and explicit clear, then exact re-admission restores it',async()=>{
- const {v,node}=harness(),restored:any[]=[];let invalidated=0;v.options.onRestoredSelection=(p:any)=>restored.push(p);v.options.onSelectionInvalidated=()=>invalidated++;v.drawPins=()=>{};
+ const originalNow=Date.now;Date.now=()=>FIXED_NOW;try{const {v,node}=harness(),restored:any[]=[];let invalidated=0;v.options.onRestoredSelection=(p:any)=>restored.push(p);v.options.onSelectionInvalidated=()=>invalidated++;v.drawPins=()=>{};
  const reef={id:'verified-id',properties:{waypoint_latitude:35.9,waypoint_longitude:-121.5,region:'cambria-san-simeon',terrain_grade:'B',depth_min_ft:40,depth_max_ft:70,terrain_score:60,resolution_m:2,source_year:2020,metric_support_fraction:.9,screen_expires_at:'2027-01-01T00:00:00Z'}};
  v.features=[reef];v.selectHabitat('verified-id');assert.equal(restored.length,1);assert.equal(invalidated,0);
  v.restoreHabitatSelection();assert.equal(invalidated,0,'valid redraw retains admitted identity');v.selectHabitat('verified-id');assert.equal(invalidated,0,'same exact shared identity does not falsely withdraw admission');
@@ -123,17 +126,17 @@ test('selection invalidation clears restored host proof on expiry, rejection and
  v.features=[reef];v.restoreHabitatSelection();assert.equal(restored.length,4);
  const previousFetch=globalThis.fetch;globalThis.fetch=async()=>new Response('held source',{status:503});try{await (CoastViewer.prototype as any).refreshHabitat.call(v);}finally{globalThis.fetch=previousFetch;}
  assert.equal(invalidated,2,'actual rejected source refresh withdraws publication selection');assert.equal(v.selectedTarget,null);assert.equal(node('target-detail').hidden,true);v.restoreHabitatSelection();assert.equal(restored.length,4);
- v.features=[reef];v.restoreHabitatSelection();assert.equal(restored.length,5);v.selectHabitat(null);assert.equal(invalidated,3);assert.equal(v.requestedHabitat,null);assert.equal(node('target-detail').hidden,true);
+ v.features=[reef];v.restoreHabitatSelection();assert.equal(restored.length,5);v.selectHabitat(null);assert.equal(invalidated,3);assert.equal(v.requestedHabitat,null);assert.equal(node('target-detail').hidden,true);}finally{Date.now=originalNow;}
 });
 test('species changes and admitted-feature disappearance invalidate once; valid reef and shore redraws do not',()=>{
- const {v,node}=harness();let invalidated=0,restored=0;v.options.onSelectionInvalidated=()=>invalidated++;v.options.onRestoredSelection=()=>restored++;v.drawPins=()=>{};
+ const originalNow=Date.now;Date.now=()=>FIXED_NOW;try{const {v,node}=harness();let invalidated=0,restored=0;v.options.onSelectionInvalidated=()=>invalidated++;v.options.onRestoredSelection=()=>restored++;v.drawPins=()=>{};
  const reef={id:'reef-current',properties:{waypoint_latitude:35.9,waypoint_longitude:-121.5,region:'cambria-san-simeon',terrain_grade:'B',depth_min_ft:40,depth_max_ft:70,terrain_score:60,resolution_m:2,source_year:2020,metric_support_fraction:.9,screen_expires_at:'2027-01-01T00:00:00Z'}};
  v.features=[reef];v.selectHabitat('reef-current');v.restoreHabitatSelection();assert.equal(invalidated,0);
  v.features=[];v.restoreHabitatSelection();assert.equal(invalidated,1);v.restoreHabitatSelection();assert.equal(invalidated,1);
  v.features=[reef];v.restoreHabitatSelection();v.setSpecies('unknown');assert.equal(invalidated,2);assert.equal(v.selectedTarget,null);
  v.speciesSupported=true;node('species').value='surfperch';const shore={id:'shore-current',properties:{areaId:'south',name:'Original shore',access:[{coordinates:[-120.76,35.16]}],shoreClass:'sand',sourceYear:2020,checkedAt:'2026-09-01',legalReviewExpiresAt:'2026-09-30'},geometry:{coordinates:[[[-120.75,35.15],[-120.74,35.14]]]}};
  v.shoreFeatures=[shore];v.selectHabitat('shore-current');v.restoreHabitatSelection();const before=invalidated;v.restoreHabitatSelection();assert.equal(invalidated,before);
- v.shoreFeatures=[];v.restoreHabitatSelection();assert.equal(invalidated,before+1);assert.equal(node('target-detail').hidden,true);assert.ok(restored>=4);
+ v.shoreFeatures=[];v.restoreHabitatSelection();assert.equal(invalidated,before+1);assert.equal(node('target-detail').hidden,true);assert.ok(restored>=4);}finally{Date.now=originalNow;}
 });
 
 test('temporary hiding retains admitted context only until its original expiry without hidden requests',()=>{
@@ -153,9 +156,9 @@ test('hidden current receipt survives pending validation but rejected resumed so
 });
 
 test('reef context receipt expires at the earliest original release, regional or feature deadline',()=>{
- const {v}=harness();v.reviewed={manifest:{expiresAt:'2027-03-01T00:00:00Z',regions:[{expiresAt:'2027-02-01T00:00:00Z'}]}};
+ const originalNow=Date.now;Date.now=()=>FIXED_NOW;try{const {v}=harness();v.reviewed={manifest:{expiresAt:'2027-03-01T00:00:00Z',regions:[{expiresAt:'2027-02-01T00:00:00Z'}]}};
  const reef={id:'deadline',properties:{waypoint_latitude:35.9,waypoint_longitude:-121.5,region:'cambria-san-simeon',screen_expires_at:'2027-04-01T00:00:00Z'}};
- v.selectFeature(reef,false);assert.equal(v.selectionReceipt.expires,Date.parse('2027-02-01T00:00:00Z'));clearTimeout(v.selectionTimer);
+ v.selectFeature(reef,false);assert.equal(v.selectionReceipt.expires,Date.parse('2027-02-01T00:00:00Z'));clearTimeout(v.selectionTimer);}finally{Date.now=originalNow;}
 });
 
 test('earlier bound full-context publication expiry withdraws native receipt while hidden',()=>{
@@ -197,7 +200,7 @@ test('source deadline timers are cancelled on Off, hour, location, and presentat
  try{for(const change of [()=>v.setCurrentLayer('off'),()=>v.setHour(new Date(NaN)),()=>v.setLocation({latitude:35.4,longitude:-120.9}),()=>v.withholdOverlays()]){v.currentExpiryTimer='source-timer';change();}assert.equal(cancelled,4);}finally{globalThis.clearTimeout=prior;}
 });
 test('3D shore: a never-reviewed rocky run is withheld and said so; sand copy is unchanged without one',async()=>{
- const {v,node}=harness();const coords=[[-120.95,35.45],[-120.94,35.451]];
+ const originalNow=Date.now;Date.now=()=>FIXED_NOW;try{const {v,node}=harness();const coords=[[-120.95,35.45],[-120.94,35.451]];
  const mk=(id:string,reviewExpiresAt:string|null,substrate:string)=>({id,geometry:{type:'MultiLineString',coordinates:[coords]},properties:{id,name:id,areaId:'central',substrate,reviewExpiresAt,access:[{coordinates:coords[0]}],shoreClass:'class',sourceYear:2006,checkedAt:null,legalReviewExpiresAt:null}});
  const features=[mk('sand-run','2999-01-01T00:00:00Z','sand'),mk('rocky-run',null,'rocky'),mk('old-run','2000-01-01T00:00:00Z','sand')];
  const {admitShore}=await import('../../packages/coast/src/shore-review.ts');
@@ -215,5 +218,5 @@ test('3D shore: a never-reviewed rocky run is withheld and said so; sand copy is
   assert.equal(node('habitat-status').textContent,'1 sandy-shore context segments. No ranked offshore Surfperch habitat is admitted.');
   v.shoreFeatures=[mk('rocky-run','2999-01-01T00:00:00Z','rocky')];(CoastViewer.prototype as any).drawShore.call(v);
   assert.match(node('habitat-status').textContent,/^1 rocky-shore context segments\./);
- }finally{(globalThis as any).document=priorDocument;}
+ }finally{(globalThis as any).document=priorDocument;}}finally{Date.now=originalNow;}
 });
