@@ -3,6 +3,7 @@ import {computed, effect, signal as cell} from '@preact/signals';
 import type {AddProtocolAction, LayerSpecification} from 'maplibre-gl';
 import {PMTiles, TileType} from 'pmtiles';
 import {waypointPlacement} from '../waypoint-placement.ts';
+import {COASTLINE_PICK} from './coastline.ts';
 import {chartMark} from './chart.ts';
 import type {Engine} from './engine.ts';
 import {BOTTOM_RELIEF} from './layers.ts';
@@ -253,10 +254,19 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
         themePaint: p => paintEdits(buildLayers(p, isLight(), seafloor, field).layers),
         ...control ? {control} : {},
         ...hasDetail ? {themePatterns: p => surveyHatchPattern(pattern, p, isLight()),
-          inspect: {layer: hit, show(properties) {
+          inspect: {layer: hit, alongside: COASTLINE_PICK, show(properties) {
             // Refused waypoints remain armed; successful ones change the
             // engine's pick context. Neither may open a survey card instead.
-            if (chartMark.peek() || waypointPlacement.peek() || typeof properties.tier !== 'string') return;
+            if (waypointPlacement.peek() || typeof properties.tier !== 'string') return;
+            const picked = chartMark.peek();
+            if (picked) {
+              if (detailOn && picked.id.startsWith('coastline:') && properties.tier === 'none') {
+                const key = 'legend.surveyDetail.chip.none' as const;
+                const title = 'legend.surveyDetail.title' as const;
+                chartMark.value = {...picked, reading: `${picked.reading} · ${t(title, 'en')}: ${t(key, 'en')}`, copy: {...picked.copy, reading: [...(picked.copy?.reading ?? [picked.reading]), ' · ', {id:title}, ': ', {id:key}]}};
+              }
+              return;
+            }
             const lang = language.peek();
             const reading = properties.tier === 'estimated' && typeof properties.grid_m === 'number'
               ? t('legend.surveyDetail.estimateGrid', lang, {grid: properties.grid_m})
