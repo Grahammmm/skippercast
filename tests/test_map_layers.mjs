@@ -228,7 +228,7 @@ function library() {
     removeLayer(id) { this.options.style.layers = this.options.style.layers.filter(l => l.id !== id); }
     addSource(id, source) { this.options.style.sources[id] = source; this.getSource(id).updateImage = () => {}; }
     removeSource(id) { delete this.options.style.sources[id]; delete this.sources[id]; }
-    setLayoutProperty(id, name, value) { this.visibility[id] = value; (this.layoutCalls ??= []).push([id, value]); }
+    setLayoutProperty(id, name, value) { this.visibility[id] = value; (this.layoutCalls ??= []).push([id, value]); (this.layoutProps ??= []).push([id, name, value]); }
     getSource(id) { return this.loaded && this.options.style.sources[id] ? this.sources[id] ??= {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
     queryRenderedFeatures(point, options) { const {layers} = options ?? point; return fake.features.filter(f => layers.includes(f.layer.id)); }
     resize() {}
@@ -404,6 +404,25 @@ test('the engine\'s style gate: calls before style.load wait, then apply once wi
   map.fire('style.load');
   assert.deepEqual(map.dataCalls.map(([, data]) => data), ['latest', 'after'], 'after the style loads, calls apply at once and nothing replays');
   assert.deepEqual(map.layoutCalls.map(([, value]) => value), ['visible', 'none']);
+});
+
+// M37 contract: an overlay that resubmits a layer ID with a changed layout (the no-survey label's text-field after a
+// language change) updates the layer already on the map. Believable bug: draw() only added missing layers and restyled
+// paint, so the mounted label kept the old language's words while the overlay object said otherwise.
+test('re-submitting an overlay with a changed layout updates the mounted layer, and leaves visibility and unchanged layout alone', () => {
+  const fake = library();
+  const style = {version: 8, sources: {}, layers: [{id: 'water', type: 'fill'}]};
+  const engine = createEngine(fake.module, {host: {}, style, camera: {latitude: 35.37, longitude: -120.86, zoom: 12}, onMove() {}, onLayerError() {}});
+  const [map] = fake.maps;
+  const overlay = text => ({sources: {gap: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}},
+    layers: [{id: 'gap-label', source: 'gap', type: 'symbol', layout: {'text-field': text, 'text-size': 11, visibility: 'visible'}}]});
+  map.fire('style.load');
+  engine.setOverlay('cue', overlay('no survey'));
+  assert.equal(map.layoutProps, undefined, 'a first install adds the layer and sets no layout');
+  engine.setOverlay('cue', overlay('no survey'));
+  assert.equal(map.layoutProps, undefined, 'an identical resubmission sets no layout');
+  engine.setOverlay('cue', overlay('sin levantamiento'));
+  assert.deepEqual(map.layoutProps, [['gap-label', 'text-field', 'sin levantamiento']], 'only the changed text-field is applied');
 });
 
 /** A browser just big enough for navigate() (as tests/test_map_stage.mjs). */

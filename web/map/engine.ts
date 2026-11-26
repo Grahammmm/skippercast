@@ -336,6 +336,14 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   }
   const show = (layerId: string, visible: boolean): void => { if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none'); };
   const fill = (sourceId: string, data: SourceData): void => { (map.getSource(sourceId) as MapLibre.GeoJSONSource | undefined)?.setData(data); };
+  type Layout = Readonly<Record<string, unknown>>;
+  // Visibility belongs to show()/setVisible; every other layout property that changed is applied to the mounted layer.
+  const relayout = (id: string, was: Layout = {}, next: Layout = {}): void => {
+    for (const key of new Set([...Object.keys(was), ...Object.keys(next)])) {
+      if (key === 'visibility' || JSON.stringify(was[key]) === JSON.stringify(next[key])) continue;
+      (map.setLayoutProperty as (id: string, name: string, value: unknown) => void)(id, key, next[key] ?? null);
+    }
+  };
   const draw = (layer: string, overlay: Overlay | null, before?: string | readonly string[]): void => {
     if (overlay && failed.has(overlay)) return;
     for (const id of Object.keys(overlay?.sources ?? {})) retired.delete(id);
@@ -351,7 +359,12 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
     for (const id of Object.keys(old?.sources ?? {})) if (!(id in next.sources) && map.getSource(id)) map.removeSource(id);
     for (const [id, source] of Object.entries(next.sources)) if (!map.getSource(id)) map.addSource(id, source);
     const under = ([] as string[]).concat(before ?? []).find(id => map.getLayer(id));
-    for (const l of next.layers) if (!map.getLayer(l.id)) map.addLayer(l, under);
+    for (const l of next.layers) {
+      if (!map.getLayer(l.id)) { map.addLayer(l, under); continue; }
+      // A kept layer follows its new layout (a label's text after a language change); paint is restyled below.
+      const was = old?.layers.find(o => o.id === l.id);
+      if (was) relayout(l.id, (was as {layout?: Layout}).layout, (l as {layout?: Layout}).layout);
+    }
     if (palette && overlay?.themePaint) restyle(restylable, palette, [{themePaint: overlay.themePaint.bind(overlay)}]);
     if (old?.control !== overlay?.control) {
       removeControl(layer);
