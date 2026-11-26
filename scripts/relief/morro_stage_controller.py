@@ -211,6 +211,35 @@ ASSET_MANIFEST = 'preview-assets.json'
 ASSET_SCHEMA = 'sc-morro-preview-assets/1'
 _ASSET_NAME = re.compile(r'[0-9a-f]{64}\.(?:pmtiles|json|geojson\.br)')
 _MAX_PAGES = 10
+_LISTING_LIMIT = 8 << 20  # the same bound as stage_transport's metadata reader
+
+
+def decode_listing(data: bytes) -> list:
+    """Decode one page of the GitHub release listing: a JSON ARRAY, bounded, canonical JSON only."""
+    from skippercast.relief import package
+
+    if len(data) > _LISTING_LIMIT:
+        raise HoldError('GitHub release listing exceeds the byte limit')
+
+    def unique(pairs):
+        doc = {}
+        for key, value in pairs:
+            if key in doc:
+                raise HoldError(f'duplicate JSON member {key!r} in the GitHub release listing')
+            doc[key] = value
+        return doc
+
+    def no_constant(name):
+        raise HoldError(f'invalid JSON constant {name} in the GitHub release listing')
+
+    try:
+        rows = json.loads(data.decode('utf-8'), object_pairs_hook=unique, parse_constant=no_constant)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise HoldError('invalid GitHub release listing') from None
+    if not isinstance(rows, list):
+        raise HoldError('invalid GitHub release listing')
+    package.receipts.canonical(rows)  # reject malformed Unicode, as decode_document does
+    return rows
 
 
 def preview_tag(pointer: dict) -> str:
@@ -387,7 +416,14 @@ class DraftRelease:
 
         if self._open is not None:
             return self._open(page)
-        return self._reader.metadata(f'/repos/{stage.REPOSITORY}/releases?per_page=100&page={page}')
+        # The listing is a JSON array; stage_transport's metadata reader accepts only an object (it
+        # held every real dispatch with 'expected a JSON object', run 45727170009). Same bounded read,
+        # same canonical-JSON rules, array allowed.
+        request = self._reader._request(f'{stage._API}/repos/{stage.REPOSITORY}/releases?per_page=100&page={page}',
+                                        'application/vnd.github+json')
+        with stage._open(request) as stream:
+            data = stream.read(_LISTING_LIMIT + 1)
+        return decode_listing(data)
 
     def assets(self, tag):
         from skippercast.relief import stage_transport as stage
