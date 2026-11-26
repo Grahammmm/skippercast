@@ -15,7 +15,7 @@ import {readPalette, type Palette} from './palette.ts';
 import {resolveRelief} from './relief-data.ts';
 import {reliefVerifier} from './relief-verify.ts';
 import {BASEMAP_SOURCE, basemapStyle} from './style.ts';
-import {decodeSurveyDetail, surveyDetailLayers, surveyHatchPattern} from './survey-detail.ts';
+import {decodeSurveyDetail, surveyDetailLayers, surveyGapLabel, surveyHatchPattern} from './survey-detail.ts';
 import {paintEdits} from './theme-restyle.ts';
 
 export interface SurveyDetailView {
@@ -280,7 +280,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
     disposePaint = effect(() => {
       if (signal.aborted) return;
       const seafloor = seafloorOn.value, field = fieldOn.value;
-      const current = detail.value, gapData = gap.value, hasDetail = available(), hasGap = gapShown();
+      const current = detail.value, gapData = gap.value, hasDetail = available(), hasGap = gapShown(), lang = language.value;
       const {layers, detailLayers} = buildLayers(readPalette(), isLight(), seafloor, field);
       detailIds = detailLayers.map(l => l.id); // The hatch stays visible.
       drawn = true;
@@ -317,14 +317,17 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
               basis: typeof properties.date === 'string' ? properties.date : ''});
           }}} : {}}, 'boundaries');
       // The hatch: the opted-in detail's tier-none areas once loaded, else the companion's. Reusing the source ID keeps
-      // the layer mounted, so new data goes in through setData (setOverlay adds a source only once).
+      // the layer mounted, so new data goes in through setData (setOverlay adds a source only once). M37: the same areas
+      // are named in the legend's words, so a gap too narrow for the hatch to read is still marked.
       const cue = hasDetail ? current : hasGap ? gapData : null;
       if (cue) {
         const hatch = surveyDetailLayers(cueSource, survey, pattern, readPalette(), isLight())[0]!;
+        const words = t('legend.surveyDetail.chip.none', lang);
+        const label = (p: Palette) => surveyGapLabel(cueSource, survey, words, p);
         const replaced = cueData !== null && cueData !== cue;
         cueData = cue;
-        o.engine.setOverlay(SURVEY_CUE, {sources: {[cueSource]: {type: 'geojson', data: cue}}, layers: [hatch],
-          themePatterns: p => surveyHatchPattern(pattern, p, isLight())}, MPA_FILL);
+        o.engine.setOverlay(SURVEY_CUE, {sources: {[cueSource]: {type: 'geojson', data: cue}}, layers: [hatch, label(readPalette())],
+          themePatterns: p => surveyHatchPattern(pattern, p, isLight()), themePaint: p => paintEdits([label(p)])}, MPA_FILL);
         if (replaced) o.engine.setData(cueSource, cue);
       } else if (cueData) { cueData = null; o.engine.setOverlay(SURVEY_CUE, null); }
       setDetail();

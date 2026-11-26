@@ -251,10 +251,11 @@ test('reviewed survey opt-in is lazy and a bad delivery preserves relief', async
 
 // M32 contract: with Layers closed the Chart shows where there is no reviewed survey. A pointer may bind, next to the
 // survey detail, a small companion holding only the detail's tier-none areas; it loads at start (never the multi-MB
-// detail) and draws only the existing hatch. Believable bugs: eagerly fetching the full detail; drawing the companion's
-// outline/labels or a measured tint; trusting a companion that carries any other tier, fails its digest, or is bound
-// without the reviewed detail it was derived from; losing the hatch when the opt-in detail is refused.
-test('a bound no-survey companion draws only the hatch at start and never fetches the detail early', async t => {
+// detail) and draws only the existing hatch plus (M37) the legend's "no survey" words at those areas. Believable bugs:
+// eagerly fetching the full detail; drawing the companion's outline or a measured tint; labelling any other tier;
+// trusting a companion that carries any other tier, fails its digest, or is bound without the reviewed detail it was
+// derived from; losing the hatch when the opt-in detail is refused.
+test('a bound no-survey companion draws only the hatch and its label at start and never fetches the detail early', async t => {
   const square = [[[-121, 35], [-120, 35], [-120, 36], [-121, 35]]];
   const doc = (features, region = 'north') => Buffer.from(JSON.stringify({type: 'FeatureCollection', region, navigation: 'NOT FOR NAVIGATION',
     features: features.map(properties => ({type: 'Feature', properties, geometry: {type: 'Polygon', coordinates: square}}))}));
@@ -277,12 +278,21 @@ test('a bound no-survey companion draws only the hatch at start and never fetche
     `/feeds/tiles/relief/north/${'c'.repeat(64)}/survey/${p.survey_gap.wire.sha256}.geojson.br`]);
   // M35: the hatch is its own overlay above the Aerial/ENC bases (under MPAs); the relief stack keeps no survey layer.
   assert.deepEqual(layerIds(), ['', '-earth', '-parks', '-coast']);
-  assert.deepEqual(cueIds(), ['-survey-hatch']);
+  assert.deepEqual(cueIds(), ['-survey-hatch', '-survey-gap-label']);
   assert.equal(c.cueBefore, 'mpa-fill');
   assert.equal(c.before, 'boundaries');
   assert.ok(!Object.keys(c.overlay.sources).some(key => key.includes('-survey')), 'the relief overlay holds no survey source');
   const [cueKey, data] = Object.entries(c.cue.sources)[0];
   assert.equal(c.cue.layers[0].source, cueKey);
+  // M37: the label names only the tier-none areas, in the legend's own words, and is a point label (no line, no fill).
+  const label = c.cue.layers[1];
+  assert.equal(label.source, cueKey);
+  assert.equal(label.type, 'symbol');
+  assert.deepEqual(label.filter, ['==', ['get', 'tier'], 'none']);
+  assert.equal(label.layout['text-field'], 'no survey');
+  assert.equal(label.layout['symbol-placement'], 'point');
+  assert.ok(!label.layout['text-allow-overlap'] && !label.layout['text-ignore-placement'], 'the label yields to other labels');
+  assert.equal(typeof c.cue.themePaint, 'function');
   assert.deepEqual(data.data.features.map(f => f.properties.tier), ['none']);
   assert.equal(typeof c.cue.themePatterns, 'function');
   assert.equal(c.cue.themePatterns({mapNosurvey: '#000'})[0].id, c.cue.layers[0].paint['fill-pattern']);
@@ -294,7 +304,7 @@ test('a bound no-survey companion draws only the hatch at start and never fetche
   assert.equal(c.fetches.at(-1)[0], `/feeds/tiles/relief/north/${'c'.repeat(64)}/survey/${detail.wire.sha256}.geojson.br`);
   assert.equal(view, null);
   assert.deepEqual(layerIds(), ['', '-earth', '-parks', '-coast']);
-  assert.deepEqual(cueIds(), ['-survey-hatch']);
+  assert.deepEqual(cueIds(), ['-survey-hatch', '-survey-gap-label']);
   north.destroy();
   assert.equal(c.cue, null, 'destroy removes the hatch overlay too');
 
@@ -354,7 +364,16 @@ test('opting in after the companion shows the whole detail and moves the hatch o
   assert.notEqual(c.data[0][1], companion);
   assert.deepEqual(tiers(cueKey), ['estimated', 'none']);
   assert.deepEqual(c.cue.layers[0].filter, ['==', ['get', 'tier'], 'none']);
+  assert.deepEqual(c.cue.layers[1].filter, ['==', ['get', 'tier'], 'none'], 'M37: the label never names an estimated area');
   assert.equal(c.cueBefore, 'mpa-fill');
   assert.equal(view.shown, true);
+  // M37: the label follows the page language without a second cue source.
+  const {language, prepareCatalogue} = await import('../web/i18n.ts');
+  await prepareCatalogue('es');
+  const was = language.peek();
+  t.after(() => { language.value = was; });
+  language.value = 'es';
+  assert.equal(c.cue.layers[1].layout['text-field'], 'sin levantamiento');
+  assert.deepEqual(Object.keys(c.cue.sources), [cueKey]);
   assert.deepEqual(c.errors, []);
 });
