@@ -82,11 +82,21 @@ def test_c3_committed_page_is_fresh_and_credits_morro_contours(capsys):
     morro = re.search(r'<h4 id="region-morro-bay">.*?</h4>(.*?)(?=<h[34]\b)', current, re.S)
     assert morro is not None
     contours, = re.findall(r'<h5>Depth contours</h5>\s*<ul>(.*?)</ul>', morro[1], re.S)
-    assert re.findall(r'<strong>([^<]+)</strong>', contours) == [
-        'Point Buchon bathymetry and seafloor character',
-        'Morro Bay bathymetry and seafloor character',
-        'Point Estero bathymetry and seafloor character',
-    ]
+    # The committed Morro contour set decides which surveys the page must credit: ft-v1 (USGS 2008 grids) until the
+    # Morro v2 data lands, then ft-v3 (the 2022 NOAA lidar and BlueTopo, whose files state no survey date).
+    contour_set = json.loads((ROOT / 'catalog/depth-contours/morro-bay.geojson').read_text())['provenance'].get('set')
+    if contour_set == 'ft-v3':
+        assert re.findall(r'<strong>([^<]+)</strong>', contours) == [
+            '2022 NOAA Morro Bay topobathy lidar DEM',
+            'NOAA BlueTopo bathymetry',
+        ]
+        assert contours.count('Date: survey date not stated') == 2
+    else:
+        assert re.findall(r'<strong>([^<]+)</strong>', contours) == [
+            'Point Buchon bathymetry and seafloor character',
+            'Morro Bay bathymetry and seafloor character',
+            'Point Estero bathymetry and seafloor character',
+        ]
     assert bsr.main(['--check', '--root', str(ROOT)]) == 0
     assert capsys.readouterr().err == ''
 
@@ -411,6 +421,64 @@ def test_c1_contour_provenance_credits_only_its_catalogue_members(tmp_path):
     ]
     assert 'Contour-only' not in page and 'contour-only' not in page
     assert summary == {'listed_live': 3, 'eligible_unused': 0, 'withheld_live': 0}
+
+
+# ---- M43: the committed page states survey dates the way the reviewed stage overlay does ---------------------------------
+
+def test_m43_depth_layers_state_checked_survey_dates_and_never_free_text(tmp_path):
+    """M43: production serves the committed page, so it must say what the reviewed /sources overlay said.
+
+    Bug caught: v2 Morro credits on production without "survey date not stated" (or with free text from a file).
+    """
+    rows = [row('lidar'), row('topo'), row('dated', survey_year=2008), row('shade')]
+    root = make_root(tmp_path, rows, [region('r1', 'Region One')])
+    add_contours(root, ('lidar', 'topo', 'dated'))
+    path = root / 'catalog/depth-contours/r1.geojson'
+    document = json.loads(path.read_text())
+    for entry, date in zip(document['provenance']['sources'], ('unstated', '2019-06', '2008')):
+        entry['survey_date'] = date
+    path.write_text(json.dumps(document))
+    pointer = add_relief_pointer(root, ('shade', 'lidar'))
+    document = json.loads(pointer.read_text())
+    document['sources'][0]['survey_dates'] = ['unstated']
+    document['sources'][1]['survey_dates'] = ['2019', '2021']
+    pointer.write_text(json.dumps(document))
+    layers = {r['id']: r['layers'] for r in bsr.collect(root)['regions']}['r1']
+    assert layers == {
+        'Depth contours': {'lidar': 'survey date not stated', 'topo': 'survey 2019-06', 'dated': ''},
+        'Depth shading': {'shade': 'survey date not stated', 'lidar': ''},
+    }
+    _, page, _ = bsr.build(root)
+    live = section(page, 'data-sources-live')
+    assert live.count('Date: survey date not stated') == 2
+    assert 'Date: survey 2019-06' in live and live.count('Date: survey 2008') == 1
+    assert 'Contour-only' not in page and 'Pointer-only' not in page
+
+
+def test_m43_a_file_date_that_contradicts_the_catalogue_fails_generation(tmp_path):
+    """M43: a catalogue date renders from the catalogue, so the contour file must agree with it (the overlay's rule)."""
+    root = make_root(tmp_path, [row('dated', survey_year=2008)], [region('r1', 'Region One')])
+    path = add_contours(root, ('dated',))
+    document = json.loads(path.read_text())
+    document['provenance']['sources'][0]['survey_date'] = '2009'
+    path.write_text(json.dumps(document))
+    with pytest.raises(bsr.RegisterError, match=r"r1: depth contours source 'dated' records survey dates \['2009'\]"):
+        bsr.collect(root)
+
+
+@pytest.mark.parametrize('catalog, values', [
+    pytest.param({}, ['unstated'], id='unstated'),
+    pytest.param({}, ['2019'], id='one date'),
+    pytest.param({}, ['2019', '2021'], id='two dates'),
+    pytest.param({}, ['unstated', '2019'], id='mixed'),
+    pytest.param({'survey_year': 2008}, ['2008'], id='catalogue date'),
+])
+def test_m43_register_and_stage_overlay_agree_on_every_date_case(catalog, values):
+    """M43: one rule for preview and production; a drift between the two copies shows up here."""
+    from scripts.relief import morro_sources_overlay as overlay
+    sources = {'grid': row('grid', **catalog)}
+    expected = overlay._credits(sources, [('grid', 'Credit for grid', values)])
+    assert bsr._survey_extras(sources, 'r1', 'Depth contours', [('grid', values)]) == expected
 
 
 @pytest.mark.parametrize('ident, rows, problem', [
