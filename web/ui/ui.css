@@ -125,8 +125,10 @@ input, select, textarea { font-size: var(--text-input) !important; }
 /* The end of the body is padded by the detent's hidden offset, so scrolling to the end brings the last row above the tab bar at half too; the
    padding follows the settled detent, never a drag frame. The app's sheet already stands on the tab bar (app.css sets its bottom to the bar's height), so the
    bar is not padded again (CI-1: on an 844x390 landscape phone that extra 56 px hid Sign in at full and made the half body taller than the sheet).
-   contain: the sheet's scroll does not chain to the page (the body only). */
-.ui-sheet-body { flex: 1; min-height: 0; box-sizing: border-box; overflow: auto; overscroll-behavior: contain; padding: 0 var(--space-4) calc(var(--space-5) + max(0px, var(--sheet-hidden-offset))); }
+   contain: the sheet's scroll does not chain to the page (the body only).
+   M36: scroll-padding-bottom is the same hidden offset, so focus and scrollIntoView (keyboard, find-in-page, a legend row brought into view) stop above
+   the tab bar at half instead of under it; at full the offset is 0px and only the --space-5 end gap remains. */
+.ui-sheet-body { flex: 1; min-height: 0; box-sizing: border-box; overflow: auto; overscroll-behavior: contain; padding: 0 var(--space-4) calc(var(--space-5) + max(0px, var(--sheet-hidden-offset))); scroll-padding-bottom: calc(var(--space-5) + max(0px, var(--sheet-hidden-offset))); }
 .ui-sheet[data-detent="peek"] .ui-sheet-body { overflow: hidden; padding-bottom: var(--space-5); }
 
 /* Scroll cue (design § 6 item 8; web/ui/scroll-cue.ts): while a scroll area has more below, its last 16 px fade out. Only the
