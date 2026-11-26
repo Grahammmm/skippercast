@@ -388,9 +388,12 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
         representation.encodeBody = 'manual';
       }
       if (object.range && request.headers.has('Range')) {
-        const range = object.range;
-        const {offset = 0, length = object.size - offset} = 'suffix' in range
-          ? {offset: Math.max(0, object.size - range.suffix)} : range;
+        // The Workers runtime reports every R2Range key, unset ones as undefined ({offset, length, suffix: undefined}),
+        // so test the suffix value, not the key: `'suffix' in range` labelled every cold offset read "bytes NaN-NaN".
+        const range = object.range as {offset?: number | null; length?: number | null; suffix?: number | null};
+        const suffix = typeof range.suffix === 'number';
+        const offset = suffix ? Math.max(0, object.size - range.suffix!) : range.offset ?? 0;
+        const length = suffix ? object.size - offset : range.length ?? object.size - offset;
         headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
         headers.set('Content-Length', String(length));
         if (fill) { const filled = fill({size: object.size, range: object.range}).catch(() => {}); if (ctx?.waitUntil) ctx.waitUntil(filled); else await filled; }

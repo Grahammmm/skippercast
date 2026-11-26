@@ -13,10 +13,16 @@ const cases = [
   ['bytes=-20', {suffix: 20}, '0123456789', 'bytes 0-9/10'],
   ['bytes=2-5', {offset: 2, length: 4}, '2345', 'bytes 2-5/10'],
   ['bytes=6-', {offset: 6}, '6789', 'bytes 6-9/10'],
+  // The Workers runtime returns every R2Range key, unset ones undefined. Hosted stage/production cold reads of
+  // bytes=0-16383 answered "bytes NaN-NaN/<size>" (2026-11-25), so the PMTiles relief header read was refused.
+  ['bytes=0-3', {offset: 0, length: 4, suffix: undefined}, '0123', 'bytes 0-3/10'],
+  ['bytes=2-5', {offset: 2, length: 4, suffix: undefined}, '2345', 'bytes 2-5/10'],
+  ['bytes=6-', {offset: 6, length: undefined, suffix: undefined}, '6789', 'bytes 6-9/10'],
+  ['bytes=-3', {offset: undefined, length: undefined, suffix: 3}, '789', 'bytes 7-9/10'],
 ];
 
 for (const [header, range, bytes, contentRange] of cases) {
-  test(`cold R2 ${header} labels exactly the bytes served`, async t => {
+  test(`cold R2 ${header} ${JSON.stringify(Object.keys(range))} labels exactly the bytes served`, async t => {
     useBucket({FEEDS: {async get(requestedKey, options) {
       assert.equal(requestedKey, key);
       assert.equal(options.range.get('Range'), header);
