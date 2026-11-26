@@ -611,6 +611,50 @@ def controller_stage():
     return stage
 
 
+class _Listing(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+
+def test_draft_release_reader_reads_the_real_json_array_listing(monkeypatch):
+    # Run 45727170009: the real listing is a JSON array, and the object-only metadata reader held
+    # every dispatch with 'expected a JSON object'. Exercise the unmocked reader path.
+    stage, seen = controller_stage(), []
+
+    def fake_open(request):
+        seen.append(request)
+        return _Listing(json.dumps([{'id': 1, 'tag_name': 'v1'}, draft()]).encode())
+
+    monkeypatch.setattr(stage, '_open', fake_open)
+    reader = controller.DraftRelease('push-token')
+    assert reader.assets(TAG) == {'a' * 64 + '.pmtiles': stage.Asset(9, 4)}
+    assert [r.full_url for r in seen] == [f'{API}/releases?per_page=100&page=1']
+    assert seen[0].get_header('Authorization') == 'Bearer push-token'
+    assert seen[0].get_header('Accept') == 'application/vnd.github+json'
+
+
+@pytest.mark.parametrize(('data', 'match'), [
+    pytest.param(b'{"message": "Not Found"}', 'invalid GitHub release listing', id='object'),
+    pytest.param(b'[{"id": 1, "id": 2}]', 'duplicate JSON member', id='duplicate'),
+    pytest.param(b'[{"id": NaN}]', 'invalid JSON constant', id='nan'),
+    pytest.param(b'[{"id": 1}', 'invalid GitHub release listing', id='truncated'),
+    pytest.param(b'[\xff]', 'invalid GitHub release listing', id='not-utf8'),
+    pytest.param(b'[' + b' ' * (8 << 20) + b']', 'exceeds the byte limit', id='oversize'),
+])
+def test_release_listing_decoder_refuses_anything_but_a_bounded_canonical_array(data, match):
+    with pytest.raises(controller.HoldError, match=match):
+        controller.decode_listing(data)
+
+
+def test_release_listing_decoder_refuses_malformed_unicode():
+    with pytest.raises(ValueError, match='not canonical JSON'):
+        controller.decode_listing(b'[{"name": "\\ud800"}]')
+    assert controller.decode_listing(b'[]') == []
+
+
 class FakeDraft:
     def __init__(self, files):
         self.files = files
