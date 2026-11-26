@@ -454,8 +454,10 @@ test('MSK-2: Chart inserts real fields and contours at their current MapLibre an
   });
   camera.value = view;
   publishedChartFiles.value = {region: id, files: ['depth-contours-overview.geojson']};
+  // The pinned ft-v1 overview (byte-identical to the v1 publication), so the anchors hold whichever release is committed.
+  const v1Overview = new URL('./fixtures/morro-legacy-ft-v1/depth-contours-overview.geojson', import.meta.url);
   controllers.push(createDepthContours({engine, page: () => PAGE, now: () => now.getTime(), palette: () => sentinel,
-    fetchFn: async url => serveDist(url)}));
+    fetchFn: async url => url.endsWith('/regions/morro-bay/depth-contours-overview.geojson') ? new Response(readFileSync(v1Overview)) : serveDist(url)}));
   await tick();
   const opts = {engine, page: () => PAGE, palette: () => sentinel, now: () => now, zone: () => 'UTC'};
   const grid = [35.4, 35.5].flatMap(lat => [-121, -120.9].map(lon => ({lat, lon, tempF: 57, errorF: 1})));

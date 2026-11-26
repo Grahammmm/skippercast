@@ -24,7 +24,7 @@ const m = await import(`data:text/javascript;base64,${Buffer.from(out.contents).
 // The rendered row follows the validated file, not a region default.
 // A missing state projection or stale v1 legend would mislabel the ft-v2 full file.
 test('contour legend follows the loaded set in English and Spanish', async () => {
-  const v1 = JSON.parse(await readFile(new URL('dist/regions/morro-bay/depth-contours-overview.geojson', root), 'utf8'));
+  const v1 = JSON.parse(await readFile(new URL('tests/fixtures/morro-legacy-ft-v1/depth-contours-overview.geojson', root), 'utf8'));
   const v2 = {type: 'FeatureCollection', provenance: {
     region_id: 'morro-bay', units: 'ft', set: 'ft-v2', shelf_limit_ft: 300,
     index_depths_ft: [60, 150, 300], intervals: [

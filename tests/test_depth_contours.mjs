@@ -1,6 +1,7 @@
 // Shelf depth contours (CI6-13, docs/plans/front-end/design.md § 9): the published
 // file's check, the overview/full switch, the overlay, the card and the Chart layer,
-// read from the committed Morro Bay publication (offline) with a fake engine.
+// read from the pinned ft-v1 Morro Bay publication (tests/fixtures/morro-legacy-ft-v1, byte-identical to the
+// v1 dist files; the committed release may move to ft-v3) offline with a fake engine.
 // web/map/depth-contours.ts runs by type stripping.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -24,8 +25,8 @@ import {themes} from '../scripts/check_contrast.mjs';
 
 const ROOT = new URL('..', import.meta.url);
 const json = path => JSON.parse(readFileSync(new URL(path, ROOT), 'utf8'));
-const FULL = json('dist/regions/morro-bay/depth-contours.geojson');
-const OVERVIEW = json('dist/regions/morro-bay/depth-contours-overview.geojson');
+const FULL = json('tests/fixtures/morro-legacy-ft-v1/depth-contours.geojson');
+const OVERVIEW = json('tests/fixtures/morro-legacy-ft-v1/depth-contours-overview.geojson');
 const TODAY = '2026-10-20';
 const sentinel = readPalette(name => /^map-.*-(?:opacity|width)$/.test(name) ? '1' : `token(${name})`);
 const flush = () => new Promise(resolve => setImmediate(resolve));
