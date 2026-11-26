@@ -244,12 +244,23 @@ def test_publish_bytes_do_not_depend_on_where_the_catalog_puts_the_stamped_keys(
 
 def test_the_committed_morro_bay_publication_is_within_budget_and_says_its_datum():
     root = ROOT
-    for name, budget in (('depth-contours.geojson', dc.MAX_BYTES), ('depth-contours-overview.geojson', dc.OVERVIEW_MAX_BYTES)):
+    detail = json.loads((root / 'dist/regions/morro-bay/depth-contours.geojson').read_text())
+    # The publisher's own limits for the committed set (ft-v1 1 MB / 64 KB; ft-v2/v3 3 MB / 300 KB), never a looser pair.
+    full_max, overview_max = dc.size_budgets(detail)
+    for name, budget in (('depth-contours.geojson', full_max), ('depth-contours-overview.geojson', overview_max)):
         path = root / 'dist/regions/morro-bay' / name
         assert path.stat().st_size <= budget, name
         data = json.loads(path.read_text())
-        assert data['provenance']['units'] == 'ft' and data['provenance']['interval_ft'] == dc.INTERVAL_FT
-        assert {f['properties']['vertical_datum'] for f in data['features']} == {dc.UNVERIFIED_DATUM}
+        assert data['provenance']['units'] == 'ft'
+        if data['provenance'].get('set') == dc.FT_V3:
+            # ft-v3 states its tiers in its contour style, not a single interval; every feature names a datum its sources state.
+            assert data['provenance'].get('interval_ft') is None and data['provenance']['contours'], name
+            stated = {s['vertical_datum'] for s in data['provenance']['sources']}
+            datums = {f['properties']['vertical_datum'] for f in data['features']}
+            assert datums and datums <= stated, name
+        else:
+            assert data['provenance']['interval_ft'] == dc.INTERVAL_FT
+            assert {f['properties']['vertical_datum'] for f in data['features']} == {dc.UNVERIFIED_DATUM}
         assert 'Not for navigation' in data['provenance']['limitations']
 
 
@@ -281,9 +292,15 @@ def test_publish_records_the_omitted_bound_surveys_in_both_forms(tmp_path):
 
 
 def test_the_committed_morro_bay_publication_names_its_omitted_survey():
+    # ft-v1 traced the three USGS 2008 grids and omits the approved NOAA BAG; Morro v2 (ft-v3) omits the 2015 USACE
+    # NCMP lidar, still a candidate (C8 exclusion), and credits only the 2022 NOAA lidar and BlueTopo.
     for name in ('depth-contours.geojson', 'depth-contours-overview.geojson'):
         provenance = json.loads((ROOT / 'dist/regions/morro-bay' / name).read_text())['provenance']
-        assert provenance['sources_omitted'] == [{'source_id': 'noaa-bag', 'review_status': 'approved'}], name
+        if provenance.get('set') == dc.FT_V3:
+            assert provenance['sources_omitted'] == [{'source_id': 'usace-ncmp-ca-8482', 'review_status': 'candidate'}], name
+            assert [s['source_id'] for s in provenance['sources']] == ['noaa-morro-bay-topobathy-2022-9630', 'noaa-bluetopo'], name
+        else:
+            assert provenance['sources_omitted'] == [{'source_id': 'noaa-bag', 'review_status': 'approved'}], name
 
 
 @pytest.mark.parametrize('where', ['collection', 'provenance', 'feature properties'])
