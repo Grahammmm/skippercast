@@ -40,6 +40,7 @@ for entry in (ROOT / 'src', ROOT):  # this script sets its own path; no PYTHONPA
         sys.path.insert(0, str(entry))
 
 from skippercast.platform.contracts import load_catalogs, public_url  # noqa: E402
+from skippercast.platform.depth_contours import UNSTATED_SURVEY_DATE, selected_survey_date  # noqa: E402
 from skippercast.relief import package as relief_package  # noqa: E402
 from skippercast.seafloor.rights import CSUMB_CREDIT  # noqa: E402
 from tests.contract import test_commercial_sources as contract  # noqa: E402
@@ -188,6 +189,47 @@ def _depth_detail(pointer):
     return ', '.join(labels) or 'not stated'
 
 
+def _survey_extras(sources, region_id, layer, rows):
+    """{source id: extra date text} for one depth layer, from the survey dates its own artifact records.
+
+    Same rule as the stage overlay (scripts/relief/morro_sources_overlay.py), so the committed page production
+    serves says what the reviewed preview said: a catalogue date renders from the catalogue and must agree with
+    the artifact; an artifact that records only "unstated" says "survey date not stated"; one checked date is
+    named; several name none. Rows are (source id, recorded dates or None). Unlike the overlay, which binds one
+    release and refuses, an unparseable date here adds no claim and is never printed.
+    """
+    dates = {}
+    for ident, values in rows:
+        found = dates.setdefault(ident, set())
+        if not isinstance(values, list):
+            continue  # the artifact records no date field: no claim beyond the catalogue's
+        for value in values:
+            if value == UNSTATED_SURVEY_DATE:
+                found.add(value)
+                continue
+            try:
+                found.add(selected_survey_date({'survey_date': value}))
+            except (TypeError, ValueError):
+                continue  # free text is never printed: the page renders catalogue text and checked dates only
+    extras = {}
+    for ident, values in dates.items():
+        catalog_date = sources.get(ident, {}).get('survey_date') or sources.get(ident, {}).get('survey_year')
+        if not values:
+            extras[ident] = ''
+        elif catalog_date:
+            if values != {str(catalog_date)}:
+                raise RegisterError(f'{region_id}: {layer.lower()} source {ident!r} records survey dates '
+                                    f'{sorted(values)} but the catalogue says {catalog_date}')
+            extras[ident] = ''  # _dates renders it from the catalogue
+        elif values == {UNSTATED_SURVEY_DATE}:
+            extras[ident] = 'survey date not stated'
+        elif len(values) == 1:
+            extras[ident] = 'survey ' + next(iter(values))
+        else:
+            extras[ident] = ''  # no single date is supported by this layer
+    return extras
+
+
 def _relief_pointers(root):
     directory = root / 'catalog/relief'
     schema_path = directory / 'pointer.schema.json'
@@ -209,7 +251,7 @@ def _relief_pointers(root):
                 if isinstance(entry, dict) and 'id' in entry
             )
             raise RegisterError(f'{region_id}: invalid relief pointer {path.name} (source IDs: {ids or "unavailable"}): {error}') from error
-        yield pointer['region'], dict.fromkeys((entry['id'] for entry in pointer['sources']), ''), _depth_detail(pointer)
+        yield pointer['region'], [(entry['id'], entry.get('survey_dates')) for entry in pointer['sources']], _depth_detail(pointer)
 
 
 def _contour_sources(root):
@@ -225,7 +267,8 @@ def _contour_sources(root):
             raise RegisterError(f'{path.name}: invalid contour region or source IDs')
         if 'publication_held' in collection or 'publication_held' in provenance:
             raise RegisterError(f'{path.name}: depth contours are held')
-        yield region_id, dict.fromkeys(ids, ''), None
+        yield region_id, [(entry['source_id'], [entry['survey_date']] if 'survey_date' in entry else None)
+                          for entry in provenance['sources']], None
 
 
 def collect(root=ROOT):
@@ -274,7 +317,8 @@ def collect(root=ROOT):
     depth_inputs = ((DEPTH_SHADING, _relief_pointers(root)), (DEPTH_CONTOURS, _contour_sources(root)))
     depth_usage = set()
     for layer, inputs in depth_inputs:
-        for region_id, members, depth_detail in inputs:
+        for region_id, rows, depth_detail in inputs:
+            members = list(dict.fromkeys(ident for ident, _ in rows))
             if region_id not in live_regions:
                 config = root / 'regions' / region_id / 'region.json'
                 if not config.is_file():
@@ -290,7 +334,7 @@ def collect(root=ROOT):
                 if not listed(sources[ident], live=True):
                     raise RegisterError(f'{region_id}: {layer.lower()} has unlistable source {ident!r}')
                 depth_usage.add((region_id, layer, ident))
-            live_regions[region_id]['layers'].setdefault(layer, {}).update(members)
+            live_regions[region_id]['layers'].setdefault(layer, {}).update(_survey_extras(sources, region_id, layer, rows))
             if depth_detail is not None:
                 live_regions[region_id]['depth_detail'] = depth_detail
 
