@@ -8,6 +8,7 @@ import {chartMark} from './chart.ts';
 import type {Engine} from './engine.ts';
 import {BOTTOM_RELIEF} from './layers.ts';
 import {chartPick} from './marks.ts';
+import {MPA_FILL} from './mpa.ts';
 import {fieldDesaturation} from './nearshore-paint.ts';
 import {language, t, type StringId} from '../i18n.ts';
 import {readPalette, type Palette} from './palette.ts';
@@ -24,6 +25,10 @@ export interface SurveyDetailView {
 }
 
 const SCHEME = 'bottom-relief';
+/** M35: the no-survey hatch is its own overlay, drawn above the Aerial and ENC bases (under MPAs, marks and the coastline
+ * glow). The relief overlay sits inside the basemap stack, so on Morro's default Aerial base an opaque nearshore photo
+ * covered every hatch pixel while the hatch itself was present, patterned and rendered (hosted trace 2026-11-25). */
+export const SURVEY_CUE = `${BOTTOM_RELIEF}-gap-cue`;
 const readers = new Map<string, (z: number, x: number, y: number, signal: AbortSignal) => ReturnType<AddProtocolAction>>();
 const libraries = new WeakSet<object>();
 let serial = 0;
@@ -58,15 +63,18 @@ interface ReliefOptions {
 export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
   const page = o.page ?? location.href, fetchFn = o.fetchFn ?? fetch;
   const abort = new AbortController(), token = String(++serial), source = `${BOTTOM_RELIEF}-${token}`;
-  const survey = `${source}-survey`, pattern = `${survey}-pattern`, hit = `${survey}-hit`;
+  const survey = `${source}-survey`, pattern = `${survey}-pattern`, hit = `${survey}-hit`, cueSource = `${survey}-cue`;
   const isLight = () => document.documentElement.dataset.theme === 'light';
   let disposePaint: (() => void) | undefined, disposeSurvey: (() => void) | undefined, drawn = false;
+  // The data the hatch overlay was last given (the companion, then the opted-in detail), or null while it is not drawn.
+  let cueData: unknown = null;
   function destroy() {
     abort.abort();
     readers.delete(token);
     disposePaint?.();
     disposeSurvey?.();
     o.surveyView?.(null);
+    if (cueData) { cueData = null; o.engine.setOverlay(SURVEY_CUE, null); }
     if (drawn) { drawn = false; o.engine.setOverlay(BOTTOM_RELIEF, null); }
     if (chartMark.peek()?.id === survey) chartMark.value = null;
   }
@@ -258,9 +266,9 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
           'raster-saturation': seafloor ? -0.8 : field ? fieldDesaturation() : 0, 'raster-brightness-min': seafloor && light ? 0.30 : 0,
           'raster-brightness-max': seafloor && !light ? 0.75 : 1}}];
       const hasDetail = available();
-      const detailLayers = hasDetail ? surveyDetailLayers(survey, survey, pattern, p, light) : [];
+      // The hatch is not here: it is the SURVEY_CUE overlay's, above the Aerial and ENC bases.
+      const detailLayers = hasDetail ? surveyDetailLayers(survey, survey, pattern, p, light).slice(1) : [];
       if (hasDetail) layers.push(...detailLayers, {id: hit, type: 'fill', source: survey, paint: {'fill-opacity': 0}});
-      else if (gapShown()) layers.push(surveyDetailLayers(survey, survey, pattern, p, light)[0]!); // the hatch alone
       layers.push(...land.map(l => ({...l, id: `${source}-${l.id}`} as LayerSpecification)),
       {id: `${source}-coast`, type: 'line', source: BASEMAP_SOURCE, 'source-layer': 'earth',
         paint: {'line-color': p.mapCoast, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, light ? 0.7 : 0.5, 13, light ? 1.8 : 1.4],
@@ -274,20 +282,17 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       const seafloor = seafloorOn.value, field = fieldOn.value;
       const current = detail.value, gapData = gap.value, hasDetail = available(), hasGap = gapShown();
       const {layers, detailLayers} = buildLayers(readPalette(), isLight(), seafloor, field);
-      detailIds = detailLayers.slice(1).map(l => l.id); // The hatch stays visible.
+      detailIds = detailLayers.map(l => l.id); // The hatch stays visible.
       drawn = true;
       // Settings resubmit paints against the same IDs. On a theme switch the
       // engine calls only the providers, using the current effective theme.
       // No source or attribution text on the map (G 2026-11-18); credits live on the sources page.
       o.engine.setOverlay(BOTTOM_RELIEF, {stopOnError: true, sources: {[source]: {type: 'raster', tileSize: 256,
         tiles: [`${SCHEME}://${token}/{z}/{x}/{y}`], minzoom: a.minzoom, maxzoom: a.maxzoom, bounds: [...a.bounds]},
-        ...hasDetail && current ? {[survey]: {type: 'geojson', data: current}}
-          : hasGap && gapData ? {[survey]: {type: 'geojson', data: gapData}} : {}}, layers,
+        ...hasDetail && current ? {[survey]: {type: 'geojson', data: current}} : {}}, layers,
         themePaint: p => paintEdits(buildLayers(p, isLight(), seafloor, field).layers),
         ...control ? {control} : {},
-        ...hasGap ? {themePatterns: p => surveyHatchPattern(pattern, p, isLight())} : {},
-        ...hasDetail ? {themePatterns: p => surveyHatchPattern(pattern, p, isLight()),
-          inspect: {layer: hit, alongside: COASTLINE_PICK, show(properties) {
+        ...hasDetail ? {inspect: {layer: hit, alongside: COASTLINE_PICK, show(properties) {
             // Refused waypoints remain armed; successful ones change the
             // engine's pick context. Neither may open a survey card instead.
             if (waypointPlacement.peek() || typeof properties.tier !== 'string') return;
@@ -311,6 +316,17 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
               source: '',
               basis: typeof properties.date === 'string' ? properties.date : ''});
           }}} : {}}, 'boundaries');
+      // The hatch: the opted-in detail's tier-none areas once loaded, else the companion's. Reusing the source ID keeps
+      // the layer mounted, so new data goes in through setData (setOverlay adds a source only once).
+      const cue = hasDetail ? current : hasGap ? gapData : null;
+      if (cue) {
+        const hatch = surveyDetailLayers(cueSource, survey, pattern, readPalette(), isLight())[0]!;
+        const replaced = cueData !== null && cueData !== cue;
+        cueData = cue;
+        o.engine.setOverlay(SURVEY_CUE, {sources: {[cueSource]: {type: 'geojson', data: cue}}, layers: [hatch],
+          themePatterns: p => surveyHatchPattern(pattern, p, isLight())}, MPA_FILL);
+        if (replaced) o.engine.setData(cueSource, cue);
+      } else if (cueData) { cueData = null; o.engine.setOverlay(SURVEY_CUE, null); }
       setDetail();
     });
     updateView();

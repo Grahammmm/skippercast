@@ -145,7 +145,8 @@ export function surveyHatchPattern(id: string, palette: Palette, light: boolean)
   return image ? [{id, image, pixelRatio: SURVEY_HATCH_PIXEL_RATIO}] : [];
 }
 
-/** Bottom-to-top order, below the redraw of basemap land and parks. Only the
+/** Bottom-to-top order. The relief overlay draws the tint, outline and labels below its redraw of basemap land and parks;
+ * the hatch (first) is drawn by bottom-relief.ts as its own overlay above the Aerial/ENC bases. Only the
  * optional tint, outline and labels change visibility; the hatch is always on. */
 export function surveyDetailLayers(source: string, id: string, pattern: string, p: Palette, light: boolean): LayerSpecification[] {
   const tier: ExpressionSpecification = ['get', 'tier'];
