@@ -8,7 +8,7 @@
 // for longer interaction sequences, or failed to check Chart fallback with v1's message.
 import {createHash} from 'node:crypto';
 import {syntheticTerrain} from './terrain-keyboard-fixture.ts';
-import {readFileSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
 import type {Locator, Page, Route} from '@playwright/test';
 import {chartCentre, expect, PIXEL, test, type V2} from './fixtures.ts';
@@ -25,6 +25,26 @@ test.beforeEach(async ({page, v2: _v2}) => {
 /** Hold every coast data request open: the renderer mounts and waits for its terrain. */
 const holdCoastData = (page: Page) => page.route(/\/(?:api\/coast|coast-data)\//, () => { /* never answered */ });
 const failCoastData = (page: Page) => page.route(/\/(?:api\/coast|coast-data)\//, route => route.fulfill({status: 503, json: {error: 'Offline map test'}}));
+// M42: specs must not depend on which Morro Bay release is committed. When the repo commits a reviewed public relief
+// pointer (catalog/relief/morro-bay.json, the go-live data), the Chart's always-on Depth shading draws from it; this server
+// has no relief archive (its /feeds/ are stubs), so the first failed tile read honestly says "Depth shading unavailable.".
+// Whether that happens before an assertion depends on the viewport, so a spec about another layer may allow that one row,
+// and only when such a pointer is committed. With no pointer (today's v1) the row is never allowed.
+const MORRO_POINTER = new URL('../catalog/relief/morro-bay.json', import.meta.url);
+const PUBLIC_RELIEF = existsSync(MORRO_POINTER) && ((p: Record<string, unknown>) => p.region === 'morro-bay' && p.private === false && p.status === 'reviewed')(JSON.parse(readFileSync(MORRO_POINTER, 'utf8')));
+/** `layer` is unavailable and no other layer is, except Depth shading's missing test archive when a public pointer is committed. */
+async function onlyUnavailable(page: Page, layer: string) {
+  const rows = page.locator('[data-unavailable]');
+  await expect(page.locator(`[data-unavailable="${layer}"]`)).toHaveCount(1);
+  const others = (await rows.evaluateAll(els => els.map(e => e.getAttribute('data-unavailable')))).filter(id => id !== layer);
+  expect(others, 'other unavailable layers').toEqual(PUBLIC_RELIEF && others.length ? ['bottom-relief'] : []);
+  if (others.length) await expect(page.locator('[data-unavailable="bottom-relief"]')).toHaveText('Depth shading unavailable.');
+}
+// M42: the contour click spec reads the ft-v1 contract (30 ft interval, survey edge, 2008 surveys) from a pinned copy of
+// the ft-v1 overview committed on main d649d5b7 (sha256 187561c0…), not from whichever release the repo commits.
+const CONTOURS_V1_OVERVIEW = readFileSync(new URL('../tests/fixtures/depth-contours/morro-bay-ft-v1-overview.geojson', import.meta.url));
+const serveV1Contours = (page: Page) => page.route('**/regions/morro-bay/depth-contours-overview.geojson',
+  route => route.fulfill({body: CONTOURS_V1_OVERVIEW, contentType: 'application/geo+json'}));
 const TINY = readFileSync(new URL('../tests/fixtures/basemap/tiny.pmtiles', import.meta.url));
 const ARCHIVE = 'tiles/basemap/ca-coast-fixture.pmtiles';
 /** FE-10's manifest and archive, answered by byte range as R2 answers the PMTiles reader. */
@@ -387,7 +407,7 @@ test('a failing coastline marks only its layer unavailable; the basemap keeps dr
   await v2.open('app', {region: 'morro-bay', presentation: 'chart'});
   if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
   await expect(page.locator('[data-unavailable="coastline"]')).toHaveText('Coastline unavailable.');
-  await expect(page.locator('[data-unavailable]')).toHaveCount(1);
+  await onlyUnavailable(page, 'coastline');
   await sourcesLinkOnly(page);
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
   expect(asked).toEqual(['/regions/morro-bay/shoreline-overview.geojson', '/regions/morro-bay/shoreline.geojson']);
@@ -433,7 +453,7 @@ test('RF2205-9: an overview-only region never asks for the full shoreline, even 
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: '35.38000,-120.88000,13'});
   if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click();
   await expect(page.locator('[data-unavailable="coastline"]')).toHaveText('Coastline unavailable.');
-  await expect(page.locator('[data-unavailable]')).toHaveCount(1);
+  await onlyUnavailable(page, 'coastline');
   await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
   await page.waitForTimeout(500);
   expect(asked.filter(path => path.endsWith('/shoreline.geojson')), 'the unlisted full shoreline is never asked for').toEqual([]);
@@ -771,7 +791,7 @@ const CURRENT_VIEW = '35.32000,-120.90000,11';
 const SST_POINT = {lon: -121.00, lat: 35.34};
 const CURRENT_POINT = {lon: -120.99, lat: 35.33};
 const SWELL_POINT = {lon: -120.98, lat: 35.35};
-// A deeper contour (270 ft) and a survey edge from that overview: the shallow contours run under the ranked
+// A deeper contour (270 ft) and a survey edge from the ft-v1 overview (pinned by serveV1Contours in the contour click spec): the shallow contours run under the ranked
 // reef marks and the protected areas, so a deep open-water contour and a clear edge are the reliable pick targets.
 const CONTOUR_POINT = {lon: -120.9499, lat: 35.2903};
 const EDGE_POINT = {lon: -120.9681, lat: 35.2592};
@@ -1292,6 +1312,7 @@ test('Water temp draws nothing for a stale analysis or a region no report covers
 test('the always-on depth contours read on click: a contour names its depth, the survey edge its limit, and off-contour water still reads the field', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await serveReport(page);
+  await serveV1Contours(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'water-temp', diagnostics: '1'});
   // The always-on contours draw and key themselves while the water-temp field is on (the phone's legend lives in the Layers sheet).
   await showLayers(page);
