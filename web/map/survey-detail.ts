@@ -145,6 +145,17 @@ export function surveyHatchPattern(id: string, palette: Palette, light: boolean)
   return image ? [{id, image, pixelRatio: SURVEY_HATCH_PIXEL_RATIO}] : [];
 }
 
+/** M37: the no-survey hatch alone cannot be read where a gap is only a few CSS px wide (Morro's channel is ~0.9 / 3.6 /
+ * 14.5 px at Chart z11 / 13 / 15), so the cue overlay also names it: the legend's own "no survey" words at each tier-none
+ * area's pole of inaccessibility (MapLibre's point placement for polygons). The text marks the gap; it never fills,
+ * enlarges or outlines it. It yields to other labels (no overlap) and is drawn in the survey ink with a halo. */
+export function surveyGapLabel(source: string, id: string, text: string, p: Palette): LayerSpecification {
+  return {id: `${id}-gap-label`, source, type: 'symbol', filter: ['==', ['get', 'tier'], 'none'],
+    layout: {'symbol-placement': 'point', 'text-field': text, 'text-font': [LABEL_FONT],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 10, 11, 15, 13], 'text-max-width': 8, 'text-padding': 4},
+    paint: {'text-color': p.mapSurveyInk, 'text-halo-color': p.mapSurveyHalo, 'text-halo-width': 1.6}};
+}
+
 /** Bottom-to-top order. The relief overlay draws the tint, outline and labels below its redraw of basemap land and parks;
  * the hatch (first) is drawn by bottom-relief.ts as its own overlay above the Aerial/ENC bases. Only the
  * optional tint, outline and labels change visibility; the hatch is always on. */

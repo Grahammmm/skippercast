@@ -58,7 +58,12 @@ test('attached relief and survey paint match fresh builds; hatch updates under o
   const ids = o => o.layers.map(l => l.id);
   assert.deepEqual(ids(light), ids(dark));
   assert.deepEqual(ids(lightCue), ids(darkCue));
-  assert.deepEqual(ids(darkCue).map(l => l.replace(/^bottom-relief-\d+/, '')), ['-survey-hatch']);
+  assert.deepEqual(ids(darkCue).map(l => l.replace(/^bottom-relief-\d+/, '')), ['-survey-hatch', '-survey-gap-label']);
+  // M37: the gap label restyles through the cue overlay's own paint provider, in the survey ink of each theme.
+  const gapLabel = cue => cue.layers.find(l => l.id.endsWith('-survey-gap-label'));
+  assert.equal(gapLabel(darkCue).paint['text-color'], palettes.dark.mapSurveyInk);
+  assert.equal(gapLabel(lightCue).paint['text-color'], palettes.light.mapSurveyInk);
+  assert.equal(typeof darkCue.themePaint, 'function');
   assert.ok(!ids(dark).some(l => l.endsWith('-survey-hatch')), 'the relief overlay no longer carries the hatch');
   assert.equal(dark.themePatterns, undefined);
   assert.deepEqual(light.sources, dark.sources);
@@ -67,7 +72,7 @@ test('attached relief and survey paint match fresh builds; hatch updates under o
   assert.equal(light.layers[0].paint['raster-brightness-min'], 0.30);
   const both = (relief, cue) => ({layers: [...relief.layers, ...cue.layers]});
   const report = assertThemePaintOracle({palettes, build: p => p === palettes.light ? both(light, lightCue) : both(dark, darkCue), provider: {
-    themePaint(p) { dataset.theme = themeOf(p); return dark.themePaint(p); },
+    themePaint(p) { dataset.theme = themeOf(p); return [...dark.themePaint(p), ...darkCue.themePaint(p)]; },
     themePatterns(p) { dataset.theme = themeOf(p); return darkCue.themePatterns(p); },
   }});
   const [darkHatch] = darkCue.themePatterns(palettes.dark);
