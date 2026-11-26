@@ -46,12 +46,24 @@ function chart(t, surveyView, surveys = new Map()) {
     getComputedStyle: () => ({getPropertyValue: key => key.endsWith('opacity') ? '1' : `${root.dataset.theme ?? 'dark'}:${key}`}),
     MutationObserver: class { constructor(cb) { themeChanged = cb; } observe() {} disconnect() { themeChanged = null; } },
   });
-  const errors = [], fetches = [], handles = [], readies = [], looks = [];
+  const errors = [], fetches = [], handles = [], readies = [], looks = [], data = [];
+  // What MapLibre would hold, as engine.ts draws it: a source is added once and keeps its first data until its owner
+  // drops it; only setData replaces it.
+  const mounted = new Map(), owned = new Map();
   const seafloor = signal(false), field = signal(false);
-  let overlay, before, protocol, breakRange = false;
+  let overlay, before, cue, cueBefore, protocol, breakRange = false;
   const engine = {
     view: {on: () => () => {}},
-    setOverlay(owner, next, anchor) { assert.equal(owner, 'bottom-relief'); overlay = next; before = anchor; },
+    setOverlay(owner, next, anchor) {
+      const ids = Object.keys(next?.sources ?? {});
+      for (const id of owned.get(owner) ?? []) if (!ids.includes(id)) mounted.delete(id);
+      for (const [id, s] of Object.entries(next?.sources ?? {})) if (!mounted.has(id)) mounted.set(id, s.data);
+      owned.set(owner, ids);
+      if (owner === 'bottom-relief-gap-cue') { cue = next; cueBefore = anchor; return; }
+      assert.equal(owner, 'bottom-relief'); overlay = next; before = anchor;
+    },
+    setData(id, next) { data.push([id, next]); if (mounted.has(id)) mounted.set(id, next); },
+    setVisible() {}, renderedValues: () => new Set(),
     setRasterOpacity(id, opacity) { assert.equal(id, overlay.layers[0].id); overlay.layers[0].paint['raster-opacity'] = opacity; },
   };
   const library = {addProtocol(_, action) { protocol = action; }};
@@ -77,9 +89,9 @@ function chart(t, surveyView, surveys = new Map()) {
   };
   t.after(() => { handles.reverse().forEach(h => h.destroy()); Object.assign(globalThis, old); });
   const tile = (url, x = 168) => Promise.resolve().then(() => protocol({url: url.replace('{z}/{x}/{y}', `10/${x}/404`)}, new AbortController()));
-  return {start, tile, errors, fetches, readies, looks, seafloor, field, breakRange: () => { breakRange = true; },
+  return {start, tile, errors, fetches, readies, looks, seafloor, field, data, mounted, breakRange: () => { breakRange = true; },
     theme(value) { root.dataset.theme = value; themeChanged?.(); },
-    get overlay() { return overlay; }, get before() { return before; },
+    get overlay() { return overlay; }, get before() { return before; }, get cue() { return cue; }, get cueBefore() { return cueBefore; },
     get template() { return Object.values(overlay.sources)[0].tiles[0]; }};
 }
 
@@ -257,22 +269,34 @@ test('a bound no-survey companion draws only the hatch at start and never fetche
   let view;
   const c = chart(t, next => { view = next; }, surveys);
   const layerIds = () => c.overlay.layers.map(l => l.id.replace(/^bottom-relief-\d+/, ''));
+  const cueIds = () => c.cue?.layers.map(l => l.id.replace(/^bottom-relief-\d+/, '')) ?? [];
   const gapBody = doc([none]), p = bound('north', gapBody);
-  c.start('north', p);
-  await until(() => c.overlay?.layers.some(l => l.id.endsWith('-survey-hatch')), 'the companion hatch');
+  const north = c.start('north', p);
+  await until(() => c.cue?.layers.some(l => l.id.endsWith('-survey-hatch')), 'the companion hatch');
   assert.deepEqual(c.fetches.map(([url]) => url), ['/catalog/relief/north.json',
     `/feeds/tiles/relief/north/${'c'.repeat(64)}/survey/${p.survey_gap.wire.sha256}.geojson.br`]);
-  assert.deepEqual(layerIds(), ['', '-survey-hatch', '-earth', '-parks', '-coast']);
-  const [, data] = Object.entries(c.overlay.sources).find(([key]) => key.endsWith('-survey'));
+  // M35: the hatch is its own overlay above the Aerial/ENC bases (under MPAs); the relief stack keeps no survey layer.
+  assert.deepEqual(layerIds(), ['', '-earth', '-parks', '-coast']);
+  assert.deepEqual(cueIds(), ['-survey-hatch']);
+  assert.equal(c.cueBefore, 'mpa-fill');
+  assert.equal(c.before, 'boundaries');
+  assert.ok(!Object.keys(c.overlay.sources).some(key => key.includes('-survey')), 'the relief overlay holds no survey source');
+  const [cueKey, data] = Object.entries(c.cue.sources)[0];
+  assert.equal(c.cue.layers[0].source, cueKey);
   assert.deepEqual(data.data.features.map(f => f.properties.tier), ['none']);
-  assert.equal(typeof c.overlay.themePatterns, 'function');
-  assert.equal(c.overlay.inspect, undefined, 'the companion alone never answers a tap');
+  assert.equal(typeof c.cue.themePatterns, 'function');
+  assert.equal(c.cue.themePatterns({mapNosurvey: '#000'})[0].id, c.cue.layers[0].paint['fill-pattern']);
+  assert.equal(c.cue.inspect, undefined, 'the companion alone never answers a tap');
+  assert.equal(c.overlay.inspect, undefined);
   // Opting in still fetches the detail lazily; a refused detail removes the control but keeps the default cue.
   view.toggle();
   await until(() => view === null, 'the refused detail to remove the control');
   assert.equal(c.fetches.at(-1)[0], `/feeds/tiles/relief/north/${'c'.repeat(64)}/survey/${detail.wire.sha256}.geojson.br`);
   assert.equal(view, null);
-  assert.deepEqual(layerIds(), ['', '-survey-hatch', '-earth', '-parks', '-coast']);
+  assert.deepEqual(layerIds(), ['', '-earth', '-parks', '-coast']);
+  assert.deepEqual(cueIds(), ['-survey-hatch']);
+  north.destroy();
+  assert.equal(c.cue, null, 'destroy removes the hatch overlay too');
 
   // Refusals: any other tier, a digest mismatch, a companion without its detail binding, an oversized pin.
   const refusals = {
@@ -282,12 +306,55 @@ test('a bound no-survey companion draws only the hatch at start and never fetche
     oversized: bound('oversized', gapBody, {wire: {bytes: 256 * 1024 + 1, sha256: sha('big')}, decoded: {bytes: gapBody.length, sha256: sha(gapBody)}}),
   };
   for (const [region, body] of Object.entries(refusals)) {
-    c.start(region, body);
+    const handle = c.start(region, body);
     await tick(); await tick(); await tick();
-    assert.ok(!layerIds().includes('-survey-hatch'), `${region}: no hatch`);
+    assert.equal(c.cue, null, `${region}: no hatch`);
+    assert.ok(!layerIds().some(l => l.includes('-survey')), `${region}: no survey layer`);
     assert.ok(!Object.keys(c.overlay.sources).some(key => key.endsWith('-survey')), `${region}: no survey source`);
+    handle.destroy();
   }
   assert.ok(!c.fetches.some(([url]) => url.startsWith('/feeds/tiles/relief/orphan/') || url.startsWith('/feeds/tiles/relief/oversized/')),
     'an unbound or oversized companion is never requested');
+  assert.deepEqual(c.errors, []);
+});
+
+// M35 contract: after the companion drew the hatch, opting in must show the FULL reviewed detail. Believable bug (on main
+// before M35): the companion and the detail shared one source ID, and a source is added only once, so the opt-in
+// outline, tint and labels kept drawing the companion's tier-none areas and no estimated/measured tier ever appeared.
+test('opting in after the companion shows the whole detail and moves the hatch onto it', async t => {
+  const square = [[[-121, 35], [-120, 35], [-120, 36], [-121, 35]]];
+  const doc = features => Buffer.from(JSON.stringify({type: 'FeatureCollection', region: 'north', navigation: 'NOT FOR NAVIGATION',
+    features: features.map(properties => ({type: 'Feature', properties, geometry: {type: 'Polygon', coordinates: square}}))}));
+  const none = {tier: 'none', sources: []};
+  const estimated = {tier: 'estimated', sources: [id], source: 'Synthetic survey', grid_m: 10};
+  const pins = body => ({wire: {bytes: 40, sha256: sha(`wire:${body}`)}, decoded: {bytes: body.length, sha256: sha(body)}});
+  const gapBody = doc([none]), detailBody = doc([estimated, none]), gap = pins(gapBody), detail = pins(detailBody);
+  const surveys = new Map([[gap, gapBody], [detail, detailBody]].map(([pin, body]) => [
+    `/feeds/tiles/relief/north/${'c'.repeat(64)}/survey/${pin.wire.sha256}.geojson.br`,
+    () => new Response(body, {headers: {'Content-Encoding': 'br', 'Content-Length': String(pin.wire.bytes)}})]));
+  let view;
+  const c = chart(t, next => { view = next; }, surveys);
+  c.start('north', {...pointer('north'), survey_detail: detail, survey_gap: gap});
+  await until(() => c.cue, 'the companion hatch');
+  const companion = Object.values(c.cue.sources)[0].data;
+  assert.deepEqual(c.data, []);
+  view.toggle();
+  await until(() => c.overlay.inspect, 'the opted-in detail');
+  const tiers = key => c.mounted.get(key)?.features.map(f => f.properties.tier);
+  const [surveyKey] = Object.keys(c.overlay.sources).filter(key => key.endsWith('-survey'));
+  assert.deepEqual(tiers(surveyKey), ['estimated', 'none'], 'the mounted detail source holds the detail, not the companion');
+  const ids = c.overlay.layers.map(l => l.id.replace(/^bottom-relief-\d+/, ''));
+  assert.deepEqual(ids, ['', '-survey-tint', '-survey-outline', '-survey-label', '-survey-hit', '-earth', '-parks', '-coast']);
+  assert.ok(c.overlay.layers.filter(l => /-survey-/.test(l.id)).every(l => l.source === surveyKey));
+  // The hatch overlay stays mounted and is handed the detail through setData (its source already exists).
+  const [cueKey] = Object.keys(c.cue.sources);
+  assert.notEqual(cueKey, surveyKey);
+  assert.equal(c.data.length, 1);
+  assert.equal(c.data[0][0], cueKey);
+  assert.notEqual(c.data[0][1], companion);
+  assert.deepEqual(tiers(cueKey), ['estimated', 'none']);
+  assert.deepEqual(c.cue.layers[0].filter, ['==', ['get', 'tier'], 'none']);
+  assert.equal(c.cueBefore, 'mpa-fill');
+  assert.equal(view.shown, true);
   assert.deepEqual(c.errors, []);
 });

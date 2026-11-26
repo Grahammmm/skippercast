@@ -41,31 +41,38 @@ test('attached relief and survey paint match fresh builds; hatch updates under o
   Object.assign(globalThis, globals);
   t.after(() => { for (const [key, desc] of Object.entries(old)) { if (desc) Object.defineProperty(globalThis, key, desc); else delete globalThis[key]; } });
   const field = signal(true);
-  let overlay;
+  // M35: the hatch is its own overlay; the relief overlay owns the paint provider, the hatch overlay the pattern.
+  const overlays = {};
   const installed = new Promise((ready, unavailable) => {
     const handle = attachBottomRelief({region, surveyDetail, ready, unavailable, page: 'https://fixture.test/map',
-      engine: {setOverlay: (_, next) => { overlay = next; }, setVisible() {}}, library: {addProtocol() {}},
+      engine: {setOverlay: (owner, next) => { overlays[owner] = next; }, setVisible() {}}, library: {addProtocol() {}},
       seafloorOn: () => true, fieldOn: () => field.value, fetchFn: async () => Response.json(pointer)});
     t.after(() => handle.destroy());
   });
   await installed;
-  const dark = overlay;
+  const dark = overlays['bottom-relief'], darkCue = overlays['bottom-relief-gap-cue'];
   dataset.theme = 'light';
   field.value = false;
   field.value = true;
-  const light = overlay;
+  const light = overlays['bottom-relief'], lightCue = overlays['bottom-relief-gap-cue'];
   const ids = o => o.layers.map(l => l.id);
   assert.deepEqual(ids(light), ids(dark));
+  assert.deepEqual(ids(lightCue), ids(darkCue));
+  assert.deepEqual(ids(darkCue).map(l => l.replace(/^bottom-relief-\d+/, '')), ['-survey-hatch']);
+  assert.ok(!ids(dark).some(l => l.endsWith('-survey-hatch')), 'the relief overlay no longer carries the hatch');
+  assert.equal(dark.themePatterns, undefined);
   assert.deepEqual(light.sources, dark.sources);
+  assert.deepEqual(lightCue.sources, darkCue.sources);
   assert.equal(dark.layers[0].paint['raster-brightness-max'], 0.75);
   assert.equal(light.layers[0].paint['raster-brightness-min'], 0.30);
-  const report = assertThemePaintOracle({palettes, build: p => p === palettes.light ? light : dark, provider: {
+  const both = (relief, cue) => ({layers: [...relief.layers, ...cue.layers]});
+  const report = assertThemePaintOracle({palettes, build: p => p === palettes.light ? both(light, lightCue) : both(dark, darkCue), provider: {
     themePaint(p) { dataset.theme = themeOf(p); return dark.themePaint(p); },
-    themePatterns(p) { dataset.theme = themeOf(p); return dark.themePatterns(p); },
+    themePatterns(p) { dataset.theme = themeOf(p); return darkCue.themePatterns(p); },
   }});
-  const [darkHatch] = dark.themePatterns(palettes.dark);
+  const [darkHatch] = darkCue.themePatterns(palettes.dark);
   dataset.theme = 'light';
-  const [lightHatch] = dark.themePatterns(palettes.light);
+  const [lightHatch] = darkCue.themePatterns(palettes.light);
   assert.deepEqual(report.addedIds, [darkHatch.id]);
   assert.deepEqual([lightHatch.id, darkHatch.pixelRatio, lightHatch.pixelRatio], [darkHatch.id, 2, 2]);
   assert.deepEqual([darkHatch.image.widthPx, lightHatch.image.widthPx], [1.2, 1.4]);
@@ -105,7 +112,7 @@ test('survey hit layer answers only while detail is on, and switching off closes
   const installed = new Promise((ready, unavailable) => {
     const handle = attachBottomRelief({region, surveyDetail, ready, unavailable, page: 'https://fixture.test/map',
       surveyView: next => { view = next; },
-      engine: {setOverlay: (_, next) => { overlay = next; }, setVisible() {}, renderedValues: () => [], view: {on: () => () => {}}},
+      engine: {setOverlay: (owner, next) => { if (owner === 'bottom-relief') overlay = next; }, setVisible() {}, renderedValues: () => [], view: {on: () => () => {}}},
       library: {addProtocol() {}}, seafloorOn: () => false, fieldOn: () => false, fetchFn: async () => Response.json(pointer)});
     t.after(() => handle.destroy());
   });
