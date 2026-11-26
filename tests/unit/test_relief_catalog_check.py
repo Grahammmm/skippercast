@@ -209,8 +209,10 @@ def test_c2_usage_error(argv, tree, monkeypatch, capsys):
 
 
 def test_c3_current_repository(capsys, monkeypatch):
-    """C3: Today's real tree has Morro Bay v1 contours and zero reviewed pointers."""
-    assert check_catalog(ROOT) == []
+    """C3: The real checkout has no pointer before Morro v2, or one valid Morro pointer."""
+    morro_pointer = ROOT / RELIEF / 'morro-bay.json'
+    rows = expected('morro-bay') if morro_pointer.is_file() else []
+    assert check_catalog(ROOT) == rows
     monkeypatch.setenv('SKIPPERCAST_ROOT', str(ROOT))
     assert main(['--json']) == 0
-    assert capsys.readouterr() == ('[]\n', 'CATALOG OK\n')
+    assert capsys.readouterr() == (json.dumps(rows, indent=2) + '\n', 'CATALOG OK\n')

@@ -1,6 +1,7 @@
 """Offline regressions at the repository contour publication boundary."""
 from copy import deepcopy
 from dataclasses import dataclass
+from hashlib import sha256
 import json
 from pathlib import Path
 
@@ -15,6 +16,13 @@ STATIC = ('static-a', 'static-b', 'static-c', 'static-d')
 SELECTED = ('blue-grid', 'native-grid', 'topobathy-grid')
 OWNER = {'decision': 'allowed', 'basis': OWNER_DISPLAY_BASIS}
 NAMES = ('depth-contours.geojson', 'depth-contours-overview.geojson')
+LEGACY_FIXTURE = ROOT / 'tests/fixtures/morro-legacy-ft-v1'
+# Byte copies of the catalog import and dist pair from d649d5b7c9b1c3b8d795c21375300ad38924d4ae.
+LEGACY_SHA256 = {
+    'catalog-import.geojson': '3fb67bbb42f6b0b453e15dff83577106ad89d4458341432ce5e2c049df788874',
+    'depth-contours.geojson': '594a213c27c84385145765faa4b8df99feef154615af362a3d3f99a27ea47876',
+    'depth-contours-overview.geojson': '187561c00c777a769212de2da231756f82c442c6fa8514e62541364207e7ac0b',
+}
 
 
 def _pointer(region_id, ids):
@@ -160,7 +168,9 @@ def test_only_external_reviewed_region_pointer_can_enable_selected_mode(catalog,
 
 
 @pytest.mark.parametrize(('case', 'message'), [
-    ('listed-not-released', 'blue-grid'), ('omitted-not-released', 'native-grid'),
+    ('listed-not-released', 'blue-grid'),
+    ('wrong-released-source', 'Depth contour source blue-grid is not eligible for the reviewed relief release'),
+    ('omitted-not-released', 'native-grid'),
     ('omitted-not-in-catalog', 'native-grid'), ('non-bathymetry', 'native-grid'),
     ('clearance-removed', 'native-grid'), ('not-public', 'native-grid'),
     ('bad-rights', 'native-grid'), ('bad-needs', 'native-grid'), ('missing-omissions', 'sources_omitted'),
@@ -177,6 +187,8 @@ def test_selected_release_tie_refuses_bad_ids_and_keeps_spatial_checks(catalog, 
     source = catalog.sources['native-grid']
     if case == 'listed-not-released':
         pointer['sources'][0] = {'id': ['blue-grid']}
+    elif case == 'wrong-released-source':
+        pointer['sources'][0] = {'id': STATIC[0]}
     elif case == 'omitted-not-released':
         pointer['sources'].pop(1)
     elif case == 'omitted-not-in-catalog':
@@ -290,18 +302,20 @@ def test_legacy_without_a_set_is_strict_even_with_a_pointer(catalog):
 
 
 @pytest.mark.parametrize('with_pointer', [False, True])
-def test_morro_legacy_republish_matches_committed_pair(tmp_path, with_pointer):
-    # Protect both committed byte streams, including ordering of the static publication stamps.
+def test_morro_legacy_republish_matches_pinned_v1_pair(tmp_path, with_pointer):
+    # Protect both legacy byte streams, including ordering of the static publication stamps.
+    pinned = {name: (LEGACY_FIXTURE / name).read_bytes() for name in LEGACY_SHA256}
+    assert {name: sha256(data).hexdigest() for name, data in pinned.items()} == LEGACY_SHA256
     region = read_json(ROOT / 'regions/morro-bay/region.json')
     sources = {row['id']: row for row in read_json(ROOT / 'catalog/sources.json')['sources']}
-    root = ROOT
+    source = tmp_path / 'catalog/depth-contours/morro-bay.geojson'
+    source.parent.mkdir(parents=True)
+    source.write_bytes(pinned['catalog-import.geojson'])
     if with_pointer:
-        root = tmp_path
-        relative = 'catalog/depth-contours/morro-bay.geojson'
-        (root / relative).parent.mkdir(parents=True)
-        (root / relative).write_bytes((ROOT / relative).read_bytes())
-        _write(root / 'catalog/relief/morro-bay.json', _pointer('morro-bay', SELECTED))
+        _write(tmp_path / 'catalog/relief/morro-bay.json', _pointer('morro-bay', SELECTED))
     output = tmp_path / 'output'
-    assert dc.publish_depth_contours(root, region, output, sources) == tuple(f'regions/morro-bay/{name}' for name in NAMES)
+    assert dc.publish_depth_contours(tmp_path, region, output, sources) == tuple(
+        f'regions/morro-bay/{name}' for name in NAMES
+    )
     for name in NAMES:
-        assert (output / name).read_bytes() == (ROOT / 'dist/regions/morro-bay' / name).read_bytes()
+        assert (output / name).read_bytes() == pinned[name]
