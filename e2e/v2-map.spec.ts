@@ -40,6 +40,12 @@ async function onlyUnavailable(page: Page, layer: string) {
   expect(others, 'other unavailable layers').toEqual(PUBLIC_RELIEF && others.length ? ['bottom-relief'] : []);
   if (others.length) await expect(page.locator('[data-unavailable="bottom-relief"]')).toHaveText('Depth shading unavailable.');
 }
+/** M45: no layer is unavailable, except Depth shading's missing test archive when a public pointer is committed. */
+async function noneUnavailable(page: Page) {
+  const ids = await page.locator('[data-unavailable]').evaluateAll(els => els.map(e => e.getAttribute('data-unavailable')));
+  expect(ids, 'unavailable layers').toEqual(PUBLIC_RELIEF && ids.length ? ['bottom-relief'] : []);
+  if (ids.length) await expect(page.locator('[data-unavailable="bottom-relief"]')).toHaveText('Depth shading unavailable.');
+}
 // M42: the contour click spec reads the ft-v1 contract (30 ft interval, survey edge, 2008 surveys) from a pinned copy of
 // the ft-v1 overview committed on main d649d5b7 (sha256 187561c0…), not from whichever release the repo commits.
 const CONTOURS_V1_OVERVIEW = readFileSync(new URL('../tests/fixtures/depth-contours/morro-bay-ft-v1-overview.geojson', import.meta.url));
@@ -387,7 +393,7 @@ test('the Chart draws the basemap and the Morro Bay coastline with a Sources lin
   await expect.poll(() => fetched).toContain('200 /regions/morro-bay/shoreline-overview.geojson');
   expect(fetched.filter(f => f.endsWith('/shoreline.geojson')), 'no full shoreline at the opening zoom').toEqual([]);
   await expect(chart).toHaveAttribute('data-view', '35.38000,-120.88000,11');
-  await expect(page.locator('[data-unavailable]')).toHaveCount(0);
+  await noneUnavailable(page);
   await v2.a11y('v2-map-chart-engine');
   // At ?view= zoom 13 (MapLibre 12) it opens on the full shoreline, read once.
   fetched.length = 0;
