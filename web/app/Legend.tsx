@@ -55,7 +55,7 @@ import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} from '../map/fleet.ts';
 import {currentsState} from '../map/currents.ts';
 import {contourState} from '../map/depth-contours.ts';
-import {chartOnly, drawsIn, layerCopy, layerEntry} from '../map/layers.ts';
+import {BOTTOM_RELIEF, chartOnly, drawsIn, layerCopy, layerEntry} from '../map/layers.ts';
 import {contourCopy, lookDepthKey, nearshoreRows, surveyDetailChips, SURVEY_DETAIL_TITLE_ID} from '../map/legend-model.ts';
 import {reliefDrawn, reliefFeatures, reliefLook, reliefSurveyView} from './MapStage.tsx';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
@@ -477,6 +477,11 @@ function legendRow(e: ReturnType<typeof railEntries>[number], shown: ReturnType<
     : <PlainRow key={e.id} id={e.id} label={e.label} reason={t('rail.notDrawn', lang)} />;
 }
 
+/** An unavailable entry's name: the Chart's depth-shading overlay is not a registry entry (layers.ts BOTTOM_RELIEF), so it uses its rail name. */
+export function unavailableLabel(id: string, lang: Language): string {
+  return id === BOTTOM_RELIEF ? t('rail.depth', lang) : layerCopy(id, lang).label;
+}
+
 export function Legend() {
   const shown = shownPresentation.value, lang = language.value;
   const on = railEntries(lang).filter(e => railOn(e.id, layers.value, current.value));
@@ -496,7 +501,7 @@ export function Legend() {
         <MpaRow />
         <Cadence id="mpas" lang={lang} />
       </ul>
-      {unavailable.value.filter(id => id !== 'mpas' && !id.startsWith('preview-')).map(id => <p key={id} class="app-empty" data-unavailable={id}>{t('rail.unavailable', lang, {label: layerCopy(id, lang).label})}</p>)}
+      {unavailable.value.filter(id => id !== 'mpas' && !id.startsWith('preview-')).map(id => <p key={id} class="app-empty" data-unavailable={id}>{t('rail.unavailable', lang, {label: unavailableLabel(id, lang)})}</p>)}
       <footer class="app-legend-note app-legend-warning">{t('legend.notForNav', lang)}</footer>
     </section>
   );
