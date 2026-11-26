@@ -268,7 +268,7 @@ test('MLLW research waypoints retain explicit research class in GPX as well as n
 
 // U4: opt-in published depth-contour tracks (docs/chartplotter-export.md).
 const {loadContourFile} = await import('../web/planner.ts');
-const MORRO = JSON.parse(fs.readFileSync(new URL('../dist/regions/morro-bay/depth-contours.geojson', import.meta.url), 'utf8'));
+const MORRO = JSON.parse(fs.readFileSync(new URL('./fixtures/morro-legacy-ft-v1/depth-contours.geojson', import.meta.url), 'utf8'));
 const MORRO_REGION = {...REGION, id: 'morro-bay', name: 'Morro Bay'};
 const contourRequest = overrides => request({
   region: MORRO_REGION, bounds: [-121.2, 35.1, -120.7, 35.6], layers: {...DEFAULT_LAYERS, outlines: true, alignments: true, exclusions: true},

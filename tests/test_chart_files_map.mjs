@@ -13,7 +13,7 @@ import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
 
 const PAGE = 'https://s.test/map';
-const fixture = name => JSON.parse(readFileSync(new URL(`../dist/regions/morro-bay/${name}`, import.meta.url), 'utf8'));
+const fixture = name => JSON.parse(readFileSync(new URL(`./fixtures/morro-legacy-ft-v1/${name}`, import.meta.url), 'utf8'));
 const FULL = fixture('depth-contours.geojson'), OVERVIEW = fixture('depth-contours-overview.geojson');
 const EMPTY = {type: 'FeatureCollection', features: []};
 const ATTRIBUTION = 'NOAA NGS · CUSP shoreline';

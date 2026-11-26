@@ -20,8 +20,8 @@ import {configureStore, region, syncFromURL} from '../web/state.ts';
 
 const ROOT = new URL('..', import.meta.url);
 const json = path => JSON.parse(readFileSync(new URL(path, ROOT), 'utf8'));
-const FULL = json('dist/regions/morro-bay/depth-contours.geojson');
-const OVERVIEW = json('dist/regions/morro-bay/depth-contours-overview.geojson');
+const FULL = json('tests/fixtures/morro-legacy-ft-v1/depth-contours.geojson');
+const OVERVIEW = json('tests/fixtures/morro-legacy-ft-v1/depth-contours-overview.geojson');
 const T0 = Date.parse('2026-10-20T18:00:00Z');
 const OV = depthContoursOverviewURL('morro-bay'), DETAIL = depthContoursURL('morro-bay');
 const IDS = [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_LINE_INDEX, DEPTH_HIT, DEPTH_LABEL];
