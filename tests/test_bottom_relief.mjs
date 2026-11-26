@@ -25,6 +25,14 @@ const pointer = region => ({region, status: 'reviewed', private: false, sha256: 
   detail_summary: {mask: 'transparent-nodata', depth_bands: [{source_id: id, resolution_m: 10, min_depth_m: 0, max_depth_m: 90}]},
   native_support_by_zoom: {10: {tiles: 1, limit_m: 91.44, sources: []}}});
 const tick = () => new Promise(resolve => setImmediate(resolve));
+// The survey digest runs on the WebCrypto thread pool, so a fixed number of ticks races a loaded runner. Wait for the
+// expected state instead, with a bound so a real regression still fails.
+async function until(ready, what) {
+  for (const end = Date.now() + 2000; !ready();) {
+    if (Date.now() > end) assert.fail(`timed out waiting for ${what}`);
+    await new Promise(resolve => setTimeout(resolve, 1));
+  }
+}
 
 function chart(t, surveyView, surveys = new Map()) {
   const root = {dataset: {}};
@@ -251,7 +259,7 @@ test('a bound no-survey companion draws only the hatch at start and never fetche
   const layerIds = () => c.overlay.layers.map(l => l.id.replace(/^bottom-relief-\d+/, ''));
   const gapBody = doc([none]), p = bound('north', gapBody);
   c.start('north', p);
-  await tick(); await tick(); await tick();
+  await until(() => c.overlay?.layers.some(l => l.id.endsWith('-survey-hatch')), 'the companion hatch');
   assert.deepEqual(c.fetches.map(([url]) => url), ['/catalog/relief/north.json',
     `/feeds/tiles/relief/north/${'c'.repeat(64)}/survey/${p.survey_gap.wire.sha256}.geojson.br`]);
   assert.deepEqual(layerIds(), ['', '-survey-hatch', '-earth', '-parks', '-coast']);
@@ -261,7 +269,7 @@ test('a bound no-survey companion draws only the hatch at start and never fetche
   assert.equal(c.overlay.inspect, undefined, 'the companion alone never answers a tap');
   // Opting in still fetches the detail lazily; a refused detail removes the control but keeps the default cue.
   view.toggle();
-  await tick(); await tick(); await tick();
+  await until(() => view === null, 'the refused detail to remove the control');
   assert.equal(c.fetches.at(-1)[0], `/feeds/tiles/relief/north/${'c'.repeat(64)}/survey/${detail.wire.sha256}.geojson.br`);
   assert.equal(view, null);
   assert.deepEqual(layerIds(), ['', '-survey-hatch', '-earth', '-parks', '-coast']);
