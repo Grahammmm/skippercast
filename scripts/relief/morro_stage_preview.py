@@ -28,8 +28,41 @@ if __name__ == '__main__':
     sys.dont_write_bytecode = True
 
 REGION = 'morro-bay'
-POINTER = f'catalog/relief/{REGION}.json'
-CONTOURS = f'catalog/depth-contours/{REGION}.geojson'
+# The four contour-bearing Central Coast regions share ONE separate preview Worker and bucket of their
+# own (.github/workflows/central-stage-preview.yml), one region per run; Morro keeps its own. This
+# preview pins and serves a detail + overview contour pair, so the two terrain-only Central regions
+# (monterey-point-sur, santa-cruz-monterey-bay: no contours to pin) are not stage regions here and are
+# refused everywhere a region is checked, until a terrain-only stage path is built for them.
+CENTRAL_REGIONS = ('big-sur-coast', 'cambria-san-simeon', 'south-big-sur-san-simeon', 'point-arguello-conception')
+REGIONS = (REGION, *CENTRAL_REGIONS)
+# Each region may be previewed only on its own group's Worker and bucket, so a Central run can never
+# overwrite the Morro preview (or the other way round).
+STAGE_TARGETS = {REGION: ('skippercast-morro-stage', 'skippercast-feeds-stage'),
+                 **{region: ('skippercast-central-stage', 'skippercast-feeds-central-stage')
+                    for region in CENTRAL_REGIONS}}
+
+
+def pointer_path(region: str) -> str:
+    return f'catalog/relief/{region}.json'
+
+
+def contours_path(region: str) -> str:
+    return f'catalog/depth-contours/{region}.geojson'
+
+
+def label(region: str) -> str:
+    """How errors name the region (Morro keeps its historical wording)."""
+    return 'Morro Bay' if region == REGION else region
+
+
+def check_region(region: object) -> str:
+    if not isinstance(region, str) or region not in REGIONS:
+        raise PreviewError('region is not one the stage preview may carry')
+    return region
+
+
+POINTER = pointer_path(REGION)
+CONTOURS = contours_path(REGION)
 PRODUCTION_WORKER = 'skippercast'
 # Every bucket the production config or the deploy can bind or write.
 PRODUCTION_BUCKETS = frozenset({'skippercast-feeds', 'skippercast-backups', 'skippercast-advisor-media'})
@@ -148,8 +181,9 @@ def _unexpected_files(tree: Path) -> list[str]:
     return out
 
 
-def candidate(tree: Path, sha: str) -> dict:
-    """The exact clean candidate commit and the Morro data it carries."""
+def candidate(tree: Path, sha: str, region: str = REGION) -> dict:
+    """The exact clean candidate commit and the region data it carries."""
+    check_region(region)
     if not _SHA.fullmatch(sha):
         raise PreviewError('candidate must be a full lowercase commit SHA')
     try:
@@ -166,35 +200,40 @@ def candidate(tree: Path, sha: str) -> dict:
         raise PreviewError('candidate checkout has uncommitted or untracked files')
     if hidden:
         raise PreviewError('candidate checkout has ignored or hidden files outside build output: ' + ', '.join(sorted(hidden)[:5]))
+    pointer_name, contours_name = pointer_path(region), contours_path(region)
     found = {}
-    for path in (POINTER, CONTOURS):
+    for path in (pointer_name, contours_name):
         try:
             found[path] = _git(tree, 'cat-file', 'blob', f'{sha}:{path}')
         except subprocess.SubprocessError:
             found[path] = None
-    pointer = found[POINTER]
+    pointer = found[pointer_name]
     if pointer is None:
-        raise PreviewError(f'candidate has no {POINTER}')
+        raise PreviewError(f'candidate has no {pointer_name}')
     try:
         doc = json.loads(pointer)
     except (ValueError, RecursionError):
         raise PreviewError('candidate relief pointer is not JSON') from None
-    if not isinstance(doc, dict) or doc.get('region') != REGION:
-        raise PreviewError('candidate relief pointer is not for Morro Bay')
+    if not isinstance(doc, dict) or doc.get('region') != region:
+        raise PreviewError(f'candidate relief pointer is not for {label(region)}')
     return {'commit': sha, 'pointer_sha256': _sha256(pointer),
-            'contours_sha256': _sha256(found[CONTOURS]) if found[CONTOURS] is not None else None}
+            'contours_sha256': _sha256(found[contours_name]) if found[contours_name] is not None else None}
 
 
-def plan(tree: Path, sha: str, base_text: str, *, worker: str, bucket: str, pointer_sha256: str) -> tuple[dict, dict]:
+def plan(tree: Path, sha: str, base_text: str, *, worker: str, bucket: str, pointer_sha256: str,
+         region: str = REGION) -> tuple[dict, dict]:
     """(stage config, plan receipt) for the candidate; the pointer must be the reviewed one."""
+    check_region(region)
+    if (worker, bucket) != STAGE_TARGETS[region]:
+        raise PreviewError(f'{label(region)} may be previewed only on its own stage Worker and bucket')
     if not _SHA256.fullmatch(pointer_sha256):
         raise PreviewError('reviewed pointer digest must be 64 lowercase hex digits')
-    found = candidate(tree, sha)
+    found = candidate(tree, sha, region)
     if found['pointer_sha256'] != pointer_sha256:
         raise PreviewError('candidate relief pointer is not the reviewed pointer')
     config = stage_config(read_wrangler(base_text), worker=worker, bucket=bucket)
     encoded = (json.dumps(config, indent=2, sort_keys=True) + '\n').encode()
-    receipt = {'schema': 'sc-morro-stage-preview/1', 'region': REGION, **found,
+    receipt = {'schema': 'sc-morro-stage-preview/1', 'region': region, **found,
                'worker': worker, 'bucket': bucket, 'config_sha256': _sha256(encoded),
                'scope': 'stage-only plan; not deployed, not hosted evidence'}
     return config, receipt
@@ -207,8 +246,10 @@ def read_plan(data: bytes) -> dict:
     except (ValueError, RecursionError):  # RecursionError: nesting deeper than the decoder allows
         raise PreviewError('plan is not JSON') from None
     if not isinstance(receipt, dict) or receipt.get('schema') != 'sc-morro-stage-preview/1' \
-            or receipt.get('region') != REGION:
+            or receipt.get('region') not in REGIONS:
         raise PreviewError('plan is not a Morro stage preview plan')
+    if STAGE_TARGETS[receipt['region']] != (receipt.get('worker'), receipt.get('bucket')):
+        raise PreviewError('plan does not name its region\'s own stage Worker and bucket')
     if not isinstance(receipt.get('commit'), str) or not _SHA.fullmatch(receipt['commit']):
         raise PreviewError('plan commit must be a full lowercase commit SHA')
     if not isinstance(receipt.get('pointer_sha256'), str) or not _SHA256.fullmatch(receipt['pointer_sha256']):
@@ -246,8 +287,9 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser('plan', help='write the stage-only Wrangler config and its plan receipt')
     p.add_argument('--tree', type=Path, required=True, help='clean checkout of the candidate commit')
     p.add_argument('--sha', required=True, help='exact candidate commit')
-    p.add_argument('--pointer-sha256', required=True, help='SHA-256 of the reviewed Morro pointer bytes')
+    p.add_argument('--pointer-sha256', required=True, help='SHA-256 of the reviewed region pointer bytes')
     p.add_argument('--wrangler', type=Path, required=True, help='reviewed production wrangler.jsonc')
+    p.add_argument('--region', default=REGION, choices=REGIONS)
     p.add_argument('--worker', default='skippercast-morro-stage')
     p.add_argument('--bucket', default='skippercast-feeds-stage')
     p.add_argument('--out', type=Path, required=True, help='directory for wrangler.stage.json and plan.json')
@@ -259,7 +301,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == 'plan':
             config, receipt = plan(args.tree, args.sha, args.wrangler.read_text(encoding='utf-8'),
-                                   worker=args.worker, bucket=args.bucket, pointer_sha256=args.pointer_sha256)
+                                   worker=args.worker, bucket=args.bucket, pointer_sha256=args.pointer_sha256,
+                                   region=args.region)
             args.out.mkdir(parents=True, exist_ok=True)
             _write(args.out / 'wrangler.stage.json', (json.dumps(config, indent=2, sort_keys=True) + '\n').encode())
             _write(args.out / 'plan.json', (json.dumps(receipt, indent=2, sort_keys=True) + '\n').encode())

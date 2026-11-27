@@ -41,13 +41,12 @@ for entry in (ROOT / 'src', ROOT):  # this script sets its own path; no PYTHONPA
 
 from skippercast.platform.contracts import load_catalogs, public_url  # noqa: E402
 from skippercast.platform.depth_contours import UNSTATED_SURVEY_DATE, selected_survey_date  # noqa: E402
+from skippercast.platform.sources_register_markers import BEGIN, END  # noqa: E402
 from skippercast.relief import package as relief_package  # noqa: E402
 from skippercast.seafloor.rights import CSUMB_CREDIT  # noqa: E402
 from tests.contract import test_commercial_sources as contract  # noqa: E402
 
 PAGE = Path('dist/sources.html')
-BEGIN = '<!-- BEGIN GENERATED data-sources: scripts/build_sources_register.py (do not edit by hand) -->'
-END = '<!-- END GENERATED data-sources -->'
 # First run only: the section goes in front of this heading; later runs replace the marked block.
 INSERT_BEFORE = '<h2>Current official checks</h2>'
 INDENT = '      '
