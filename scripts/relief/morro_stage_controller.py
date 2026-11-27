@@ -47,13 +47,29 @@ if __name__ == '__main__':
     sys.path[:0] = [str(CONTROLLER / 'src'), str(CONTROLLER)]
 
 from scripts.relief import morro_stage_preview as preview  # noqa: E402
+from scripts import build_sources_register as register  # noqa: E402
 
 PLAN_SCHEMA = 'sc-morro-stage-preview/1'
-# The Morro data a candidate may change: the relief pointer, the contour import and the
-# two published contour files the browser loads (scripts/build_depth_contours.py output).
-DATA_PATHS = frozenset({preview.POINTER, preview.CONTOURS,
-                        f'dist/regions/{preview.REGION}/depth-contours.geojson',
-                        f'dist/regions/{preview.REGION}/depth-contours-overview.geojson'})
+
+
+def data_paths(region: str) -> frozenset:
+    """The data a candidate for `region` may change: the relief pointer, the contour import and the
+    two published contour files the browser loads (scripts/build_depth_contours.py output).
+
+    A Central region gets its first contours here, so the platform build also rewrites that region's
+    dist/regions/<id>/region.json (its `chart_files` list) and the source register rewrites
+    dist/sources.html; both are generated data, so the STAGE candidate can be the data PR head itself.
+    Morro's set is unchanged."""
+    preview.check_region(region)
+    paths = {preview.pointer_path(region), preview.contours_path(region),
+             f'dist/regions/{region}/depth-contours.geojson',
+             f'dist/regions/{region}/depth-contours-overview.geojson'}
+    if region in preview.CENTRAL_REGIONS:
+        paths |= {f'dist/regions/{region}/region.json', 'dist/sources.html'}
+    return frozenset(paths)
+
+
+DATA_PATHS = data_paths(preview.REGION)
 CONFIG_NAME = 'wrangler.stage.json'
 _SHA = re.compile(r'[0-9a-f]{40}')
 _SHA256 = re.compile(r'[0-9a-f]{64}')
@@ -71,19 +87,37 @@ def _git(tree: Path, *args: str) -> bytes:
         raise HoldError('git could not read the candidate checkout') from None
 
 
-def scope(tree: Path, base: str, sha: str) -> list[str]:
-    """Paths the candidate changes against the reviewed base; only Morro's data files may differ."""
+def _sources_shell(page: bytes) -> tuple[bytes, bytes]:
+    """Return the reviewed bytes surrounding one unambiguous generated register."""
+    begin, end = register.BEGIN.encode(), register.END.encode()
+    if page.count(begin) != 1 or page.count(end) != 1 or page.index(begin) > page.index(end):
+        raise HoldError('dist/sources.html must contain exactly one register block')
+    head, rest = page.split(begin)
+    block, tail = rest.split(end)
+    if not block:
+        raise HoldError('dist/sources.html has an invalid register block')
+    return head, tail
+
+
+def scope(tree: Path, base: str, sha: str, region: str = preview.REGION) -> list[str]:
+    """Paths the candidate changes against the reviewed base; only the region's data files may differ."""
+    allowed = data_paths(region)
     if not _SHA.fullmatch(base) or not _SHA.fullmatch(sha):
         raise HoldError('base and candidate must be full lowercase commit SHAs')
     raw = _git(tree, 'diff', '--name-only', '-z', '--no-renames', '--no-ext-diff', base, sha, '--')
     changed = sorted(path.decode(errors='replace') for path in raw.split(b'\0') if path)
-    outside = [path for path in changed if path not in DATA_PATHS]
+    outside = [path for path in changed if path not in allowed]
     if outside:
-        raise HoldError('candidate changes files outside the Morro data: ' + ', '.join(outside[:5]))
+        what = 'the Morro data' if region == preview.REGION else f'the {region} data'
+        raise HoldError(f'candidate changes files outside {what}: ' + ', '.join(outside[:5]))
     for path in changed:
         listing = _git(tree, 'ls-tree', '-z', sha, '--', path)
         if listing and not listing.startswith(b'100644 blob '):
             raise HoldError(f'candidate {path} is not a regular file')
+    if 'dist/sources.html' in changed:
+        path = 'dist/sources.html'
+        if _sources_shell(_git(tree, 'show', f'{base}:{path}')) != _sources_shell(_git(tree, 'show', f'{sha}:{path}')):
+            raise HoldError('candidate dist/sources.html changes outside the generated register block')
     return changed
 
 
@@ -102,10 +136,12 @@ def load_plan(plan_dir: Path) -> tuple[dict, bytes]:
         config = (plan_dir / CONFIG_NAME).read_bytes()
     except (OSError, ValueError):
         raise HoldError('stage plan is missing or not JSON') from None
-    if (not isinstance(receipt, dict) or receipt.get('schema') != PLAN_SCHEMA or receipt.get('region') != preview.REGION
+    if (not isinstance(receipt, dict) or receipt.get('schema') != PLAN_SCHEMA or receipt.get('region') not in preview.REGIONS
             or not isinstance(receipt.get('commit'), str) or not _SHA.fullmatch(receipt['commit'])
             or not isinstance(receipt.get('pointer_sha256'), str) or not _SHA256.fullmatch(receipt['pointer_sha256'])):
         raise HoldError('stage plan is not a Morro stage preview plan')
+    if preview.STAGE_TARGETS[receipt['region']] != (receipt.get('worker'), receipt.get('bucket')):
+        raise HoldError('stage plan does not name its region\'s own stage Worker and bucket')
     if hashlib.sha256(config).hexdigest() != receipt.get('config_sha256'):
         raise HoldError('stage config differs from the plan')
     try:
@@ -189,15 +225,16 @@ class StageR2:
 
 
 def candidate_pointer(tree: Path, receipt: dict) -> dict:
-    """The planned commit's Morro pointer, checked against the plan digest and the controller's policy."""
+    """The planned commit's region pointer, checked against the plan digest and the controller's policy."""
     from skippercast.relief import package
 
-    data = _git(tree, 'cat-file', 'blob', f"{receipt['commit']}:{preview.POINTER}")
+    region = receipt['region']
+    data = _git(tree, 'cat-file', 'blob', f"{receipt['commit']}:{preview.pointer_path(region)}")
     if hashlib.sha256(data).hexdigest() != receipt['pointer_sha256']:
         raise HoldError('candidate pointer differs from the planned pointer')
     pointer = package.decode_document(data)
-    if pointer.get('region') != preview.REGION:
-        raise HoldError('candidate pointer is not for Morro Bay')
+    if pointer.get('region') != region:
+        raise HoldError(f'candidate pointer is not for {preview.label(region)}')
     # The controller's reviewed schema and source policy, never the candidate's copies.
     schema = package.pointer_schema()
     registry = package.decode_document((CONTROLLER / 'catalog/sources.json').read_bytes())
@@ -242,15 +279,16 @@ def decode_listing(data: bytes) -> list:
     return rows
 
 
-def preview_tag(pointer: dict) -> str:
+def preview_tag(pointer: dict, region: str = preview.REGION) -> str:
     """The draft release name for this pointer; never the production relief-<region>-<envelope> tag."""
-    region, envelope = pointer.get('region'), pointer.get('envelope_sha256')
-    if region != preview.REGION or not isinstance(envelope, str) or not _SHA256.fullmatch(envelope):
-        raise HoldError('pointer is not a Morro Bay pointer with an envelope digest')
+    found, envelope = pointer.get('region'), pointer.get('envelope_sha256')
+    if (region not in preview.REGIONS or found != region
+            or not isinstance(envelope, str) or not _SHA256.fullmatch(envelope)):
+        raise HoldError(f'pointer is not a {preview.label(region)} pointer with an envelope digest')
     return f'{PREVIEW_PREFIX}{region}-{envelope}'
 
 
-def _pointer_file(path: Path, pointer_sha256: str) -> dict:
+def _pointer_file(path: Path, pointer_sha256: str, region: str = preview.REGION) -> dict:
     from skippercast.relief import package
 
     if not _SHA256.fullmatch(pointer_sha256 or ''):
@@ -262,7 +300,7 @@ def _pointer_file(path: Path, pointer_sha256: str) -> dict:
         raise HoldError('pointer differs from the pinned pointer digest')
     pointer = package.decode_document(data)
     package.validate_schema(pointer, package.pointer_schema())
-    preview_tag(pointer)
+    preview_tag(pointer, region)
     return pointer
 
 
@@ -277,7 +315,8 @@ def _new_dir(out: Path) -> None:
     out.mkdir(parents=True)
 
 
-def prepare_assets(pointer_path: Path, pointer_sha256: str, region_dir: Path, out: Path) -> dict:
+def prepare_assets(pointer_path: Path, pointer_sha256: str, region_dir: Path, out: Path,
+                   region: str = preview.REGION) -> dict:
     """Box only, offline: write exactly the pointer's release objects from a local release directory.
 
     Every object is located by its SHA-256 among regular files under ``region_dir``, copied under its
@@ -286,8 +325,8 @@ def prepare_assets(pointer_path: Path, pointer_sha256: str, region_dir: Path, ou
     """
     from skippercast.relief import stage_transport as stage
 
-    pointer = _pointer_file(pointer_path, pointer_sha256)
-    tag = preview_tag(pointer)
+    pointer = _pointer_file(pointer_path, pointer_sha256, region)
+    tag = preview_tag(pointer, region)
     if region_dir.is_symlink() or not region_dir.is_dir():
         raise HoldError('release directory is not a directory')
     by_sha: dict[str, Path] = {}
@@ -445,12 +484,13 @@ class DraftRelease:
         return self._reader.download(asset)
 
 
-def fetch(pointer_path: Path, pointer_sha256: str, out: Path, *, release=None, env=None) -> dict:
+def fetch(pointer_path: Path, pointer_sha256: str, out: Path, *, release=None, env=None,
+          region: str = preview.REGION) -> dict:
     """Fetch job: download the pinned pointer's draft preview assets (bounded) into a new directory."""
     from skippercast.relief import stage_transport as stage
 
-    pointer = _pointer_file(pointer_path, pointer_sha256)
-    tag = preview_tag(pointer)
+    pointer = _pointer_file(pointer_path, pointer_sha256, region)
+    tag = preview_tag(pointer, region)
     if release is None:
         release = DraftRelease((env or os.environ).get('PREVIEW_RELEASE_READ_TOKEN', ''))
     assets = release.assets(tag)
@@ -586,6 +626,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument('--tree', type=Path, required=True)
     s.add_argument('--base', required=True, help='the reviewed controller commit (github.workflow_sha)')
     s.add_argument('--sha', required=True, help='the candidate commit')
+    s.add_argument('--region', default=preview.REGION, choices=preview.REGIONS)
     for name, text in (('place-config', 'write the checked stage config into the candidate tree'),
                        ('copy', 'copy the release objects into the stage bucket')):
         p = sub.add_parser(name, help=text)
@@ -600,22 +641,24 @@ def main(argv: list[str] | None = None) -> int:
     for name, text in (('assets', 'box only: write the pointer release objects for the draft preview release'),
                        ('fetch', 'fetch job: download the draft preview release assets')):
         p = sub.add_parser(name, help=text)
-        p.add_argument('--pointer', type=Path, required=True, help='the candidate catalog/relief/morro-bay.json')
+        p.add_argument('--pointer', type=Path, required=True, help='the candidate catalog/relief/<region>.json')
         p.add_argument('--pointer-sha256', required=True)
         p.add_argument('--out', type=Path, required=True, help='a new directory')
+        p.add_argument('--region', default=preview.REGION, choices=preview.REGIONS)
         if name == 'assets':
-            p.add_argument('--release-dir', type=Path, required=True, help='the local Morro region release directory')
+            p.add_argument('--release-dir', type=Path, required=True, help='the local region release directory')
     args = parser.parse_args(argv)
     try:
         if args.command == 'scope':
-            changed = scope(args.tree, args.base, args.sha)
+            changed = scope(args.tree, args.base, args.sha, args.region)
             print('SCOPE data-only: ' + (', '.join(changed) or 'no change from the reviewed base'))
         elif args.command == 'place-config':
             print(f'CONFIG {place_config(args.plan_dir, args.tree, args.origin).name}')
         elif args.command == 'assets':
-            print(json.dumps(prepare_assets(args.pointer, args.pointer_sha256, args.release_dir, args.out), sort_keys=True))
+            print(json.dumps(prepare_assets(args.pointer, args.pointer_sha256, args.release_dir, args.out,
+                                            args.region), sort_keys=True))
         elif args.command == 'fetch':
-            print(json.dumps(fetch(args.pointer, args.pointer_sha256, args.out), sort_keys=True))
+            print(json.dumps(fetch(args.pointer, args.pointer_sha256, args.out, region=args.region), sort_keys=True))
         elif args.command == 'basemap':
             print('BASEMAP ' + json.dumps(basemap(args.plan_dir, os.environ), sort_keys=True))
         else:

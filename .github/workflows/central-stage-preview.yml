@@ -1,0 +1,372 @@
+name: Central stage preview
+
+# Manual, stage-only preview of ONE Central Coast region's data candidate (that region's unmerged
+# data-pointer PR head) on the Central preview Worker and its own feeds bucket. Same guards, same
+# controller scripts and same checks as the Morro stage preview (stage-preview.yml), with the
+# region as a dispatch input; never runs on a push, a schedule or a PR, never touches the production
+# Worker, bucket, routes, D1 or queues, and never merges or publishes anything.
+#
+# Separate site: Worker skippercast-central-stage on its own workers.dev address,
+# https://skippercast-central-stage.<account subdomain>.workers.dev, and bucket
+# skippercast-feeds-central-stage. morro_stage_preview.STAGE_TARGETS binds every Central region to
+# exactly this Worker and bucket (and Morro to its own), so a Central run cannot overwrite the Morro
+# preview. Covered by G's PREVIEWSITE pattern (2026-11-25: own workers.dev address and own storage,
+# no sign-in, no schedule, no custom domain, started by hand only from reviewed main, existing
+# Cloudflare key, free tier) as extended to the Central regions by the standing region go-live
+# decision (G 2026-11-27 ~06:1x, decisions/G-DECISIONS.log on the box). It does NOT approve
+# go-live, merging the data change or deploying the live site. Merging this file deploys nothing;
+# only a manual dispatch from main does.
+#
+# Guards, all from this workflow's own reviewed revision (the controller), never the candidate's:
+#   1. dispatch only from protected main of this repository, region from the fixed list below;
+#   2. the candidate may differ from the controller commit only in that region's pointer, contour
+#      import and published contour files (morro_stage_controller.py scope --region);
+#   3. morro_stage_preview.py plan --region refuses every production name, route, schedule and
+#      bucket, refuses another region group's Worker or bucket, and binds the candidate commit and
+#      the reviewed pointer digest; the plan is re-run after the build;
+#   4. relief objects go only to the *-stage bucket (create-only, full read-back);
+#   5. the preview must then serve exactly the planned commit and pointer bytes, the pinned detail
+#      and overview contour bytes, and the /sources page this run built.
+# Relief objects come from the DRAFT release relief-preview-<region>-<envelope>, uploaded by the box
+# with `morro_stage_controller.py assets --region <region>`; see stage-preview.yml for the reasons.
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: "the one Central Coast region this candidate carries"
+        type: choice
+        required: true
+        options:
+          - big-sur-coast
+          - cambria-san-simeon
+          - south-big-sur-san-simeon
+          - monterey-point-sur
+          - point-arguello-conception
+          - santa-cruz-monterey-bay
+      candidate:
+        description: "exact 40-character commit of the region's data candidate (the data-pointer PR head)"
+        type: string
+        required: true
+      pointer_sha256:
+        description: "SHA-256 of the reviewed catalog/relief/<region>.json bytes"
+        type: string
+        required: true
+      detail_sha256:
+        description: "SHA-256 of the reviewed dist/regions/<region>/depth-contours.geojson bytes"
+        type: string
+        required: true
+      overview_sha256:
+        description: "SHA-256 of the reviewed dist/regions/<region>/depth-contours-overview.geojson bytes"
+        type: string
+        required: true
+      catalogue_sha256:
+        description: "SHA-256 of the release rights pin, the candidate's catalog/sources.json bytes"
+        type: string
+        required: true
+      origin:
+        description: "the stage Worker's address, https://skippercast-central-stage.<account subdomain>.workers.dev"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: central-stage-preview
+  cancel-in-progress: false
+
+env:
+  WRANGLER: npx --yes wrangler@4.142.0
+  STAGE_WORKER: skippercast-central-stage
+  STAGE_BUCKET: skippercast-feeds-central-stage
+
+jobs:
+  fetch:
+    # Only this job may list drafts (contents: write). It checks out the controller from this
+    # workflow's own revision and nothing of the candidate but its pointer file, and never runs
+    # candidate code, a dependency install or a build. No Cloudflare secret reaches it.
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'Grahammmm/skippercast' &&
+      github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      REGION: ${{ inputs.region }}
+      CANDIDATE: ${{ inputs.candidate }}
+      POINTER_SHA256: ${{ inputs.pointer_sha256 }}
+    steps:
+      - name: Reject a non-main dispatch or a malformed candidate before checkout
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ] || [ "$GITHUB_REF_PROTECTED" != "true" ]; then
+            echo "::error::Central stage preview held: dispatch from protected main only."
+            exit 1
+          fi
+          case "$REGION" in
+            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|monterey-point-sur|point-arguello-conception|santa-cruz-monterey-bay) ;;
+            *) echo "::error::Central stage preview held: region is not a Central Coast stage region."; exit 1;;
+          esac
+          if ! [[ "$CANDIDATE" =~ ^[0-9a-f]{40}$ ]] || ! [[ "$POINTER_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::Central stage preview held: candidate and pointer digest must be full lowercase hex."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .preview-controller
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/__init__.py
+            scripts/relief/__init__.py
+            scripts/relief/morro_stage_preview.py
+            scripts/relief/morro_stage_controller.py
+            src/skippercast/
+            catalog/relief/pointer.schema.json
+            catalog/sources.json
+            requirements-publish.txt
+          sparse-checkout-cone-mode: false
+      - name: Move the controller out of the candidate tree
+        run: |
+          rm -rf "$RUNNER_TEMP/preview-controller"
+          mv .preview-controller "$RUNNER_TEMP/preview-controller"
+          echo "CONTROLLER=$RUNNER_TEMP/preview-controller" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.candidate }}
+          persist-credentials: false
+          sparse-checkout: catalog/relief/${{ inputs.region }}.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install pinned controller dependencies
+        run: python3 -Im pip install -r "$CONTROLLER/requirements-publish.txt"
+      - name: Fetch the candidate pointer's draft preview release assets
+        env:
+          PREVIEW_RELEASE_READ_TOKEN: ${{ github.token }}
+        run: >-
+          python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" fetch
+          --region "$REGION" --pointer "catalog/relief/$REGION.json" --pointer-sha256 "$POINTER_SHA256"
+          --out "$RUNNER_TEMP/preview-assets"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: central-preview-assets-${{ inputs.candidate }}
+          path: ${{ runner.temp }}/preview-assets/
+          if-no-files-found: error
+          retention-days: 1
+
+  preview:
+    needs: fetch
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'Grahammmm/skippercast' &&
+      github.ref == 'refs/heads/main' && github.ref_protected
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: central-stage-preview
+    env:
+      REGION: ${{ inputs.region }}
+      CANDIDATE: ${{ inputs.candidate }}
+      POINTER_SHA256: ${{ inputs.pointer_sha256 }}
+      DETAIL_SHA256: ${{ inputs.detail_sha256 }}
+      OVERVIEW_SHA256: ${{ inputs.overview_sha256 }}
+      CATALOGUE_SHA256: ${{ inputs.catalogue_sha256 }}
+      STAGE_URL: ${{ inputs.origin }}
+    steps:
+      - name: Reject a non-main dispatch or malformed inputs before checkout
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+          HAS_R2: ${{ secrets.R2_PUBLISH_TOKEN != '' }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ] || [ "$GITHUB_REF_PROTECTED" != "true" ]; then
+            echo "::error::Central stage preview held: dispatch from protected main only."
+            exit 1
+          fi
+          case "$REGION" in
+            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|monterey-point-sur|point-arguello-conception|santa-cruz-monterey-bay) ;;
+            *) echo "::error::Central stage preview held: region is not a Central Coast stage region."; exit 1;;
+          esac
+          # Whole-value matches (bash [[ =~ ]]), never line-oriented grep -x: a multi-line value with one
+          # valid line is held.
+          if ! [[ "$CANDIDATE" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Central stage preview held: candidate must be a full lowercase commit SHA."
+            exit 1
+          fi
+          for pin in "$POINTER_SHA256" "$DETAIL_SHA256" "$OVERVIEW_SHA256" "$CATALOGUE_SHA256"; do
+            if ! [[ "$pin" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::Central stage preview held: every digest (pointer, detail, overview, catalogue) must be 64 lowercase hex digits."
+              exit 1
+            fi
+          done
+          # The whole value, not line by line (a multi-line value is held), with the same DNS-label rule as
+          # the controller's check_origin.
+          origin_re='^https://'"$STAGE_WORKER"'\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.workers\.dev$'
+          if ! [[ "$STAGE_URL" =~ $origin_re ]]; then
+            echo "::error::Central stage preview held: origin must be https://${STAGE_WORKER}.<account subdomain>.workers.dev."
+            exit 1
+          fi
+          if [ "$HAS_TOKEN" != "true" ] || [ "$HAS_ACCOUNT" != "true" ] || [ "$HAS_R2" != "true" ]; then
+            echo "::error::Central stage preview held: Cloudflare credentials are not configured."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .preview-controller
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/__init__.py
+            scripts/relief/__init__.py
+            scripts/relief/morro_stage_preview.py
+            scripts/relief/morro_stage_controller.py
+            scripts/wrangler_config.mjs
+            src/skippercast/
+            catalog/relief/pointer.schema.json
+            catalog/sources.json
+            requirements-publish.txt
+            wrangler.jsonc
+          sparse-checkout-cone-mode: false
+      - name: Move the controller out of the candidate tree
+        run: |
+          rm -rf "$RUNNER_TEMP/preview-controller"
+          mv .preview-controller "$RUNNER_TEMP/preview-controller"
+          echo "CONTROLLER=$RUNNER_TEMP/preview-controller" >> "$GITHUB_ENV"
+          # The runner context is not available in job-level env (the whole file was invalid with it there).
+          echo "PLAN_DIR=$RUNNER_TEMP/central-stage-plan" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.candidate }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require the candidate to change only the region's data against the controller
+        run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" scope --tree . --base "$GITHUB_WORKFLOW_SHA" --sha "$CANDIDATE" --region "$REGION"
+      - name: Plan the isolated stage config before any dependency or build runs
+        run: >-
+          python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" plan --tree . --sha "$CANDIDATE"
+          --pointer-sha256 "$POINTER_SHA256" --wrangler "$CONTROLLER/wrangler.jsonc" --region "$REGION"
+          --worker "$STAGE_WORKER" --bucket "$STAGE_BUCKET" --out "$PLAN_DIR"
+      - name: Render the candidate's /sources credits from its pinned files
+        run: |
+          # Reviewed main's own overlay script: the scope guard proved the candidate's code equals the controller
+          # commit. It refuses unless the four files match the dispatch pins, and writes only outside both trees.
+          python3 -I scripts/relief/morro_sources_overlay.py --tree . --out "$RUNNER_TEMP/sources-overlay" --region "$REGION" \
+            --pointer-sha256 "$POINTER_SHA256" --detail-sha256 "$DETAIL_SHA256" \
+            --overview-sha256 "$OVERVIEW_SHA256" --catalogue-sha256 "$CATALOGUE_SHA256" > "$PLAN_DIR/sources-overlay.json"
+      - name: Feed the /sources overlay into the build input
+        run: |
+          # Only the page whose hash the overlay receipt names, and only as the build's input page: the build
+          # then names and fingerprints it. A copy after the build is never what the Worker serves.
+          want=$(jq -er '.html_sha256 | select(test("^[0-9a-f]{64}$"))' "$PLAN_DIR/sources-overlay.json") || {
+            echo "::error::Central stage preview held: the /sources overlay receipt has no page digest."; exit 1; }
+          got=$(sha256sum "$RUNNER_TEMP/sources-overlay/sources.html" | cut -d' ' -f1)
+          if [ "$got" != "$want" ]; then
+            echo "::error::Central stage preview held: the /sources overlay page differs from its receipt."
+            exit 1
+          fi
+          cp "$RUNNER_TEMP/sources-overlay/sources.html" dist/sources.html
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10
+      - name: Install locked web dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Worker and fingerprinted site
+        run: |
+          pnpm build
+          node scripts/check_client.mjs
+          # Keep the page the Worker will serve at /sources: the build-named shell made from the overlay.
+          build_id=$(jq -er '.build | select(test("^[0-9a-f]{10}$"))' dist/client/precache.json)
+          cp "dist/client/sources.$build_id.html" "$PLAN_DIR/sources-shell.html"
+          # The overlay was a build input only; the re-plan below sees the candidate exactly as checked out.
+          git checkout -- dist/sources.html
+          # The served receipt names the candidate commit only (no production switches).
+          node "$CONTROLLER/scripts/wrangler_config.mjs" --snapshot "$CANDIDATE" dist/client/deploy.json
+      - name: Re-plan after the build (only dependencies and build output may have appeared)
+        run: >-
+          python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" plan --tree . --sha "$CANDIDATE"
+          --pointer-sha256 "$POINTER_SHA256" --wrangler "$CONTROLLER/wrangler.jsonc" --region "$REGION"
+          --worker "$STAGE_WORKER" --bucket "$STAGE_BUCKET" --out "$PLAN_DIR.rebuilt" &&
+          cmp "$PLAN_DIR/plan.json" "$PLAN_DIR.rebuilt/plan.json"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install pinned controller dependencies
+        run: python3 -Im pip install -r "$CONTROLLER/requirements-publish.txt"
+      - name: Create the stage bucket if it does not exist yet
+        working-directory: ${{ runner.temp }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Outside the candidate tree, so Wrangler reads no project config. Only a *-stage name.
+          case "$STAGE_BUCKET" in *-stage) ;; *) echo "::error::Central stage preview held: not a stage bucket."; exit 1;; esac
+          $WRANGLER r2 bucket info "$STAGE_BUCKET" > /dev/null 2>&1 || $WRANGLER r2 bucket create "$STAGE_BUCKET"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: central-preview-assets-${{ inputs.candidate }}
+          path: ${{ runner.temp }}/preview-assets
+      - name: Copy the candidate's relief release into the stage bucket only
+        env:
+          STAGE_R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
+          STAGE_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: >-
+          python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" copy --plan-dir "$PLAN_DIR" --tree .
+          --assets-dir "$RUNNER_TEMP/preview-assets"
+      - name: Copy the public basemap into the stage bucket only
+        env:
+          STAGE_R2_PUBLISH_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN }}
+          STAGE_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" basemap --plan-dir "$PLAN_DIR"
+      - name: Place the checked stage config
+        run: python3 -I "$CONTROLLER/scripts/relief/morro_stage_controller.py" place-config --plan-dir "$PLAN_DIR" --tree . --origin "$STAGE_URL"
+      - name: Deploy the stage Worker only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: $WRANGLER deploy --config wrangler.stage.json --message "Central stage preview ${REGION} ${CANDIDATE} (run ${GITHUB_RUN_ID})"
+      - name: Require the preview to serve exactly the planned commit, pointer, contours and /sources
+        run: |
+          mkdir -p "$PLAN_DIR/served"
+          served="$PLAN_DIR/served"
+          # Edge caches can lag a fresh deploy: up to 6 reads 10 s apart, then the last verdict stands.
+          for attempt in 1 2 3 4 5 6; do
+            rm -f "$served/deploy.json" "$served/pointer.json" "$served/detail.geojson" "$served/overview.geojson" "$served/sources.html"
+            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/deploy.json" -o "$served/deploy.json" || echo '{}' > "$served/deploy.json"
+            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/catalog/relief/$REGION.json" -o "$served/pointer.json" || rm -f "$served/pointer.json"
+            curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/$REGION/depth-contours.geojson" -o "$served/detail.geojson" || rm -f "$served/detail.geojson"
+            curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/$REGION/depth-contours-overview.geojson" -o "$served/overview.geojson" || rm -f "$served/overview.geojson"
+            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/sources" -o "$served/sources.html" || rm -f "$served/sources.html"
+            ok=1
+            python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" verify --plan "$PLAN_DIR/plan.json" \
+              --deploy-json "$served/deploy.json" --pointer "$served/pointer.json" > "$served/verify.json" || ok=0
+            [ "$(sha256sum "$served/detail.geojson" 2>/dev/null | cut -d' ' -f1)" = "$DETAIL_SHA256" ] || { ok=0; echo "served detail contours differ from the pin"; }
+            [ "$(sha256sum "$served/overview.geojson" 2>/dev/null | cut -d' ' -f1)" = "$OVERVIEW_SHA256" ] || { ok=0; echo "served overview contours differ from the pin"; }
+            cmp -s "$served/sources.html" "$PLAN_DIR/sources-shell.html" || { ok=0; echo "served /sources is not the page this run built"; }
+            if [ "$ok" = 1 ]; then
+              cat "$served/verify.json"
+              exit 0
+            fi
+            if [ "$attempt" -lt 6 ]; then sleep 10; fi
+          done
+          cat "$served/verify.json"
+          echo "::error::Central stage preview does not serve the planned commit, pointer, contours and /sources page."
+          exit 1
+      - name: Keep the stage receipts
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: central-stage-preview-${{ inputs.region }}-${{ inputs.candidate }}
+          path: |
+            ${{ runner.temp }}/central-stage-plan/plan.json
+            ${{ runner.temp }}/central-stage-plan/wrangler.stage.json
+            ${{ runner.temp }}/central-stage-plan/sources-overlay.json
+            ${{ runner.temp }}/central-stage-plan/sources-shell.html
+            ${{ runner.temp }}/central-stage-plan/served/
+          if-no-files-found: warn
+          retention-days: 90
