@@ -1,7 +1,10 @@
 name: Central stage preview
 
 # Manual, stage-only preview of ONE Central Coast region's data candidate (that region's unmerged
-# data-pointer PR head) on the Central preview Worker and its own feeds bucket. Same guards, same
+# data-pointer PR head) on the Central preview Worker and its own feeds bucket. Only the four
+# contour-bearing Central regions: every run pins and serves a detail + overview contour pair, so the
+# terrain-only Monterey/Point Sur and Santa Cruz/Monterey Bay regions are refused here (their own
+# terrain-only stage path is a later change). Same guards, same
 # controller scripts and same checks as the Morro stage preview (stage-preview.yml), with the
 # region as a dispatch input; never runs on a push, a schedule or a PR, never touches the production
 # Worker, bucket, routes, D1 or queues, and never merges or publishes anything.
@@ -26,23 +29,22 @@ name: Central stage preview
 #      the reviewed pointer digest; the plan is re-run after the build;
 #   4. relief objects go only to the *-stage bucket (create-only, full read-back);
 #   5. the preview must then serve exactly the planned commit and pointer bytes, the pinned detail
-#      and overview contour bytes, and the /sources page this run built.
+#      and overview contour bytes, the candidate's region.json (whose chart_files the scope guard
+#      proved names both contour files, so the Chart requests them) and the /sources page this run built.
 # Relief objects come from the DRAFT release relief-preview-<region>-<envelope>, uploaded by the box
 # with `morro_stage_controller.py assets --region <region>`; see stage-preview.yml for the reasons.
 on:
   workflow_dispatch:
     inputs:
       region:
-        description: "the one Central Coast region this candidate carries"
+        description: "the one contour-bearing Central Coast region this candidate carries"
         type: choice
         required: true
         options:
           - big-sur-coast
           - cambria-san-simeon
           - south-big-sur-san-simeon
-          - monterey-point-sur
           - point-arguello-conception
-          - santa-cruz-monterey-bay
       candidate:
         description: "exact 40-character commit of the region's data candidate (the data-pointer PR head)"
         type: string
@@ -105,7 +107,7 @@ jobs:
             exit 1
           fi
           case "$REGION" in
-            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|monterey-point-sur|point-arguello-conception|santa-cruz-monterey-bay) ;;
+            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|point-arguello-conception) ;;
             *) echo "::error::Central stage preview held: region is not a Central Coast stage region."; exit 1;;
           esac
           if ! [[ "$CANDIDATE" =~ ^[0-9a-f]{40}$ ]] || ! [[ "$POINTER_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
@@ -186,7 +188,7 @@ jobs:
             exit 1
           fi
           case "$REGION" in
-            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|monterey-point-sur|point-arguello-conception|santa-cruz-monterey-bay) ;;
+            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|point-arguello-conception) ;;
             *) echo "::error::Central stage preview held: region is not a Central Coast stage region."; exit 1;;
           esac
           # Whole-value matches (bash [[ =~ ]]), never line-oriented grep -x: a multi-line value with one
@@ -335,17 +337,19 @@ jobs:
           served="$PLAN_DIR/served"
           # Edge caches can lag a fresh deploy: up to 6 reads 10 s apart, then the last verdict stands.
           for attempt in 1 2 3 4 5 6; do
-            rm -f "$served/deploy.json" "$served/pointer.json" "$served/detail.geojson" "$served/overview.geojson" "$served/sources.html"
+            rm -f "$served/deploy.json" "$served/pointer.json" "$served/detail.geojson" "$served/overview.geojson" "$served/region.json" "$served/sources.html"
             curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/deploy.json" -o "$served/deploy.json" || echo '{}' > "$served/deploy.json"
             curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/catalog/relief/$REGION.json" -o "$served/pointer.json" || rm -f "$served/pointer.json"
             curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/$REGION/depth-contours.geojson" -o "$served/detail.geojson" || rm -f "$served/detail.geojson"
             curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/$REGION/depth-contours-overview.geojson" -o "$served/overview.geojson" || rm -f "$served/overview.geojson"
+            curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/regions/$REGION/region.json" -o "$served/region.json" || rm -f "$served/region.json"
             curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/sources" -o "$served/sources.html" || rm -f "$served/sources.html"
             ok=1
             python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" verify --plan "$PLAN_DIR/plan.json" \
               --deploy-json "$served/deploy.json" --pointer "$served/pointer.json" > "$served/verify.json" || ok=0
             [ "$(sha256sum "$served/detail.geojson" 2>/dev/null | cut -d' ' -f1)" = "$DETAIL_SHA256" ] || { ok=0; echo "served detail contours differ from the pin"; }
             [ "$(sha256sum "$served/overview.geojson" 2>/dev/null | cut -d' ' -f1)" = "$OVERVIEW_SHA256" ] || { ok=0; echo "served overview contours differ from the pin"; }
+            cmp -s "$served/region.json" "dist/regions/$REGION/region.json" || { ok=0; echo "served region.json is not the candidate's (chart_files)"; }
             cmp -s "$served/sources.html" "$PLAN_DIR/sources-shell.html" || { ok=0; echo "served /sources is not the page this run built"; }
             if [ "$ok" = 1 ]; then
               cat "$served/verify.json"
@@ -354,7 +358,7 @@ jobs:
             if [ "$attempt" -lt 6 ]; then sleep 10; fi
           done
           cat "$served/verify.json"
-          echo "::error::Central stage preview does not serve the planned commit, pointer, contours and /sources page."
+          echo "::error::Central stage preview does not serve the planned commit, pointer, contours, region.json and /sources page."
           exit 1
       - name: Keep the stage receipts
         if: always()

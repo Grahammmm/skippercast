@@ -57,9 +57,9 @@ def data_paths(region: str) -> frozenset:
     two published contour files the browser loads (scripts/build_depth_contours.py output).
 
     A Central region gets its first contours here, so the platform build also rewrites that region's
-    dist/regions/<id>/region.json (its `chart_files` list) and the source register rewrites
-    dist/sources.html; both are generated data, so the STAGE candidate can be the data PR head itself.
-    Morro's set is unchanged."""
+    dist/regions/<id>/region.json (its `chart_files` list only, see check_chart_index) and the source
+    register rewrites dist/sources.html; both are generated data, so the STAGE candidate can be the data
+    PR head itself. Morro's set is unchanged."""
     preview.check_region(region)
     paths = {preview.pointer_path(region), preview.contours_path(region),
              f'dist/regions/{region}/depth-contours.geojson',
@@ -70,6 +70,8 @@ def data_paths(region: str) -> frozenset:
 
 
 DATA_PATHS = data_paths(preview.REGION)
+# The two published contour files, as region.json `chart_files` names them (web/chart-files.ts).
+CONTOUR_FILES = ('depth-contours.geojson', 'depth-contours-overview.geojson')
 CONFIG_NAME = 'wrangler.stage.json'
 _SHA = re.compile(r'[0-9a-f]{40}')
 _SHA256 = re.compile(r'[0-9a-f]{64}')
@@ -118,7 +120,39 @@ def scope(tree: Path, base: str, sha: str, region: str = preview.REGION) -> list
         path = 'dist/sources.html'
         if _sources_shell(_git(tree, 'show', f'{base}:{path}')) != _sources_shell(_git(tree, 'show', f'{sha}:{path}')):
             raise HoldError('candidate dist/sources.html changes outside the generated register block')
+    if region in preview.CENTRAL_REGIONS:
+        check_chart_index(tree, base, sha, region, changed)
     return changed
+
+
+def _region_doc(tree: Path, rev: str, path: str) -> dict:
+    try:
+        doc = json.loads(_git(tree, 'show', f'{rev}:{path}'))
+    except HoldError:
+        raise HoldError(f'{path} is missing') from None
+    except (ValueError, RecursionError):
+        raise HoldError(f'{path} is not JSON') from None
+    if not isinstance(doc, dict):
+        raise HoldError(f'{path} is not a JSON object')
+    return doc
+
+
+def check_chart_index(tree: Path, base: str, sha: str, region: str, changed: list[str]) -> None:
+    """The Chart asks only for files its region.json `chart_files` lists (web/map/depth-contours.ts), and the
+    build serves region.json unchanged. So the candidate's list must name both contour files whether or not
+    region.json changed, and a changed region.json may differ from the base in that list only."""
+    path = f'dist/regions/{region}/region.json'
+    doc = _region_doc(tree, sha, path)
+    if path in changed:
+        old = _region_doc(tree, base, path)
+        if {k: v for k, v in old.items() if k != 'chart_files'} != {k: v for k, v in doc.items() if k != 'chart_files'}:
+            raise HoldError(f'candidate {path} changes more than its chart_files list')
+    files = doc.get('chart_files')
+    if not isinstance(files, list) or not all(isinstance(name, str) for name in files):
+        raise HoldError(f'candidate {path} has no chart_files list')
+    missing = [name for name in CONTOUR_FILES if name not in files]
+    if missing:
+        raise HoldError(f'candidate {path} chart_files omits {", ".join(missing)}, so the Chart would not request it')
 
 
 def check_origin(origin: str, worker: str) -> str:

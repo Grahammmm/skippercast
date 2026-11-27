@@ -17,6 +17,8 @@ import yaml
 from scripts.relief import morro_sources_overlay as overlay
 from scripts.relief import morro_stage_controller as controller
 from scripts.relief import morro_stage_preview as preview
+from scripts.relief import central_preview_identities as identities
+from scripts.relief.central_stage_handoff import CENTRAL_RELEASES
 from scripts import build_sources_register as register
 from skippercast.relief import package
 from tests._support import ROOT
@@ -60,10 +62,23 @@ def repo(tmp_path):
     return repo
 
 
+REGION_JSON = 'dist/regions/big-sur-coast/region.json'
+BOTH_CONTOURS = ['depth-contours-overview.geojson', 'depth-contours.geojson']
+
+
+def region_json(chart_files, **extra):
+    doc = {'id': 'big-sur-coast', 'name': 'Big Sur outer coast', **extra}
+    if chart_files is not None:
+        doc['chart_files'] = chart_files
+    return json.dumps(doc) + '\n'
+
+
 @pytest.fixture
 def base(repo):
+    # Reviewed main as it is before a region's first contours: region.json lists no Chart side files.
     page = f'<html>reviewed\n{register.BEGIN}\nold register\n{register.END}\n</html>\n'
-    return commit(repo, {'server/index.ts': 'export {}\n', 'dist/sources.html': page}, 'reviewed main')
+    return commit(repo, {'server/index.ts': 'export {}\n', 'dist/sources.html': page, REGION_JSON: region_json([])},
+                  'reviewed main')
 
 
 def step(steps, name_prefix):
@@ -74,8 +89,38 @@ def step(steps, name_prefix):
 
 # --- region targets ------------------------------------------------------------------------------
 
+def test_central_stage_regions_are_exactly_the_contour_bearing_central_regions():
+    # The preview pins and serves a contour pair, so the two terrain-only regions are not stage regions.
+    six = set(CENTRAL_RELEASES)
+    assert len(six) == 6 and set(identities.TERRAIN_ONLY) < six
+    assert set(CENTRAL) == six - identities.TERRAIN_ONLY and len(CENTRAL) == 4
+
+
+@pytest.mark.parametrize('region', sorted(identities.TERRAIN_ONLY))
+def test_terrain_only_regions_are_refused_before_any_checkout_and_by_every_command(region, repo, base, tmp_path):
+    inputs = WORKFLOW[True]['workflow_dispatch']['inputs']['region']['options']
+    assert region not in inputs
+    for steps in (FETCH, STEPS):
+        assert region not in steps[0]['run']
+    with pytest.raises(preview.PreviewError, match='may carry'):
+        preview.check_region(region)
+    with pytest.raises(preview.PreviewError):
+        controller.data_paths(region)
+    with pytest.raises(ValueError):
+        overlay.inputs(region)
+    data = pointer_bytes(region)
+    sha = commit(repo, {preview.pointer_path(region): data}, f'{region} data')
+    with pytest.raises(SystemExit):
+        controller.main(['scope', '--tree', str(repo), '--base', base, '--sha', sha, '--region', region])
+    with pytest.raises(SystemExit):
+        preview.main(['plan', '--tree', str(repo), '--sha', sha, '--pointer-sha256', hashlib.sha256(data).hexdigest(),
+                      '--wrangler', str(ROOT / 'wrangler.jsonc'), '--region', region,
+                      '--worker', WORKER, '--bucket', BUCKET, '--out', str(tmp_path / 'plan')])
+    assert not (tmp_path / 'plan').exists()
+
+
 def test_every_central_region_has_the_one_central_target_and_morro_keeps_its_own():
-    assert set(preview.REGIONS) == {'morro-bay', *CENTRAL} and len(CENTRAL) == 6
+    assert set(preview.REGIONS) == {'morro-bay', *CENTRAL}
     assert preview.STAGE_TARGETS['morro-bay'] == ('skippercast-morro-stage', 'skippercast-feeds-stage')
     for region in CENTRAL:
         assert preview.STAGE_TARGETS[region] == (WORKER, BUCKET)
@@ -159,7 +204,7 @@ def test_scope_admits_only_the_named_region_data(repo, base):
              f'dist/regions/{region}/depth-contours.geojson': '{}\n',
              f'dist/regions/{region}/depth-contours-overview.geojson': '{}\n',
              # A region's first contours: the build rewrites its chart_files and the register its credits.
-             f'dist/regions/{region}/region.json': '{}\n',
+             REGION_JSON: region_json(BOTH_CONTOURS),
              'dist/sources.html': f'<html>reviewed\n{register.BEGIN}\nnew register\n{register.END}\n</html>\n'}
     sha = commit(repo, files, 'big sur data')
     assert controller.scope(repo, base, sha, region) == sorted(files)
@@ -169,6 +214,73 @@ def test_scope_admits_only_the_named_region_data(repo, base):
         controller.scope(repo, base, sha)
     with pytest.raises(controller.HoldError, match='outside the cambria-san-simeon data'):
         controller.scope(repo, base, sha, 'cambria-san-simeon')
+
+
+def contour_candidate(repo, region_doc):
+    region = 'big-sur-coast'
+    files = {preview.pointer_path(region): pointer_bytes(region),
+             f'dist/regions/{region}/depth-contours.geojson': '{}\n',
+             f'dist/regions/{region}/depth-contours-overview.geojson': '{}\n'}
+    if region_doc is not None:
+        files[REGION_JSON] = region_doc
+    return commit(repo, files, 'contour candidate')
+
+
+def test_scope_holds_a_stale_chart_index_that_was_not_changed(repo, base):
+    # The reviewed regression: contours added, region.json left with its empty list, so the Chart asks for neither.
+    sha = contour_candidate(repo, None)
+    with pytest.raises(controller.HoldError, match='chart_files omits depth-contours.geojson, depth-contours-overview'):
+        controller.scope(repo, base, sha, 'big-sur-coast')
+    assert controller.main(['scope', '--tree', str(repo), '--base', base, '--sha', sha, '--region', 'big-sur-coast']) != 0
+
+
+@pytest.mark.parametrize('chart_files, match', [
+    (['depth-contours.geojson'], 'omits depth-contours-overview.geojson'),
+    (['depth-contours-overview.geojson', 'shoreline.geojson'], r'omits depth-contours\.geojson,'),
+    (None, 'has no chart_files list'),
+    ('depth-contours.geojson depth-contours-overview.geojson', 'has no chart_files list'),
+])
+def test_scope_holds_a_changed_chart_index_without_both_contour_files(repo, base, chart_files, match):
+    sha = contour_candidate(repo, region_json(chart_files))
+    with pytest.raises(controller.HoldError, match=match):
+        controller.scope(repo, base, sha, 'big-sur-coast')
+
+
+@pytest.mark.parametrize('doc', [region_json(BOTH_CONTOURS, status='live'),
+                                 json.dumps({'id': 'big-sur-coast', 'chart_files': BOTH_CONTOURS}) + '\n'])
+def test_scope_holds_a_region_json_change_beyond_chart_files(repo, base, doc):
+    sha = contour_candidate(repo, doc)
+    with pytest.raises(controller.HoldError, match='changes more than its chart_files list'):
+        controller.scope(repo, base, sha, 'big-sur-coast')
+
+
+@pytest.mark.parametrize('doc, match', [('not json\n', 'is not JSON'), ('[]\n', 'is not a JSON object')])
+def test_scope_holds_a_malformed_region_json(repo, base, doc, match):
+    sha = contour_candidate(repo, doc)
+    with pytest.raises(controller.HoldError, match=match):
+        controller.scope(repo, base, sha, 'big-sur-coast')
+
+
+def test_scope_holds_a_deleted_region_json(repo, base):
+    git(repo, 'rm', '-q', REGION_JSON)
+    git(repo, 'commit', '-q', '-m', 'delete region.json')
+    with pytest.raises(controller.HoldError, match='region.json is missing'):
+        controller.scope(repo, base, git(repo, 'rev-parse', 'HEAD'), 'big-sur-coast')
+
+
+def test_scope_accepts_an_unchanged_chart_index_that_already_lists_both_contour_files(repo):
+    page = f'<html>reviewed\n{register.BEGIN}\nold\n{register.END}\n</html>\n'
+    base = commit(repo, {'dist/sources.html': page, REGION_JSON: region_json(BOTH_CONTOURS)}, 'main with contours')
+    sha = contour_candidate(repo, None)
+    assert REGION_JSON not in controller.scope(repo, base, sha, 'big-sur-coast')
+
+
+def test_the_preview_must_serve_the_candidates_region_json():
+    served = STEPS[step(STEPS, 'Require the preview to serve exactly')]['run']
+    assert '"$STAGE_URL/regions/$REGION/region.json" -o "$served/region.json"' in served
+    assert 'cmp -s "$served/region.json" "dist/regions/$REGION/region.json" || { ok=0;' in served
+    cleared = [line for line in served.splitlines() if line.strip().startswith('rm -f "$served/deploy.json"')]
+    assert len(cleared) == 1 and '"$served/region.json"' in cleared[0]  # no stale copy survives a retry
 
 
 @pytest.mark.parametrize('page', [
@@ -255,6 +367,41 @@ def test_overlay_contour_rows_refuse_another_region_set():
     with pytest.raises(ValueError, match='big-sur-coast ft-v3'):
         list(overlay._contour_rows(doc, 'detail', 's' * 64, 'big-sur-coast'))
     assert list(overlay._contour_rows(doc, 'detail', 's' * 64)) == []
+
+
+def overlay_tree(tmp_path):
+    tree = tmp_path / 'tree'
+    names = overlay.inputs('big-sur-coast')
+    blobs = {name: f'{{"{name}": 1}}\n'.encode() for name in names}
+    for name, path in names.items():
+        (tree / path).parent.mkdir(parents=True, exist_ok=True)
+        (tree / path).write_bytes(blobs[name])
+    return tree, {name: hashlib.sha256(raw).hexdigest() for name, raw in blobs.items()}
+
+
+@pytest.mark.parametrize('missing', ['detail', 'overview'])
+def test_overlay_requires_both_contour_pins_for_a_central_candidate(tmp_path, missing, capsys):
+    tree, pins = overlay_tree(tmp_path)
+    args = ['--tree', str(tree), '--out', str(tmp_path / 'out'), '--region', 'big-sur-coast']
+    for name, pin in pins.items():
+        if name != missing:
+            args += [f'--{name}-sha256', pin]
+    with pytest.raises(SystemExit) as stop:
+        overlay.main(args)
+    assert stop.value.code == 2 and f'--{missing}-sha256' in capsys.readouterr().err
+    assert not (tmp_path / 'out').exists()
+
+
+@pytest.mark.parametrize('wrong', ['detail', 'overview'])
+def test_overlay_holds_a_mismatched_contour_pin_for_a_central_candidate(tmp_path, wrong, capsys):
+    tree, pins = overlay_tree(tmp_path)
+    pins[wrong] = 'f' * 64
+    args = ['--tree', str(tree), '--out', str(tmp_path / 'out'), '--region', 'big-sur-coast']
+    for name, pin in pins.items():
+        args += [f'--{name}-sha256', pin]
+    assert overlay.main(args) == 2
+    assert f'{wrong}: SHA-256 differs from the reviewed pin' in capsys.readouterr().err
+    assert not (tmp_path / 'out').exists()
 
 
 # --- workflow ------------------------------------------------------------------------------------
