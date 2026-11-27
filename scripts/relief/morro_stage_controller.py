@@ -47,7 +47,7 @@ if __name__ == '__main__':
     sys.path[:0] = [str(CONTROLLER / 'src'), str(CONTROLLER)]
 
 from scripts.relief import morro_stage_preview as preview  # noqa: E402
-from scripts import build_sources_register as register  # noqa: E402
+from skippercast.platform import sources_register_markers as register  # noqa: E402
 
 PLAN_SCHEMA = 'sc-morro-stage-preview/1'
 

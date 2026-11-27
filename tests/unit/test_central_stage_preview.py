@@ -6,8 +6,10 @@ Offline only: no Cloudflare, GitHub or R2 call is made.
 """
 import hashlib
 import json
+import os
 import re
 import subprocess
+import sys
 
 import pytest
 import yaml
@@ -331,3 +333,28 @@ def test_workflow_matches_the_reviewed_morro_preview_apart_from_the_region():
                        'cloudflare_deploy.sh', 'd1 ', 'CUSTOM_DOMAINS', 'pull_request_target', 'vars.',
                        'skippercast-morro-stage', 'skippercast-feeds-stage\n'):
         assert production not in body
+
+
+CONTROLLER_CALL = re.compile(r'python3 -I "\$CONTROLLER/(scripts/relief/[a-z_]+\.py)" ([a-z-]+)')
+
+
+@pytest.mark.parametrize('workflow', [WORKFLOW, MORRO], ids=['central', 'morro'])
+@pytest.mark.parametrize('job', ['fetch', 'preview'])
+def test_every_controller_command_starts_from_the_workflow_sparse_checkout(workflow, job, tmp_path):
+    # The job runs the controller from its own sparse checkout of main, not from a full tree: lay out exactly
+    # the tracked files that checkout names and start every command the job calls (an import missing from the
+    # checkout fails here, as it would on the runner before any asset is fetched).
+    steps = workflow['jobs'][job]['steps']
+    checkout = next(s for s in steps if s.get('with', {}).get('path') == '.preview-controller')
+    patterns = checkout['with']['sparse-checkout'].split()
+    tracked = subprocess.run(['git', '-C', str(ROOT), 'ls-files', '-z'], check=True, capture_output=True).stdout
+    for path in tracked.decode().split('\0'):
+        if any(path == p or (p.endswith('/') and path.startswith(p)) for p in patterns):
+            (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+            (tmp_path / path).write_bytes((ROOT / path).read_bytes())
+    calls = sorted({m.groups() for s in steps for m in CONTROLLER_CALL.finditer(s.get('run', ''))})
+    assert calls, job
+    for script, command in calls:
+        run = subprocess.run([sys.executable, '-I', str(tmp_path / script), command, '--help'], cwd=tmp_path,
+                             env={'PATH': os.environ.get('PATH', '')}, capture_output=True, text=True, timeout=60)
+        assert run.returncode == 0, (script, command, run.stderr[-2000:])
