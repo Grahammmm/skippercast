@@ -140,19 +140,35 @@ def _region_doc(tree: Path, rev: str, path: str) -> dict:
 def check_chart_index(tree: Path, base: str, sha: str, region: str, changed: list[str]) -> None:
     """The Chart asks only for files its region.json `chart_files` lists (web/map/depth-contours.ts), and the
     build serves region.json unchanged. So the candidate's list must name both contour files whether or not
-    region.json changed, and a changed region.json may differ from the base in that list only."""
+    region.json changed, each name once, and a changed region.json may differ from the base only by adding
+    the contour pair to that list: every file the base lists (shoreline, land/water, poster ...) stays, since
+    the Chart treats a file missing from the list as unpublished."""
     path = f'dist/regions/{region}/region.json'
     doc = _region_doc(tree, sha, path)
-    if path in changed:
-        old = _region_doc(tree, base, path)
-        if {k: v for k, v in old.items() if k != 'chart_files'} != {k: v for k, v in doc.items() if k != 'chart_files'}:
-            raise HoldError(f'candidate {path} changes more than its chart_files list')
-    files = doc.get('chart_files')
-    if not isinstance(files, list) or not all(isinstance(name, str) for name in files):
-        raise HoldError(f'candidate {path} has no chart_files list')
+    old = _region_doc(tree, base, path) if path in changed else doc
+    if {k: v for k, v in old.items() if k != 'chart_files'} != {k: v for k, v in doc.items() if k != 'chart_files'}:
+        raise HoldError(f'candidate {path} changes more than its chart_files list')
+    files = _chart_files(doc, f'candidate {path}')
     missing = [name for name in CONTOUR_FILES if name not in files]
     if missing:
         raise HoldError(f'candidate {path} chart_files omits {", ".join(missing)}, so the Chart would not request it')
+    repeated = sorted({name for name in files if files.count(name) > 1})
+    if repeated:
+        raise HoldError(f'candidate {path} chart_files lists {", ".join(repeated)} more than once')
+    kept = _chart_files(old, f'base {path}')
+    dropped = [name for name in kept if name not in files]
+    if dropped:
+        raise HoldError(f'candidate {path} chart_files drops {", ".join(dropped)}, which the base still publishes')
+    added = [name for name in files if name not in kept and name not in CONTOUR_FILES]
+    if added:
+        raise HoldError(f'candidate {path} chart_files adds {", ".join(added)} beyond the contour pair')
+
+
+def _chart_files(doc: dict, what: str) -> list:
+    files = doc.get('chart_files')
+    if not isinstance(files, list) or not all(isinstance(name, str) for name in files):
+        raise HoldError(f'{what} has no chart_files list')
+    return files
 
 
 def check_origin(origin: str, worker: str) -> str:
