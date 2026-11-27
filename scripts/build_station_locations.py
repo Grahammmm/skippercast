@@ -65,11 +65,13 @@ def configured(root=ROOT):
     return wanted
 
 
-def _write_atomic(path, data):
+def _write_atomic(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.", delete=False) as handle:
         try:
-            handle.write(data), handle.flush(), os.fsync(handle.fileno())
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
             os.replace(handle.name, path)
         finally:  # after the replace the temp name is gone; after any error the temp file is removed here
             Path(handle.name).unlink(missing_ok=True)
