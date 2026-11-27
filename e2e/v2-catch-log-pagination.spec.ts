@@ -55,6 +55,13 @@ async function stubAccount(page: Page): Promise<Stub> {
   return stub;
 }
 
+async function stubNewEntry(page: Page) {
+  await page.route(url => url.pathname === '/api/catch-log', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    return route.fulfill({status: 201, json: {id: 'new-1'}});
+  });
+}
+
 async function openAccount(page: Page, v2: {open(name: 'app', params?: Record<string, string>): Promise<void>}) {
   await v2.open('app', AREA);
   await page.evaluate(() => { location.hash = 'account'; });
@@ -62,6 +69,16 @@ async function openAccount(page: Page, v2: {open(name: 'app', params?: Record<st
   await expect(card).toContainText('Signed in as Skipper');
   return card;
 }
+
+test('a full final page offers no older entries', async ({page, pageErrors, v2}) => {
+  const stub = await stubAccount(page);
+  for (const row of ROWS.slice(PAGE_SIZE)) stub.removed.add(row.id);
+  const card = await openAccount(page, v2);
+  await expect(card.locator('#log-list li')).toHaveCount(PAGE_SIZE);
+  await expect(card.locator('#log-older')).toBeHidden();
+  expect(stub.reads).toEqual([null]);
+  expect(pageErrors).toEqual([]);
+});
 
 test('older_entries_append_by_keyboard_after_deleting_the_cursor_row', async ({page, pageErrors, v2}) => {
   const stub = await stubAccount(page);
@@ -143,7 +160,9 @@ test('failed_older_read_keeps_rows_and_retries_the_same_cursor_and_failed_remove
   stub.failDelete = true;
   await items.nth(250).getByRole('button', {name: 'Remove'}).click();
   await expect(card.locator('#account-status')).toHaveText('Not found.');
+  expect(stub.deletes).toEqual(['e250']);
   await expect(items).toHaveCount(400);
+  await expect(items.filter({hasText: 'Species 250'})).toHaveCount(1);
   expect(pageErrors).toEqual([]);
 });
 
@@ -161,24 +180,19 @@ test('first_read_failure_offers_try_again_and_a_new_entry_starts_again_at_page_o
   await expect(card.locator('#log-list li')).toHaveCount(400);
 
   // Saving an entry reads page one again (a new entry may sort anywhere by its date); the older pages are not kept.
-  await page.route(url => url.pathname === '/api/catch-log', async route => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    return route.fulfill({status: 201, json: {id: 'new-1'}});
-  });
+  await stubNewEntry(page);
   await card.getByLabel('What happened').selectOption('blank');
   await card.getByRole('button', {name: 'Save to my log'}).click();
   await expect(card.locator('#account-status')).toHaveText('Saved to your log.');
   await expect(card.locator('#log-list li')).toHaveCount(200);
   await expect(card.getByRole('button', {name: 'Show older entries'})).toBeVisible();
+  expect(stub.reads).toEqual([null, null, TOKEN('e199'), null]);
   expect(pageErrors).toEqual([]);
 });
 
 test('a_pending_older_read_cannot_change_a_newer_list_or_a_closed_sheet', async ({page, pageErrors, v2}) => {
   const stub = await stubAccount(page);
-  await page.route(url => url.pathname === '/api/catch-log', async route => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    return route.fulfill({status: 201, json: {id: 'new-1'}});
-  });
+  await stubNewEntry(page);
   const card = await openAccount(page, v2);
   const items = card.locator('#log-list li'), older = card.locator('#log-older');
   await expect(items).toHaveCount(200);
