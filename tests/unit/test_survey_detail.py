@@ -11,8 +11,8 @@ import json
 import pytest
 
 from scripts.relief import region as cli
-from skippercast.relief import envelope, receipts, survey_delivery as sd
-from tests.unit.test_relief_package import REGION, assembly, inputs  # noqa: F401  (fixture and producer chain)
+from skippercast.relief import envelope, receipts, survey_delivery as sd, survey_detail
+from tests.unit.test_relief_package import REGION, SOURCE, assembly, inputs  # noqa: F401  (fixture and producer chain)
 
 SQUARE = [[[-121.0, 35.0], [-120.5, 35.0], [-120.5, 35.5], [-121.0, 35.0]]]
 ZONE_DETAIL = 'layers/public/zone/detail.geojson'
@@ -22,6 +22,7 @@ FILES = [  # selection rows as the select stage writes them
     {'id': 'grid-b-3333', 'source_id': 'grid-b', 'decision': 'included', 'rights_class': 'public'},
     {'id': 'grid-c-4444', 'source_id': 'grid-c', 'decision': 'excluded', 'rights_class': 'public'},
     {'id': 'grid-d-5555', 'source_id': 'grid-d', 'decision': 'included', 'rights_class': 'private'},
+    {'id': f'{SOURCE}-6666', 'source_id': SOURCE, 'decision': 'included', 'rights_class': 'public'},
 ]
 
 
@@ -127,6 +128,31 @@ def test_stage_refuses_another_regions_selection(tmp_path, capsys):
     assert 'public selection of this region' in capsys.readouterr().out
 
 
+@pytest.mark.parametrize('swap', ['selection', 'zone'])
+def test_stage_reads_only_the_bytes_its_upstream_receipts_attest(tmp_path, monkeypatch, swap, capsys):
+    # The runner checks upstream receipts before planning; a file swapped after that check must not reach the detail.
+    region = receipts.Region(tmp_path, REGION)
+    upstream(region, zone_doc(feature('estimated', ['grid-a-1111']), feature('none', [])))
+    real_plan = survey_detail.plan
+
+    def plan_then_swap(ctx):
+        planned = real_plan(ctx)
+        if swap == 'selection':  # same ids, a different catalog attribution
+            rows = [dict(row, source_id='grid-b') for row in FILES]
+            doc = {'region': REGION, 'scope': 'public', 'files': rows}
+            (region.dir / 'select/selection.json').write_text(json.dumps(doc))
+        else:
+            (region.dir / ZONE_DETAIL).write_text(json.dumps(zone_doc(feature('estimated', ['grid-b-3333']))))
+        return planned
+
+    monkeypatch.setattr(survey_detail, 'plan', plan_then_swap)
+    assert run(region, 'survey_detail', '--scope', 'public') != 0
+    out = capsys.readouterr().out
+    assert ('select output changed' if swap == 'selection' else 'zone.public output changed') in out
+    assert not (region.dir / sd.DECODED_PATH).exists()
+    assert not receipts.check(region, 'survey_detail', 'public').done
+
+
 def test_new_zone_makes_the_detail_stale_until_it_is_rebuilt(tmp_path, capsys):
     region = receipts.Region(tmp_path, REGION)
     upstream(region, zone_doc(feature('estimated', ['grid-a']), feature('none', [])))
@@ -149,9 +175,11 @@ def package_with(region, manifest, *refs):
 
 def test_chain_zone_to_detail_to_gap_to_release(tmp_path, assembly, capsys):  # noqa: F811
     region, manifest = inputs(tmp_path)
-    upstream(region, zone_doc(feature('estimated', ['grid-a-1111']), feature('none', [])))
+    # The zone names a selection file of the release's own source, as a real zone does.
+    upstream(region, zone_doc(feature('estimated', [f'{SOURCE}-6666']), feature('none', [])))
     assert run(region, 'survey_detail', '--scope', 'public') == 0
     _, raw = detail_of(region)
+    assert [f['properties']['sources'] for f in json.loads(raw)['features']] == [[SOURCE], []]
     # survey_gap now has a receipted upstream and derives the no-survey companion from it.
     assert run(region, 'survey_gap', '--scope', 'public') == 0
     assert (region.dir / sd.GAP_DECODED_PATH).read_bytes() == sd.gap_document(raw)
@@ -165,6 +193,27 @@ def test_chain_zone_to_detail_to_gap_to_release(tmp_path, assembly, capsys):  # 
     assert member == {'survey_detail': {'decoded': {'bytes': len(raw), 'sha256': sha256(raw).hexdigest()},
                                         'wire': {'bytes': len(wire), 'sha256': sha256(wire).hexdigest()}}}
     capsys.readouterr()
+
+
+@pytest.mark.parametrize('with_gap', [False, True], ids=['detail-only', 'with-gap'])
+def test_package_refuses_a_detail_the_chart_would_drop(tmp_path, assembly, with_gap, capsys):  # noqa: F811
+    # The detail is valid for the selection (grid-a is public and included), but the release credits only SOURCE,
+    # so decodeSurveyDetail would refuse the whole layer: packaging must refuse it first.
+    region, manifest = inputs(tmp_path)
+    upstream(region, zone_doc(feature('estimated', ['grid-a-1111']), feature('none', [])))
+    assert run(region, 'survey_detail', '--scope', 'public') == 0
+    refs = ['survey_detail:public']
+    if with_gap:
+        assert run(region, 'survey_gap', '--scope', 'public') == 0
+        refs.append('survey_gap:public')
+    doc = json.loads(manifest.read_bytes())
+    doc['layer_paths'] = [p for p in doc['layer_paths'] if not sd.is_survey_path(p)] + (
+        [sd.DECODED_PATH, sd.WIRE_PATH, sd.GAP_DECODED_PATH, sd.GAP_WIRE_PATH] if with_gap else [sd.DECODED_PATH, sd.WIRE_PATH])
+    manifest.write_text(json.dumps(doc, sort_keys=True), encoding='utf-8')
+    assert run(region, 'package', '--manifest', manifest, '--upstream', 'tiles:public',
+               *(arg for ref in refs for arg in ('--upstream', ref))) != 0
+    assert 'does not credit' in capsys.readouterr().out
+    assert not receipts.check(region, 'package').done
 
 
 def test_all_estimated_detail_has_no_gap_companion(tmp_path, capsys):

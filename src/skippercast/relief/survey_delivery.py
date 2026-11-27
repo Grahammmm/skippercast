@@ -65,8 +65,8 @@ def _canonical(doc) -> bytes:
     return (json.dumps(doc, sort_keys=True, separators=(',', ':'), allow_nan=False) + '\n').encode()
 
 
-def gap_document(decoded: bytes) -> bytes:
-    """The companion for a reviewed decoded detail: the same document, keeping only its tier-none features."""
+def _document(decoded: bytes) -> dict:
+    """A reviewed decoded detail (or companion) as a document, refused unless it is canonical."""
     try:
         doc = json.loads(decoded.decode('utf-8'))
     except (UnicodeDecodeError, ValueError):
@@ -74,6 +74,12 @@ def gap_document(decoded: bytes) -> bytes:
     if (not isinstance(doc, dict) or doc.get('type') != 'FeatureCollection'
             or not isinstance(doc.get('features'), list) or _canonical(doc) != decoded):
         raise ValueError('survey detail is not a canonical FeatureCollection')
+    return doc
+
+
+def gap_document(decoded: bytes) -> bytes:
+    """The companion for a reviewed decoded detail: the same document, keeping only its tier-none features."""
+    doc = _document(decoded)
     gap = []
     for feature in doc['features']:
         props = feature.get('properties') if isinstance(feature, dict) else None
@@ -124,6 +130,23 @@ def detail_document(zone_detail: bytes, region: str, source_ids: dict) -> bytes:
             raise ValueError('a surveyed feature must name exactly one catalog source')
         props['sources'] = named
     return _canonical(doc)
+
+
+def check_detail_sources(decoded: bytes, source_ids) -> None:
+    """The Chart draws a survey detail only if each surveyed area names exactly one of the release's own sources.
+
+    ``source_ids`` are the release (and so the pointer) source ids; ``decodeSurveyDetail`` drops the whole layer for
+    any other name, so a release must not carry such a detail. A no-survey feature names none."""
+    for feature in _document(decoded)['features']:
+        props = feature.get('properties') if isinstance(feature, dict) else None
+        if not isinstance(props, dict):
+            raise ValueError('survey detail feature without properties')
+        sources = props.get('sources')
+        if props.get('tier') == 'none':
+            if sources != []:
+                raise ValueError('a no-survey feature cannot name a source')
+        elif not (isinstance(sources, list) and len(sources) == 1 and sources[0] in source_ids):
+            raise ValueError(f'survey detail names a source the release does not credit: {sources!r}')
 
 
 def check_gap(detail: bytes, gap: bytes) -> None:
