@@ -15,6 +15,7 @@ import yaml
 from scripts.relief import morro_sources_overlay as overlay
 from scripts.relief import morro_stage_controller as controller
 from scripts.relief import morro_stage_preview as preview
+from scripts import build_sources_register as register
 from skippercast.relief import package
 from tests._support import ROOT
 
@@ -59,7 +60,8 @@ def repo(tmp_path):
 
 @pytest.fixture
 def base(repo):
-    return commit(repo, {'server/index.ts': 'export {}\n'}, 'reviewed main')
+    page = f'<html>reviewed\n{register.BEGIN}\nold register\n{register.END}\n</html>\n'
+    return commit(repo, {'server/index.ts': 'export {}\n', 'dist/sources.html': page}, 'reviewed main')
 
 
 def step(steps, name_prefix):
@@ -155,7 +157,8 @@ def test_scope_admits_only_the_named_region_data(repo, base):
              f'dist/regions/{region}/depth-contours.geojson': '{}\n',
              f'dist/regions/{region}/depth-contours-overview.geojson': '{}\n',
              # A region's first contours: the build rewrites its chart_files and the register its credits.
-             f'dist/regions/{region}/region.json': '{}\n', 'dist/sources.html': '<html></html>\n'}
+             f'dist/regions/{region}/region.json': '{}\n',
+             'dist/sources.html': f'<html>reviewed\n{register.BEGIN}\nnew register\n{register.END}\n</html>\n'}
     sha = commit(repo, files, 'big sur data')
     assert controller.scope(repo, base, sha, region) == sorted(files)
     assert controller.main(['scope', '--tree', str(repo), '--base', base, '--sha', sha, '--region', region]) == 0
@@ -164,6 +167,27 @@ def test_scope_admits_only_the_named_region_data(repo, base):
         controller.scope(repo, base, sha)
     with pytest.raises(controller.HoldError, match='outside the cambria-san-simeon data'):
         controller.scope(repo, base, sha, 'cambria-san-simeon')
+
+
+@pytest.mark.parametrize('page', [
+    f'<html><script>bad()</script>\n{register.BEGIN}\nnew\n{register.END}\n</html>\n',
+    f'<html>reviewed\n{register.BEGIN}\nnew\n{register.END}\n<script>bad()</script></html>\n',
+    f'<html>reviewed\n{register.BEGIN}\nnew\n{register.END}\n{register.END}\n</html>\n',
+    f'<html>reviewed\n{register.END}\nnew\n{register.BEGIN}\n</html>\n',
+    f'<html>reviewed\n{register.BEGIN}\n{register.BEGIN}\n{register.END}\n</html>\n',
+    '<html>no markers</html>\n',
+])
+def test_scope_holds_changes_outside_register_and_ambiguous_markers(repo, base, page):
+    sha = commit(repo, {'dist/sources.html': page}, 'unreviewed page')
+    with pytest.raises(controller.HoldError, match='sources.html'):
+        controller.scope(repo, base, sha, 'big-sur-coast')
+
+
+def test_scope_holds_deleted_sources_page(repo, base):
+    git(repo, 'rm', 'dist/sources.html')
+    git(repo, 'commit', '-q', '-m', 'delete page')
+    with pytest.raises(controller.HoldError):
+        controller.scope(repo, base, git(repo, 'rev-parse', 'HEAD'), 'big-sur-coast')
 
 
 def test_morro_scope_is_unchanged():

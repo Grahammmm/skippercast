@@ -47,6 +47,7 @@ if __name__ == '__main__':
     sys.path[:0] = [str(CONTROLLER / 'src'), str(CONTROLLER)]
 
 from scripts.relief import morro_stage_preview as preview  # noqa: E402
+from scripts import build_sources_register as register  # noqa: E402
 
 PLAN_SCHEMA = 'sc-morro-stage-preview/1'
 
@@ -86,6 +87,18 @@ def _git(tree: Path, *args: str) -> bytes:
         raise HoldError('git could not read the candidate checkout') from None
 
 
+def _sources_shell(page: bytes) -> tuple[bytes, bytes]:
+    """Return the reviewed bytes surrounding one unambiguous generated register."""
+    begin, end = register.BEGIN.encode(), register.END.encode()
+    if page.count(begin) != 1 or page.count(end) != 1 or page.index(begin) > page.index(end):
+        raise HoldError('dist/sources.html must contain exactly one register block')
+    head, rest = page.split(begin)
+    block, tail = rest.split(end)
+    if not block:
+        raise HoldError('dist/sources.html has an invalid register block')
+    return head, tail
+
+
 def scope(tree: Path, base: str, sha: str, region: str = preview.REGION) -> list[str]:
     """Paths the candidate changes against the reviewed base; only the region's data files may differ."""
     allowed = data_paths(region)
@@ -101,6 +114,10 @@ def scope(tree: Path, base: str, sha: str, region: str = preview.REGION) -> list
         listing = _git(tree, 'ls-tree', '-z', sha, '--', path)
         if listing and not listing.startswith(b'100644 blob '):
             raise HoldError(f'candidate {path} is not a regular file')
+    if 'dist/sources.html' in changed:
+        path = 'dist/sources.html'
+        if _sources_shell(_git(tree, 'show', f'{base}:{path}')) != _sources_shell(_git(tree, 'show', f'{sha}:{path}')):
+            raise HoldError('candidate dist/sources.html changes outside the generated register block')
     return changed
 
 
