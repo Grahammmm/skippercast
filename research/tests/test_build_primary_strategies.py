@@ -65,17 +65,16 @@ class BuildPrimaryStrategiesTest(unittest.TestCase):
         self.species['x'] = strategy(steps='abcd')
         self.assert_refused('Empty strategy step: x')
 
-    def test_non_object_method_source_is_named(self):
-        self.species['y'] = strategy(method_sources=['https://x'])
-        self.assert_refused('Invalid method source: y')
-
-    def test_non_list_method_sources_is_named(self):
-        self.species['y'] = strategy(method_sources={'title': 't', 'url': 'https://e.org'})
-        self.assert_refused('Invalid method source: y')
-
-    def test_non_string_method_url_is_named(self):
-        self.species['y'] = strategy(method_sources=[{'title': 't', 'url': 5}])
-        self.assert_refused('Invalid method source: y')
+    def test_invalid_method_sources_name_the_species(self):
+        url = 'https://e.org'
+        for sources in (['https://x'],
+                        {'title': 't', 'url': url},
+                        [{'title': 't', 'url': 5}],
+                        [{'title': 't', 'url': 'http://e.org'}],
+                        [{'url': url}]):
+            with self.subTest(method_sources=sources):
+                self.species['y'] = strategy(method_sources=sources)
+                self.assert_refused('Invalid method source: y')
 
     def test_species_list_in_catalog_is_invalid(self):
         self.write_tree({'schema_version': 1, 'reviewed_at': '2026-11-02', 'scope': 'boat', 'species': []})
@@ -100,10 +99,11 @@ class BuildPrimaryStrategiesTest(unittest.TestCase):
         written = bps.build(self.root)
         self.assertEqual(written, ['dist/regions/a/strategies.json', 'dist/regions/b/strategies.json'])
         self.assertEqual(sorted(p.name for p in self.root.glob('dist/regions/*/*')), ['strategies.json'] * 2)
-        packet = json.loads(self.target('b').read_text())
-        self.assertEqual(packet['region_id'], 'b')
-        self.assertEqual(packet['strategies'], {'x': self.species['x'], 'y': self.species['y']})
-        self.assertTrue(self.target('a').read_text().endswith('}\n'))
+        for region_id, region in self.regions.items():
+            with self.subTest(region_id=region_id):
+                packet = json.loads(self.target(region_id).read_text())
+                self.assertEqual(packet['region_id'], region_id)
+                self.assertEqual(packet['strategies'], {key: self.species[key] for key in region['species']})
 
 
 if __name__ == '__main__':

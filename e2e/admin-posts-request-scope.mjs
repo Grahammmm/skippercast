@@ -114,7 +114,7 @@ test('kind_changes_and_aba_do_not_readmit_old_responses', () => run(async t => {
   assert.ok((await t.text()).includes('Newest synthetic card'));
   assert.ok(!/Oldest synthetic|Story synthetic/.test(await t.text()));
   assert.equal(await t.more().count(), 0);
-  // Status ABA: draft -> approved -> draft; the first draft request settles last.
+  // Status round trip: return to draft, then deliver the approved reply after the new draft page.
   await t.select(0, 'approved');
   await t.asked(q('approved'));
   await t.select(0, 'draft');
@@ -144,7 +144,7 @@ test('old_pagination_cannot_append_or_replace_next_after_filter_change', () => r
   assert.equal(await t.page.evaluate(() => window.pending.some(x => x.url.includes('draft-cursor-2'))), false);
 }));
 
-test('current_first_page_more_and_refresh_keep_working', () => run(async t => {
+test('pagination_appends_rows_and_a_failed_filter_request_shows_an_alert', () => run(async t => {
   await t.asked(q('draft'));
   await t.reply(q('draft'), 0, {posts: [post('d1', 'draft', {caption: 'Draft one'})], next: 'c1'});
   await t.more().click();
@@ -157,7 +157,7 @@ test('current_first_page_more_and_refresh_keep_working', () => run(async t => {
   await t.asked(q('approved'));
   await t.reply(q('approved'), 0, {error: 'x'}, 500);
   await t.page.getByRole('alert').filter({hasText: 'Could not load'}).waitFor();
-  // The independent calendar keeps its own request and is not remounted by a filter change.
+  // Check that the calendar requested its endpoint at least once; this does not rule out a remount.
   assert.equal(await t.page.evaluate(() => window.pending.filter(x => x.url.startsWith('/api/admin/posts/calendar')).length) >= 1, true);
 }));
 
