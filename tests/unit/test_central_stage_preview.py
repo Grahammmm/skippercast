@@ -153,7 +153,9 @@ def test_scope_admits_only_the_named_region_data(repo, base):
     files = {preview.pointer_path(region): pointer_bytes(region),
              preview.contours_path(region): '{"type":"FeatureCollection","features":[]}\n',
              f'dist/regions/{region}/depth-contours.geojson': '{}\n',
-             f'dist/regions/{region}/depth-contours-overview.geojson': '{}\n'}
+             f'dist/regions/{region}/depth-contours-overview.geojson': '{}\n',
+             # A region's first contours: the build rewrites its chart_files and the register its credits.
+             f'dist/regions/{region}/region.json': '{}\n', 'dist/sources.html': '<html></html>\n'}
     sha = commit(repo, files, 'big sur data')
     assert controller.scope(repo, base, sha, region) == sorted(files)
     assert controller.main(['scope', '--tree', str(repo), '--base', base, '--sha', sha, '--region', region]) == 0
@@ -164,8 +166,16 @@ def test_scope_admits_only_the_named_region_data(repo, base):
         controller.scope(repo, base, sha, 'cambria-san-simeon')
 
 
-@pytest.mark.parametrize('other', ['dist/regions/big-sur-coast/region.json', 'catalog/relief/morro-bay.json',
-                                   'catalog/sources.json', 'server/index.ts', 'dist/sources.html'])
+def test_morro_scope_is_unchanged():
+    assert controller.DATA_PATHS == {'catalog/relief/morro-bay.json', 'catalog/depth-contours/morro-bay.geojson',
+                                     'dist/regions/morro-bay/depth-contours.geojson',
+                                     'dist/regions/morro-bay/depth-contours-overview.geojson'}
+    assert controller.data_paths('morro-bay') == controller.DATA_PATHS
+
+
+@pytest.mark.parametrize('other', ['dist/regions/big-sur-coast/manifest.json', 'catalog/relief/morro-bay.json',
+                                   'catalog/sources.json', 'server/index.ts', 'dist/regions/index.json',
+                                   'dist/regions/cambria-san-simeon/region.json'])
 def test_scope_holds_any_other_file_for_a_central_region(repo, base, other):
     sha = commit(repo, {preview.pointer_path('big-sur-coast'): pointer_bytes('big-sur-coast'), other: '{}\n'}, 'more')
     with pytest.raises(controller.HoldError, match='outside the big-sur-coast data'):

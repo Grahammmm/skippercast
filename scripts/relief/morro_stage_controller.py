@@ -53,11 +53,19 @@ PLAN_SCHEMA = 'sc-morro-stage-preview/1'
 
 def data_paths(region: str) -> frozenset:
     """The data a candidate for `region` may change: the relief pointer, the contour import and the
-    two published contour files the browser loads (scripts/build_depth_contours.py output)."""
+    two published contour files the browser loads (scripts/build_depth_contours.py output).
+
+    A Central region gets its first contours here, so the platform build also rewrites that region's
+    dist/regions/<id>/region.json (its `chart_files` list) and the source register rewrites
+    dist/sources.html; both are generated data, so the STAGE candidate can be the data PR head itself.
+    Morro's set is unchanged."""
     preview.check_region(region)
-    return frozenset({preview.pointer_path(region), preview.contours_path(region),
-                      f'dist/regions/{region}/depth-contours.geojson',
-                      f'dist/regions/{region}/depth-contours-overview.geojson'})
+    paths = {preview.pointer_path(region), preview.contours_path(region),
+             f'dist/regions/{region}/depth-contours.geojson',
+             f'dist/regions/{region}/depth-contours-overview.geojson'}
+    if region in preview.CENTRAL_REGIONS:
+        paths |= {f'dist/regions/{region}/region.json', 'dist/sources.html'}
+    return frozenset(paths)
 
 
 DATA_PATHS = data_paths(preview.REGION)
