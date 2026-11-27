@@ -119,6 +119,11 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             scripts/__init__.py
+            scripts/build_sources_register.py
+            tests/__init__.py
+            tests/_support.py
+            tests/contract/__init__.py
+            tests/contract/test_commercial_sources.py
             scripts/relief/__init__.py
             scripts/relief/morro_stage_preview.py
             scripts/relief/morro_stage_controller.py
@@ -214,6 +219,11 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             scripts/__init__.py
+            scripts/build_sources_register.py
+            tests/__init__.py
+            tests/_support.py
+            tests/contract/__init__.py
+            tests/contract/test_commercial_sources.py
             scripts/relief/__init__.py
             scripts/relief/morro_stage_preview.py
             scripts/relief/morro_stage_controller.py
