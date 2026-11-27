@@ -19,9 +19,9 @@ Tests are `unittest.TestCase` classes run by [pytest](https://docs.pytest.org/) 
 
 ```bash
 python -m pip install -e ".[test]"                  # pytest, jsonschema, moto
-python -m pytest -m "not gis"                       # what CI's check job runs (Python 3.11 and 3.13)
+python -m pytest -m "not gis"                       # local non-GIS run; see Parallel runs for CI flags
 python -m pip install -e ".[survey,ocean,publish,test]"
-SKIPPERCAST_REQUIRE_GIS=1 python -m pytest          # what the survey-science job runs: everything
+SKIPPERCAST_REQUIRE_GIS=1 python -m pytest          # local suite including GIS; host archives remain opt-in
 python -m pytest tests/unit                         # one layer
 python -m pytest -m claims                          # every claims pin
 python scripts/run_core_tests.py --scope live       # the live-conditions gate
@@ -47,7 +47,7 @@ Every test must be parallel-safe, because any two tests can run at the same time
 
 ## Layers
 
-Layers are directories. `tests/conftest.py` and `research/tests/conftest.py` add the markers from the directory, so a test never declares them; `--strict-markers` rejects any other marker.
+`tests/conftest.py` and `research/tests/conftest.py` apply layer markers by directory, so tests do not declare their own layer markers. Tests can still use other registered markers, such as `host_archive`; `--strict-markers` rejects unregistered markers.
 
 | Layer | Where | Markers | Contents | In CI |
 | --- | --- | --- | --- | --- |
@@ -105,7 +105,7 @@ When you change a pinned receipt, change the pin in the same PR and say in the P
 
 ## Adding a test
 
-**Python.** Add `test_<topic>.py` with `unittest.TestCase` classes to the layer it belongs to (table above); import `ROOT`/`FIXTURES` from `tests._support`. If it imports a survey package, it goes in a `gis/` directory. A test of a research script or receipt goes in `research/tests/`, named by the claim it pins. Plain `def test_*` functions are collected by pytest but not by `unittest`, so keep to `TestCase` classes. If it covers code the live job runs (see **Live scope**), it also runs before every live cycle, so keep it fast and deterministic.
+**Python.** Add `test_<topic>.py` with `unittest.TestCase` classes to the layer it belongs to (table above); import `ROOT`/`FIXTURES` from `tests._support`. If it imports a survey package, it goes in a `gis/` directory. A test of a research script or receipt goes in `research/tests/`, named by the claim it pins. Plain `def test_*` functions are collected by pytest but not by `unittest`, so keep to `TestCase` classes. For product tests covering live-cycle code, see **Live scope** for the local test command. CI gates these changes; the scheduled live cycle does not run the tests.
 
 **Node.** Add `tests/test_<topic>.mjs` using `node:test` and `node:assert/strict`. To exercise Worker routes, set the build-time globals before importing the Worker, as `tests/test_private_api.mjs` does:
 
