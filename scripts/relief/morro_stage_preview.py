@@ -28,10 +28,12 @@ if __name__ == '__main__':
     sys.dont_write_bytecode = True
 
 REGION = 'morro-bay'
-# The six Central Coast regions share ONE separate preview Worker and bucket of their own
-# (.github/workflows/central-stage-preview.yml), one region per run; Morro keeps its own.
-CENTRAL_REGIONS = ('big-sur-coast', 'cambria-san-simeon', 'south-big-sur-san-simeon',
-                   'monterey-point-sur', 'point-arguello-conception', 'santa-cruz-monterey-bay')
+# The four contour-bearing Central Coast regions share ONE separate preview Worker and bucket of their
+# own (.github/workflows/central-stage-preview.yml), one region per run; Morro keeps its own. This
+# preview pins and serves a detail + overview contour pair, so the two terrain-only Central regions
+# (monterey-point-sur, santa-cruz-monterey-bay: no contours to pin) are not stage regions here and are
+# refused everywhere a region is checked, until a terrain-only stage path is built for them.
+CENTRAL_REGIONS = ('big-sur-coast', 'cambria-san-simeon', 'south-big-sur-san-simeon', 'point-arguello-conception')
 REGIONS = (REGION, *CENTRAL_REGIONS)
 # Each region may be previewed only on its own group's Worker and bucket, so a Central run can never
 # overwrite the Morro preview (or the other way round).

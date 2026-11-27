@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render a local stage /sources.html from the exact candidate assets of one region.
 
-Morro Bay by default; `--region` names one of the six Central Coast regions the Central stage
+Morro Bay by default; `--region` names one of the four contour-bearing Central Coast regions the Central stage
 preview may carry (morro_stage_preview.REGIONS), with the same pins and the same checks.
 
 Pass a reviewed, isolated candidate tree and independent SHA-256 pins from its
