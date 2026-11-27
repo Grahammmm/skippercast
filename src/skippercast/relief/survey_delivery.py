@@ -90,6 +90,42 @@ def gap_document(decoded: bytes) -> bytes:
     return _canonical(dict(doc, features=gap))
 
 
+def detail_document(zone_detail: bytes, region: str, source_ids: dict) -> bytes:
+    """The public survey detail for a region's zone-stage detail, in canonical form.
+
+    ``source_ids`` maps every included public selection file id to its catalog source id. A surveyed feature must
+    name exactly one catalog source, either directly or through one of its selection files; the Chart refuses
+    anything else. A no-survey (``tier: none``) feature names none. Nothing else in the document changes.
+    """
+    try:
+        doc = json.loads(zone_detail.decode('utf-8'))
+    except (UnicodeDecodeError, ValueError):
+        raise ValueError('zone detail is not JSON') from None
+    if (not isinstance(doc, dict) or doc.get('type') != 'FeatureCollection' or not isinstance(doc.get('features'), list)
+            or doc.get('region') != region or doc.get('navigation') != 'NOT FOR NAVIGATION'):
+        raise ValueError(f'zone detail is not the {region} survey FeatureCollection')
+    catalog = set(source_ids.values())
+    for feature in doc['features']:
+        props = feature.get('properties') if isinstance(feature, dict) else None
+        if not isinstance(props, dict) or not isinstance(props.get('sources'), list):
+            raise ValueError('zone detail feature without a sources list')
+        if props.get('tier') == 'none':
+            if props['sources']:
+                raise ValueError('a no-survey feature cannot name a source')
+            continue
+        named = []
+        for value in props['sources']:
+            source = source_ids.get(value, value if value in catalog else None)
+            if source is None:
+                raise ValueError(f'zone detail names a source outside the public selection: {value!r}')
+            if source not in named:
+                named.append(source)
+        if len(named) != 1:
+            raise ValueError('a surveyed feature must name exactly one catalog source')
+        props['sources'] = named
+    return _canonical(doc)
+
+
 def check_gap(detail: bytes, gap: bytes) -> None:
     if gap_document(detail) != gap:
         raise ValueError('survey gap companion is not derived from the reviewed survey detail')
