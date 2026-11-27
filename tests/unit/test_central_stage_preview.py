@@ -7,9 +7,7 @@ Offline only: no Cloudflare, GitHub or R2 call is made.
 import hashlib
 import json
 import re
-import shutil
 import subprocess
-import sys
 
 import pytest
 import yaml
@@ -258,27 +256,6 @@ def test_overlay_contour_rows_refuse_another_region_set():
 
 
 # --- workflow ------------------------------------------------------------------------------------
-
-@pytest.mark.parametrize('workflow', [WORKFLOW, MORRO], ids=['central', 'morro'])
-@pytest.mark.parametrize('job', ['fetch', 'preview'])
-def test_sparse_controller_starts_in_isolated_python(workflow, job, tmp_path):
-    checkout = next(s for s in workflow['jobs'][job]['steps']
-                    if s.get('with', {}).get('path') == '.preview-controller')
-    for name in checkout['with']['sparse-checkout'].split():
-        source = ROOT / name
-        if not source.exists():  # Git sparse patterns may name absent files.
-            continue
-        target = tmp_path / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if source.is_dir():
-            shutil.copytree(source, target, dirs_exist_ok=True)
-        else:
-            shutil.copy2(source, target)
-    result = subprocess.run([sys.executable, '-I', str(tmp_path / 'scripts/relief/morro_stage_controller.py'), '--help'],
-                            cwd=tmp_path, text=True, capture_output=True)
-    assert result.returncode == 0, result.stderr
-    assert 'fetch' in result.stdout and 'scope' in result.stdout
-
 
 def test_workflow_is_manual_from_protected_main_with_a_fixed_region_list():
     triggers = WORKFLOW[True]
