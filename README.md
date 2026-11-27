@@ -31,15 +31,24 @@ The whole coast can also be browsed by CDFW's five ocean regions, with seasonal 
 
 ## Run it
 
-From the repository root, with Python 3.11+, Node 22 and pnpm:
+From the repository root, serve the static site with:
 
 ```bash
-python3 -m http.server 8485 --directory dist        # the app at http://localhost:8485
-pip install -e ".[test]" && python3 -m pytest -m "not gis"   # Python tests, offline
-pnpm install --frozen-lockfile && pnpm test           # Worker and browser tests
+python3 -m http.server 8485 --directory dist        # http://localhost:8485
 ```
 
-More in the [quickstart](docs/quickstart.md) and the [web app guide](docs/web-app.md).
+To run the tests, use Python 3.11+, Node 22 (22.18 or later) and pnpm. The tests do not need the static server.
+
+```bash
+python3 -m pip install -e ".[test]"
+python3 -m pytest -m "not gis"                      # offline Python tests
+pnpm install --frozen-lockfile
+pnpm test                                          # Node tests for Worker routes and browser modules
+```
+
+For end-to-end browser tests, install Chromium with `npx playwright install chromium` (or set `PW_CHROMIUM` to an existing Chrome executable), then run `pnpm build && pnpm e2e`. Playwright starts its own local Worker by default.
+
+See the [testing guide](docs/engineering/testing.md), [quickstart](docs/quickstart.md) and [web app guide](docs/web-app.md).
 
 ## How it works
 
