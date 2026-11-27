@@ -275,6 +275,56 @@ def test_scope_accepts_an_unchanged_chart_index_that_already_lists_both_contour_
     assert REGION_JSON not in controller.scope(repo, base, sha, 'big-sur-coast')
 
 
+# A region whose shipped region.json already lists Chart side files (Cambria-San Simeon on main lists these five).
+CAMBRIA = 'cambria-san-simeon'
+CAMBRIA_JSON = f'dist/regions/{CAMBRIA}/region.json'
+CAMBRIA_SHIPPED = json.loads((ROOT / CAMBRIA_JSON).read_text())
+
+
+def cambria_candidate(repo, chart_files):
+    page = f'<html>reviewed\n{register.BEGIN}\nold\n{register.END}\n</html>\n'
+    base = commit(repo, {'dist/sources.html': page, CAMBRIA_JSON: json.dumps(CAMBRIA_SHIPPED) + '\n'}, 'main (Cambria)')
+    files = {preview.pointer_path(CAMBRIA): pointer_bytes(CAMBRIA),
+             f'dist/regions/{CAMBRIA}/depth-contours.geojson': '{}\n',
+             f'dist/regions/{CAMBRIA}/depth-contours-overview.geojson': '{}\n',
+             CAMBRIA_JSON: json.dumps({**CAMBRIA_SHIPPED, 'chart_files': chart_files}) + '\n'}
+    return base, commit(repo, files, 'cambria contour candidate')
+
+
+def test_the_cambria_fixture_is_the_shipped_list_of_five_existing_chart_files():
+    assert sorted(CAMBRIA_SHIPPED['chart_files']) == ['land-water-lines.json', 'land-water.json', 'poster.svg',
+                                                       'shoreline-overview.geojson', 'shoreline.geojson']
+
+
+@pytest.mark.parametrize('order', [lambda kept: kept + BOTH_CONTOURS, lambda kept: sorted(kept + BOTH_CONTOURS)])
+def test_scope_accepts_a_chart_index_that_keeps_every_existing_file_and_adds_the_pair(repo, order):
+    base, sha = cambria_candidate(repo, order(list(CAMBRIA_SHIPPED['chart_files'])))
+    assert CAMBRIA_JSON in controller.scope(repo, base, sha, CAMBRIA)
+
+
+@pytest.mark.parametrize('chart_files, match', [
+    # The reviewed regression (RETURN at caff7219): both contour names kept, all five shipped files dropped.
+    (BOTH_CONTOURS, 'drops land-water-lines.json, land-water.json, poster.svg, shoreline-overview.geojson, shoreline.geojson'),
+    ([n for n in CAMBRIA_SHIPPED['chart_files'] if n != 'shoreline.geojson'] + BOTH_CONTOURS, r'drops shoreline\.geojson,'),
+    (CAMBRIA_SHIPPED['chart_files'] + BOTH_CONTOURS + ['depth-contours.geojson'], 'lists depth-contours.geojson more than once'),
+    (CAMBRIA_SHIPPED['chart_files'] + ['poster.svg'] + BOTH_CONTOURS, 'lists poster.svg more than once'),
+    (CAMBRIA_SHIPPED['chart_files'] + BOTH_CONTOURS + ['coastline.geojson'], 'adds coastline.geojson beyond the contour pair'),
+])
+def test_scope_holds_a_chart_index_that_loses_repeats_or_invents_chart_files(repo, chart_files, match):
+    base, sha = cambria_candidate(repo, chart_files)
+    with pytest.raises(controller.HoldError, match=match):
+        controller.scope(repo, base, sha, CAMBRIA)
+    assert controller.main(['scope', '--tree', str(repo), '--base', base, '--sha', sha, '--region', CAMBRIA]) != 0
+
+
+def test_scope_holds_when_the_base_region_json_has_no_chart_files_list(repo):
+    page = f'<html>reviewed\n{register.BEGIN}\nold\n{register.END}\n</html>\n'
+    base = commit(repo, {'dist/sources.html': page, REGION_JSON: region_json(None)}, 'main without a list')
+    sha = contour_candidate(repo, region_json(BOTH_CONTOURS))
+    with pytest.raises(controller.HoldError, match='base dist/regions/big-sur-coast/region.json has no chart_files list'):
+        controller.scope(repo, base, sha, 'big-sur-coast')
+
+
 def test_the_preview_must_serve_the_candidates_region_json():
     served = STEPS[step(STEPS, 'Require the preview to serve exactly')]['run']
     assert '"$STAGE_URL/regions/$REGION/region.json" -o "$served/region.json"' in served
