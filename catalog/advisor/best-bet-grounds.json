@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "method": "Reply-path input for get_best_bets: each allowlisted reef ground (catalog/advisor/public-grounds.json), its nearest coastal forecast point and its habitat part from dist/data/atlas.json, computed by scripts/advisor/build-scores.mjs --grounds-out. No coordinate, no target id. Terrain grade measures structure, not fish.",
+  "regions": {
+    "morro-bay": [
+      {
+        "name": "Pecho Rock",
+        "ground_id": "CHARTER-PECHO",
+        "point": "avila",
+        "habitat": {
+          "value": 0.79,
+          "evidence": "Moderate",
+          "reasons": [
+            "11 mapped reef search targets, best terrain grade A",
+            "terrain grade measures structure, not fish"
+          ]
+        }
+      },
+      {
+        "name": "Diablo coast",
+        "ground_id": "CHARTER-DIABLO",
+        "point": "avila",
+        "habitat": {
+          "value": 0.8,
+          "evidence": "Moderate",
+          "reasons": [
+            "8 mapped reef search targets, best terrain grade A",
+            "terrain grade measures structure, not fish"
+          ]
+        }
+      },
+      {
+        "name": "Morro Bay coast",
+        "ground_id": "CHARTER-MORRO",
+        "point": "central",
+        "habitat": {
+          "value": 0.81,
+          "evidence": "Moderate",
+          "reasons": [
+            "36 mapped reef search targets, best terrain grade A",
+            "terrain grade measures structure, not fish"
+          ]
+        }
+      }
+    ]
+  }
+}

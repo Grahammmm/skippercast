@@ -11,7 +11,7 @@
 // TA-I1/I2/I3 replace the skipper-tool stubs. Each stub already has its final
 // name, roles and input_schema, so the prompt and tests do not change when the
 // file does.
-import type {AdvisorContactRow} from '../types.ts';
+import type {AdvisorContactRow, AdvisorSettings} from '../types.ts';
 import type {AdvisorTool, ToolAudience, ToolContext, ToolOutput} from './tool.ts';
 export {NOT_BUILT, stubTool} from './tool.ts';
 export type {AdvisorTool, ToolAudience, ToolContext, ToolOutput} from './tool.ts';
@@ -35,13 +35,14 @@ import {registerBoat} from './register_boat.ts';
 import {addCrew} from './add_crew.ts';
 import {removeCrew} from './remove_crew.ts';
 import {shareAnglerPhoto} from './share_angler_photo.ts';
+import {getBestBets} from './get_best_bets.ts';
 
 const ALL: readonly ToolAudience[] = ['angler', 'skipper', 'crew'];
 export const ANYONE = ALL;
 
 /** Every tool, in the order the model sees them. */
 export const TOOLS: readonly AdvisorTool[] = [
-  updateProfile, getPortReport, getConditions, getRules, getSpecies, getStrategy, getTrips, identifyFish,
+  updateProfile, getPortReport, getConditions, getBestBets, getRules, getSpecies, getStrategy, getTrips, identifyFish,
   readCountBoard, proposeReport, editReport, proposePost, registerBoat, addCrew, removeCrew, shareAnglerPhoto,
   sendUploadLink, sendContactCard, offerTextLink, escalate,
 ];
@@ -53,12 +54,13 @@ export const isWebOnly = (contact: Pick<AdvisorContactRow, 'phone_enc' | 'web_se
 /**
  * The tools this contact may use: by role (anglers never see skipper tools;
  * the admin-test role sees what an angler sees), and web-only tools only on
- * the web chat. Nobody sees an admin tool: there is none.
+ * the web chat. get_best_bets only with ADVISOR_BEST_BETS on (settings.bestBets;
+ * no settings means off). Nobody sees an admin tool: there is none.
  */
-export function toolsForRole(contact: Pick<AdvisorContactRow, 'role' | 'phone_enc' | 'web_session'>): AdvisorTool[] {
+export function toolsForRole(contact: Pick<AdvisorContactRow, 'role' | 'phone_enc' | 'web_session'>, settings?: Pick<AdvisorSettings, 'bestBets'>): AdvisorTool[] {
   const role: ToolAudience = contact.role === 'skipper' || contact.role === 'crew' ? contact.role : 'angler';
   const web = isWebOnly(contact);
-  return TOOLS.filter(tool => tool.roles.includes('web') ? web : tool.roles.includes(role));
+  return TOOLS.filter(tool => (tool !== getBestBets || settings?.bestBets === true) && (tool.roles.includes('web') ? web : tool.roles.includes(role)));
 }
 
 /** The Messages API `tools` array; the last definition carries cache_control so the whole list is cached with the system prompt. */

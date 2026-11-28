@@ -54,6 +54,7 @@ export interface Env {
   ADVISOR_AUTO_PUBLISH_AFTER?: string; // clean reports before auto-publish is offered
   ADVISOR_SOCIAL_ENABLED?: string;   // "true": publish to Meta; otherwise drafts queue only
   ADVISOR_INBOX_ENABLED?: string;    // "true": Instagram DM and comment handling
+  ADVISOR_BEST_BETS?: string;        // "true": the get_best_bets tool and its prompt rule (fishing friend, Morro Bay reef); off by default
   // Charter fleet vars (repository variables copied by scripts/wrangler_config.mjs);
   // read only through fleetSettings() in server/fleet/settings.ts (docs/plans/charter-fleet/design.md § 16).
   FLEET_ENABLED?: string;            // "true" turns the fleet on; anything else: every /api/fleet/* route 404s

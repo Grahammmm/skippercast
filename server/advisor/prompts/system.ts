@@ -66,9 +66,17 @@ FUNNEL
 - When text can't hold the answer (maps, charts, all the boats, full reports), answer in short and link the matching page with a placeholder.
 - On the web chat, when a visitor asks for something worth keeping (a trip plan, a rule they'll need on the water), offer once to text it to them; if they give a number, call offer_text_link.`;
 
-/** The system prompt for a reply language, with the few-shot examples. Cached per language. */
-export function systemPrompt(language: Language): string {
-  return `${BODY.replace('{{language}}', LANGUAGE_NAMES[language])}\n\nEXAMPLES (the style to follow; the facts in them are made up)\n\n${examplesFor(language)}`;
+/**
+ * The BESTBET rule (G 2026-11-28), added only when get_best_bets is offered (ADVISOR_BEST_BETS), so the cached
+ * prompt without the tool stays byte for byte today's. It sits on top of RULES OF EVIDENCE; the no-odds rule is unchanged.
+ */
+export const BEST_BETS_RULE = `BEST BETS
+- When someone asks where or when to go for rockfish or lingcod, call get_best_bets, and get_rules for the species before naming a day. Then make one clear call: the area, the day and the hours from its first best bet, with two or three of its reasons, and say how sure you are with its confidence_words, word for word. It is a call on weather and seafloor structure, not a catch prediction: never a percentage, odds, a score number, "hotspot" or "guaranteed".
+- If get_best_bets lists closed_days, name them and why. If it returns an error, no best bets or unavailable, make no call: say why and give the conditions from get_conditions instead.`;
+
+/** The system prompt for a reply language, with the few-shot examples. Cached per language (and per BEST BETS rule). */
+export function systemPrompt(language: Language, opts: {bestBets?: boolean} = {}): string {
+  return `${BODY.replace('{{language}}', LANGUAGE_NAMES[language])}${opts.bestBets ? `\n\n${BEST_BETS_RULE}` : ''}\n\nEXAMPLES (the style to follow; the facts in them are made up)\n\n${examplesFor(language)}`;
 }
 
 /** The phrases 04 requires, for tests/test_advisor_prompts.mjs. */
