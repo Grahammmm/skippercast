@@ -80,11 +80,13 @@ test('the Chart legend keys only the verified classes in view', () => {
   m.reliefLook.value = 'deep-fixed-v1';
   const render = () => m.render(m.h(m.Legend));
   const bold = html => [...html.matchAll(/data-survey-chip="([^"]+)"[^>]*><span[^>]*><\/span><strong>/g)].map(match => match[1]);
+  const listed = html => [...html.matchAll(/data-survey-chip="([^"]+)"/g)].map(match => match[1]);
+  const all = new Set(['1m-measured', '2m', '5m', '4-16m-compiled', 'estimated', 'none']);
   try {
     assert.doesNotMatch(render(), /app-relief-survey/);
     for (const lang of ['en', 'es']) {
       m.language.value = lang;
-      m.reliefSurveyView.value = {classes: new Set(['2m', 'none']), shown: false, toggle() {}};
+      m.reliefSurveyView.value = {classes: new Set(['2m', 'none']), carried: all, shown: false, toggle() {}};
       let html = render();
       assert.deepEqual(bold(html), ['2m', 'none']);
       assert.match(html, /aria-pressed="false"/);
@@ -92,10 +94,18 @@ test('the Chart legend keys only the verified classes in view', () => {
       assert.match(html, /300\+<\/li>/);
       assert.match(html, /0–66 ft \(0–20 m\)/);
       assert.ok(html.includes(m.t('legend.notForNav', lang)));
-      m.reliefSurveyView.value = {classes: new Set(['estimated']), shown: true, toggle() {}};
+      m.reliefSurveyView.value = {classes: new Set(['estimated']), carried: all, shown: true, toggle() {}};
       html = render();
       assert.deepEqual(bold(html), ['estimated']);
       assert.match(html, /aria-pressed="true"/);
+      // STYLE GAP 1: before the file loads its classes are unknown, so no class is listed (only the toggle);
+      // an all-compiled file (Big Sur) lists only its own two classes, never "1 m measured" or "no survey".
+      m.reliefSurveyView.value = {classes: new Set(), carried: null, shown: false, toggle() {}};
+      html = render();
+      assert.match(html, /app-relief-survey/);
+      assert.deepEqual(listed(html), []);
+      m.reliefSurveyView.value = {classes: new Set(), carried: new Set(['estimated', '4-16m-compiled']), shown: true, toggle() {}};
+      assert.deepEqual(listed(render()), ['4-16m-compiled', 'estimated']);
     }
   } finally {
     m.reliefDrawn.value = false;

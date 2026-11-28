@@ -20,6 +20,8 @@ import {paintEdits} from './theme-restyle.ts';
 
 export interface SurveyDetailView {
   readonly classes: ReadonlySet<string>;
+  /** Every class (tier and grid tier) the region's verified survey file carries; null until that file is loaded. */
+  readonly carried: ReadonlySet<string> | null;
   readonly shown: boolean;
   toggle(): void;
 }
@@ -206,6 +208,20 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
     const gapShown = () => !available() && !!gap.peek()?.features.length && hatchable();
     let pending = false, refused = false, detailOn = false, detailIds: string[] = [];
     const control = available() && !o.surveyView ? document.createElement('div') : null;
+    // STYLE GAP 1: the classes the loaded file carries, so the key lists only those (computed once per decoded file).
+    let carried: {of: unknown; set: ReadonlySet<string>} | null = null;
+    const carriedClasses = (): ReadonlySet<string> | null => {
+      const file = available() ? detail.peek() : null;
+      if (!file) return null;
+      if (carried && carried.of === file) return carried.set;
+      const set = new Set<string>();
+      for (const {properties: p} of file.features) {
+        if (typeof p?.tier === 'string') set.add(p.tier);
+        if (typeof p?.grid_tier === 'string') set.add(p.grid_tier);
+      }
+      carried = {of: file, set};
+      return set;
+    };
     // The coastline card with the survey line appended, and the card it was before that.
     let merged: ReturnType<typeof chartMark.peek>, original: ReturnType<typeof chartMark.peek>;
     const setDetail = () => {
@@ -222,7 +238,7 @@ export function attachBottomRelief(o: ReliefOptions): {destroy(): void} {
       if (!available() && (!binding || refused)) { o.surveyView(null); return; }
       const classes = new Set(available() ? o.engine.renderedValues(hit, 'tier') : []);
       if (available()) for (const grid of o.engine.renderedValues(hit, 'grid_tier')) classes.add(grid);
-      o.surveyView({classes, shown: detailOn, toggle});
+      o.surveyView({classes, carried: carriedClasses(), shown: detailOn, toggle});
     };
     function toggle() {
       if (signal.aborted || pending || refused) return;

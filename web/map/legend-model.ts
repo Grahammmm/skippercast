@@ -140,11 +140,15 @@ const REPORTED_AS_ESTIMATED_IN_SHALLOWS: readonly SurveyDetailChipId[] = ['2m', 
  * only if it is also present outside the shallows (deeper, or in view with no band
  * given). An interpolated 1 m grid arrives as `estimated` (MB-09) and so never lights
  * `1m-measured`. Without band sets the view is taken as drawn.
+ *
+ * `carried` (STYLE GAP 1): the classes the region's verified survey file carries anywhere. When given, the key lists
+ * only those chips (plus any bold one), so a region whose file is all estimated never shows a "1 m measured" chip.
  */
 export function surveyDetailChips(
   classesInView: ReadonlySet<string>,
   shallowClasses: ReadonlySet<string> = new Set(),
   deeperClasses: ReadonlySet<string> = new Set(),
+  carried?: ReadonlySet<string>,
 ): SurveyDetailChip[] {
   const bold = new Set<SurveyDetailChipId>();
   // Outside the shallows: deeper classes, and in-view classes the caller did not place in the shallows.
@@ -155,7 +159,8 @@ export function surveyDetailChips(
     if (REPORTED_AS_ESTIMATED_IN_SHALLOWS.includes(id)) bold.add('estimated');
     else bold.add(id);
   }
-  return SURVEY_DETAIL_CHIPS.map(id => ({id, labelId: `legend.surveyDetail.chip.${id}`, bold: bold.has(id)}));
+  return SURVEY_DETAIL_CHIPS.filter(id => !carried || carried.has(id) || bold.has(id))
+    .map(id => ({id, labelId: `legend.surveyDetail.chip.${id}`, bold: bold.has(id)}));
 }
 
 // ── Depth-lines copy ids ─────────────────────────────────────────────────────────

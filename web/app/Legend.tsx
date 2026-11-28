@@ -452,12 +452,12 @@ function ReliefRow() {
       <strong>{t(SURVEY_DETAIL_TITLE_ID, lang)}</strong>
       <button class="app-relief-survey" type="button" aria-pressed={survey.shown} onClick={survey.toggle}>
         <span>{t('legend.surveyDetail.show', lang)}</span>
-        <span class="app-relief-chips">{surveyDetailChips(survey.classes).map(chip => {
+        {survey.carried ? <span class="app-relief-chips">{surveyDetailChips(survey.classes, undefined, undefined, survey.carried).map(chip => {
           const label = t(chip.labelId as StringId, lang);
           return <span key={chip.id} data-survey-chip={chip.id}>
             <span class="app-relief-survey-swatch" aria-hidden="true" />{chip.bold ? <strong>{label}</strong> : label}
           </span>;
-        })}</span>
+        })}</span> : null}
       </button>
     </> : null}
     {layers.value.includes('seafloor') && !seafloorUnpublished.value ? <p class="app-legend-note">{t('legend.relief.dimmed', lang)}</p> : null}

@@ -348,6 +348,7 @@ test('opting in after the companion shows the whole detail and moves the hatch o
   await until(() => c.cue, 'the companion hatch');
   const companion = Object.values(c.cue.sources)[0].data;
   assert.deepEqual(c.data, []);
+  assert.equal(view.carried, null, 'the classes are unknown until the detail itself is loaded');
   view.toggle();
   await until(() => c.overlay.inspect, 'the opted-in detail');
   const tiers = key => c.mounted.get(key)?.features.map(f => f.properties.tier);
@@ -367,6 +368,8 @@ test('opting in after the companion shows the whole detail and moves the hatch o
   assert.deepEqual(c.cue.layers[1].filter, ['==', ['get', 'tier'], 'none'], 'M37: the label never names an estimated area');
   assert.equal(c.cueBefore, 'mpa-fill');
   assert.equal(view.shown, true);
+  // STYLE GAP 1: the key's class list is the loaded file's own classes; before the file loads it is unknown (null).
+  assert.deepEqual([...view.carried].sort(), ['estimated', 'none']);
   // M37: the label follows the page language without a second cue source.
   const {language, prepareCatalogue} = await import('../web/i18n.ts');
   await prepareCatalogue('es');
