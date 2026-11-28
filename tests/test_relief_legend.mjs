@@ -16,7 +16,7 @@ const {outputFiles: [out]} = await build({stdin: {resolveDir: root.pathname, loa
     export {createDepthContours, contourState, depthContoursURL} from './web/map/depth-contours.ts';
     export {camera} from './web/map/stage.ts';
     export {publishedChartFiles} from './web/chart-files.ts';
-    export {seafloorState} from './web/map/seafloor.ts';
+    export {seafloorAbsent, seafloorState} from './web/map/seafloor.ts';
     export {language, prepareCatalogue, t} from './web/i18n.ts';
     export {configureStore, region, syncFromURL} from './web/state.ts';`},
   bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
@@ -195,15 +195,19 @@ test('MSK-2: the legend renders each nearshore row only for its own data flag', 
 // the colours stay as they are, so the note would mislead.
 test('the depth-colours-dimmed note shows only while Seafloor type can draw', t => {
   drawnRelief(t);
-  const before = m.seafloorState.value;
-  t.after(() => { m.seafloorState.value = before; });
+  const before = m.seafloorState.value, absent = m.seafloorAbsent.value;
+  t.after(() => { m.seafloorState.value = before; m.seafloorAbsent.value = absent; });
   m.syncFromURL(`https://s.test/map?region=${morro}&presentation=chart&layers=seafloor`);
   const dimmed = () => legendHTML().includes(m.t('legend.relief.dimmed', 'en'));
+  m.seafloorAbsent.value = null;
   m.seafloorState.value = {...before, status: 'checking', note: 'Checking seafloor publication…'};
   assert.equal(dimmed(), true, 'checking: the layer may still draw');
   m.seafloorState.value = {...before, status: 'unavailable', note: 'Seafloor publication is incomplete · retrying in 30s'};
   assert.equal(dimmed(), true, 'a transient failure keeps the note (the layer retries)');
+  m.seafloorAbsent.value = 'monterey-point-sur';
+  assert.equal(dimmed(), true, 'another region\'s absence keeps the note');
   m.seafloorState.value = {...before, status: 'unavailable', note: 'No seafloor publication for this region'};
+  m.seafloorAbsent.value = morro;
   assert.equal(dimmed(), false, 'no publication: no note');
   m.syncFromURL(`https://s.test/map?region=${morro}&presentation=chart`);
   m.seafloorState.value = before;

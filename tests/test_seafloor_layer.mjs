@@ -13,7 +13,7 @@ import {decodeTile as decodeV2, dedupeById as dedupeV2, manifestState, tileFeatu
 import {
   EXPIRED, INCOMPLETE, NO_PUBLICATION, ROUGH_ZOOM, SEAFLOOR_LAYERS, SEAFLOOR_SOURCE, TILE_PARALLEL, admitCell, admitHabitat, createSeafloor, fitKey, legendKey,
   roughFirst, seafloorRough,
-  cellBasis, publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyList, surveySummary, toneOf, viewBounds,
+  cellBasis, publicationRights, seafloorAbsent, seafloorLayers, seafloorMark, seafloorState, seafloorUnpublished, seafloorView, surveyList, surveySummary, toneOf, viewBounds,
 } from '../web/map/seafloor.ts';
 import {clickMark} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
@@ -326,6 +326,30 @@ test('v2: held, updating, unpublished and ledger-mismatched publications draw no
   t.after(() => none.layer.destroy());
   await settle();
   assert.deepEqual([seafloorState.value.status, seafloorState.value.note, none.timers.size], ['unavailable', NO_PUBLICATION, 0]);
+  assert.deepEqual([seafloorAbsent.value, seafloorUnpublished.value], ['morro-bay', true], 'the gate\'s no-publication answer is kept for the region');
+  // Checker RETURN at 8909c81b: a preset or profile that drops Seafloor type resets the state to off, but the region
+  // still publishes nothing; the confirmed absence stays scoped to that region.
+  none.layers('currents');
+  await settle();
+  assert.deepEqual([seafloorState.value.status, seafloorUnpublished.value], ['off', true], 'layer off: still not published');
+  syncFromURL(`${PAGE_V2}?region=monterey-point-sur&profile=boat&layers=currents`);
+  await settle();
+  assert.equal(seafloorUnpublished.value, false, 'another region fails open');
+  none.layers('currents');
+  await settle();
+  assert.equal(seafloorUnpublished.value, true, 'back in the region (layer still off): still not published');
+  none.manifest = {...MANIFEST_BASE, ledger_sha256: LEDGER_SHA, status: 'updating'};
+  none.layers('seafloor');
+  await settle();
+  assert.deepEqual([seafloorState.value.status, seafloorAbsent.value, seafloorUnpublished.value], ['updating', null, false], 'a transient answer for the region fails open');
+  none.manifest = 404;
+  await none.fire();
+  assert.equal(seafloorUnpublished.value, true, 'a new no-publication answer confirms it again');
+  none.manifest = {...MANIFEST_BASE, ledger_sha256: LEDGER_SHA};
+  none.layers('currents');
+  none.layers('seafloor');
+  await settle();
+  assert.deepEqual([seafloorState.value.status, seafloorUnpublished.value], ['ready', false], 'a ready publication clears it');
   none.layer.destroy();
 
   for (const status of ['held', 'expired']) {

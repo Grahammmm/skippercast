@@ -1182,6 +1182,8 @@ test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile 
 });
 
 test('in 3D the Chart\'s entries and the base read "Chart only" and never toggle hidden layers', async ({page, pageErrors, v2}) => {
+  // Gap 3: a region with no seafloor publication shows Seafloor type off on the Chart; this test is about the 3D entries, so the gate never answers.
+  await page.route(/\/feeds\/tiles\/seafloor\//, () => { /* never answered */ });
   // Keep 3D available throughout the rail and axe checks, not just until the fetch deadline.
   await terrain3d(page, v2);
   await expect(page.locator('.app-terrain')).toBeVisible();

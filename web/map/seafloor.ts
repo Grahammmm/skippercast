@@ -323,9 +323,13 @@ export interface SeafloorState {
 }
 const OFF: SeafloorState = Object.freeze({status: 'off', note: '', view: 'terrain', fit: null, surveys: [], credits: [], drawn: 0});
 export const seafloorState = signal<SeafloorState>(OFF);
-/** The region has no seafloor publication at all (the gate said so, not a fetch failure): the menu shows Seafloor type
- * as not published, and the depth colours are not dimmed for a layer that cannot draw. */
-export const seafloorUnpublished = computed(() => seafloorState.value.status === 'unavailable' && seafloorState.value.note === NO_PUBLICATION);
+/** The region whose seafloor gate last said "no publication" (not a fetch failure). Kept while the layer is off (a preset
+ * or profile that drops Seafloor type does not make the region publish one); cleared when that region's gate answers
+ * anything else (ready or transient), so new uncertainty fails open. */
+export const seafloorAbsent = signal<string | null>(null);
+/** The current region has no seafloor publication at all: the menu shows Seafloor type as not published, and the depth
+ * colours are not dimmed for a layer that cannot draw. Another region fails open. */
+export const seafloorUnpublished = computed(() => seafloorAbsent.value !== null && seafloorAbsent.value === region.value);
 /** R4-SC-09-F1c: true while the drawn seafloor is a rough-first archive's rough layer and its full detail has not drawn (the stage labels it). */
 export const seafloorRough = signal(false);
 /** Whether a manifest publishes a rough-first archive whose rough layer this layer can read first (src/skippercast/seafloor/rough_first.py). */
@@ -426,6 +430,8 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     if (o.startReady && !o.startReady()) return;
     const gate = await loadManifest(id, fetchFn, now()) as Gate;
     if (request !== enabling) return;
+    if (gate.published === false) seafloorAbsent.value = id;
+    else if (seafloorAbsent.peek() === id) seafloorAbsent.value = null;
     if (gate.state !== 'ready' || !gate.manifest) {
       if (gate.published === false) fail('unavailable', NO_PUBLICATION, false);
       else fail(gate.state as SeafloorStatus, gate.reason, RETRY_STATES.has(gate.state));
