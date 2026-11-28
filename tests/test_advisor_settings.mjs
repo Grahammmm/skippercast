@@ -9,7 +9,7 @@ const DEFAULTS = {
   adminContactId: null, inboxPublicReplies: false, model: 'claude-sonnet-5', visionModel: 'claude-sonnet-5',
   visionProviders: ['hermes', 'claude'], dailyMessagesPerContact: 40, dailyLlmPerContact: 30, globalDailyLlm: 2000,
   globalDailyVision: 400, dailyLlmPerIp: 30, globalDailyLlmWeb: 400, globalDailyCold: 50, publicBase: 'https://skippercast.com', regionDefault: 'morro-bay', autoPublishAfter: 5,
-  socialEnabled: false, inboxEnabled: false,
+  socialEnabled: false, inboxEnabled: false, bestBets: false,
 };
 
 test('with no vars every setting is the documented default', () => {
@@ -25,14 +25,14 @@ test('every var overrides its setting', () => {
     ADVISOR_MODEL: 'claude-opus-5-5', ADVISOR_VISION_MODEL: 'claude-haiku-5@2026', ADVISOR_VISION_PROVIDERS: 'claude',
     ADVISOR_DAILY_MESSAGES_PER_CONTACT: '10', ADVISOR_DAILY_LLM_PER_CONTACT: '0', ADVISOR_GLOBAL_DAILY_LLM: '50',
     ADVISOR_GLOBAL_DAILY_VISION: '7', ADVISOR_DAILY_LLM_PER_IP: '9', ADVISOR_GLOBAL_DAILY_LLM_WEB: '9', ADVISOR_GLOBAL_DAILY_COLD: '9', ADVISOR_PUBLIC_BASE: 'https://staging.skippercast.com/', ADVISOR_REGION_DEFAULT: 'port-san-luis',
-    ADVISOR_AUTO_PUBLISH_AFTER: '3', ADVISOR_SOCIAL_ENABLED: 'true', ADVISOR_INBOX_ENABLED: 'true',
+    ADVISOR_AUTO_PUBLISH_AFTER: '3', ADVISOR_SOCIAL_ENABLED: 'true', ADVISOR_INBOX_ENABLED: 'true', ADVISOR_BEST_BETS: 'true',
   });
   assert.deepEqual(settings, {
     enabled: true, repliesEnabled: false, number: '+18055550123', channel: 'twilio', privateApi: true,
     adminContactId: 'c_0123abcd', inboxPublicReplies: true, model: 'claude-opus-5-5', visionModel: 'claude-haiku-5@2026',
     visionProviders: ['claude'], dailyMessagesPerContact: 10, dailyLlmPerContact: 0, globalDailyLlm: 50, globalDailyVision: 7, dailyLlmPerIp: 9, globalDailyLlmWeb: 9, globalDailyCold: 9,
     publicBase: 'https://staging.skippercast.com', regionDefault: 'port-san-luis', autoPublishAfter: 3,
-    socialEnabled: true, inboxEnabled: true,
+    socialEnabled: true, inboxEnabled: true, bestBets: true,
   });
 });
 
@@ -44,6 +44,7 @@ test('booleans parse "true"/"false" in any case with surrounding space; anything
     assert.equal(advisorSettings({ADVISOR_REPLIES_ENABLED: value}).repliesEnabled, true, `replies ${value}`);
     assert.equal(advisorSettings({ADVISOR_SOCIAL_ENABLED: value}).socialEnabled, false);
     assert.equal(advisorSettings({ADVISOR_INBOX_ENABLED: value}).inboxEnabled, false);
+    assert.equal(advisorSettings({ADVISOR_BEST_BETS: value}).bestBets, false);
     assert.equal(advisorSettings({BLUEBUBBLES_PRIVATE_API: value}).privateApi, false);
     assert.equal(advisorSettings({ADVISOR_INBOX_PUBLIC_REPLIES: value}).inboxPublicReplies, false);
   }

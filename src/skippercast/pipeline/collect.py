@@ -381,7 +381,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
     # Refetch the latest seven completed local dates for late corrections. Older
     # successful day facts are reused with their original retrieval timestamps.
     report_jobs = []
-    for offset in range(1, days + 1) if region["landing_names"] else []:
+    for offset in range(1, days + 1) if config["report_ports"] else []:
         day = (local_day - timedelta(days=offset)).isoformat()
         ident = "catches-" + day
         old = old_sources.get(ident)
@@ -401,6 +401,9 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
                 "schedule": {"cron": "17 4 * * *", "timezone": "America/Los_Angeles", "max_delay_hours": 36},
                 "region_id": region_id, "scope": region["name"], "bounds": region["bounds"],
                 "landing_names": region["landing_names"],
+                # The publisher ports this feed covers. [] = no landing-report coverage at all,
+                # which readers must not show as a covered port with zero trips.
+                "report_ports": list(config["report_ports"].values()),
                 "report_window": {"start": (local_day - timedelta(days=days)).isoformat(),
                                   "end": (local_day - timedelta(days=1)).isoformat(), "days": days},
                 "sources": sources, "reports": sorted(reports, key=lambda r: (r["date"], r["id"]), reverse=True),
@@ -413,7 +416,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
                                 "Daily observations are not a seven-day bite forecast or live entrance clearance."]}
     last_seven = [sources.get("catches-" + (local_day - timedelta(days=i)).isoformat(), {}) for i in range(1, 8)]
     coverage = sum(s.get("status") == "ok" for s in last_seven)
-    charter_stale = bool(region["landing_names"]) and coverage < 5
+    charter_stale = bool(config["report_ports"]) and coverage < 5
     critical = any(sources[k]["status"] == "ok" for k in ("buoy-" + stations["nearshore_buoy"], "buoy-" + stations["offshore_buoy"]))
     issues = [s["id"] for s in sources.values() if s["status"] != "ok" or s.get("fallback_for")]
     status = "ok" if not issues else "degraded" if critical else "failed"
@@ -447,6 +450,12 @@ def validate(snapshot):
         parsers.iso_time(snapshot["published_at"])
     if snapshot.get("catch_probability") is not None or snapshot.get("bite_score") is not None:
         raise ValueError("Uncalibrated catch probability must remain absent")
+    if "report_ports" in snapshot:   # absent on feeds written before coverage was published
+        ports = snapshot["report_ports"]
+        if not isinstance(ports, list) or not all(isinstance(p, str) and p for p in ports):
+            raise ValueError("report_ports must be a list of port names")
+        if not ports and snapshot["reports"]:
+            raise ValueError("A feed without landing-report coverage carries no trip records")
     section = snapshot.get("charter_reports")
     if section is not None:
         if section.get("status") != "not_available" or snapshot["reports"]:

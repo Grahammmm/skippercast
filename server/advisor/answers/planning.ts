@@ -29,7 +29,7 @@ import {advisoriesFrom, advisoryCheckTime, parseTripDate, regionZones, requestBo
 import {forecastClock} from './forecast-clock.ts';
 import {advisorBarCheck, withBarHold} from './bar.ts';
 import type {Advisory, DayConditions, Window} from './conditions.ts';
-import {reportEvidence, CONFIDENCE_WORDS} from './confidence.ts';
+import {coversLanding, reportEvidence, CONFIDENCE_WORDS} from './confidence.ts';
 import type {Confidence, LandingReport} from './confidence.ts';
 import {lookupRules} from './rules.ts';
 import {dailyInputs, seasonOpen} from './reports.ts';
@@ -198,8 +198,8 @@ export async function planningBrief(env: Env, args: {port: string; date?: string
   let landing: Activity['landing'] = {available: false, label: t(language, 'landing_label'), trips: 0, boats: 0, days: 0, window: null};
   let confidence: Confidence = 'Insufficient';
   const daily = await dailyFeed(region, read);
-  // A feed that marks its charter section not available has no trip facts: never report zero trips from it.
-  const chartersGone = (daily as {charter_reports?: {status?: unknown}} | null)?.charter_reports?.status === 'not_available';
+  // A feed that marks its charter section not available, or whose publisher does not cover this port, has no trip facts: never report zero trips from it.
+  const chartersGone = (daily as {charter_reports?: {status?: unknown}} | null)?.charter_reports?.status === 'not_available' || !coversLanding(daily, landingNames(port));
   if (daily && !chartersGone && feedKey && feedKey !== 'dungeness') {
     const names = new Set(landingNames(port).map(n => n.toLowerCase()));
     const portFeed = {...daily, reports: (daily.reports as LandingReport[]).filter(r => names.has(String(r.port ?? '').toLowerCase()))};

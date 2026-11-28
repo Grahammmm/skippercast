@@ -28,7 +28,8 @@ async function load() {
       export {mpaState} from './web/map/mpa.ts';
       export {RAIL_ENTRIES} from './web/app/rail.ts';
       export {CHART_ONLY, depthLinesOn, drawsIn, menuList, spotsOn, withDepthLines, withSpots} from './web/map/layers.ts';
-      export {seafloorState} from './web/map/seafloor.ts';
+      export {seafloorAbsent, seafloorState} from './web/map/seafloor.ts';
+      export {publishedChartFiles} from './web/chart-files.ts';
       export {currentsState, currentsStatus} from './web/map/currents.ts';
       export {waterTempState} from './web/map/sst.ts';
       export {swellState} from './web/map/swell.ts';
@@ -453,4 +454,59 @@ test('rail_uses_late_catalogue', async () => {
     assert.match(html, /rail-label">Corrientes</);
     assert.doesNotMatch(html, /rail-label">Currents</);
   } finally { m.language.value = 'en'; }
+});
+
+// Gap 3 (terrain-only regions): a layer the region does not publish must not look active. Depth lines follow the
+// region's published chart_files (no contour file -> off, not published); Seafloor type follows the seafloor gate's
+// confirmed "no publication" for this region (seafloorAbsent; the gate logic is in test_seafloor_layer.mjs), kept when a
+// preset or profile drops the layer from the list. Unknown lists and other regions fail open.
+test('a region without contour files or a seafloor publication shows Depth lines and Seafloor type off and not published', async t => {
+  const m = await load(), s = m.state;
+  const reset = [m.seafloorState, m.seafloorAbsent, m.publishedChartFiles].map(signal => [signal, signal.value]);
+  t.after(() => { for (const [signal, value] of reset) signal.value = value; });
+  s.configureStore({v2: true, storage: null});
+  const NOT = 'Not published for this area';
+  const rows = () => { const items = railItems(m.render(m.h(m.LayerRail))); return {lines: items['Depth lines'], seafloor: items['Seafloor type']}; };
+  s.syncFromURL(`${ORIGIN}?region=monterey-point-sur&presentation=chart&layers=seafloor`);
+  m.publishedChartFiles.value = {region: 'monterey-point-sur', files: null, pending: true};
+  assert.deepEqual([rows().lines.on, rows().lines.disabled], [true, false], 'list not known yet: fail open');
+  m.publishedChartFiles.value = {region: 'monterey-point-sur', files: ['land-water.json', 'land-water-lines.json', 'shoreline.geojson']};
+  m.seafloorState.value = {...reset[0][1], status: 'unavailable', note: 'No seafloor publication for this region'};
+  m.seafloorAbsent.value = 'monterey-point-sur';
+  let r = rows();
+  assert.deepEqual([r.lines.on, r.lines.disabled, r.lines.note], [false, true, NOT], 'no contour file: Depth lines off and not published');
+  assert.deepEqual([r.seafloor.on, r.seafloor.disabled, r.seafloor.note], [false, true, NOT], 'no seafloor publication: Seafloor type off and not published');
+  // Checker RETURN at 8909c81b: a preset (Transit) drops Seafloor type from the list and the layer resets its state to off;
+  // the region still publishes nothing, so both rows keep their note.
+  s.syncFromURL(`${ORIGIN}?region=monterey-point-sur&presentation=chart&layers=currents`);
+  m.seafloorState.value = reset[0][1];
+  r = rows();
+  assert.deepEqual([r.lines.disabled, r.lines.note], [true, NOT], 'preset without Seafloor type: Depth lines still not published');
+  assert.deepEqual([r.seafloor.on, r.seafloor.disabled, r.seafloor.note], [false, true, NOT], 'preset without Seafloor type: still not published');
+  m.seafloorAbsent.value = 'morro-bay';
+  s.syncFromURL(`${ORIGIN}?region=monterey-point-sur&presentation=chart&layers=seafloor`);
+  m.seafloorState.value = {...reset[0][1], status: 'checking', note: 'Checking seafloor publication…'};
+  r = rows();
+  assert.deepEqual([r.seafloor.on, r.seafloor.disabled], [true, false], 'another region\'s absence says nothing about this one');
+  m.seafloorAbsent.value = null;
+  m.seafloorState.value = {...reset[0][1], status: 'unavailable', note: 'Seafloor publication is incomplete · retrying in 30s'};
+  r = rows();
+  assert.deepEqual([r.seafloor.on, r.seafloor.disabled], [true, false], 'a transient failure keeps the switch');
+  m.publishedChartFiles.value = {region: 'morro-bay', files: ['land-water.json']};
+  assert.deepEqual([rows().lines.on, rows().lines.disabled], [true, false], 'another region\'s list says nothing about this one');
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=seafloor`);
+  m.publishedChartFiles.value = {region: 'morro-bay', files: ['depth-contours-overview.geojson', 'depth-contours.geojson', 'land-water.json']};
+  m.seafloorState.value = {...reset[0][1], status: 'ready', note: '', drawn: 3};
+  r = rows();
+  assert.deepEqual([r.lines.on, r.lines.disabled, r.lines.note], [true, false, ''], 'a contour region keeps Depth lines');
+  assert.deepEqual([r.seafloor.on, r.seafloor.disabled], [true, false], 'a drawn seafloor keeps Seafloor type');
+  m.publishedChartFiles.value = {region: 'morro-bay', files: ['depth-contours-overview.geojson']};
+  assert.equal(rows().lines.on, true, 'either contour file keeps Depth lines');
+  s.syncFromURL(`${ORIGIN}?region=monterey-point-sur&presentation=3d&layers=seafloor`);
+  m.publishedChartFiles.value = {region: 'monterey-point-sur', files: ['land-water.json']};
+  m.seafloorState.value = {...reset[0][1], status: 'unavailable', note: 'No seafloor publication for this region'};
+  m.seafloorAbsent.value = 'monterey-point-sur';
+  r = rows();
+  assert.equal(r.lines.note, m.CHART_ONLY, 'in the terrain the lines still read Chart only first');
+  assert.deepEqual([r.seafloor.disabled, r.seafloor.note], [false, ''], 'in the terrain Seafloor holds the terrain options (FE-80)');
 });

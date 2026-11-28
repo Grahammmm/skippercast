@@ -30,7 +30,7 @@
     },
     {
       "path": "schemas/daily-feed.schema.json",
-      "sha256": "b29dc55327715352e204325bfcf468440810a28d8a4849b3a94da96282bb1c73"
+      "sha256": "02241fccfc87eeccf0abc0c6dbfe22d805dec36383474c1e52a5e650c4c1c70d"
     },
     {
       "path": "schemas/data-needs.schema.json",

@@ -19,7 +19,7 @@ import {aerialSoft, createAerial, createImageryStartup, createSharpStart} from '
 import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {createShore} from '../map/shore.ts';
 import {chartFailed, createChart, markUnavailable, unavailable} from '../map/chart.ts';
-import {seafloorRough, seafloorState} from '../map/seafloor.ts';
+import {seafloorRough, seafloorState, seafloorUnpublished} from '../map/seafloor.ts';
 import {createCommercialAis} from '../map/commercial-ais.ts';
 import {createDepthContours} from '../map/depth-contours.ts';
 import {createClouds} from '../map/clouds.ts';
@@ -87,7 +87,8 @@ function watchBottomRelief(engine: ReadonlySignal<Engine | null>) {
     void import('../map/bottom-relief.ts').then(relief => {
       if (cancelled) return;
       handle = relief.attachBottomRelief({engine: e, region: id,
-        seafloorOn: () => layers.value.includes('seafloor'),
+        // Gap 3: a region with no seafloor publication draws no Seafloor type, so its depth colours stay undimmed.
+        seafloorOn: () => layers.value.includes('seafloor') && !seafloorUnpublished.value,
         fieldOn: () => layers.value.includes('water-temp') || layers.value.includes('chlorophyll') ||
           previewOn.value.some(layer => layer === 'sst' || layer === 'chlorophyll'),
         surveyView: view => { reliefSurveyView.value = view; },
