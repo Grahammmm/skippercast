@@ -4,24 +4,49 @@ The log is how a person sees a pipeline run: each step, its state and its time, 
 Uses the fake region.py of test_run_region.py; no real stage runs.
 """
 import json
+from datetime import datetime, timezone
 
 import pytest
 
 from scripts.relief import run_region as RR
 from tests.unit.test_run_region import Box, STAGE_ORDER
 
+NOW = datetime(2026, 11, 28, 3, 0, 0, tzinfo=timezone.utc)
+STAMP = '2026-11-28T03:00:00Z'  # the same second as the run: a timestamp rule cannot tell built from done
+
 
 @pytest.fixture
 def box(tmp_path, monkeypatch):
     monkeypatch.delenv('SC_RELIEF_NORM', raising=False)
     monkeypatch.delenv('SC_RELIEF_OUT', raising=False)
-    return Box(tmp_path)
+    made = Box(tmp_path)
+    made.cfg.clock = lambda: NOW
+    return made
 
 
-def receipt(box, name, ended):
+def attempt(generation, number, history=None):
+    doc = {'schema': 'sc-stage-receipt/1', 'generation': generation, 'attempt': number, 'status': 'ok',
+           'started': STAMP, 'ended': STAMP}
+    return doc if history is None else dict(doc, generation_history=history)
+
+
+def receipt(box, name, doc):
     path = box.out / 'morro-bay' / 'stages' / name
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({'ended': ended}))
+    path.write_text(json.dumps(doc))
+
+
+def during(monkeypatch, stage, action):
+    """Run ``action`` while the fake region.py runs ``stage`` (what a real stage does to its receipt)."""
+    real = RR.subprocess.run
+
+    def run(command, **kwargs):
+        result = real(command, **kwargs)
+        if stage in command:
+            action()
+        return result
+
+    monkeypatch.setattr(RR.subprocess, 'run', run)
 
 
 def the_log(box):
@@ -29,10 +54,11 @@ def the_log(box):
     return path, json.loads(path.read_text())
 
 
-def test_complete_run_logs_every_step_with_state_and_time(box, capsys):
-    # Old receipt = the stage found itself done (no work); fresh receipt = built; no receipt = ok.
-    receipt(box, 'select.json', '2000-01-01T00:00:00Z')
-    receipt(box, 'mosaic.public.json', '2999-01-01T00:00:00Z')
+def test_complete_run_logs_every_step_with_state_and_time(box, capsys, monkeypatch):
+    # Receipt left as it was = done (no work); a new attempt written by the stage = built; no receipt = ok.
+    receipt(box, 'select.json', attempt('a' * 64, 1))
+    receipt(box, 'mosaic.public.json', attempt('b' * 64, 1))
+    during(monkeypatch, 'mosaic', lambda: receipt(box, 'mosaic.public.json', attempt('c' * 64, 1)))
     assert box.run(through='tiles') == 0
     path, doc = the_log(box)
     assert path.name.endswith('-p424242.json')
@@ -48,6 +74,54 @@ def test_complete_run_logs_every_step_with_state_and_time(box, capsys):
     assert [line.split()[:2] for line in out[table + 1:table + 5]] == [
         ['step', 'state'], ['select', 'done'], ['mosaic', 'built'], ['tiles', 'ok']]
     assert out[-1] == 'run_region: morro-bay complete through tiles'
+
+
+def test_same_second_no_op_is_done_and_same_second_rebuild_is_built(box, monkeypatch):
+    # RETURN #3825 item 2: the receipt ended in the run's own second. Unchanged = done; the next
+    # attempt of the same generation (a rebuild) in that second = built.
+    receipt(box, 'select.json', attempt('a' * 64, 1))
+    receipt(box, 'mosaic.public.json', attempt('b' * 64, 1))
+    during(monkeypatch, 'mosaic', lambda: receipt(box, 'mosaic.public.json', attempt('b' * 64, 2)))
+    assert box.run(through='mosaic') == 0
+    _, doc = the_log(box)
+    assert [(s['step'], s['state']) for s in doc['steps']] == [('select', 'done'), ('mosaic', 'built')]
+
+
+def test_restored_earlier_receipt_is_done(box, monkeypatch):
+    # The receipt rules restore an earlier ok generation from the history without a rebuild.
+    old = attempt('a' * 64, 1)
+    receipt(box, 'select.json', attempt('b' * 64, 1, history={'a' * 64: old}))
+    during(monkeypatch, 'select', lambda: receipt(box, 'select.json', dict(old, generation_history={
+        'a' * 64: old, 'b' * 64: attempt('b' * 64, 1)})))
+    assert box.run(through='select') == 0
+    _, doc = the_log(box)
+    assert [(s['step'], s['state']) for s in doc['steps']] == [('select', 'done')]
+
+
+def test_redirected_runs_directory_is_refused_and_nothing_is_written_there(box, tmp_path, capsys):
+    # RETURN #3825 item 1: a copied tree whose runs/ is a symlink must not receive the log.
+    elsewhere = tmp_path / 'elsewhere'
+    elsewhere.mkdir()
+    (box.out / 'morro-bay').mkdir()
+    (box.out / 'morro-bay' / RR.RUNS_DIR).symlink_to(elsewhere)
+    assert box.run(through='tiles') == 0
+    assert box.ran() == ['select', 'mosaic', 'tiles']
+    assert list(elsewhere.iterdir()) == []
+    assert capsys.readouterr().out.count('run_region: warning: cannot write the run log') == 1
+
+
+def test_planted_link_at_the_log_path_is_replaced_not_followed(box, tmp_path):
+    victim = tmp_path / 'victim.txt'
+    victim.write_text('keep me\n')
+    runs = box.out / 'morro-bay' / RR.RUNS_DIR
+    runs.mkdir(parents=True)
+    (runs / f'{NOW:%Y%m%dT%H%M%SZ}-p424242.json').symlink_to(victim)
+    (runs / f'.{NOW:%Y%m%dT%H%M%SZ}-p424242.json.tmp').symlink_to(victim)  # the old predictable temp name
+    assert box.run(through='tiles') == 0
+    assert victim.read_text() == 'keep me\n'
+    path, doc = the_log(box)
+    assert not path.is_symlink() and doc['outcome'] == 'complete'
+    assert sorted(p.name for p in runs.iterdir() if p.name.startswith('.')) == [f'.{path.name}.tmp']  # no temp left
 
 
 def test_status_handoff_is_its_own_step(box):

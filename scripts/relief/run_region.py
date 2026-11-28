@@ -62,10 +62,13 @@ Every run that takes the region lock writes a run log ``OUT/<region>/runs/<UTC s
 (schema ``sc-run-log/1``): one row per step with its exit code, state and seconds, and the run's
 outcome (``complete``, ``stopped``, ``refused``, ``interrupted``; ``running`` while it runs). It is
 rewritten atomically after every step, so a killed run leaves the steps it finished. A step
-that exits 0 is ``built`` when its stage receipt was written during the step, ``done`` (no work:
-the receipt rules found it done) when the receipt is older, and ``ok`` when it has no readable
-receipt. Other states: 1 ``failed``, 2 ``not available``, 3 ``blocked``, 4 ``held``, 5 ``busy``.
-The run ends by printing the log as a step / state / seconds table.
+that exits 0 is ``built`` when its stage receipt now records an attempt (generation, attempt,
+started) that the receipt did not hold before the step, ``done`` (no work) when the current
+attempt is one the receipt already held (unchanged, or an earlier ok generation restored from
+its history), and ``ok`` when it has no readable receipt. Other states: 1 ``failed``, 2 ``not
+available``, 3 ``blocked``, 4 ``held``, 5 ``busy``. The log is written only inside a real
+``OUT/<region>/runs`` directory (never through a symlink), via an exclusively created temporary
+file in that directory. The run ends by printing the log as a step / state / seconds table.
 
 ``--dry-run`` prints the chain and the state of every guard. With an output root it also
 previews the region's receipt-based rebuild plan. It runs nothing and creates no file or
@@ -618,25 +621,58 @@ def _iso(moment):
     return moment.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def step_state(out, region, stage, extra, code, started):
-    """The run-log state of one finished step (see the module docstring)."""
-    if code:
-        return EXIT_STATES.get(code, 'failed')
+def stage_receipt_path(out, region, stage, extra):
+    """The receipt a step's stage keeps (``stages/<name>[.<scope>].json``); None for a status step."""
     if stage == 'status':
-        return 'ok'
+        return None
     args = (extra or {}).get(stage, ())
     scope = args[args.index('--scope') + 1] if '--scope' in args else None
     name = stage.replace('-', '_')
-    path = out / region / 'stages' / (f'{name}.json' if scope is None else f'{name}.{scope}.json')
+    return out / region / 'stages' / (f'{name}.json' if scope is None else f'{name}.{scope}.json')
+
+
+def _attempt_key(doc):
+    return tuple(doc.get(k) for k in ('generation', 'attempt', 'started')) if isinstance(doc, dict) else None
+
+
+def receipt_attempts(path):
+    """(current attempt key, every attempt key the receipt holds) or None when unreadable.
+
+    The keys come from the stage's own receipt rules: a rebuild always records a new attempt
+    (new generation, or the next attempt number with a new start time), while a no-op leaves
+    the receipt as it is and a restore copies an earlier ok receipt out of its history.
+    """
+    if path is None:
+        return None
     try:
-        ended = datetime.strptime(json.loads(path.read_bytes())['ended'], '%Y-%m-%dT%H:%M:%SZ')
-    except (OSError, ValueError, TypeError, KeyError):
+        doc = json.loads(path.read_bytes())
+    except (OSError, ValueError):
+        return None
+    current = _attempt_key(doc)
+    if current is None:
+        return None
+    history = doc.get('generation_history')
+    held = {current, *(_attempt_key(d) for d in history.values())} if isinstance(history, dict) else {current}
+    return current, held
+
+
+def step_state(code, before, after):
+    """The run-log state of one finished step from its receipt before and after (module docstring)."""
+    if code:
+        return EXIT_STATES.get(code, 'failed')
+    if after is None:
         return 'ok'
-    return 'built' if ended.replace(tzinfo=timezone.utc) >= started.replace(microsecond=0) else 'done'
+    return 'done' if before is not None and after[0] in before[1] else 'built'
 
 
 class RunLog:
-    """``OUT/<region>/runs/<stamp>-p<pid>.json``, rewritten atomically after every step."""
+    """``OUT/<region>/runs/<stamp>-p<pid>.json``, rewritten atomically after every step.
+
+    Every write goes through a descriptor of the verified ``runs`` directory: the directory
+    and the region directory are opened without following symlinks, the temporary file is
+    created exclusively (``O_EXCL | O_NOFOLLOW``) inside it and renamed in it, so neither a
+    redirected ``runs`` nor a planted temporary path can send the log elsewhere.
+    """
 
     def __init__(self, cfg, out, region, through):
         self.cfg = cfg
@@ -645,7 +681,29 @@ class RunLog:
         self.doc = {'schema': RUN_LOG_SCHEMA, 'region': region, 'through': through, 'started': _iso(started),
                     'ended': None, 'outcome': 'running', 'exit': None, 'reason': None, 'steps': []}
         self.broken = False
+        self.dir_fd = None
+        try:
+            self.dir_fd = self._open_runs_dir(out, region)
+        except OSError as exc:
+            self._warn(exc)
         self.save()
+
+    @staticmethod
+    def _open_runs_dir(out, region):
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        region_fd = os.open(Path(out) / region, flags)
+        try:
+            try:
+                os.mkdir(RUNS_DIR, 0o755, dir_fd=region_fd)
+            except FileExistsError:
+                pass
+            return os.open(RUNS_DIR, flags, dir_fd=region_fd)
+        finally:
+            os.close(region_fd)
+
+    def _warn(self, exc):
+        self.broken = True
+        say(f'run_region: warning: cannot write the run log {self.path}: {exc} (the chain continues)')
 
     def step(self, name, code, state, seconds):
         self.doc['steps'].append({'step': name, 'exit': code, 'state': state, 'seconds': round(seconds, 1)})
@@ -658,14 +716,27 @@ class RunLog:
     def save(self):
         if self.broken:
             return
-        tmp = self.path.with_name(f'.{self.path.name}.tmp')
+        tmp = f'.{self.path.name}.tmp-{os.urandom(6).hex()}'
+        data = (json.dumps(self.doc, indent=1) + '\n').encode()
         try:
-            self.path.parent.mkdir(exist_ok=True)
-            tmp.write_text(json.dumps(self.doc, indent=1) + '\n')
-            os.replace(tmp, self.path)
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644, dir_fd=self.dir_fd)
+            try:
+                with os.fdopen(fd, 'wb') as handle:
+                    handle.write(data)
+                os.replace(tmp, self.path.name, src_dir_fd=self.dir_fd, dst_dir_fd=self.dir_fd)
+            except OSError:
+                try:
+                    os.unlink(tmp, dir_fd=self.dir_fd)
+                except OSError:
+                    pass
+                raise
         except OSError as exc:
-            self.broken = True
-            say(f'run_region: warning: cannot write the run log {self.path}: {exc} (the chain continues)')
+            self._warn(exc)
+
+    def close(self):
+        if self.dir_fd is not None:
+            os.close(self.dir_fd)
+            self.dir_fd = None
 
     def table(self):
         rows = [(s['step'], s['state'], f'{s["seconds"]:.1f}') for s in self.doc['steps']]
@@ -855,7 +926,9 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
             label = f'status for {attest}' if attest else stage
             step = f'status:{attest}' if attest else stage
             say(f'run_region: stage {label}: ' + ' '.join(command))
-            started, wall = time.monotonic(), cfg.clock()
+            receipt = stage_receipt_path(out, region, stage, extra)
+            before = receipt_attempts(receipt)
+            started = time.monotonic()
             try:
                 result = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=bool(attest))
             except OSError as exc:
@@ -870,10 +943,10 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
                     except (OSError, ValueError) as exc:
                         log.step(step, 0, 'failed', seconds)
                         return end('stopped', EXIT_REFUSED, f'STOPPED at {label}: {exc}')
-                log.step(step, 0, step_state(out, region, stage, extra, 0, wall), seconds)
+                log.step(step, 0, step_state(0, before, receipt_attempts(receipt)), seconds)
                 say(f'run_region: stage {label}: exit 0 ({seconds:.1f}s)')
                 continue
-            log.step(step, code, step_state(out, region, stage, extra, code, wall), seconds)
+            log.step(step, code, step_state(code, before, None), seconds)
             if attest and result.stderr:
                 say(result.stderr.decode(errors='replace').rstrip())
             if code == EXIT_USAGE:
@@ -891,6 +964,7 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
         log.finish('interrupted', 130, 'interrupted')
         raise
     finally:
+        log.close()
         os.close(fd)  # releases the lock
 
 
