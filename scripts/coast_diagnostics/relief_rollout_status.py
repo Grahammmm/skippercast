@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Report the first incomplete stage in each region's public relief rollout.
 
-Only receipt and artifact reads are performed. This is a point-in-time
+With ``--stages`` it reports every stage of every region instead (a region x stage table of
+receipt states: done, stale, failed, held, missing, invalid, unproved), the pipeline's status
+page. Only receipt and artifact reads are performed. This is a point-in-time
 observation, not a release check. An interrupted attempt may still be active:
 this diagnostic does not probe or acquire stage locks.
 """
@@ -98,17 +100,42 @@ class ReceiptReader:
         return receipts.Verdict('done', 'outputs re-hash; upstream current', doc)
 
 
-def region_status(region: receipts.Region) -> Status:
+class StageState(TypedDict):
+    stage: str
+    state: str
+    reason: str
+    generation: str | None
+
+
+def stage_states(region: receipts.Region):
+    """Every public stage of the region in rollout order, each with its receipt verdict (lazy)."""
     reader = ReceiptReader(region)
-    generation = None
     for stage in STAGES:
         ref = receipts.Ref(stage, 'public' if stage in SCOPED_STAGES else None)
         verdict = reader.check(ref)
-        generation = (verdict.receipt or {}).get('generation')
-        if not verdict.done:
-            return Status(region=region.id, stage=ref.key, state=verdict.state,
-                          reason=verdict.reason, generation=generation)
+        yield StageState(stage=ref.key, state=verdict.state, reason=verdict.reason,
+                         generation=(verdict.receipt or {}).get('generation'))
+
+
+def region_status(region: receipts.Region) -> Status:
+    generation = None
+    for row in stage_states(region):
+        generation = row['generation']
+        if row['state'] != 'done':
+            return Status(region=region.id, **row)
     return Status(region=region.id, stage=None, state='complete', reason=COMPLETE, generation=generation)
+
+
+def stage_table(matrix):
+    """Region x stage table of states, one line per region (the --stages text view)."""
+    names = [row['stage'] for row in matrix[0]['stages']] if matrix else []
+    width = max([len('region'), *(len(entry['region']) for entry in matrix)])
+    cells = [max([len(name), *(len(entry['stages'][i]['state']) for entry in matrix)]) for i, name in enumerate(names)]
+    lines = ['  '.join([f'{"region":<{width}}', *(f'{name:<{w}}' for name, w in zip(names, cells))]).rstrip()]
+    for entry in matrix:
+        states = (f'{row["state"]:<{w}}' for row, w in zip(entry['stages'], cells))
+        lines.append('  '.join([f'{entry["region"]:<{width}}', *states]).rstrip())
+    return '\n'.join(lines)
 
 
 def main(argv=None):
@@ -116,12 +143,19 @@ def main(argv=None):
     parser.add_argument('--out', required=True, help='relief pipeline output root')
     parser.add_argument('--regions', required=True, help='comma-separated region IDs in rollout order')
     parser.add_argument('--json', action='store_true', help='emit a JSON array instead of one line per region')
+    parser.add_argument('--stages', action='store_true',
+                        help='every stage of every region (done/stale/failed/held/missing/...), not only the first '
+                             'incomplete one: a region x stage table, or with --json one object per region')
     args = parser.parse_args(argv)
     try:
         regions = [receipts.Region(args.out, token.strip()) for token in args.regions.split(',')]
     except (ValueError, OSError, RuntimeError) as exc:
         parser.error(str(exc))
 
+    if args.stages:
+        matrix = [{'region': region.id, 'stages': list(stage_states(region))} for region in regions]
+        print(json.dumps(matrix, indent=2) if args.json else stage_table(matrix))
+        return 0
     rows = [region_status(region) for region in regions]
     if args.json:
         print(json.dumps(rows, indent=2))

@@ -181,3 +181,44 @@ def test_interrupted_receipt_never_probes_lock_or_changes_tree(tmp_path, monkeyp
     assert (row['stage'], row['state'], row['generation']) == ('select', 'failed', doc['generation'])
     assert 'activity not checked' in row['reason']
     assert {p: p.read_bytes() for p in region.dir.rglob('*') if p.is_file()} == before
+
+
+def test_stages_report_lists_every_stage_of_every_region(tmp_path):
+    # The status page (#3819 slice B): the first-incomplete view hides what is done or stale after the gap.
+    morro = receipts.Region(tmp_path, 'morro-fixture')
+    populate(morro, contour_fails=True)
+    populate(receipts.Region(tmp_path, 'complete-fixture'))
+    mixed = receipts.Region(tmp_path, 'mixed-fixture')
+    select = record(mixed, 'select')
+    mosaic = record(mixed, 'mosaic', scope='public', upstream=[dependency(select)], status='held',
+                    held_reason='fixture hold')
+    record(mixed, 'tiles', scope='public', upstream=[dependency(mosaic)])
+    keys = [f'{s}.public' if s in SCOPED_STAGES else s for s in STAGES]
+    ids = 'morro-fixture,never-started,complete-fixture,mixed-fixture'
+    matrix = json.loads(invoke(tmp_path, ids, '--stages', '--json'))
+    assert [entry['region'] for entry in matrix] == ids.split(',')
+    states = {entry['region']: [(row['stage'], row['state']) for row in entry['stages']] for entry in matrix}
+    failed_at = STAGES.index('contours')
+    assert states['morro-fixture'] == [
+        (key, 'done' if i < failed_at else 'failed' if i == failed_at else 'missing') for i, key in enumerate(keys)]
+    assert states['never-started'] == [(key, 'missing') for key in keys]
+    assert states['complete-fixture'] == [(key, 'done') for key in keys]
+    assert states['mixed-fixture'][:4] == [('select', 'done'), ('mosaic.public', 'held'), ('tiles.public', 'stale'),
+                                           ('zone.public', 'missing')]
+    contours = matrix[0]['stages'][failed_at]
+    assert 'survey_year' in contours['reason'] and len(contours['generation']) == 64
+    assert matrix[1]['stages'][0] == {'stage': 'select', 'state': 'missing', 'reason': 'no receipt', 'generation': None}
+    assert not (tmp_path / 'never-started').exists()
+
+
+def test_stages_text_is_a_region_by_stage_table(tmp_path):
+    populate(receipts.Region(tmp_path, 'morro-fixture'), contour_fails=True)
+    lines = invoke(tmp_path, 'morro-fixture,never-started', '--stages').splitlines()
+    keys = [f'{s}.public' if s in SCOPED_STAGES else s for s in STAGES]
+    failed_at = STAGES.index('contours')
+    assert len(lines) == 3
+    assert lines[0].split() == ['region', *keys]
+    assert lines[1].split() == ['morro-fixture', *['done'] * failed_at, 'failed',
+                                *['missing'] * (len(STAGES) - failed_at - 1)]
+    assert lines[2].split() == ['never-started', *['missing'] * len(STAGES)]
+    assert lines[1].index('failed') == lines[0].index('contours')  # each state sits under its stage name
