@@ -1,12 +1,15 @@
 """R6a: derive the package layer inventory from the current producer receipts.
 
-    region.py inventory --region <id> --out <OUT>
+    region.py inventory --region <id> --out <OUT> [--survey detail|detail-and-gap]
     region.py package --region <id> --out <OUT> --manifest OUT/<id>/inventory/manifest.json \\
         --upstream tiles:public --upstream digests --upstream zone:public --upstream inventory
 
 The layer producers write disjoint leaves (``tiles`` -> ``layers/public/tiles``, ``zone`` ->
 ``layers/public/zone``, ``digests`` -> ``layers/public/relief.digests``), so a rebuild of one
-never replaces another. This stage copies no layer bytes. It lists the exact files that the
+never replaces another. With ``--survey`` the inventory also takes the survey stages as upstream
+and lists the exact pair each one owns (``survey_detail`` -> ``layers/public/survey-detail``,
+``survey_gap`` -> ``layers/public/survey-gap``); package then needs the same ``--upstream
+survey_detail:public`` (and ``survey_gap:public``). This stage copies no layer bytes. It lists the exact files that the
 current producer receipts own and derives the release metadata from the archive the tiles
 receipt owns, the public selection and the source catalog. ``package`` then hashes every
 listed file against those receipts again, and with ``--upstream inventory`` it refuses a
@@ -32,12 +35,16 @@ import gzip
 import os
 import struct
 
-from skippercast.relief import mosaic, package, receipts
+from skippercast.relief import mosaic, package, receipts, survey_delivery
 
 UPSTREAM = ('select', 'tiles:public', 'digests', 'zone:public')
+# --survey: the survey stages whose current pair this inventory also lists (none without the option).
+SURVEY = {'detail': ('survey_detail:public',), 'detail-and-gap': ('survey_detail:public', 'survey_gap:public')}
+SURVEY_PAIRS = {'survey_detail.public': (survey_delivery.DECODED_PATH, survey_delivery.WIRE_PATH),
+                'survey_gap.public': (survey_delivery.GAP_DECODED_PATH, survey_delivery.GAP_WIRE_PATH)}
 TARGET = 'inventory'
 MANIFEST = 'manifest.json'
-CODE_FILES = ('skippercast.relief.package', 'skippercast.relief.mosaic')
+CODE_FILES = ('skippercast.relief.package', 'skippercast.relief.mosaic', 'skippercast.relief.survey_delivery')
 SHALLOW_M = 91.44
 # The header stores bounds as e7 integers; this is the slack QA allows (relief/qa.py bounds_ok check).
 BOUNDS_TOLERANCE_DEG = 5.1e-8
@@ -153,6 +160,26 @@ def zoom_support(by_zoom, catalog_id):
     return result
 
 
+def add_arguments(parser):
+    parser.add_argument('--survey', choices=tuple(SURVEY),
+                        help='also list the survey detail pair (detail) or the detail and gap pairs (detail-and-gap)')
+
+
+def upstream(args):
+    return (*UPSTREAM, *SURVEY.get(args.survey, ()))
+
+
+def survey_paths(upstream_docs):
+    """The survey layer pairs owned by the survey receipts this run takes as upstream."""
+    paths = []
+    for key, pair in SURVEY_PAIRS.items():
+        if key in upstream_docs:
+            if owned(upstream_docs[key]) != sorted(pair):
+                raise InventoryError(f'the current {key} receipt does not own exactly its survey pair')
+            paths += pair
+    return paths
+
+
 def plan(ctx):
     table = mosaic.selected(ctx, 'sources.json')
     archive = mosaic.upstream_file(ctx, 'tiles.public', ctx.region.dir / package.ARCHIVE)
@@ -168,7 +195,7 @@ def build(ctx, out):
     index = owned(digests, package.LAYERS + 'relief.digests/')
     if package.DIGEST_ROOT not in index:
         raise InventoryError('the current digests receipt does not own the digest root')
-    layer_paths = sorted({package.ARCHIVE, *index, *owned(zone)})
+    layer_paths = sorted({package.ARCHIVE, *index, *owned(zone), *survey_paths(ctx.upstream)})
 
     metadata = archive_metadata(mosaic.upstream_file(ctx, 'tiles.public', ctx.region.dir / package.ARCHIVE))
     rows = mosaic.sources(ctx)

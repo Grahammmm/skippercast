@@ -9,7 +9,8 @@ A stage module provides either
 * ``build(ctx, out_dir) -> dict | None`` (a receipt stage, run by
   :func:`skippercast.relief.receipts.run_stage`), with the optional attributes
   ``UPSTREAM`` (``"stage"`` or ``"stage:scope"``; ``{scope}`` is replaced by the run's
-  scope), ``SCOPES``, ``TARGET``, ``CODE_FILES``, ``add_arguments(parser)`` and
+  scope), ``SCOPES``, ``TARGET``, ``CODE_FILES``, ``add_arguments(parser)``,
+  ``upstream(args)`` (the upstream list for these arguments, instead of ``UPSTREAM``) and
   ``plan(ctx) -> Plan``; or
 * ``main(argv) -> int`` for a command that manages its own receipts (publish,
   live-check, rollback).
