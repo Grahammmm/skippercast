@@ -2,13 +2,15 @@
 ``process`` the processor job, ``backfill`` the MarineCadastre backfill, ``validate`` the classifier's
 validation against hand labels (section 11), ``label`` the export and import of agent-proposed labels,
 ``watch-check`` the watched gate over the stored watch rows and ``schedule-precision`` the precision of
-schedule-correlation on a history window, and ``port-coverage`` the counts-only per-port coverage block.
+schedule-correlation on a history window, ``port-coverage`` the counts-only per-port coverage block and
+``archive`` the long-term copy of closed raw day files.
 """
 from __future__ import annotations
 
 import sys
 
-COMMANDS = ("listen", "process", "backfill", "validate", "label", "watch-check", "schedule-precision", "port-coverage")
+COMMANDS = ("listen", "process", "backfill", "validate", "label", "watch-check", "schedule-precision", "port-coverage",
+            "archive")
 
 
 def main(argv=None) -> int:
@@ -41,6 +43,9 @@ def main(argv=None) -> int:
     if command == "port-coverage":
         from .port_coverage import main as port_coverage
         return port_coverage(rest)
+    if command == "archive":
+        from .archive import main as archive
+        return archive(rest)
     return 2   # pragma: no cover
 
 
