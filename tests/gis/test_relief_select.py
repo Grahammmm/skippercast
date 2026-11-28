@@ -254,3 +254,38 @@ def test_exclude_source_cannot_widen_selection_or_use_aliases(tmp_path):
         with pytest.raises(SystemExit) as refused:
             main([*argv, '--exclude-source', alias])
         assert refused.value.code == 1
+
+
+def test_config_files_from_another_checkout_reuse_select(tmp_path):
+    # Contract: the region config, registry and labels are pinned by content, not by where the checkout
+    # sits; the same files at another path give the same generation and no new work. Bug caught: every
+    # run from a new worktree made a new select generation, so identical data paid a multi-hour mosaic
+    # and tiles rebuild (the dry-run plan said reuse). Control: an edited registry is still new work.
+    region, cache, argv = fixture(tmp_path)
+    values = np.full((2, 2), -5, dtype='float32')
+    raw = raster(tmp_path / 'survey.tif', values)
+    normalized(cache, raw, values, np.full(values.shape, 3, dtype='uint8'))
+    put(region / 'census.json', dict(summary={'region': region.name}, files=[row_for(raw, 'survey')]))
+    put(tmp_path / 'registry.json', {'sources': [registry_row('survey')]})
+    check = receipts.Region(region.parent, region.name)
+    assert main(argv) == 0
+    first = read(check.receipt_path('select'))
+    outputs = {p.name: p.read_bytes() for p in (region / 'select').iterdir()}
+
+    other = tmp_path / 'other-checkout'
+    other.mkdir()
+    moved = list(argv)
+    for flag in ('--registry', '--provenance', '--region-config'):
+        at = moved.index(flag) + 1
+        source = Path(moved[at])
+        (other / source.name).write_bytes(source.read_bytes())
+        moved[at] = str(other / source.name)
+    assert main(moved) == 0
+    again = read(check.receipt_path('select'))
+    assert (again['generation'], again['attempt'], again['ended']) == (
+        first['generation'], first['attempt'], first['ended'])
+    assert {p.name: p.read_bytes() for p in (region / 'select').iterdir()} == outputs
+
+    put(other / 'registry.json', {'sources': [registry_row('survey', notes='edited')]})
+    assert main(moved) == 0
+    assert read(check.receipt_path('select'))['generation'] != first['generation']
