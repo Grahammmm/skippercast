@@ -6,7 +6,8 @@ import sys
 import pytest
 
 from scripts.coast_diagnostics import relief_rollout_status as rollout
-from scripts.relief.run_region import SCOPED_STAGES, STAGES
+from scripts.coast_diagnostics.relief_rollout_status import SCOPED_STAGES, STAGES
+from scripts.relief.run_region import STAGES as RUN_STAGES, SURVEY_STAGES
 from skippercast.relief import receipts
 from tests._support import ROOT
 
@@ -222,3 +223,52 @@ def test_stages_text_is_a_region_by_stage_table(tmp_path):
                                 *['missing'] * (len(STAGES) - failed_at - 1)]
     assert lines[2].split() == ['never-started', *['missing'] * len(STAGES)]
     assert lines[1].index('failed') == lines[0].index('contours')  # each state sits under its stage name
+
+
+def populate_surveyed(region, taken):
+    """A run_region.py chain whose inventory takes the survey stages in `taken` (its --survey choice)."""
+    docs, previous = {}, None
+    for stage in RUN_STAGES:
+        if stage in SURVEY_STAGES:
+            if stage in taken:
+                docs[stage] = record(region, stage, scope='public', upstream=(dependency(docs['zone']),))
+            continue
+        upstream = (dependency(previous),) if previous else ()
+        if stage == 'inventory':
+            upstream += tuple(dependency(docs[name]) for name in taken)
+        fields: dict = {'params': {'review_required': True}} if stage == 'mosaic' else {}
+        previous = docs[stage] = record(region, stage, scope='public' if stage in SCOPED_STAGES else None,
+                                        upstream=upstream, **fields)
+    return docs
+
+
+def test_survey_stages_have_no_row_but_a_taken_one_is_checked_through_inventory(tmp_path):
+    # The report cannot tell from receipts which --survey choice the latest run made, so it lists no
+    # survey row; a survey stage inventory took must still keep the chain from reading complete.
+    assert STAGES == tuple(stage for stage in RUN_STAGES if stage not in SURVEY_STAGES)
+    region = receipts.Region(tmp_path, 'surveyed')
+    docs = populate_surveyed(region, SURVEY_STAGES)
+    assert rollout.region_status(region)['state'] == 'complete'
+    [entry] = json.loads(invoke(tmp_path, 'surveyed', '--stages', '--json'))
+    assert [row['stage'] for row in entry['stages']] == [
+        f'{s}.public' if s in SCOPED_STAGES else s for s in STAGES]
+    assert {row['state'] for row in entry['stages']} == {'done'}
+    record(region, 'survey_gap', scope='public', upstream=(dependency(docs['zone']),), status='held',
+           held_reason='fixture hold')
+    row = rollout.region_status(region)
+    assert (row['stage'], row['state']) == ('inventory', 'stale')
+    assert 'survey_gap.public not done (held)' in row['reason']
+
+
+@pytest.mark.parametrize('leftover', ['held', 'failed', 'ok'])
+def test_survey_receipt_inventory_did_not_take_never_changes_the_report(tmp_path, leftover):
+    # A no-survey chain is judged only by what it took: a survey receipt from another attempt (an
+    # opt-in run that stopped, or one finished before a later --survey none run) neither hides a
+    # completed chain nor makes it held; that attempt's own result is its runner exit code and run log.
+    region = receipts.Region(tmp_path, 'plain')
+    populate_surveyed(region, ())
+    before = rollout.region_status(region)
+    assert before['state'] == 'complete'
+    fields = {'held_reason': 'fixture hold'} if leftover == 'held' else {'error': 'fixture'} if leftover == 'failed' else {}
+    record(region, 'survey_detail', scope='public', status=leftover, **fields)
+    assert rollout.region_status(region) == before

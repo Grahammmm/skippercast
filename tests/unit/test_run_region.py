@@ -115,9 +115,9 @@ class Box:
         (directory / 'cmdline').write_bytes(b'\0'.join(a.encode() for a in argv) + b'\0')
 
     def run(self, *args, region='morro-bay', through='envelope'):
-        stage = STAGE_ORDER.index(through)
-        required = [*(ZONE_ARGS if stage >= STAGE_ORDER.index('zone') else []),
-                    *(['--basemap', str(self.basemap)] if stage >= STAGE_ORDER.index('shots') else [])]
+        stage = RR.STAGES.index(through)
+        required = [*(ZONE_ARGS if stage >= RR.STAGES.index('zone') else []),
+                    *(['--basemap', str(self.basemap)] if stage >= RR.STAGES.index('shots') else [])]
         return RR.main([region, '--out', str(self.out), '--through', through, *required, *args], self.cfg)
 
     def out_tree(self):

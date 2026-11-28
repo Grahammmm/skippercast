@@ -11,7 +11,14 @@
 
 Runs ``region.py <stage> --region <region> --out <OUT>`` through the requested stage::
 
-    select mosaic tiles zone digests inventory contours nearshore_vectors package shots qa envelope
+    select mosaic tiles zone survey_detail survey_gap digests inventory contours nearshore_vectors
+    package shots qa envelope
+
+The survey stages (public only) are opt-in. They derive the Chart's survey-confidence detail and its
+no-survey gap companion from the zone output; inventory lists their pairs as release layers and
+package takes them as upstream. ``--survey detail-and-gap`` runs both (Morro Bay); ``--survey
+detail`` runs survey_detail only (a region whose detail has no unsurveyed area, e.g. Big Sur); the
+default ``--survey none`` skips both and packages relief without survey layers, as before.
 
 With --census, census-bind runs before select. Normalize separately, per source. Select reads
 the resulting cache and the source-label file given by --provenance (without it, select falls
@@ -97,9 +104,13 @@ import sys
 import time
 
 DEFAULT_NORM = '/mnt/agentorange-backup/seafloor-relief-cache/_norm'  # select's --cache default
-SCOPED_STAGES = ('mosaic', 'tiles', 'zone', 'nearshore_vectors')
-STAGES = ('select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'nearshore_vectors',
-          'package', 'shots', 'qa', 'envelope')
+SURVEY_STAGES = ('survey_detail', 'survey_gap')
+SCOPED_STAGES = ('mosaic', 'tiles', 'zone', *SURVEY_STAGES, 'nearshore_vectors')
+STAGES = ('select', 'mosaic', 'tiles', 'zone', *SURVEY_STAGES, 'digests', 'inventory', 'contours',
+          'nearshore_vectors', 'package', 'shots', 'qa', 'envelope')
+# --survey choice -> the survey stages it skips; inventory and package take the rest.
+SURVEY_SKIPS = {'detail-and-gap': (), 'detail': ('survey_gap',), 'none': SURVEY_STAGES}
+SKIP = 'skip'  # stage_extras key: stages left out of this run's chain (never a stage name)
 ZONE_STAGE_INPUTS = {'--coarse': 'coarse', '--water': 'water', '--coarse-source': 'coarse'}
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 HEX64 = re.compile(r'[0-9a-f]{64}')
@@ -282,8 +293,8 @@ def input_problem(cfg, name, path, digest):
     return None if actual == digest else f'{path} expected sha256 {digest}, got {actual}'
 
 
-def chain_through(through):
-    return STAGES[:STAGES.index(through) + 1]
+def chain_through(through, skip=()):
+    return tuple(stage for stage in STAGES[:STAGES.index(through) + 1] if stage not in skip)
 
 
 def stage_command(cfg, stage, region, out, extra=None):
@@ -294,7 +305,7 @@ def stage_command(cfg, stage, region, out, extra=None):
 def steps_through(through, extra):
     if 'census-bind' in extra:
         yield 'census-bind', None
-    for stage in chain_through(through):
+    for stage in chain_through(through, extra.get(SKIP, ())):
         yield stage, None
         if stage in ('package', 'shots'):
             yield 'status', stage
@@ -323,7 +334,14 @@ def stage_extras(args, out):
         extra[stage] = ['--scope', args.scope]
     if args.region_config:
         for stage in ('select', *SCOPED_STAGES):
-            extra[stage] += ['--region-config', args.region_config]
+            if stage not in SURVEY_STAGES:  # they read only receipted zone/select outputs
+                extra[stage] += ['--region-config', args.region_config]
+    extra[SKIP] = SURVEY_SKIPS[args.survey]
+    surveyed = [stage for stage in SURVEY_STAGES if stage not in extra[SKIP]]
+    if surveyed:
+        extra['inventory'] = ['--survey', args.survey]
+    for stage in surveyed:
+        extra['package'] += ['--upstream', f'{stage}:public']
     if args.provenance:
         extra['select'] += ['--provenance', args.provenance]
     for source_id in args.exclude_source or ():
@@ -711,7 +729,7 @@ class RunLog:
         return '\n'.join(lines)
 
 
-def show_rebuild_plan(cfg, out, region):
+def show_rebuild_plan(cfg, out, region, survey=()):
     if __package__:
         from . import rebuild_plan as report
     else:
@@ -726,7 +744,7 @@ def show_rebuild_plan(cfg, out, region):
         if any(under(path, cfg.forbidden_root) for path in stages.glob('*.json')):
             say('rebuild plan unavailable: receipt is under the forbidden root')
             return
-        rows = report._region_plan(out, region, report._stage_digests())
+        rows = report._region_plan(out, region, report._stage_digests(), survey=survey)
     except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
         say(f'rebuild plan unavailable: {exc}')
         return
@@ -770,11 +788,15 @@ def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap, *,
     for index, (stage, attest) in enumerate(steps_through(through, extra), 1):
         note = f'  # verify {attest}' if attest else ''
         say(f'  {index:>2}. {" ".join(stage_command(cfg, stage, region, out, extra))}{note}')
-    say('not run: ' + ', '.join(STAGES[STAGES.index(through) + 1:]) if through != STAGES[-1] else 'not run: (none)')
+    later = chain_through(STAGES[-1], extra.get(SKIP, ()))[len(chain_through(through, extra.get(SKIP, ()))):]
+    say('not run: ' + (', '.join(later) or '(none)'))
+    if extra.get(SKIP):
+        say('skipped (--survey): ' + ', '.join(extra[SKIP]))
     if through == 'envelope':
         say('r8 packet: after envelope')
     if show_plan:
-        show_rebuild_plan(cfg, out, region)
+        show_rebuild_plan(cfg, out, region,
+                          tuple(stage for stage in SURVEY_STAGES if stage not in extra.get(SKIP, ())))
     say('guards (re-checked before every stage):')
     refused = bool(missing)
     for stage, flags in missing:
@@ -943,6 +965,9 @@ def parse(argv):
                         f'to select as --cache (default $SC_RELIEF_NORM when set, else {DEFAULT_NORM})')
     parser.add_argument('--scope', default='public', choices=('public', 'private'),
                         help='scope of the scoped stages mosaic, tiles and zone (default public)')
+    parser.add_argument('--survey', default='none', choices=tuple(SURVEY_SKIPS),
+                        help='survey layers in the release: none (default; no survey stage), detail '
+                        '(survey_detail only) or detail-and-gap (survey_detail and survey_gap)')
     parser.add_argument('--basemap', help='local basemap PMTiles (required for shots, qa and envelope)')
     parser.add_argument('--qa-support', help='qa option: mosaic support_class TIFF')
     parser.add_argument('--qa-fine-proof', nargs=2, action='append', metavar=('ZOOM', 'PATH'),
@@ -994,6 +1019,13 @@ def main(argv=None, cfg=None):
                      'once per held source before starting run_region.py')
     if args.through not in STAGES:
         parser.error(f'unknown stage {args.through!r}; stages: {", ".join(STAGES)}')
+    if args.through in SURVEY_SKIPS[args.survey]:
+        parser.error(f'--survey {args.survey} skips {args.through}; choose a stage this chain runs '
+                     '(survey stages run only with --survey detail or detail-and-gap)')
+    if args.scope != 'public' and any(stage in chain_through(args.through, SURVEY_SKIPS[args.survey])
+                                      for stage in SURVEY_STAGES):
+        parser.error(f'the chain reaches the public-only survey stages; with --scope {args.scope} '
+                     'use --survey none or stop before survey_detail')
     if args.out is None and not args.dry_run:
         parser.error('the following arguments are required: --out')
     out = Path(os.path.abspath(os.path.expanduser(args.out))) if args.out is not None else Path('<OUT>')
