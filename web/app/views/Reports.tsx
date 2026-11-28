@@ -16,7 +16,7 @@ import {coastReport} from '../../coast-data.ts';
 import {PROFILE_TABLE} from '../../profile.ts';
 import {profile, region, species} from '../../state.ts';
 import type {Charters, Evidence, EvidenceNotAvailable, ReportsData, Watch} from '../../reports.ts';
-import {regionInfo} from '../App.tsx';
+import {regionInfo} from '../region-info.ts';
 import {DEFAULT_ZONE} from '../../zone.ts';
 import {CoastMarkup, isSafeCatchState} from '../CoastMarkup.tsx';
 import {language, t} from '../../i18n.ts';

@@ -32,7 +32,7 @@ import {TimeDock} from './TimeDock.tsx';
 import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
-import {Reports} from './views/Reports.tsx';
+import {LazyReports} from './views/LazyReports.tsx';
 import {PlanView} from './PlanView.tsx';
 import {appView} from '../state.ts';
 import {useHourNow, type HourClock} from '../clock.ts';
@@ -81,7 +81,7 @@ export function Desktop({now: fixedNow, clock}: {now?: Date; clock?: HourClock} 
         <Guard name="time-dock"><TimeDock now={now} /></Guard>
       </MapStage>
       {appView.value === 'plan' ? <div class="app-page"><Guard name="plan"><PlanView now={now} /></Guard></div> : null}
-      {appView.value === 'reports' ? <div class="app-page"><Guard name="reports"><Reports now={now} /></Guard></div> : null}
+      {appView.value === 'reports' ? <div class="app-page"><Guard name="reports"><LazyReports now={now} /></Guard></div> : null}
     </main>
   );
 }
