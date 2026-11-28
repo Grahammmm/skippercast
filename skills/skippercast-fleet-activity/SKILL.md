@@ -32,8 +32,14 @@ parts of #469 are **not built**, and the skill names them as gaps:
 - the host check and profile from #468 (`scripts/agentorange/check_host.sh`,
   `docs/operations/agentorange.md`);
 - the status script `scripts/check_activity.py`;
-- the long-term raw archive and its nightly backup: the raw store keeps
-  `thresholds.retention.raw_days` of positions, and no backup job exists;
+- the schedule of the long-term raw archive: the raw store keeps
+  `thresholds.retention.raw_days` of positions;
+  `python -m skippercast.fleet.ais archive --region <id> --dest <dir>`
+  (or `$SKIPPERCAST_FLEET_ARCHIVE`) copies the closed day files, *on the
+  runner*, and never lets an emptied store file overwrite a fuller copy, but
+  nothing runs it daily yet, and it does not check free space on the archive
+  disk (check it before running; a failed copy exits 1 and leaves no partial
+  file);
 - the activity-side identity checks (a watched boat that never leaves port,
   moves like a cargo or pleasure vessel, or contradicts its class);
 - Hermes scheduling of the skill, and Telegram alerts (the AgentOrange side
