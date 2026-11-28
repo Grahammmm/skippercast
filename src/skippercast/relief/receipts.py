@@ -17,10 +17,10 @@ Rules (E2E-PIPELINE §3):
 
 1. **Generation.** ``generation`` is the sha256 of the canonical JSON of the stage's inputs
    (role and content sha256; a path is recorded but not hashed, so moving a file does not
-   rebuild), its upstream generations, its code (``stage_digest`` only: ``repo_sha`` is
-   recorded, not hashed, so a commit that does not touch a stage's files does not rebuild
-   it) and its params. The same inputs, upstream, code and params always give the same
-   generation, on any host and in any directory.
+   rebuild, and the no-op run re-records the new path), its upstream generations, its code
+   (``stage_digest`` only: ``repo_sha`` is recorded, not hashed, so a commit that does not
+   touch a stage's files does not rebuild it) and its params. The same inputs, upstream,
+   code and params always give the same generation, on any host and in any directory.
 2. **Done** = the receipt has status ``ok``, every output re-hashes (size and sha256) to the
    receipt, and every upstream generation equals the generation in the *current* upstream
    receipt, which is itself done. A stage run is additionally a no-op only when its newly
@@ -639,10 +639,14 @@ def run_stage(run: StageRun, *, clock: Callable[[], datetime] = utc_now,
             # it is restored as the current receipt without a rebuild or a new attempt.
             verdict = _verify_ok(region, same, memo)
             if verdict.done:
+                # Same generation = same input content; re-record where it is read now, so a moved
+                # input (another checkout) is not reported missing by the rebuild plan later.
                 if prev['generation'] != gen:
-                    save(same)
+                    save(dict(same, inputs=inputs))
                     return result('done', gen, 'no work: earlier ok receipt restored, outputs re-hash, '
                                                'upstream current')
+                if prev['inputs'] != inputs:
+                    write_json_atomic(receipt_path, dict(prev, inputs=inputs))
                 return result('done', gen, 'no work: receipt ok, outputs re-hash, upstream current')
 
         base = {
