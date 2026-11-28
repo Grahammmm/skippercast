@@ -1119,7 +1119,7 @@ def test_c2_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys
 
 
 PLAN_STAGES = ('select mosaic.public tiles.public zone.public digests inventory contours '
-               'package shots qa envelope nearshore_vectors.public survey_detail.public survey_gap.public').split()
+               'package shots qa envelope nearshore_vectors.public').split()
 
 
 @pytest.mark.parametrize('saved', [

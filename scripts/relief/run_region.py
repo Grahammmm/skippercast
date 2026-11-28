@@ -729,7 +729,7 @@ class RunLog:
         return '\n'.join(lines)
 
 
-def show_rebuild_plan(cfg, out, region):
+def show_rebuild_plan(cfg, out, region, survey=()):
     if __package__:
         from . import rebuild_plan as report
     else:
@@ -744,7 +744,7 @@ def show_rebuild_plan(cfg, out, region):
         if any(under(path, cfg.forbidden_root) for path in stages.glob('*.json')):
             say('rebuild plan unavailable: receipt is under the forbidden root')
             return
-        rows = report._region_plan(out, region, report._stage_digests())
+        rows = report._region_plan(out, region, report._stage_digests(), survey=survey)
     except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
         say(f'rebuild plan unavailable: {exc}')
         return
@@ -795,7 +795,8 @@ def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap, *,
     if through == 'envelope':
         say('r8 packet: after envelope')
     if show_plan:
-        show_rebuild_plan(cfg, out, region)
+        show_rebuild_plan(cfg, out, region,
+                          tuple(stage for stage in SURVEY_STAGES if stage not in extra.get(SKIP, ())))
     say('guards (re-checked before every stage):')
     refused = bool(missing)
     for stage, flags in missing:

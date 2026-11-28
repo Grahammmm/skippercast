@@ -9,9 +9,11 @@ import json
 
 import pytest
 
+from scripts.relief import rebuild_plan as plan_cli, rebuild_scope_check as scope_cli
 from scripts.relief import region as region_cli
 from scripts.relief import run_region as RR
 from skippercast.relief import inventory, package, survey_delivery as sd
+from tests.unit.test_rebuild_plan_cli import KEYS, record
 from tests.unit.test_relief_inventory_metadata import _bounds_archive, _inventory_ctx
 from tests.unit.test_run_region import STAGE_ORDER, Box
 
@@ -188,3 +190,75 @@ def test_inventory_survey_option_choices():
     with pytest.raises(SystemExit):
         parser.parse_args(['--survey', 'gap'])
     assert inventory.upstream(parser.parse_args([])) == inventory.UPSTREAM
+
+
+SURVEY_KEYS = ['survey_detail.public', 'survey_gap.public']
+
+
+def current_receipts(box, region, inventory_upstream=()):
+    """Up-to-date receipts for every default stage (KEYS: main's report, no survey key)."""
+    current = plan_cli._stage_digests()
+    for key in KEYS:
+        record(box.out, region, key, current[key],
+               upstream=inventory_upstream if key == 'inventory' else ())
+
+
+def plan_rows(box, capsys, region, *args):
+    assert box.run('--dry-run', *args, region=region, through='mosaic') == 0
+    out, err = capsys.readouterr()
+    assert err == ''
+    return [line.strip() for line in out.splitlines()
+            if line.startswith('  ') and (' reuse (' in line or ' rebuild (' in line)]
+
+
+def scope_check(box, capsys, tmp_path, region, inventory_keys):
+    # The saved plan is the planner CLI's own JSON; the ceiling allows no rebuild at all.
+    assert plan_cli.main(['--out', str(box.out), '--json', region]) == 0
+    files = {'plan': capsys.readouterr().out, 'allow': '{}',
+             'expected': json.dumps({region: inventory_keys})}
+    for name, text in files.items():
+        (tmp_path / f'{name}.json').write_text(text)
+    code = scope_cli.main(['--plan', str(tmp_path / 'plan.json'), '--allow', str(tmp_path / 'allow.json'),
+                           '--expected-stages', str(tmp_path / 'expected.json'), region])
+    return code, json.loads(capsys.readouterr().out)
+
+
+def test_unchanged_no_survey_region_plans_all_reuse_within_an_empty_ceiling(box, capsys, tmp_path):
+    # Bug caught (RETURN at 6f476dc9): the opt-in survey stages joined the shared stage list, so
+    # every region that never runs them planned two missing rebuilds and failed an empty ceiling.
+    current_receipts(box, 'test-bay')
+    assert plan_rows(box, capsys, 'test-bay') == [f'{key} reuse (-)' for key in KEYS]
+    code, report = scope_check(box, capsys, tmp_path, 'test-bay', list(KEYS))
+    assert (code, report['within_ceiling'], report['missing_stages'], report['outside_ceiling']) == (0, True, {}, [])
+
+
+def test_selected_survey_stages_are_planned_and_checked(box, capsys, tmp_path):
+    # Control: --survey detail-and-gap on the same receipts plans both survey stages as missing.
+    current_receipts(box, 'test-bay')
+    rows = plan_rows(box, capsys, 'test-bay', '--survey', 'detail-and-gap')
+    assert rows == [f'{key} reuse (-)' for key in KEYS] + [f'{key} rebuild (missing)' for key in SURVEY_KEYS]
+    current = plan_cli._stage_digests()
+    for key in SURVEY_KEYS:
+        record(box.out, 'test-bay', key, current[key])
+    assert plan_rows(box, capsys, 'test-bay', '--survey', 'detail-and-gap') == [
+        f'{key} reuse (-)' for key in (*KEYS, *SURVEY_KEYS)]
+    # With receipts the planner CLI reports them too; the inventory must then list them.
+    code, report = scope_check(box, capsys, tmp_path, 'test-bay', list(KEYS))
+    assert (code, report['unexpected_stages']) == (1, {'test-bay': SURVEY_KEYS})
+    code, report = scope_check(box, capsys, tmp_path, 'test-bay', [*KEYS, *SURVEY_KEYS])
+    assert (code, report['within_ceiling']) == (0, True)
+
+
+def test_a_survey_stage_recorded_as_a_dependency_is_still_checked(box, capsys, tmp_path):
+    # Control: no --survey, but the inventory receipt takes survey_detail upstream and it has no receipt.
+    current_receipts(box, 'test-bay', inventory_upstream=[('survey_detail', 'public')])
+    rows = plan_rows(box, capsys, 'test-bay')
+    assert 'survey_detail.public rebuild (missing)' in rows
+    assert 'inventory rebuild (upstream:survey_detail.public)' in rows
+    assert not any(row.startswith('survey_gap') for row in rows)
+    code, report = scope_check(box, capsys, tmp_path, 'test-bay', list(KEYS))
+    assert (code, report['unexpected_stages']) == (1, {'test-bay': ['survey_detail.public']})
+    code, report = scope_check(box, capsys, tmp_path, 'test-bay', [*KEYS, 'survey_detail.public'])
+    assert code == 1 and {(row['stage'], row['action']) for row in report['outside_ceiling']} >= {
+        ('survey_detail.public', 'rebuild'), ('inventory', 'rebuild')}
+    assert scope_cli.REQUIRED_STAGES.isdisjoint(SURVEY_KEYS)
