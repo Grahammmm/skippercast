@@ -755,8 +755,22 @@ def show_rebuild_plan(cfg, out, region, extra, survey=()):
         if any(under(path, cfg.forbidden_root) for path in stages.glob('*.json')):
             say('rebuild plan unavailable: receipt is under the forbidden root')
             return
+        # The preview hashes select's inputs where this run reads them, so it applies the runner's
+        # forbidden root and select's own path rules (no symlinks) first: a refused input is never
+        # opened here. An allowed path that does not exist stays input-missing in the plan.
+        from skippercast.relief.select import local_path
+        at = select_inputs(cfg, region, extra)
+        for role, path in at.items():
+            if under(path, cfg.forbidden_root):
+                say(f'rebuild plan unavailable: select input {role} is under the forbidden root')
+                return
+            try:
+                local_path(path)
+            except ValueError as exc:
+                say(f'rebuild plan unavailable: select input {role}: {exc}')
+                return
         rows = report._region_plan(out, region, report._stage_digests(), survey=survey,
-                                   inputs_at={'select': select_inputs(cfg, region, extra)})
+                                   inputs_at={'select': at})
     except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
         say(f'rebuild plan unavailable: {exc}')
         return

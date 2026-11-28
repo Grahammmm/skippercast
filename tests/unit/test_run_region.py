@@ -1235,6 +1235,49 @@ def test_dry_run_does_not_read_forbidden_receipt_symlink(box, capsys, monkeypatc
     assert out.splitlines()[-1] == 'dry run: a real run would be refused now; nothing was run and nothing was written'
 
 
+@pytest.mark.parametrize('case, reason', [
+    pytest.param('inside', 'is under the forbidden root', id='labels under the forbidden root'),
+    pytest.param('link-in', 'is under the forbidden root', id='labels symlink into the forbidden root'),
+    pytest.param('link-out', ': symlink input refused', id='labels symlink select refuses'),
+])
+def test_dry_run_does_not_open_a_refused_select_input(box, capsys, monkeypatch, case, reason):
+    # The preview compares select's inputs where this run reads them (#3836). Bug caught (RETURN 2):
+    # it hashed --provenance before the guards, so a file the runner refuses (under the forbidden
+    # root) or select refuses (a symlink) was opened by --dry-run. An allowed absent file stays
+    # input-missing (tests/gis/test_relief_select.py).
+    vault = box.root / 'vault'
+    vault.mkdir()
+    box.cfg.forbidden_root = str(vault)
+    protected = (vault if case != 'link-out' else box.root) / 'labels.json'
+    protected.write_text('{}')
+    labels = protected
+    if case != 'inside':
+        labels = box.root / 'linked-labels.json'
+        labels.symlink_to(protected)
+    receipt = receipts.Region(box.out, 'test-bay').receipt_path('select')
+    receipt.parent.mkdir(parents=True)
+    receipt.write_bytes(receipts.canonical(dict(
+        schema=receipts.SCHEMA, region='test-bay', stage='select', scope=None, status='ok', attempt=1,
+        generation=GEN, code={'stage_digest': '0' * 64}, params={}, upstream=[], outputs=[],
+        inputs=[{'role': 'provenance', 'path': str(box.root / 'old-labels.json'), 'sha256': GEN}])))
+    hashed = []
+    original = receipts.sha256_file
+
+    def track(path):
+        hashed.append(Path(path).resolve())
+        return original(path)
+
+    monkeypatch.setattr(receipts, 'sha256_file', track)
+    assert box.run('--dry-run', '--provenance', str(labels), region='test-bay', through='select') == 0
+    out = capsys.readouterr().out
+    assert protected not in hashed
+    assert [line for line in out.splitlines() if 'rebuild plan' in line] == [
+        f'rebuild plan unavailable: select input provenance {reason}'.replace(' :', ':')]
+    if case != 'link-out':  # the runner's own guard still refuses the run
+        assert f'  REFUSE input-path: {labels} is under {vault}' in out.splitlines()
+        assert out.splitlines()[-1] == 'dry run: a real run would be refused now; nothing was run and nothing was written'
+
+
 @pytest.mark.parametrize('partial, census, input_lines', [
     ([], False, ['inputs for zone: --coarse (stage coarse), --water (stage water), --coarse-source (stage coarse)']),
     (ZONE_ARGS[:2], False, ['inputs for zone: --coarse (option), --water (stage water), --coarse-source (missing option)']),
