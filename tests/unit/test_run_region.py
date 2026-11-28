@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.relief import rebuild_plan as report_cli, run_region as RR
+from scripts.relief import morro_stage_preview as PREVIEW, rebuild_plan as report_cli, run_region as RR
 from skippercast.relief import receipts
 from tests._support import ROOT
 
@@ -1298,4 +1298,30 @@ def test_c2_dry_run_as_a_command_leaves_no_planner_bytecode(box):
     assert [line for line in done.stdout.splitlines() if line.startswith('  select rebuild')] == [
         '  select rebuild (missing)',
     ]
-    assert (list(cache.rglob('rebuild_plan.*.pyc')), box.out_tree()) == ([], [])
+    assert (list(cache.rglob('rebuild_plan.*.pyc')), list(cache.rglob('morro_stage_preview.*.pyc')),
+            box.out_tree()) == ([], [], [])
+
+
+@pytest.mark.parametrize('region', ['morro-bay', *PREVIEW.STAGE_REGIONS])
+def test_terrain_only_region_packages_without_a_contour_style(box, capsys, region):
+    # Contract: a terrain-only region publishes no contours, so package must not take the contours
+    # receipt (package.style_from_receipts would then pin style.contours, and the terrain-only stage
+    # overlay refuses that pointer). Contour regions keep the contour style. Bug caught: the chain
+    # always passed --upstream contours, so no terrain-only release could be staged.
+    assert RR.main([region, '--out', str(box.out), '--dry-run'], box.cfg) == 0
+    package_line, = [line for line in capsys.readouterr().out.splitlines()
+                     if re.match(r'\s+\d+\. ', line) and ' package --region ' in line]
+    upstream = re.findall(r'--upstream (\S+)', package_line)
+    terrain_only = region in PREVIEW.TERRAIN_ONLY_REGIONS
+    assert upstream == ['tiles:public', 'digests', 'zone:public', 'inventory', *([] if terrain_only else ['contours'])]
+    assert RR.TERRAIN_ONLY_REGIONS is PREVIEW.TERRAIN_ONLY_REGIONS  # one list: what is staged is what is packaged
+
+
+def test_terrain_only_package_as_a_command_omits_contours(box):
+    # Contract: the sibling import also works when run as `python3 run_region.py` (no package).
+    import subprocess
+    done = subprocess.run([sys.executable, str(ROOT / 'scripts/relief/run_region.py'), 'monterey-point-sur',
+                           '--out', str(box.out), '--dry-run'], cwd=box.root, capture_output=True, text=True)
+    package_line, = [line for line in done.stdout.splitlines()
+                     if re.match(r'\s+\d+\. ', line) and ' package --region ' in line]
+    assert '--upstream inventory' in package_line and '--upstream contours' not in package_line

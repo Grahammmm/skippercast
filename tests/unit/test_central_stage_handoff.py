@@ -80,6 +80,52 @@ def test_cli_complete_through_envelope_and_reports_every_central_release(tmp_pat
                and row['last_verified'] is None for row in rows[1:])
 
 
+def _chain(out, region, package_links_contours, qa_links_contours=True):
+    def save(step, *upstream):
+        return _saved(out, region, step, *upstream)
+
+    select = save('select')
+    mosaic = save('mosaic.public', select)
+    tiles = save('tiles.public', select, mosaic)
+    zone = save('zone.public', select, mosaic)
+    digests = save('digests', tiles)
+    inventory = save('inventory', select, tiles, digests, zone)
+    contours = save('contours', select, mosaic)
+    nearshore = save('nearshore_vectors.public', select, mosaic)
+    package = save('package', tiles, digests, zone, inventory, *([contours] if package_links_contours else []))
+    save('shots', package)
+    qa = save('qa', package, mosaic, nearshore, *([contours] if qa_links_contours else []))
+    return save('envelope', package, qa)
+
+
+@pytest.mark.parametrize('region', [MONTEREY, SANTA_CRUZ])
+def test_terrain_only_chain_reaches_envelope_without_a_package_contour_edge(tmp_path, capsys, region):
+    # Invariant: the handoff report follows run_region's terrain-only package (no contour style).
+    # Regression: every complete terrain-only chain was reported as package/stale.
+    envelope = _chain(tmp_path, region, package_links_contours=False)
+    row = _triage(tmp_path, capsys)[region]
+    assert (row['first_unresolved'], row['reason']) == (None, None)
+    assert row['last_verified'] == _last(region, 'envelope', envelope)
+
+
+@pytest.mark.parametrize(('region', 'package_links', 'qa_links', 'stop', 'detail'), [
+    (BIG_SUR, False, True, 'package', 'required direct upstream omitted: contours'),
+    (CAMBRIA, False, True, 'package', 'required direct upstream omitted: contours'),
+    (MONTEREY, True, True, 'package', 'terrain-only release links a contour style: contours'),
+    (SANTA_CRUZ, True, True, 'package', 'terrain-only release links a contour style: contours'),
+    (MONTEREY, False, False, 'qa', 'required direct upstream omitted: contours'),
+    (BIG_SUR, True, False, 'qa', 'required direct upstream omitted: contours'),
+])
+def test_package_contour_edge_follows_region_kind_and_qa_always_binds_contours(
+        tmp_path, capsys, region, package_links, qa_links, stop, detail):
+    # Invariant: only the two terrain-only regions drop (and must drop) package's contour edge;
+    # QA keeps contour evidence for both kinds of release.
+    _chain(tmp_path, region, package_links, qa_links)
+    row = _triage(tmp_path, capsys)[region]
+    assert (row['first_unresolved'], row['reason'], row['detail']) == (stop, 'stale', detail)
+    assert row['last_verified']['step'] == ('nearshore_vectors.public' if stop == 'package' else 'shots')
+
+
 def test_matching_stale_held_and_failed_neighbors_stay_separate(tmp_path, capsys, monkeypatch):
     # Invariant: first unresolved stops the cursor per region, with no lock probe.
     # Regressions: trusting older history, skipping a held step for a later ok,

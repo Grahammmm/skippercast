@@ -9,8 +9,15 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 
 from skippercast.relief import receipts
+
+if __package__:
+    from .morro_stage_preview import TERRAIN_ONLY_REGIONS
+else:  # run as a command: its sibling import must not leave bytecode in a cold checkout
+    sys.dont_write_bytecode = True
+    from morro_stage_preview import TERRAIN_ONLY_REGIONS
 
 CENTRAL_RELEASES = (
     'big-sur-coast', 'cambria-san-simeon', 'south-big-sur-san-simeon',
@@ -34,6 +41,15 @@ PUBLIC_CHAIN = {
     'qa': ('package', 'mosaic.public', 'nearshore_vectors.public', 'contours'),
     'envelope': ('package', 'qa'),
 }
+# A terrain-only release pins no contour style, so run_region omits package's contours edge (and
+# a package that links contours is not this chain); QA still binds the contours receipt as evidence.
+TERRAIN_ONLY_PACKAGE = tuple(key for key in PUBLIC_CHAIN['package'] if key != 'contours')
+
+
+def _required(region_id, key):
+    if key == 'package' and region_id in TERRAIN_ONLY_REGIONS:
+        return TERRAIN_ONLY_PACKAGE, ('contours',)
+    return PUBLIC_CHAIN[key], ()
 
 
 def _is_digest(value):
@@ -69,7 +85,8 @@ def _read(region, key):
     return doc, None, None
 
 
-def _upstream_problem(region, key, doc, required, verified):
+def _upstream_problem(region, key, doc, verified):
+    required, forbidden = _required(region.id, key)
     seen = set()
     for row in doc['upstream']:
         ref = receipts.Ref(row['stage'], row.get('scope'))
@@ -90,17 +107,19 @@ def _upstream_problem(region, key, doc, required, verified):
             return 'direct upstream identity or generation does not match'
     if missing := sorted(set(required) - seen):
         return 'required direct upstream omitted: ' + ', '.join(missing)
+    if linked := sorted(seen & set(forbidden)):
+        return 'terrain-only release links a contour style: ' + ', '.join(linked)
     return None
 
 
 def _triage(region):
     verified = {}
     last = None
-    for key, required in PUBLIC_CHAIN.items():
+    for key in PUBLIC_CHAIN:
         doc, reason, detail = _read(region, key)
         if doc is None:
             return dict(region=region.id, last_verified=last, first_unresolved=key, reason=reason, detail=detail)
-        if problem := _upstream_problem(region, key, doc, required, verified):
+        if problem := _upstream_problem(region, key, doc, verified):
             reason, detail = 'stale', problem
         elif doc['status'] != 'ok':
             reason, detail = doc['status'], f"saved {doc['status']} receipt (attempt {doc['attempt']})"

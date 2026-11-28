@@ -26,7 +26,9 @@ back to $SC_RELIEF_PROVENANCE, else PROVENANCE-LABELS.json in the working direct
 record can SHA-256 pin it). Zone fills omitted coarse and water paths from done stage receipts;
 when using stage coarse it defaults the source ID to the family in the receipted coarse.json.
 Package reads the inventory and its public producer receipts, including the unscoped contours receipt
-for style provenance. Contour files remain QA evidence, not release layers. A held
+for style provenance, except for a terrain-only region (morro_stage_preview.TERRAIN_ONLY_REGIONS): it
+publishes no contours, so its package omits that upstream and its release style pins no contours.
+Contour files remain QA evidence, not release layers. A held
 contours stage stops the chain before package. Shots needs a local basemap and performs receipt-bound MB-08
 capture. The runner checks ``region.py status --json`` after package and shots: QA uses
 the exact package release hash and the shots stage's own generation, while the envelope
@@ -102,6 +104,12 @@ import stat
 import subprocess
 import sys
 import time
+
+if __package__:
+    from .morro_stage_preview import TERRAIN_ONLY_REGIONS
+else:  # run as a command: its sibling import must not leave bytecode in a cold checkout
+    sys.dont_write_bytecode = True
+    from morro_stage_preview import TERRAIN_ONLY_REGIONS
 
 DEFAULT_NORM = '/mnt/agentorange-backup/seafloor-relief-cache/_norm'  # select's --cache default
 SURVEY_STAGES = ('survey_detail', 'survey_gap')
@@ -319,7 +327,9 @@ def stage_extras(args, out):
         'select': ['--cache', str(args.norm)],
         'package': ['--manifest', str(root / 'inventory/manifest.json'),
                     '--upstream', 'tiles:public', '--upstream', 'digests',
-                    '--upstream', 'zone:public', '--upstream', 'inventory', '--upstream', 'contours'],
+                    '--upstream', 'zone:public', '--upstream', 'inventory',
+                    # A terrain-only region publishes no contours, so its release must not pin a contour style.
+                    *(() if args.region in TERRAIN_ONLY_REGIONS else ('--upstream', 'contours'))],
         'shots': ['--basemap', args.basemap or '<basemap>'],
         'status': ['--json'],
         'qa': ['--generation', '<generation>', '--release-sha256', '<release-sha256>',
