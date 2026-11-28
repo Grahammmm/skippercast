@@ -717,7 +717,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // role stays, and no backing, opacity, token or threshold changed.
   // Gap 3 (terrain-only regions) hides the existing depth-colours-dimmed note when the region has no seafloor publication
   // (a condition only, no new text or paint); no backing, opacity, token or threshold changed.
-  "legendTsx": "1eacc04349f3f20b2819c370bab904548b5cffb12102e4bfae13f70843fa253a"
+  // Gap 1 (survey key): Legend.tsx lists only the survey classes the loaded file carries and none before it loads (which chips
+  // render, existing chip markup); no new text, backing, opacity, token or threshold changed.
+  "legendTsx": "690d863f9642b4b7bfa3501793bce9ac3f7901bc28abc54cb6e30d002a613868"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

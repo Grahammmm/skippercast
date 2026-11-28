@@ -446,7 +446,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2052-02: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // M41: check_contrast.mjs changes only the legendTsx surface hash and its comment (Legend.tsx names a failed depth-shading overlay in its unavailable line by rail name, copy only); contrast(), every gate and every threshold are unchanged, the Reports catch flow never mounts the Legend, and the unmodified-backing negative control is untouched. Rebound from the final bytes.
   // Gap 3 (terrain-only regions): check_contrast.mjs changes only the legendTsx surface hash and its comment (Legend.tsx hides the dimmed-depth note when the region has no seafloor publication; condition only, no paint); contrast() and every gate are unchanged. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "07b6a30b4106f8b17afb34a2a0c06a5e4b2aade2fb2e679146889cbd7ab7604f",
+  // Gap 1 (survey key): check_contrast.mjs changes only the legendTsx surface hash and its comment (Legend.tsx lists only the survey classes the loaded file carries; existing chip markup, no paint); contrast() and every gate are unchanged. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "cc765a93c461aec62762111cea8564570a0f7ccb895c86bc9286d1406b6f6ea6",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // SCA-479: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.

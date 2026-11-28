@@ -61,6 +61,19 @@ test('unknown classes light nothing', () => {
   assert.deepEqual(bold(surveyDetailChips(new Set(), new Set(['1m', 'toString']))), []);
 });
 
+// Contract (STYLE GAP 1): the key lists only the classes the region's survey file carries. Bug: a region whose file is
+// all compiled/estimated (Big Sur) still lists "1 m measured", "2 m", "5 m" and "no survey", implying detail it lacks.
+test('with the carried classes given, only those chips are listed (a bold one never disappears)', () => {
+  const bigSur = new Set(['estimated', '4-16m-compiled']);
+  assert.deepEqual(surveyDetailChips(new Set(), undefined, undefined, bigSur).map(c => c.id), ['4-16m-compiled', 'estimated']);
+  assert.deepEqual(bold(surveyDetailChips(new Set(['estimated', '4-16m-compiled']), undefined, undefined, bigSur)), ['4-16m-compiled', 'estimated']);
+  // A class drawn in view but missing from the carried set still shows (and is bold): the view never loses a key.
+  assert.deepEqual(surveyDetailChips(new Set(['2m']), undefined, undefined, new Set(['estimated'])).map(c => [c.id, c.bold]),
+    [['2m', true], ['estimated', false]]);
+  // Unknown carried values add nothing.
+  assert.deepEqual(surveyDetailChips(new Set(), undefined, undefined, new Set(['1m', 'none'])).map(c => c.id), ['none']);
+});
+
 // Contract: v1 keeps today's ids byte for byte (MB-11 amendment); they must exist in the live catalogue.
 // Bug: the v1 branch is renamed or gets the v2 ids, changing a live Morro legend.
 test('v1 and an absent set return today\'s ids, all present in the catalogue', () => {
