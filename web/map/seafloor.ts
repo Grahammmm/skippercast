@@ -323,6 +323,9 @@ export interface SeafloorState {
 }
 const OFF: SeafloorState = Object.freeze({status: 'off', note: '', view: 'terrain', fit: null, surveys: [], credits: [], drawn: 0});
 export const seafloorState = signal<SeafloorState>(OFF);
+/** The region has no seafloor publication at all (the gate said so, not a fetch failure): the menu shows Seafloor type
+ * as not published, and the depth colours are not dimmed for a layer that cannot draw. */
+export const seafloorUnpublished = computed(() => seafloorState.value.status === 'unavailable' && seafloorState.value.note === NO_PUBLICATION);
 /** R4-SC-09-F1c: true while the drawn seafloor is a rough-first archive's rough layer and its full detail has not drawn (the stage labels it). */
 export const seafloorRough = signal(false);
 /** Whether a manifest publishes a rough-first archive whose rough layer this layer can read first (src/skippercast/seafloor/rough_first.py). */

@@ -715,7 +715,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // no backing, opacity, token or threshold changed.
   // M41 names a failed depth-shading overlay in the unavailable line through its rail name (copy only, no paint); the same app-empty text
   // role stays, and no backing, opacity, token or threshold changed.
-  "legendTsx": "4718ca6d69303d03e07b36b14cdd257ce2e50c024fcf5803381e952e624039ad"
+  // Gap 3 (terrain-only regions) hides the existing depth-colours-dimmed note when the region has no seafloor publication
+  // (a condition only, no new text or paint); no backing, opacity, token or threshold changed.
+  "legendTsx": "1eacc04349f3f20b2819c370bab904548b5cffb12102e4bfae13f70843fa253a"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

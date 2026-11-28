@@ -1214,6 +1214,7 @@
 "rail.admin":"{label} · administración",
 "rail.basisSummary":"{label}: fundamento",
 "rail.chartOnly":"Solo en la Carta",
+"rail.notPublished":"No publicado para esta zona",
 "rail.chartFailed":"El mapa no pudo iniciarse en este dispositivo o navegador.",
 "rail.notDrawn":"Aún no se muestra.",
 "rail.unavailable":"{label} no disponible.",

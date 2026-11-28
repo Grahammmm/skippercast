@@ -242,7 +242,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-07: LayerRail.tsx sets disabled and a catalogue note on its existing rail buttons while the Chart cannot start (a state the contrast pages never reach). No CSS, token or catch markup change. Rebind only LayerRail.tsx.
   // MB-13 regroups rail rows, adds a theme row and 24px checkbox targets; MSK-7 changes terrain fixed-ramp and readout states.
   // BODY09 mounts Reports/CatchCards, not the rail or terrain options; catch markup, CSS, tokens and contrast thresholds are unchanged.
-  "web/app/LayerRail.tsx": "aef6ccee7caa3c62f3a440620594a70331e7317b0b965481b8327b0b80ae431c",
+  // Gap 3 (terrain-only regions): LayerRail.tsx shows Depth lines / Seafloor type off with a catalogue note where the region publishes no contour file or seafloor (existing disabled state). No CSS, token or catch markup change. Rebind only the hash.
+  "web/app/LayerRail.tsx": "8eb07039c56fb7e28b3eb3af3c6643ed7bb7d6bf6b74825e749832c939fdc05c",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
@@ -281,7 +282,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MB-11: the Chart legend gains depth-ramp/survey-detail chips; BODY09 mounts Reports/CatchCards, never MapStage. No catch
   // markup, paint, contrast(), assertion or threshold change. Rebind only MapStage.tsx.
   // MSK-2: MapStage only passes the relief look and nearshore flags to the legend; Reports never mounts it. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "f86a708fad5104448bbccb1b78991ad1dbf85e2d1e322be690d75728acd27910",
+  // Gap 3 (terrain-only regions): MapStage.tsx stops dimming the depth colours when the region has no seafloor publication (a condition, Chart only). BODY09 mounts Reports, never MapStage; no CSS, token or catch markup change. Rebind only the hash.
+  "web/app/MapStage.tsx": "2cf48f3c3c4a5ccd543cf7a0416819f0072d5313529d279874687b2f0f0ea2d0",
   // MGL-15: web/tokens.css adds only map-only roles (--map-*, --hab-*, --mark-ring) with the four habitat classes' own colours; no chrome token, Reports catch colour or backdrop changed.
   // MB-05: light map-only colours and habitat opacity change; Reports catch text and backing do not use these roles.
   // MB-20: only light-theme overlay roles (--flow*, --mpa-fill/line, --swell-0..3, --contrast-1/2) change; Reports catch text and backing do not use them.
@@ -443,7 +445,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // MSKL-1: only the tokensCss surface hash and applicability comment changed; contrast() and all gates are unchanged.
   // SC2052-02: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // M41: check_contrast.mjs changes only the legendTsx surface hash and its comment (Legend.tsx names a failed depth-shading overlay in its unavailable line by rail name, copy only); contrast(), every gate and every threshold are unchanged, the Reports catch flow never mounts the Legend, and the unmodified-backing negative control is untouched. Rebound from the final bytes.
-  "scripts/check_contrast.mjs": "8c0785fc9b046be0da02998150f446bec4a5cb4c930728cd3e6e43f174307bd9",
+  // Gap 3 (terrain-only regions): check_contrast.mjs changes only the legendTsx surface hash and its comment (Legend.tsx hides the dimmed-depth note when the region has no seafloor publication; condition only, no paint); contrast() and every gate are unchanged. Rebound from the final bytes.
+  "scripts/check_contrast.mjs": "07b6a30b4106f8b17afb34a2a0c06a5e4b2aade2fb2e679146889cbd7ab7604f",
   // SC1407-15: only appCss/Legend surface hashes, shifted citations and applicability comments change; contrast() and all gates unchanged.
   // SCA-479: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
   // UXFIX-10: check_contrast.mjs changes only the appCss surface hash and its comment; contrast() is untouched. Rebound from the final bytes.
