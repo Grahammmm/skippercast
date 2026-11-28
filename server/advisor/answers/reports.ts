@@ -23,7 +23,7 @@ import {resolvePort, landingNames, exactPort, fold} from './resolve.ts';
 import {regionConfig} from './regions.ts';
 import {dailyFeed, intelligenceFeed, feedReader} from './feeds.ts';
 import type {FeedReader} from './feeds.ts';
-import {isFreshDailyFeed, reportEvidence, targetSpecies} from './confidence.ts';
+import {coversLanding, isFreshDailyFeed, reportEvidence, targetSpecies} from './confidence.ts';
 import type {Confidence, LandingReport} from './confidence.ts';
 import {advisoriesFrom, advisoryCheckTime, regionZones, windowConditions, windowEpochs, withForecastClock, WINDOW} from './conditions.ts';
 import {forecastClock} from './forecast-clock.ts';
@@ -121,7 +121,7 @@ export async function dailyInputs(env: Env, port: string, date: string, deps: Da
   const read: FeedReader = feedReader(deps);
   const [daily, intel] = region ? await Promise.all([dailyFeed(region, read), intelligenceFeed(region, read)]) : [null, null];
   let landing: DailyInputs['landing'] = {available: false, reports: [], activity: []};
-  if (daily && region) {
+  if (daily && region && coversLanding(daily, landingNames(port))) {
     const names = new Set(landingNames(port).map(n => n.toLowerCase()));
     const portFeed = {...daily, reports: (daily.reports as LandingReport[]).filter(r => names.has(String(r.port ?? '').toLowerCase()))};
     const targets = [...new Set(region.species.filter(s => s !== 'dungeness'))];

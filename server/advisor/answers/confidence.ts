@@ -38,6 +38,20 @@ export function isFreshDailyFeed(data: DailyFeed | null | undefined, now: number
   return validFeed(data) && hours >= -1 && hours <= 36;
 }
 
+/**
+ * Whether the feed's landing-report publisher covers any of a port's landing names
+ * (feed.report_ports). A feed that lists no matching port has no landing facts for
+ * that port: never present it as a covered port with zero trips. Feeds written
+ * before report_ports existed are taken as covering (their reports are still
+ * filtered by port name).
+ */
+export function coversLanding(data: unknown, names: readonly string[]): boolean {
+  const ports = (data as {report_ports?: unknown} | null | undefined)?.report_ports;
+  if (!Array.isArray(ports)) return true;
+  const own = new Set(names.map(n => n.toLowerCase()));
+  return ports.some(p => typeof p === 'string' && own.has(p.toLowerCase()));
+}
+
 const dayFormats = new Map<string, Intl.DateTimeFormat>();
 function localDay(now: number, tz: string): string {
   let f = dayFormats.get(tz);

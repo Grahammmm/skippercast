@@ -401,6 +401,9 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
                 "schedule": {"cron": "17 4 * * *", "timezone": "America/Los_Angeles", "max_delay_hours": 36},
                 "region_id": region_id, "scope": region["name"], "bounds": region["bounds"],
                 "landing_names": region["landing_names"],
+                # The publisher ports this feed covers. [] = no landing-report coverage at all,
+                # which readers must not show as a covered port with zero trips.
+                "report_ports": list(config["report_ports"].values()),
                 "report_window": {"start": (local_day - timedelta(days=days)).isoformat(),
                                   "end": (local_day - timedelta(days=1)).isoformat(), "days": days},
                 "sources": sources, "reports": sorted(reports, key=lambda r: (r["date"], r["id"]), reverse=True),
@@ -447,6 +450,12 @@ def validate(snapshot):
         parsers.iso_time(snapshot["published_at"])
     if snapshot.get("catch_probability") is not None or snapshot.get("bite_score") is not None:
         raise ValueError("Uncalibrated catch probability must remain absent")
+    if "report_ports" in snapshot:   # absent on feeds written before coverage was published
+        ports = snapshot["report_ports"]
+        if not isinstance(ports, list) or not all(isinstance(p, str) and p for p in ports):
+            raise ValueError("report_ports must be a list of port names")
+        if not ports and snapshot["reports"]:
+            raise ValueError("A feed without landing-report coverage carries no trip records")
     section = snapshot.get("charter_reports")
     if section is not None:
         if section.get("status") != "not_available" or snapshot["reports"]:
