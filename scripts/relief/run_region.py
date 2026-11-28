@@ -2,7 +2,7 @@
 """Guarded per-region runner for the relief pipeline (DATA-LIVE-6; E2E-PIPELINE §1-§3).
 
     run_region.py <region> --out <OUT> --through <stage> [--norm <NORM>]
-                  [--scope public] [--region-config FILE]
+                  [--scope public] [--region-config FILE] [--provenance FILE]
                   [--census FILE --census-sha256 HEX]
                   [--coarse TIF --water GEOJSON --coarse-source ID [--coarse-date D]]
                   [--basemap PMTILES] [--qa-support TIF] [--qa-fine-proof ZOOM TIF ...]
@@ -14,7 +14,9 @@ Runs ``region.py <stage> --region <region> --out <OUT>`` through the requested s
     select mosaic tiles zone digests inventory contours nearshore_vectors package shots qa envelope
 
 With --census, census-bind runs before select. Normalize separately, per source. Select reads
-the resulting cache. Zone fills omitted coarse and water paths from done stage receipts;
+the resulting cache and the source-label file given by --provenance (without it, select falls
+back to $SC_RELIEF_PROVENANCE, else PROVENANCE-LABELS.json in the working directory; an --inputs
+record can SHA-256 pin it). Zone fills omitted coarse and water paths from done stage receipts;
 when using stage coarse it defaults the source ID to the family in the receipted coarse.json.
 Package reads the inventory and its public producer receipts, including the unscoped contours receipt
 for style provenance. Contour files remain QA evidence, not release layers. A held
@@ -106,7 +108,7 @@ RUNS_DIR = 'runs'
 RUN_LOG_SCHEMA = 'sc-run-log/1'
 EXIT_STATES = {1: 'failed', 2: 'not available', 3: 'blocked', 4: 'held', 5: 'busy'}
 # file-valued options: the guard and the stage see the same spelling
-PATH_OPTIONS = ('region_config', 'coarse', 'water', 'basemap', 'qa_support', 'census')
+PATH_OPTIONS = ('region_config', 'provenance', 'coarse', 'water', 'basemap', 'qa_support', 'census')
 RECORD_FILES = frozenset(PATH_OPTIONS) - {'region_config'}
 RECORD_METADATA = ('coarse_source', 'coarse_date', 'norm')
 GB = 10 ** 9
@@ -322,6 +324,8 @@ def stage_extras(args, out):
     if args.region_config:
         for stage in ('select', *SCOPED_STAGES):
             extra[stage] += ['--region-config', args.region_config]
+    if args.provenance:
+        extra['select'] += ['--provenance', args.provenance]
     for source_id in args.exclude_source or ():
         extra['select'] += ['--exclude-source', source_id]
     for name in ('coarse', 'water', 'coarse-source', 'coarse-date'):
@@ -944,6 +948,8 @@ def parse(argv):
     parser.add_argument('--qa-fine-proof', nargs=2, action='append', metavar=('ZOOM', 'PATH'),
                         help='qa option: fine-support raster for zoom 16 or 17 (z16/z17 also accepted; qa receives 16/17); repeat per zoom')
     parser.add_argument('--region-config', help='region config file for select, mosaic, tiles and zone (default: regions/<id>/region.json)')
+    parser.add_argument('--provenance', help='select input: source-label file (PROVENANCE-LABELS.json); default is '
+                        "select's own ($SC_RELIEF_PROVENANCE, else the working directory)")
     parser.add_argument('--census', help='local census to bind before select')
     parser.add_argument('--exclude-source', action='append', default=[], metavar='REGISTRY_ID',
                         help='select option: skip census rows bound to this registry source id (repeatable)')

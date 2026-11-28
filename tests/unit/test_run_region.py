@@ -195,12 +195,12 @@ def test_c1_record_must_be_readable(box, capsys, no_record_guards, monkeypatch, 
     assert box.calls() == [] and box.out_tree() == []
 
 
-@pytest.mark.parametrize('field', ['census', 'census_sha256', 'coarse', 'water', 'basemap', 'qa_support',
+@pytest.mark.parametrize('field', ['census', 'census_sha256', 'coarse', 'water', 'basemap', 'qa_support', 'provenance',
                                    'coarse_source', 'coarse_date', 'norm'], ids=lambda name: f'C3: duplicate {name}')
 def test_c3_record_and_cli_overlap_is_usage_error(box, capsys, no_record_guards, field):
     # C3: even identical or empty explicit flag values must not silently win or lose.
     doc = record_doc(coarse_source='family', coarse_date='2026-01-01', norm='cache', inputs={
-        name: {'path': name, 'sha256': GEN} for name in ('census', 'coarse', 'water', 'basemap', 'qa_support')
+        name: {'path': name, 'sha256': GEN} for name in ('census', 'coarse', 'water', 'basemap', 'qa_support', 'provenance')
     })
     flag = '--' + field.replace('_', '-')
     with pytest.raises(SystemExit) as stop:
@@ -457,6 +457,44 @@ def test_exclude_source_goes_to_select_only(box):
             assert tail == ['--cache', RR.DEFAULT_NORM, '--exclude-source', 'src-a', '--exclude-source', 'src-b']
         else:
             assert '--exclude-source' not in tail
+
+
+def test_provenance_reaches_select_only_as_an_absolute_path(box, monkeypatch):
+    # Contract: --provenance names select's source-label file, fixed once against the start directory.
+    # Bug caught: select falling back to a cwd-relative PROVENANCE-LABELS.json, so the same chain
+    # silently depended on where it was started (a background unit has another working directory).
+    monkeypatch.chdir(box.root)
+    assert box.run('--provenance', 'labels/PROVENANCE-LABELS.json', through='tiles') == 0
+    calls = box.calls()
+    assert [call[0] for call in calls] == ['select', 'mosaic', 'tiles']
+    assert calls[0][5:] == ['--cache', RR.DEFAULT_NORM, '--provenance', str(box.root / 'labels/PROVENANCE-LABELS.json')]
+    assert all('--provenance' not in call for call in calls[1:])
+
+
+def test_provenance_under_the_forbidden_root_is_refused_before_select(box, capsys):
+    # Contract: the source-label file obeys the same read boundary as every other input.
+    vault = box.root / 'vault'
+    box.cfg.forbidden_root = str(vault)
+    labels = vault / 'PROVENANCE-LABELS.json'
+    assert box.run('--provenance', str(labels), through='select') == 3
+    assert f'input-path: {labels} is under {vault}' in capsys.readouterr().out
+    assert box.calls() == []
+
+
+@pytest.mark.parametrize('good', [True, False], ids=['pinned provenance reaches select', 'wrong provenance bytes refused'])
+def test_pinned_provenance_is_checked_then_forwarded(box, capsys, good):
+    # Contract: an --inputs record can SHA-256 pin the source-label file; a changed file stops the run.
+    pin = pinned_file(box.root / 'PROVENANCE-LABELS.json', b'{"labels": []}\n')
+    if not good:
+        (box.root / 'PROVENANCE-LABELS.json').write_bytes(b'{"labels": ["edited"]}\n')
+    code = run_record(box, record_doc(inputs={'provenance': pin}))
+    if good:
+        assert code == 0
+        assert box.calls() == [['select', '--region', 'morro-bay', '--out', str(box.out),
+                                '--cache', RR.DEFAULT_NORM, '--provenance', pin['path']]]
+    else:
+        assert code == 3 and box.calls() == []
+        assert capsys.readouterr().out.startswith(f'run_region: refused input provenance: {pin["path"]} expected sha256')
 
 
 def test_scoped_stages_get_scope_config_and_zone_inputs_only(box):
