@@ -637,7 +637,7 @@ def run_with_stub_python(tmp_path, name, contours):
     stubs.mkdir(exist_ok=True)
     calls = tmp_path / 'calls'
     (stubs / 'python3').write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" >> "{calls}"\necho {{}}\n')
-    (stubs / 'curl').write_text('#!/bin/sh\nexit 22\n')
+    (stubs / 'curl').write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" >> "{tmp_path / "curls"}"\nexit 22\n')
     for stub in stubs.iterdir():
         stub.chmod(0o755)
     plan = tmp_path / 'plan'
@@ -670,6 +670,11 @@ def test_served_check_compares_contour_files_only_for_a_contour_region(tmp_path,
     assert ('served detail contours differ from the pin' in run.stdout) == (contours == 'yes')
     assert ('served overview contours differ from the pin' in run.stdout) == (contours == 'yes')
     assert "served region.json is not the candidate's" in run.stdout
+    # A terrain-only run never asks the stage for contour files; a contour region asks on every attempt.
+    curls = (tmp_path / 'curls').read_text().splitlines()
+    contour_gets = [c for c in curls if '/depth-contours' in c]
+    assert len(curls) == (36 if contours == 'yes' else 24)
+    assert len(contour_gets) == (12 if contours == 'yes' else 0)
 
 
 def test_workflow_shell_reads_the_region_only_from_the_env():
