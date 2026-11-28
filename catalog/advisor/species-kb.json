@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-11-28",
+  "method": "Fishing-friend species knowledge base v1 (issue #3845). Every fact is {value, unit, source_url, source_kind, checked_at} copied from the cited source, or null when no reviewed source gives it; nothing is inferred. v1 cites only CDFW 'Life History Information for Selected California Marine Fishes': primary_depth is the table's primary depth range in FEET (where the species lives, not a legal fishing depth; the depth gate always comes from the rules table); ca_range uses the table's four regions N, NC, SC, S ('All' = all four). Group records (rockfish) carry no facts of their own; their members do. regulations_ref is the rules-table species key the advisor already resolves (a member without its own key falls back to the group's rule); no rule text or number is copied here. No catch probability or score exists in this file.",
+  "species": [
+    {
+      "id": "lingcod", "cdfw_row": "Lingcod", "regulations_ref": "lingcod",
+      "facts": {
+        "primary_depth": {"value": [0, 1400], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+        "ca_range": {"value": ["N", "NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+        "adult_habitat": {"value": ["rocky reefs", "kelp beds", "hard bottom", "soft bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+        "juvenile_habitat": {"value": ["rocky reefs", "kelp beds", "hard bottom", "soft bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+        "life_history": {"value": "Spawns nearshore on rocky reefs; males guard eggs", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+        "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null
+      },
+      "members": []
+    },
+    {
+      "id": "rockfish", "cdfw_row": null, "regulations_ref": "rockfish",
+      "facts": {"primary_depth": null, "ca_range": null, "adult_habitat": null, "juvenile_habitat": null, "life_history": null, "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null},
+      "members": [
+        {"key": "blue", "cdfw_row": "Rockfish, blue", "regulations_ref": "blue", "facts": {
+          "primary_depth": {"value": [0, 300], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["rocky reefs", "kelp forests"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["rocky reefs", "kelp forests", "soft bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "copper", "cdfw_row": "Rockfish, copper", "regulations_ref": "copper", "facts": {
+          "primary_depth": {"value": [0, 600], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["rocky reefs", "kelp forests"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["rocky reefs", "soft bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "gopher", "cdfw_row": "Rockfish, gopher", "regulations_ref": "gopher", "facts": {
+          "primary_depth": {"value": [0, 180], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["rocky reefs", "kelp forests"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["rocky reefs"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "vermilion", "cdfw_row": "Rockfish, vermilion", "regulations_ref": "vermilion", "facts": {
+          "primary_depth": {"value": [0, 900], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["wide depth range", "rocky reefs", "kelp forests", "canyons"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["soft bottom", "hard bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "olive-rockfish", "cdfw_row": "Rockfish, Olive", "regulations_ref": "rockfish", "facts": {
+          "primary_depth": {"value": [0, 480], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["rocky reefs", "kelp forests"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["kelp forests", "soft bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "black", "cdfw_row": "Rockfish, black", "regulations_ref": "black", "facts": {
+          "primary_depth": {"value": [0, 1200], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["rocky reefs", "kelp forests"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["soft bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "canary", "cdfw_row": "Rockfish, canary", "regulations_ref": "canary", "facts": {
+          "primary_depth": {"value": [0, 900], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["midwater and near bottom over hard bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["soft bottom", "sand-rock interface"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "rosy-rockfish", "cdfw_row": "Rockfish, rosy", "regulations_ref": "rockfish", "facts": {
+          "primary_depth": {"value": [50, 420], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["hard bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["soft bottom", "hard bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "starry-rockfish", "cdfw_row": "Rockfish, starry", "regulations_ref": "rockfish", "facts": {
+          "primary_depth": {"value": [80, 900], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["hard bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["hard bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "yellowtail-rockfish", "cdfw_row": "Rockfish, yellowtail", "regulations_ref": "rockfish", "facts": {
+          "primary_depth": {"value": [0, 1800], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["midwater over hard bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["midwater"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "kelp-rockfish", "cdfw_row": "Rockfish, kelp", "regulations_ref": "rockfish", "facts": {
+          "primary_depth": {"value": [0, 150], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["kelp forests"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["kelp forests", "rocky reefs"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "grass-rockfish", "cdfw_row": "Rockfish, grass", "regulations_ref": "rockfish", "facts": {
+          "primary_depth": {"value": [0, 150], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["shallow rocky reefs", "kelp forests"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["shallow rocky reefs"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "brown-rockfish", "cdfw_row": "Rockfish, brown", "regulations_ref": "rockfish", "facts": {
+          "primary_depth": {"value": [0, 420], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC", "S"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["low-relief hard and soft bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["low-relief hard and soft bottom"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}},
+        {"key": "china-rockfish", "cdfw_row": "Rockfish, China", "regulations_ref": "rockfish", "facts": {
+          "primary_depth": {"value": [36, 420], "unit": "ft", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "ca_range": {"value": ["N", "NC", "SC"], "unit": "cdfw-region", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "adult_habitat": {"value": ["rocky reefs", "kelp forests"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "juvenile_habitat": {"value": ["rocky reefs"], "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "life_history": {"value": "live-bearing", "unit": "text", "source_url": "https://wildlife.ca.gov/Conservation/Marine/Life-History-Fish", "source_kind": "agency", "checked_at": "2026-11-28"},
+          "temperature": null, "season": null, "prey": null, "tide": null, "time_of_day": null, "tactics": null}}
+      ]
+    }
+  ]
+}
