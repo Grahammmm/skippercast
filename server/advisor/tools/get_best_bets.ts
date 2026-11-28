@@ -5,7 +5,8 @@
 // the atlas never loads on the reply path. Offered only when ADVISOR_BEST_BETS is on
 // (tools/index.ts toolsForRole). Never a percentage, a score number or a coordinate: the
 // result carries the call, its reasons and how sure it is in words. A stale or unreadable
-// forecast, or an incomplete marine alert check, makes no call.
+// forecast, an incomplete or old marine alert check, or a block with an hour of no
+// forecast makes no call.
 import type {AdvisorTool} from './tool.ts';
 import type {Language} from '../types.ts';
 import catalog from '../../../catalog/advisor/best-bet-grounds.json' with {type: 'json'};
@@ -71,7 +72,7 @@ export const getBestBets: AdvisorTool = {
       ...head, dates, best_bets: best, closed_days: closed,
       advisories_checked: file.advisories_checked, forecast_issued: file.forecast_issued, forecast_age_hours: file.forecast_age_hours,
       limitations: file.limitations,
-      note: [!file.advisories_checked ? 'NWS advisories could not be checked: make no call, say so and point to the NWS forecast.'
+      note: [!file.advisories_checked ? 'NWS advisories could not be checked or the check is old: make no call, say so and point to the NWS forecast.'
         : best.length ? 'Make one clear call from the first best bet (area, day, hours) with two or three of its reasons and its confidence_words word for word. It is a call on weather and seafloor structure, not a catch prediction.'
         : 'No open block on these days: say so, with closed_days\' reasons.',
       closed.length ? 'Name the closed days and why.' : null,

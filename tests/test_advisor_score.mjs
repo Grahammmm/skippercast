@@ -13,7 +13,7 @@ import {join} from 'node:path';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
-const {buildScores, bestBets, reefGrounds, habitatFit, nearestPoint, WEIGHTS_V1, BLOCKS} = await import('../server/advisor/score/best-bets.ts');
+const {buildScores, bestBets, reefGrounds, habitatFit, nearestPoint, alertCheckCurrent, ALERT_CHECK_MAX_HOURS, WEIGHTS_V1, BLOCKS} = await import('../server/advisor/score/best-bets.ts');
 const {COORDINATE} = await import('../server/advisor/answers/advice.ts');
 
 const REGION = REGIONS['morro-bay'];
@@ -144,6 +144,63 @@ test('an incomplete marine alert check (one zone or both missing) is never ranke
   assert.ok(partial.rows.every(r => r.gate === 'advisory' && r.rank === null && r.conditions.reasons[0] === 'Small Craft Advisory'));
 });
 
+test('a recommendation needs a current alert check: old or future-dated checks abstain like a missing one; a known advisory still closes', () => {
+  const checkedAgo = (hours, alerts = []) => {
+    const day = daily(alerts);
+    for (const z of Object.values(day.sources)) z.checked_at = new Date(NOW - hours * 3600000).toISOString();
+    return buildScores({region: REGION, intel: feed(), daily: day, grounds: GROUNDS, targets: TARGETS, dates: [DATE], now: NOW});
+  };
+  // Fresh controls: half an hour and just inside the limit rank every block.
+  for (const h of [0.5, ALERT_CHECK_MAX_HOURS - 1]) {
+    const file = checkedAgo(h);
+    assert.equal(file.advisories_checked, true, `${h} h`);
+    assert.equal(file.rows.filter(r => r.rank !== null).length, GROUNDS.length * BLOCKS.length, `${h} h`);
+  }
+  // Stale: just past the limit, a week old (the checker's probe), and a check stamped two hours in the future.
+  for (const h of [ALERT_CHECK_MAX_HOURS + 1, 7 * 24, -2]) {
+    const file = checkedAgo(h);
+    assert.equal(file.advisories_checked, false, `${h} h`);
+    assert.ok(file.rows.every(r => r.gate === 'unchecked' && r.rank === null && r.conditions.reasons.includes('the marine alert check is unavailable')), `${h} h`);
+    assert.deepEqual(bestBets(file, {n: 50}), [], `${h} h`);
+  }
+  // One zone stale, the other fresh: the oldest required check decides.
+  const mixed = daily(), [first] = Object.keys(mixed.sources);
+  mixed.sources[first].checked_at = new Date(NOW - 7 * 24 * 3600000).toISOString();
+  assert.equal(buildScores({region: REGION, intel: feed(), daily: mixed, grounds: GROUNDS, targets: TARGETS, dates: [DATE], now: NOW}).advisories_checked, false);
+  // A week-old check that still lists an overlapping advisory closes the block (not merely unchecked).
+  const sca = [{event: 'Small Craft Advisory', onset: '2026-09-28T06:00:00-07:00', ends: '2026-09-28T21:00:00-07:00'}];
+  assert.ok(checkedAgo(7 * 24, sca).rows.every(r => r.gate === 'advisory' && r.rank === null && r.conditions.reasons[0] === 'Small Craft Advisory'));
+  assert.equal(alertCheckCurrent(null, NOW), false);
+  assert.equal(alertCheckCurrent('not a time', NOW), false);
+});
+
+test('a block is ranked only when every one of its hours has a rated forecast (missing timestamps or missing values); Rough still closes', () => {
+  /** The feed with GFS timestamps removed (set to null, as a gap in the series reads) at these local hours of DATE. */
+  const without = (hours, opts = {}) => {
+    const intel = feed(opts), drop = new Set(hours.map(h => at(DATE, h)));
+    for (const p of intel.forecast.models.gfs_global.data) p.hourly.time = p.hourly.time.map(t => drop.has(t) ? null : t);
+    return buildScores({region: REGION, intel, daily: daily(), grounds: GROUNDS, targets: TARGETS, dates: [DATE], now: NOW});
+  };
+  const morning = file => file.rows.filter(r => r.block === 'morning');
+  // Control: the full calm morning ranks at every ground.
+  assert.ok(morning(without([])).every(r => r.gate === 'pass' && r.rank !== null));
+  for (const [name, hours, gap] of [['two of three missing', [7, 8], '2 of 3'], ['one missing', [6], '1 of 3']]) {
+    const file = without(hours);
+    assert.ok(morning(file).every(r => r.gate === 'incomplete' && r.rank === null && r.conditions.value === null && r.evidence === 'Insufficient'
+      && r.conditions.reasons.includes(`${gap} hours have no forecast`)), name);
+    assert.ok(file.rows.filter(r => r.block === 'midday').every(r => r.gate === 'pass' && r.rank !== null), `${name}: other blocks unaffected`);
+    assert.ok(bestBets(file, {n: 50}).every(r => r.block !== 'morning'), name);
+  }
+  // A timestamp present with no usable values is as missing as an absent one.
+  const NONE = Object.fromEntries([...Object.keys(CALM), ...Object.keys(ROUGH), 'wave_period', 'swell_wave_height', 'swell_wave_period', 'swell_wave_direction',
+    'secondary_swell_wave_height', 'secondary_swell_wave_direction', 'wind_wave_period'].map(k => [k, null]));
+  const blank = build({by: (_, t) => t === at(DATE, 7) ? NONE : {}});
+  assert.ok(morning(blank).filter(r => r.date === DATE).every(r => r.gate === 'incomplete' && r.rank === null));
+  // Rough in the hour that is there still closes the block as rough, not merely incomplete.
+  const rough = without([7, 8], {by: (_, t) => t === at(DATE, 6) ? ROUGH : {}});
+  assert.ok(morning(rough).every(r => r.gate === 'rough' && r.rank === null));
+});
+
 test('blocks that have already ended today are left out', () => {
   const file = build({}, {now: Date.parse('2026-09-28T19:30:00Z')});   // 12:30 local
   assert.deepEqual([...new Set(file.rows.filter(r => r.date === DATE).map(r => r.block))], ['afternoon', 'evening']);
@@ -238,7 +295,17 @@ test('get_best_bets: an advisory day is listed closed; a stale forecast or an in
   assert.equal('best_bets' in stale, false);
   const unchecked = await bets({}, {day: {sources: {}}});
   assert.deepEqual([unchecked.best_bets, unchecked.advisories_checked], [[], false]);
-  assert.match(unchecked.note, /could not be checked: make no call/);
+  assert.match(unchecked.note, /could not be checked or the check is old: make no call/);
+  // The checker's probe: a fresh forecast with a week-old alert check makes no call.
+  const weekOld = daily();
+  for (const z of Object.values(weekOld.sources)) z.checked_at = '2026-09-21T12:00:00Z';
+  const old = await bets({date: DATE}, {day: {...weekOld, generated_at: '2026-09-21T12:00:00Z'}});
+  assert.deepEqual([old.best_bets, old.advisories_checked], [[], false]);
+  // The checker's probe: 07:00 and 08:00 missing from GFS, so 06:00-09:00 is never a call; the rest of the day still is.
+  const thin = feed();
+  for (const p of thin.forecast.models.gfs_global.data) p.hourly.time = HOURS.map(t => [at(DATE, 7), at(DATE, 8)].includes(t) ? null : t);
+  const gappy = await bets({date: DATE}, {intel: thin});
+  assert.ok(gappy.best_bets.length && gappy.best_bets.every(b => b.hours !== '06:00-09:00'));
   assert.equal((await bets({port: 'monterey'})).unavailable, true);
   assert.equal((await bets({date: '2026-09-01'})).error, 'that date has passed');
   assert.equal((await bets({date: '2026-10-20'})).beyond_horizon, true);

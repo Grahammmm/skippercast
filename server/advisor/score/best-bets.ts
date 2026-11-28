@@ -6,8 +6,9 @@
 //  - C, conditions: the advisor's one comfort model (answers/conditions.ts
 //    windowConditions, the same web/score.ts rubric get_conditions and the brief use)
 //    at the ground's nearest coastal forecast point, held by the forecast clock; a
-//    boating advisory or a Rough block is a gate, not a low score, and an incomplete
-//    marine alert check (any zone) abstains: never ranked.
+//    boating advisory or a Rough block is a gate, not a low score; an incomplete or
+//    old (ALERT_CHECK_MAX_HOURS) marine alert check, or a block with any hour of no
+//    rated forecast, abstains: never ranked.
 //  - H, habitat: the mean of the three best terrain scores among the reef search
 //    targets mapped inside the ground (dist/data/atlas.json habitat_score via
 //    dist/data/charter-grounds.json nearby_target_ids). Structure, not abundance.
@@ -18,7 +19,7 @@
 // output names only allowlisted public grounds and forecast point ids: never a
 // coordinate (tests/test_advisor_score.mjs checks it). The reply path (tools/get_best_bets.ts, behind
 // ADVISOR_BEST_BETS) reads H from catalog/advisor/best-bet-grounds.json via scoresFromCatalog.
-import {ALERT_CHECK_UNAVAILABLE, advisoriesFrom, advisoryCheckTime, regionZones, windowConditions, windowEpochs, withForecastClock, type DayConditions} from '../answers/conditions.ts';
+import {ALERT_CHECK_UNAVAILABLE, advisoriesFrom, advisoryCheckTime, rateHour, readHour, regionZones, windowConditions, windowEpochs, withForecastClock, type DayConditions} from '../answers/conditions.ts';
 import {forecastClock} from '../answers/forecast-clock.ts';
 import {COMFORT_WORD} from '../answers/comfort.ts';
 import type {Confidence} from '../answers/confidence.ts';
@@ -40,8 +41,40 @@ export interface CharterGroundIn {id: string; latitude: number; longitude: numbe
 export interface TargetIn {id: string; habitat_score: number; habitat_grade?: string; confidence?: string}
 export interface Ground {name: string; ground_id: string; point: string; target_ids: string[]}
 
-/** 'unchecked': the marine alert check is incomplete, so the block is never ranked (an advisory found still wins). */
-export type Gate = 'pass' | 'advisory' | 'rough' | 'unchecked';
+/**
+ * 'unchecked': the marine alert check is incomplete or not current (ALERT_CHECK_MAX_HOURS), so the block is never ranked (an advisory found still wins).
+ * 'incomplete': some hour of the block has no rated forecast at the ground's point (missing timestamp or missing values), so it is never ranked.
+ */
+export type Gate = 'pass' | 'advisory' | 'rough' | 'unchecked' | 'incomplete';
+
+/**
+ * A call needs a current alert check: every required zone checked within this many hours (the daily feed is collected once a day, plus the
+ * brief's 2 h allowance), and none more than an hour ahead of the clock (the brief's skew allowance). Older evidence abstains, as a missing check does.
+ */
+export const ALERT_CHECK_MAX_HOURS = 26;
+const HOUR_MS = 3_600_000;
+/** True when the oldest required-zone check (advisoryCheckTime) is current at `now`. */
+export function alertCheckCurrent(checkedAt: string | null, now: number): boolean {
+  const age = checkedAt === null ? NaN : now - Date.parse(checkedAt);
+  return Number.isFinite(age) && age >= -HOUR_MS && age <= ALERT_CHECK_MAX_HOURS * HOUR_MS;
+}
+
+/**
+ * How many whole hours of [from, to] (windowEpochs) the point's GFS series rates (a timestamp in the hour with a rateHour score, as windowConditions
+ * rates it for the reference boat), against how many hours the block spans. A missing timestamp and a timestamp with no usable values both count as unrated.
+ */
+export function blockCoverage(intel: unknown, region: Region, pointId: string, from: number, to: number): {rated: number; expected: number} {
+  const expected = Math.round((to + 1 - from) / HOUR_MS);
+  const index = region.forecast_points.findIndex(p => p.id === pointId);
+  const times = (intel as {forecast?: {models?: {gfs_global?: {data?: {hourly?: {time?: unknown[]}}[]}}}} | null)?.forecast?.models?.gfs_global?.data?.[index]?.hourly?.time;
+  const rated = new Set<number>();
+  if (index >= 0 && Array.isArray(times)) for (const t of times) {
+    if (typeof t !== 'number' || !Number.isFinite(t) || t * 1000 < from || t * 1000 > to) continue;
+    const score = rateHour(readHour(intel as never, index, t));
+    if (typeof score === 'number' && Number.isFinite(score)) rated.add(Math.floor((t * 1000 - from) / HOUR_MS));
+  }
+  return {rated: rated.size, expected};
+}
 export interface Part {value: number | null; evidence: Confidence; reasons: string[]}
 export interface ConditionsPart extends Part {gate: Gate; comfort: string}
 export interface ScoreRow {
@@ -99,10 +132,13 @@ export function habitatFit(ground: Ground, targets: readonly TargetIn[]): Part {
 
 /**
  * C from one block's DayConditions: Comfortable 1, Bumpy 0.5, Unknown none; Rough or an advisory closes the gate; model disagreement scales C down.
- * `checked` is advisoryCheckTime !== null: without a complete marine alert check for every zone the block abstains (gate 'unchecked', no value),
- * because a missing check is not evidence of calm. An advisory found in a zone that was checked still closes the gate first.
+ * `checked` is alertCheckCurrent(advisoryCheckTime(...)): without a complete, current marine alert check for every zone the block abstains (gate 'unchecked', no value),
+ * because a missing or old check is not evidence of calm. An advisory found in a zone that was checked still closes the gate first.
+ * `coverage` (blockCoverage): a block with any hour unrated abstains (gate 'incomplete', no value), so one forecast hour never stands for three;
+ * a Rough reading in the hours present still closes it first.
  */
-export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1, advisory: string | null = null, checked = true): ConditionsPart {
+export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1, advisory: string | null = null, checked = true,
+  coverage: {rated: number; expected: number} | null = null): ConditionsPart {
   const base = {comfort: day.comfort};
   // An advisory closes the gate even when the forecast itself is unusable (withForecastClock drops day.advisory then).
   const event = day.advisory ?? advisory;
@@ -119,6 +155,10 @@ export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1,
   // The readings stay as reasons, but an incomplete alert check is never ranked (windowConditions already names it in comfort_held when it held a Comfortable day).
   if (!checked) return {...base, gate: 'unchecked', value: null, evidence: 'Insufficient',
     reasons: reasons.some(r => r.includes(ALERT_CHECK_UNAVAILABLE)) ? reasons : [...reasons, ALERT_CHECK_UNAVAILABLE]};
+  if (coverage && coverage.rated < coverage.expected) {
+    const gap = `${coverage.expected - coverage.rated} of ${coverage.expected} hours have no forecast`;
+    return {...base, gate: 'incomplete', value: null, evidence: 'Insufficient', reasons: reasons.some(r => r.includes(gap)) ? reasons : [...reasons, gap]};
+  }
   const raw = day.comfort === COMFORT_WORD.go ? 1 : day.comfort === COMFORT_WORD.marginal ? 0.5 : null;
   if (raw === null) return {...base, gate: 'pass', value: null, evidence: 'Insufficient', reasons};
   if (day.models_agree === false) reasons.push('forecast models disagree');
@@ -151,7 +191,7 @@ export function scoresFromCatalog(input: CatalogInput): ScoreFile {
   const {region, intel, daily, grounds, dates, now} = input;
   const weights = input.weights ?? WEIGHTS_V1;
   const tz = region.timezone, zones = regionZones(region), clock = forecastClock(intel, now);
-  const checked = advisoryCheckTime((daily as {sources?: Record<string, unknown>} | null)?.sources, zones) !== null;
+  const checked = alertCheckCurrent(advisoryCheckTime((daily as {sources?: Record<string, unknown>} | null)?.sources, zones), now);
   const rows: ScoreRow[] = [];
   for (const date of dates) for (const block of BLOCKS) {
     const window = {start: block.start, end: block.end};
@@ -162,7 +202,7 @@ export function scoresFromCatalog(input: CatalogInput): ScoreFile {
     for (const g of grounds) {
       if (!byPoint.has(g.point)) {
         const day = withForecastClock(windowConditions(intel as never, region, g.point, date, window, null, advisories, checked), clock);
-        byPoint.set(g.point, conditionsFit(day, weights, advisories[0]?.event ?? null, checked));
+        byPoint.set(g.point, conditionsFit(day, weights, advisories[0]?.event ?? null, checked, blockCoverage(intel, region, g.point, from, to)));
       }
       const c = byPoint.get(g.point)!, h = g.habitat;
       const open = c.gate === 'pass' && c.value !== null && h.value !== null;
