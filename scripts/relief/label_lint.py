@@ -11,6 +11,12 @@ from collections.abc import Iterator
 from pathlib import Path
 
 SOURCE_FIELDS = ('id', 'name', 'label', 'provider', 'attribution')
+STRING_LANGUAGES = ('en', 'es')
+# Keep strings/templates and comments intact so embedded code-looking text is not a call.
+TS_TOKEN = re.compile(r'''//[^\n]*|/\*[\s\S]*?\*/|"(?:\\[\s\S]|[^"\\])*"'''
+                      r'''|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`|[\w$]+|[^\s]''')
+TS_GROUPS = {'(': ')', '[': ']', '{': '}'}
+IDENTIFIER = re.compile(r'[A-Za-z_$][\w$]*')
 
 
 class InputError(ValueError):
@@ -106,7 +112,217 @@ def display_path(path: Path, root: Path) -> str:
     return str(path.relative_to(root) if path.is_relative_to(root) else path)
 
 
-def scan(root: Path, styles: list[Path], data: list[Path], fields: set[str]) -> Iterator[dict]:
+def ts_value_end(tokens: list[str], start: int) -> int:
+    """Find the next sibling property or enclosing delimiter after a value."""
+    stack: list[str] = []
+    for i in range(start, len(tokens)):
+        token = tokens[i]
+        if token in TS_GROUPS:
+            stack.append(TS_GROUPS[token])
+        elif stack and token == stack[-1]:
+            stack.pop()
+        elif not stack and token in (',', ';', '}', ')', ']', 'const', 'let', 'var'):
+            return i
+    return len(tokens)
+
+
+def lookup_keys(tokens: list[str]) -> Iterator[str]:
+    for i in range(len(tokens) - 3):
+        name, opening, key, following = tokens[i:i + 4]
+        if (name == 't' and (i == 0 or tokens[i - 1] != '.') and opening == '('
+                and key.startswith(('"', "'")) and following in (',', ')')):
+            yield key[1:-1]
+
+
+Span = tuple[int, int]
+MODULE: Span = (-1, 1 << 60)  # the whole file
+Binding = tuple[Span, int, int]  # (scope, value start, value end) in token positions
+
+
+def block_spans(tokens: list[str]) -> list[Span]:
+    """Token spans of every {...} block (function bodies, blocks, object literals)."""
+    spans: list[Span] = []
+    opened: list[int] = []
+    for i, token in enumerate(tokens):
+        if token == '{':
+            opened.append(i)
+        elif token == '}' and opened:
+            spans.append((opened.pop(), i))
+    spans.extend((start, len(tokens)) for start in opened)  # unbalanced: runs to the end
+    return spans
+
+
+def scope_at(spans: list[Span], i: int) -> Span:
+    inside = [span for span in spans if span[0] < i < span[1]]
+    return min(inside, key=lambda span: span[1] - span[0], default=MODULE)
+
+
+NOT_PARAMETERS = ('if', 'for', 'while', 'switch', 'with')
+
+
+def parameter_scopes(tokens: list[str], spans: list[Span]) -> Iterator[tuple[str, int, Span]]:
+    """Yield (name, token position, body scope) for each function parameter.
+
+    Covers `function f(a)`, methods, `(a, {b}) => ...`, `a => ...` and `catch (e)`,
+    with a block or an expression body. A parameter shadows an outer local of the
+    same name inside its body, so the outer lookup is not what that body draws.
+    """
+    block_end = {start: (start, stop) for start, stop in spans}
+    opened: list[int] = []
+    pairs: list[tuple[int, int]] = []
+    for i, token in enumerate(tokens):
+        if token == '(':
+            opened.append(i)
+        elif token == ')' and opened:
+            pairs.append((opened.pop(), i))
+    heads = [(tokens[p + 1:q], p + 1, q) for p, q in pairs if p == 0 or tokens[p - 1] not in NOT_PARAMETERS]
+    heads += [(tokens[i:i + 1], i, i + 1) for i in range(len(tokens) - 2)
+              if IDENTIFIER.fullmatch(tokens[i]) and tokens[i + 1:i + 3] == ['=', '>']
+              and (i == 0 or tokens[i - 1] != '.')]
+    for inner, first, close in heads:
+        after = close + 1 if tokens[close:close + 1] == [')'] else close
+        j = after
+        if (j < len(tokens) and tokens[j] == ':' and tokens[close:close + 1] == [')']
+                and tokens[first - 1] != '?'):  # not the `(a) ? (b) : {...}` ternary
+            while j < len(tokens) and tokens[j] not in ('{', '=', ';'):  # skip a return type
+                j += 1
+        if tokens[j:j + 2] == ['=', '>']:
+            j += 2
+            body = block_end.get(j) or (j - 1, ts_value_end(tokens, j))
+        elif j < len(tokens) and tokens[j] == '{' and tokens[close:close + 1] == [')'] and j in block_end:
+            body = block_end[j]
+        else:
+            continue  # a call or a condition, not a function head
+        for k, name in enumerate(inner):
+            if not IDENTIFIER.fullmatch(name) or name in ('function', 'async'):
+                continue
+            before = inner[k - 1] if k else '('
+            following = inner[k + 1] if k + 1 < len(inner) else ')'
+            if before in ('(', ',', '...', '{', '[') and following in (',', ')', '=', ':', '?', '}', ']'):
+                yield name, first + k, body
+
+
+def local_bindings(tokens: list[str], spans: list[Span]) -> dict[str, list[Binding]]:
+    """Map each local name to the values assigned to it, each tagged with its block scope."""
+    declared: dict[str, list[Binding]] = {}
+    assigned: list[tuple[str, int, int, int]] = []
+    for name, i, body in parameter_scopes(tokens, spans):  # a parameter is a local with no lookup
+        declared.setdefault(name, []).append((body, i, i))
+    for i in range(len(tokens) - 1):
+        name = tokens[i]
+        if not IDENTIFIER.fullmatch(name):
+            continue
+        declaration = i > 0 and tokens[i - 1] in ('const', 'let', 'var')
+        if tokens[i + 1] != '=' or (i + 2 < len(tokens) and tokens[i + 2] in ('=', '>')):
+            if declaration:  # `let label;` still opens a local of that name
+                declared.setdefault(name, []).append((scope_at(spans, i), i, i))
+            continue  # not a binding: ==, === or an arrow function (x => ...)
+        if i and tokens[i - 1] in ('.', '=', '!', '<', '>'):
+            continue  # a member store or a comparison, not a local binding
+        end = ts_value_end(tokens, i + 2)
+        if declaration:
+            declared.setdefault(name, []).append((scope_at(spans, i), i + 2, end))
+        else:
+            assigned.append((name, i, i + 2, end))
+    bindings = {name: list(rows) for name, rows in declared.items()}
+    for name, i, start, end in assigned:  # a bare `label = ...` updates the nearest declared local
+        scopes = [row[0] for row in declared.get(name, []) if row[0][0] < i < row[0][1]]
+        scope = min(scopes, key=lambda span: span[1] - span[0], default=MODULE)
+        bindings.setdefault(name, []).append((scope, start, end))
+    return bindings
+
+
+def value_keys(tokens: list[str], start: int, end: int, bindings: dict[str, list[Binding]]) -> set[str]:
+    """Literal t() keys in tokens[start:end], following each local name to what its scope assigned."""
+    keys: set[str] = set()
+    seen: set[Binding] = set()
+    pending = [(start, end)]
+    while pending:
+        begin, stop = pending.pop()
+        keys.update(lookup_keys(tokens[begin:stop]))
+        for i in range(begin, stop):
+            token = tokens[i]
+            if (token not in bindings or (i > begin and tokens[i - 1] == '.')
+                    or (i + 1 < stop and tokens[i + 1] in ('(', ':'))):
+                continue
+            visible = [row for row in bindings[token] if row[0][0] < i < row[0][1]]
+            if not visible:
+                continue
+            innermost = min(row[0][1] - row[0][0] for row in visible)  # shadowing: nearest scope wins
+            for row in visible:
+                if row[0][1] - row[0][0] == innermost and row not in seen:
+                    seen.add(row)
+                    pending.append((row[1], row[2]))
+    return keys
+
+
+def drawn_string_keys(source: str) -> set[str]:
+    """Follow literal t() calls in text-field values and their local GeoJSON fields.
+
+    Saved spots use the second form: a translated fallback in properties.name,
+    drawn by ['get', 'name'] in the same module. This is a source scan of those
+    shapes, not general TypeScript dataflow (computed lookup keys are excluded).
+    """
+    tokens = [token for token in TS_TOKEN.findall(source) if not token.startswith(('//', '/*'))]
+    bindings = local_bindings(tokens, block_spans(tokens))
+    keys: set[str] = set()
+    fields: set[str] = set()
+    properties: list[int] = []
+    for i in range(len(tokens) - 2):
+        name, colon, start = tokens[i:i + 3]
+        if colon != ':':
+            continue
+        if name in ('"text-field"', "'text-field'"):
+            end = ts_value_end(tokens, i + 2)
+            value = tokens[i + 2:end]
+            keys.update(value_keys(tokens, i + 2, end, bindings))
+            for opening, op, comma, field in zip(value, value[1:], value[2:], value[3:]):
+                if opening == '[' and op in ('"get"', "'get'") and comma == ',' and field.startswith(('"', "'")):
+                    fields.add(field[1:-1])
+        elif name in ('properties', '"properties"', "'properties'") and start == '{':
+            properties.append(i + 3)
+    for i in properties:
+        while i + 1 < len(tokens) and tokens[i] != '}':
+            if tokens[i + 1] == ':':
+                end = ts_value_end(tokens, i + 2)
+                if tokens[i].strip('"\'') in fields:
+                    keys.update(value_keys(tokens, i + 2, end, bindings))
+            else:
+                end = ts_value_end(tokens, i)
+                if tokens[i] in fields:  # shorthand: {name} reads the local called name
+                    keys.update(value_keys(tokens, i, end, bindings))
+            if end == len(tokens) or tokens[end] != ',':
+                break
+            i = end + 1
+    return keys
+
+
+def catalogue_labels(root: Path) -> Iterator[tuple[dict, str | None]]:
+    keys: set[str] = set()
+    for path in files_in(root / 'web/map', '.ts'):
+        try:
+            source = path.read_text(encoding='utf-8')
+        except (OSError, UnicodeError) as exc:
+            raise InputError(f'{path}: {type(exc).__name__}: {exc}') from exc
+        keys.update(drawn_string_keys(source))
+    if not keys:
+        return
+    for lang in STRING_LANGUAGES:
+        path = root / f'web/strings.{lang}.generated.json'
+        table = object_at(read_json(path), path, 'string catalogue')
+        for key in sorted(keys):
+            location = {'file': display_path(path, root), 'key': key, 'lang': lang}
+            if key not in table:
+                yield location, None
+                continue
+            # The bundled English table wraps values; the Spanish overlay is flat.
+            text = object_at(table[key], path, key).get(lang) if lang == 'en' else table[key]
+            if not isinstance(text, str):
+                raise InputError(f'{path}: expected translated text for {key}')
+            yield location, text
+
+
+def scan(root: Path, styles: list[Path], data: list[Path], fields: set[str], *, strings: bool = False) -> Iterator[dict]:
     patterns = source_patterns(root)
 
     def matches(text: str, location: dict) -> Iterator[dict]:
@@ -145,6 +361,13 @@ def scan(root: Path, styles: list[Path], data: list[Path], fields: set[str]) -> 
                 if isinstance(value, str):
                     yield from matches(value, {'file': file, 'feature_index': i, 'property': field})
 
+    if strings:
+        for location, text in catalogue_labels(root):
+            if text is None:
+                yield {**location, 'kind': 'missing-key'}
+            else:
+                yield from matches(text, location)
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -154,12 +377,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--data', type=Path, nargs='+', action='extend', default=[],
                         help='GeoJSON inputs in addition to catalog/depth-contours/*.geojson')
     parser.add_argument('--field', nargs='+', action='extend', help='extra feature properties (default: label)')
+    parser.add_argument('--strings', action='store_true', help='also check translated map feature labels')
     parser.add_argument('--json', action='store_true', help='print a JSON array of findings')
     args = parser.parse_args(argv)
     root = args.root.resolve()
     try:
         findings = list(scan(root, [root / p for p in args.style], [root / p for p in args.data],
-                             set(args.field or ['label'])))
+                             set(args.field or ['label']), strings=args.strings))
     except InputError as exc:
         print(f'label_lint: {exc}', file=sys.stderr)
         return 2
@@ -167,13 +391,20 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(findings, indent=2, ensure_ascii=False))
     elif findings:
         for finding in findings:
+            if 'key' in finding:
+                origin = f"{finding['file']}: {finding['lang']} key {finding['key']!r}"
+                if finding.get('kind') == 'missing-key':
+                    print(f'{origin}: missing-key')
+                else:
+                    print(f"{origin}: {finding['text']!r} matches {finding['source_id']!r}")
+                continue
             origin = (f"layer {finding['layer_id']!r}" if 'layer_id' in finding
                       else f"feature {finding['feature_index']}")
             print(f"{finding['file']}: {origin}, {finding['property']!r}: "
                   f"{finding['text']!r} matches {finding['source_id']!r}")
     else:
         print('No source names found in scanned labels.')
-    return int(bool(findings))
+    return int(any('source_id' in finding for finding in findings))
 
 
 if __name__ == '__main__':
