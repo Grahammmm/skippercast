@@ -381,7 +381,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
     # Refetch the latest seven completed local dates for late corrections. Older
     # successful day facts are reused with their original retrieval timestamps.
     report_jobs = []
-    for offset in range(1, days + 1) if region["landing_names"] else []:
+    for offset in range(1, days + 1) if config["report_ports"] else []:
         day = (local_day - timedelta(days=offset)).isoformat()
         ident = "catches-" + day
         old = old_sources.get(ident)
@@ -413,7 +413,7 @@ def collect(now, previous=None, days=30, region_id="morro-bay"):
                                 "Daily observations are not a seven-day bite forecast or live entrance clearance."]}
     last_seven = [sources.get("catches-" + (local_day - timedelta(days=i)).isoformat(), {}) for i in range(1, 8)]
     coverage = sum(s.get("status") == "ok" for s in last_seven)
-    charter_stale = bool(region["landing_names"]) and coverage < 5
+    charter_stale = bool(config["report_ports"]) and coverage < 5
     critical = any(sources[k]["status"] == "ok" for k in ("buoy-" + stations["nearshore_buoy"], "buoy-" + stations["offshore_buoy"]))
     issues = [s["id"] for s in sources.values() if s["status"] != "ok" or s.get("fallback_for")]
     status = "ok" if not issues else "degraded" if critical else "failed"
