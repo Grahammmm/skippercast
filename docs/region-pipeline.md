@@ -52,29 +52,49 @@ The half-hourly job collects the distinct **ECMWF IFS and NOAA GFS** wind foreca
 ## Mapping chain: one command per stage
 
 The seafloor map of a region (relief, survey confidence, depth key) is built by one chain of
-stages. Each stage is one command, `python scripts/relief/region.py <stage> --region <id> --out <OUT>`,
-which runs module `skippercast.relief.<stage>` under a receipt in `OUT/<id>/stages/<stage>.json`
-(a stage whose receipt is done is a no-op). `python scripts/relief/run_region.py <id> --out <OUT>
---through <stage>` runs the chain in this order with the host guards, per-stage timing and a run log;
-`--dry-run` previews it. The stage rows below are kept in the runner's order by a test.
+stages. Run it with the guarded runner, which starts each stage as one command, in the order of
+the table below, with the host guards, per-stage timing and a run log:
+
+```
+python scripts/relief/run_region.py <id> --out <OUT> --norm <NORM> --survey detail-and-gap --basemap <PMTILES> --through envelope --dry-run
+```
+
+`--dry-run` prints every stage's exact command line with these values filled in, the rebuild
+plan and the guard state, and runs and writes nothing. Drop `--dry-run` to run the chain;
+`--through <stage>` stops earlier (a chain that reaches shots, qa or envelope needs `--basemap`).
+`<OUT>` is an existing output directory, `<NORM>` the normalised source cache and `<PMTILES>` a
+local basemap; `--survey none` (the default) skips survey_detail and survey_gap.
+
+One stage alone is `python scripts/relief/region.py <stage> --region <id> --out <OUT> <stage options>`.
+It runs module `skippercast.relief.<stage>` under a receipt in `OUT/<id>/stages/<stage>.json` (a
+stage whose receipt is done is a no-op). The options column is what the runner passes for the
+command above; a test runs that dry run and compares every row, and parses every row with the
+stage's own command line.
+
+Values that come from earlier stages are filled in by the runner during a real run; `--dry-run`
+shows them as placeholders. After package it reads `region.py status --region <id> --out <OUT> --json`:
+`<generation>` is the package generation and `<release-sha256>` the SHA-256 of
+`OUT/<id>/release/<generation>/release.json`; after shots, `<shots-generation>` likewise. Zone's
+`<coarse output>`, `<water output>` and `<coarse family>` come from the done coarse and water
+stages, or from `--coarse`, `--water` and `--coarse-source` given to the runner.
 
 <!-- mapping-chain-stages:begin -->
-| Stage | What it does | Details |
-| --- | --- | --- |
-| `select` | Picks the public, rights-cleared local inputs for the region | [`select.py`](../src/skippercast/relief/select.py) |
-| `mosaic` | Builds the selected public mosaic | [`mosaic.py`](../src/skippercast/relief/mosaic.py) |
-| `tiles` | Builds the relief tile archive and its coverage sidecar | [`tiles.py`](../src/skippercast/relief/tiles.py) |
-| `zone` | Builds the mapping zone and contributor detail labels | [`zone.py`](../src/skippercast/relief/zone.py) |
-| `survey_detail` | Survey-confidence detail in the form the Chart loads (opt-in, `--survey`) | [`survey_detail.py`](../src/skippercast/relief/survey_detail.py) |
-| `survey_gap` | The no-survey gap companion of the detail (opt-in, `--survey detail-and-gap`) | [`survey_gap.py`](../src/skippercast/relief/survey_gap.py) |
-| `digests` | Indexes the tile bytes the app's reader returns | [`digests.py`](../src/skippercast/relief/digests.py) |
-| `inventory` | Lists the release layers from the current producer receipts | [relief README, R6](../catalog/relief/README.md) |
-| `contours` | Traces the unpublished contour pair used as QA evidence | [`contours.py`](../src/skippercast/relief/contours.py) |
-| `nearshore_vectors` | Nearshore relief-basis vectors for QA only | [`nearshore_vectors.py`](../src/skippercast/relief/nearshore_vectors.py) |
-| `package` | Writes the immutable release manifest (terrain-only regions pin no contour style) | [relief README, R6](../catalog/relief/README.md) |
-| `shots` | Captures the fixed Chart screenshots of that package | [`shots.py`](../src/skippercast/relief/shots.py) |
-| `qa` | Measures the packaged bytes and the shots against the release hash | [relief README, R7](../catalog/relief/README.md) |
-| `envelope` | Binds release and QA for review; the runner then prints the R8 packet | [relief README, R7-R9](../catalog/relief/README.md) |
+| Stage | What it does | Stage options | Details |
+| --- | --- | --- | --- |
+| `select` | Picks the public, rights-cleared local inputs for the region | `--cache <NORM>` | [`select.py`](../src/skippercast/relief/select.py) |
+| `mosaic` | Builds the selected public mosaic | `--scope public` | [`mosaic.py`](../src/skippercast/relief/mosaic.py) |
+| `tiles` | Builds the relief tile archive and its coverage sidecar | `--scope public` | [`tiles.py`](../src/skippercast/relief/tiles.py) |
+| `zone` | Builds the mapping zone and contributor detail labels | `--scope public --coarse <coarse output> --water <water output> --coarse-source <coarse family>` | [`zone.py`](../src/skippercast/relief/zone.py) |
+| `survey_detail` | Survey-confidence detail in the form the Chart loads (with `--survey`) | `--scope public` | [`survey_detail.py`](../src/skippercast/relief/survey_detail.py) |
+| `survey_gap` | The no-survey gap companion of the detail (with `--survey detail-and-gap`) | `--scope public` | [`survey_gap.py`](../src/skippercast/relief/survey_gap.py) |
+| `digests` | Indexes the tile bytes the app's reader returns | none | [`digests.py`](../src/skippercast/relief/digests.py) |
+| `inventory` | Lists the release layers from the current producer receipts | `--survey detail-and-gap` | [relief README, R6](../catalog/relief/README.md) |
+| `contours` | Traces the unpublished contour pair used as QA evidence | none | [`contours.py`](../src/skippercast/relief/contours.py) |
+| `nearshore_vectors` | Nearshore relief-basis vectors for QA only | `--scope public` | [`nearshore_vectors.py`](../src/skippercast/relief/nearshore_vectors.py) |
+| `package` | Writes the immutable release manifest; terrain-only regions omit `--upstream contours` (no contour style), `--survey none` omits the two survey upstreams | `--manifest <OUT>/<id>/inventory/manifest.json --upstream tiles:public --upstream digests --upstream zone:public --upstream inventory --upstream contours --upstream survey_detail:public --upstream survey_gap:public` | [relief README, R6](../catalog/relief/README.md) |
+| `shots` | Captures the fixed Chart screenshots of that package | `--basemap <PMTILES>` | [`shots.py`](../src/skippercast/relief/shots.py) |
+| `qa` | Measures the packaged bytes and the shots against the release hash | `--generation <generation> --release-sha256 <release-sha256> --elevation <OUT>/<id>/mosaic/public/elevation.tif --contributor <OUT>/<id>/mosaic/public/contributor.tif --upstream mosaic:public --upstream nearshore_vectors:public --shots <OUT>/<id>/shots/<shots-generation>/shots.json` | [relief README, R7](../catalog/relief/README.md) |
+| `envelope` | Binds release and QA for review; the runner then prints the R8 packet | `--generation <generation>` | [relief README, R7-R9](../catalog/relief/README.md) |
 <!-- mapping-chain-stages:end -->
 
 A region with a pinned census first runs `census-bind` (`--census`). After the chain:
