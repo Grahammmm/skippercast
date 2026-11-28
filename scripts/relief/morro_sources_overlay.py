@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Render a local stage /sources.html from the exact candidate assets of one region.
 
-Morro Bay by default; `--region` names one of the four contour-bearing Central Coast regions the Central stage
-preview may carry (morro_stage_preview.REGIONS), with the same pins and the same checks.
+Morro Bay by default; `--region` names one of the Central Coast regions the Central stage preview may
+carry (morro_stage_preview.REGIONS), with the same pins and the same checks. A terrain-only region
+(morro_stage_preview.TERRAIN_ONLY_REGIONS) has no contour files: it takes only the pointer and catalogue
+pins, its pointer must pin no contour style, and the register may credit it no depth contours.
 
 Pass a reviewed, isolated candidate tree and independent SHA-256 pins from its
 release preparation records (not hashes calculated from the inputs here). Use a
@@ -24,14 +26,18 @@ from scripts import build_sources_register as register  # noqa: E402
 from skippercast.platform.contracts import indexed, owner_display_cleared  # noqa: E402
 from skippercast.platform.depth_contours import UNSTATED_SURVEY_DATE, selected_survey_date  # noqa: E402
 from skippercast.relief import package  # noqa: E402
-from scripts.relief.morro_stage_preview import REGIONS  # noqa: E402
+from scripts.relief.morro_stage_preview import REGIONS, TERRAIN_ONLY_REGIONS  # noqa: E402
 
 REGION = 'morro-bay'
+CONTOUR_INPUTS = ('overview', 'detail')
 
 
 def inputs(region):
+    """The pinned files for `region`; a terrain-only region has no contour files to pin."""
     if region not in REGIONS:
         raise ValueError('region is not one the stage preview may carry')
+    if region in TERRAIN_ONLY_REGIONS:
+        return {'pointer': f'catalog/relief/{region}.json', 'catalogue': 'catalog/sources.json'}
     return {
         'pointer': f'catalog/relief/{region}.json',
         'overview': f'dist/regions/{region}/depth-contours-overview.geojson',
@@ -100,12 +106,16 @@ def _credits(sources, rows):
 def render(tree, pins, region=REGION):
     """Return (overlay bytes, local receipt); never write to the candidate tree."""
     names = inputs(region)
-    pointer, overview, detail, catalogue = (_pinned(tree, name, pins[name], region) for name in names)
+    docs = {name: _pinned(tree, name, pins[name], region) for name in names}
+    pointer, catalogue = docs['pointer'], docs['catalogue']
     if (pointer['region'] != region or pointer['status'] != 'reviewed' or pointer['private'] is not False
             or not package.is_sha256(pointer['release_sha256'])):
         raise ValueError(f'expected a reviewed public {_name(region)} pointer')
     style = pointer['style']['contours']
-    if not package.is_sha256(style):
+    terrain_only = region in TERRAIN_ONLY_REGIONS
+    if terrain_only and style is not None:
+        raise ValueError(f'{region} is terrain-only but its pointer pins a contour style')
+    if not terrain_only and not package.is_sha256(style):
         raise ValueError(f'{_name(region)} pointer does not pin a contour style')
     data = register.collect(tree)
     if data['sources'] != indexed(catalogue, 'sources'):
@@ -114,10 +124,16 @@ def render(tree, pins, region=REGION):
     if morro is None:
         raise ValueError('source register does not include ' + ('Morro Bay' if region == REGION else region))
     shading = _credits(data['sources'], ((r['id'], r['attribution'], r['survey_dates']) for r in pointer['sources']))
-    contours = _credits(data['sources'], (*_contour_rows(detail, 'detail', style, region),
-                                         *_contour_rows(overview, 'overview', style, region)))
     morro['depth_detail'] = register._depth_detail(pointer)
-    morro['layers'].update({register.DEPTH_SHADING: shading, register.DEPTH_CONTOURS: contours})
+    morro['layers'][register.DEPTH_SHADING] = shading
+    contours = {}
+    if terrain_only:
+        if morro['layers'].get(register.DEPTH_CONTOURS):
+            raise ValueError(f'source register credits depth contours for terrain-only {region}')
+    else:
+        contours = _credits(data['sources'], (*_contour_rows(docs['detail'], 'detail', style, region),
+                                             *_contour_rows(docs['overview'], 'overview', style, region)))
+        morro['layers'][register.DEPTH_CONTOURS] = contours
     block, _ = register.render(data)
     source_page = package.artifact_path(tree, register.PAGE.as_posix()).read_text(encoding='utf-8')
     html = register.splice(source_page, block).encode('utf-8')
@@ -133,13 +149,20 @@ def main(argv=None):
     parser.add_argument('--out', type=Path, required=True, help='new output directory outside both checkouts')
     parser.add_argument('--region', default=REGION, choices=REGIONS)
     for name in INPUTS:
-        parser.add_argument(f'--{name}-sha256', required=True)
+        parser.add_argument(f'--{name}-sha256', required=name not in CONTOUR_INPUTS)
     args = parser.parse_args(argv)
+    for name in CONTOUR_INPUTS:
+        given = getattr(args, f'{name}_sha256') is not None
+        if args.region in TERRAIN_ONLY_REGIONS and given:
+            parser.error(f'--{name}-sha256 does not apply to terrain-only {args.region}')
+        if args.region not in TERRAIN_ONLY_REGIONS and not given:
+            parser.error(f'the following arguments are required: --{name}-sha256')
     try:
         tree, out = args.tree.resolve(strict=True), args.out.resolve()
         if any(out.is_relative_to(root) for root in (tree, ROOT)):
             raise ValueError('output must be outside the controller and candidate trees')
-        html, receipt = render(tree, {name: getattr(args, f'{name}_sha256') for name in INPUTS}, args.region)
+        html, receipt = render(tree, {name: getattr(args, f'{name}_sha256') for name in inputs(args.region)},
+                               args.region)
         out.mkdir()
         with (out / 'sources.html').open('xb') as file:
             file.write(html)

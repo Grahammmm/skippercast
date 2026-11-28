@@ -1,10 +1,10 @@
 name: Central stage preview
 
 # Manual, stage-only preview of ONE Central Coast region's data candidate (that region's unmerged
-# data-pointer PR head) on the Central preview Worker and its own feeds bucket. Only the four
-# contour-bearing Central regions: every run pins and serves a detail + overview contour pair, so the
-# terrain-only Monterey/Point Sur and Santa Cruz/Monterey Bay regions are refused here (their own
-# terrain-only stage path is a later change). Same guards, same
+# data-pointer PR head) on the Central preview Worker and its own feeds bucket. The four contour-bearing
+# regions pin and serve a detail + overview contour pair; the two terrain-only regions
+# (monterey-point-sur, santa-cruz-monterey-bay) dispatch with both contour pins EMPTY and serve only
+# their relief pointer, region.json and /sources (no contour file is pinned, built or checked). Same guards, same
 # controller scripts and same checks as the Morro stage preview (stage-preview.yml), with the
 # region as a dispatch input; never runs on a push, a schedule or a PR, never touches the production
 # Worker, bucket, routes, D1 or queues, and never merges or publishes anything.
@@ -23,7 +23,8 @@ name: Central stage preview
 # Guards, all from this workflow's own reviewed revision (the controller), never the candidate's:
 #   1. dispatch only from protected main of this repository, region from the fixed list below;
 #   2. the candidate may differ from the controller commit only in that region's pointer, contour
-#      import and published contour files (morro_stage_controller.py scope --region);
+#      import and published contour files (terrain-only: pointer and /sources register only;
+#      morro_stage_controller.py scope --region);
 #   3. morro_stage_preview.py plan --region refuses every production name, route, schedule and
 #      bucket, refuses another region group's Worker or bucket, and binds the candidate commit and
 #      the reviewed pointer digest; the plan is re-run after the build;
@@ -37,7 +38,7 @@ on:
   workflow_dispatch:
     inputs:
       region:
-        description: "the one contour-bearing Central Coast region this candidate carries"
+        description: "the one Central Coast region this candidate carries"
         type: choice
         required: true
         options:
@@ -45,6 +46,8 @@ on:
           - cambria-san-simeon
           - south-big-sur-san-simeon
           - point-arguello-conception
+          - monterey-point-sur
+          - santa-cruz-monterey-bay
       candidate:
         description: "exact 40-character commit of the region's data candidate (the data-pointer PR head)"
         type: string
@@ -54,13 +57,13 @@ on:
         type: string
         required: true
       detail_sha256:
-        description: "SHA-256 of the reviewed dist/regions/<region>/depth-contours.geojson bytes"
+        description: "SHA-256 of the reviewed dist/regions/<region>/depth-contours.geojson bytes (empty for a terrain-only region)"
         type: string
-        required: true
+        required: false
       overview_sha256:
-        description: "SHA-256 of the reviewed dist/regions/<region>/depth-contours-overview.geojson bytes"
+        description: "SHA-256 of the reviewed dist/regions/<region>/depth-contours-overview.geojson bytes (empty for a terrain-only region)"
         type: string
-        required: true
+        required: false
       catalogue_sha256:
         description: "SHA-256 of the release rights pin, the candidate's catalog/sources.json bytes"
         type: string
@@ -107,7 +110,7 @@ jobs:
             exit 1
           fi
           case "$REGION" in
-            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|point-arguello-conception) ;;
+            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|point-arguello-conception|monterey-point-sur|santa-cruz-monterey-bay) ;;
             *) echo "::error::Central stage preview held: region is not a Central Coast stage region."; exit 1;;
           esac
           if ! [[ "$CANDIDATE" =~ ^[0-9a-f]{40}$ ]] || ! [[ "$POINTER_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
@@ -187,8 +190,11 @@ jobs:
             echo "::error::Central stage preview held: dispatch from protected main only."
             exit 1
           fi
+          # CONTOURS (yes/no) is fixed here from the region alone; later steps pin, render and check contours
+          # only for a contour-bearing region.
           case "$REGION" in
-            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|point-arguello-conception) ;;
+            big-sur-coast|cambria-san-simeon|south-big-sur-san-simeon|point-arguello-conception) contours=yes;;
+            monterey-point-sur|santa-cruz-monterey-bay) contours=no;;
             *) echo "::error::Central stage preview held: region is not a Central Coast stage region."; exit 1;;
           esac
           # Whole-value matches (bash [[ =~ ]]), never line-oriented grep -x: a multi-line value with one
@@ -197,9 +203,16 @@ jobs:
             echo "::error::Central stage preview held: candidate must be a full lowercase commit SHA."
             exit 1
           fi
-          for pin in "$POINTER_SHA256" "$DETAIL_SHA256" "$OVERVIEW_SHA256" "$CATALOGUE_SHA256"; do
+          pins=("$POINTER_SHA256" "$CATALOGUE_SHA256")
+          if [ "$contours" = yes ]; then
+            pins+=("$DETAIL_SHA256" "$OVERVIEW_SHA256")
+          elif [ -n "$DETAIL_SHA256" ] || [ -n "$OVERVIEW_SHA256" ]; then
+            echo "::error::Central stage preview held: a terrain-only region takes no detail or overview contour digest."
+            exit 1
+          fi
+          for pin in "${pins[@]}"; do
             if ! [[ "$pin" =~ ^[0-9a-f]{64}$ ]]; then
-              echo "::error::Central stage preview held: every digest (pointer, detail, overview, catalogue) must be 64 lowercase hex digits."
+              echo "::error::Central stage preview held: every digest (pointer, catalogue and, with contours, detail and overview) must be 64 lowercase hex digits."
               exit 1
             fi
           done
@@ -214,6 +227,7 @@ jobs:
             echo "::error::Central stage preview held: Cloudflare credentials are not configured."
             exit 1
           fi
+          echo "CONTOURS=$contours" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.workflow_sha }}
@@ -253,10 +267,14 @@ jobs:
       - name: Render the candidate's /sources credits from its pinned files
         run: |
           # Reviewed main's own overlay script: the scope guard proved the candidate's code equals the controller
-          # commit. It refuses unless the four files match the dispatch pins, and writes only outside both trees.
+          # commit. It refuses unless the pinned files match the dispatch pins, and writes only outside both trees.
+          # A terrain-only region pins no contour files (the overlay refuses contour pins for it).
+          pins=(--pointer-sha256 "$POINTER_SHA256" --catalogue-sha256 "$CATALOGUE_SHA256")
+          if [ "$CONTOURS" = yes ]; then
+            pins+=(--detail-sha256 "$DETAIL_SHA256" --overview-sha256 "$OVERVIEW_SHA256")
+          fi
           python3 -I scripts/relief/morro_sources_overlay.py --tree . --out "$RUNNER_TEMP/sources-overlay" --region "$REGION" \
-            --pointer-sha256 "$POINTER_SHA256" --detail-sha256 "$DETAIL_SHA256" \
-            --overview-sha256 "$OVERVIEW_SHA256" --catalogue-sha256 "$CATALOGUE_SHA256" > "$PLAN_DIR/sources-overlay.json"
+            "${pins[@]}" > "$PLAN_DIR/sources-overlay.json"
       - name: Feed the /sources overlay into the build input
         run: |
           # Only the page whose hash the overlay receipt names, and only as the build's input page: the build
@@ -347,8 +365,10 @@ jobs:
             ok=1
             python3 -I "$CONTROLLER/scripts/relief/morro_stage_preview.py" verify --plan "$PLAN_DIR/plan.json" \
               --deploy-json "$served/deploy.json" --pointer "$served/pointer.json" > "$served/verify.json" || ok=0
-            [ "$(sha256sum "$served/detail.geojson" 2>/dev/null | cut -d' ' -f1)" = "$DETAIL_SHA256" ] || { ok=0; echo "served detail contours differ from the pin"; }
-            [ "$(sha256sum "$served/overview.geojson" 2>/dev/null | cut -d' ' -f1)" = "$OVERVIEW_SHA256" ] || { ok=0; echo "served overview contours differ from the pin"; }
+            if [ "$CONTOURS" = yes ]; then
+              [ "$(sha256sum "$served/detail.geojson" 2>/dev/null | cut -d' ' -f1)" = "$DETAIL_SHA256" ] || { ok=0; echo "served detail contours differ from the pin"; }
+              [ "$(sha256sum "$served/overview.geojson" 2>/dev/null | cut -d' ' -f1)" = "$OVERVIEW_SHA256" ] || { ok=0; echo "served overview contours differ from the pin"; }
+            fi
             cmp -s "$served/region.json" "dist/regions/$REGION/region.json" || { ok=0; echo "served region.json is not the candidate's (chart_files)"; }
             cmp -s "$served/sources.html" "$PLAN_DIR/sources-shell.html" || { ok=0; echo "served /sources is not the page this run built"; }
             if [ "$ok" = 1 ]; then

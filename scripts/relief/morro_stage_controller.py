@@ -59,8 +59,13 @@ def data_paths(region: str) -> frozenset:
     A Central region gets its first contours here, so the platform build also rewrites that region's
     dist/regions/<id>/region.json (its `chart_files` list only, see check_chart_index) and the source
     register rewrites dist/sources.html; both are generated data, so the STAGE candidate can be the data
-    PR head itself. Morro's set is unchanged."""
+    PR head itself. Morro's set is unchanged.
+
+    A terrain-only region has no contours: only its relief pointer and the generated register in
+    dist/sources.html may change (its region.json keeps a chart_files list without contours)."""
     preview.check_region(region)
+    if region in preview.TERRAIN_ONLY_REGIONS:
+        return frozenset({preview.pointer_path(region), 'dist/sources.html'})
     paths = {preview.pointer_path(region), preview.contours_path(region),
              f'dist/regions/{region}/depth-contours.geojson',
              f'dist/regions/{region}/depth-contours-overview.geojson'}
@@ -122,7 +127,17 @@ def scope(tree: Path, base: str, sha: str, region: str = preview.REGION) -> list
             raise HoldError('candidate dist/sources.html changes outside the generated register block')
     if region in preview.CENTRAL_REGIONS:
         check_chart_index(tree, base, sha, region, changed)
+    elif region in preview.TERRAIN_ONLY_REGIONS:
+        check_terrain_index(tree, sha, region)
     return changed
+
+
+def check_terrain_index(tree: Path, sha: str, region: str) -> None:
+    """A terrain-only preview pins and serves no contours, so the Chart must not ask for any."""
+    path = f'dist/regions/{region}/region.json'
+    listed = [name for name in CONTOUR_FILES if name in _chart_files(_region_doc(tree, sha, path), f'candidate {path}')]
+    if listed:
+        raise HoldError(f'candidate {path} chart_files lists {", ".join(listed)} for a terrain-only region')
 
 
 def _region_doc(tree: Path, rev: str, path: str) -> dict:
