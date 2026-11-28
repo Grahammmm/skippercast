@@ -90,6 +90,8 @@
       }
     },
     "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "report_ports": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true,
+                     "description": "Landing-report publisher ports this feed covers, in publisher order. An empty list means the region has no landing-report coverage (not a covered port with zero trips). Absent on feeds written before it was added."},
     "charter_reports": {
       "type": "object",
       "required": ["status", "reason", "last_source_day"],
