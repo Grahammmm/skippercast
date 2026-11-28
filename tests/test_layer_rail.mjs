@@ -6,6 +6,7 @@
 // on the modules' signals with synthetic values; nothing is fetched.
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import util from 'node:util';
 import {mkdtemp} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -453,4 +454,51 @@ test('rail_uses_late_catalogue', async () => {
     assert.match(html, /rail-label">Corrientes</);
     assert.doesNotMatch(html, /rail-label">Currents</);
   } finally { m.language.value = 'en'; }
+});
+
+// SC2137-04: the one ?current= control (rail and Conditions) names its four sources in the page language.
+// Protects: a Spanish page must not show the English labels in CURRENT_SOURCES; the values, order, English text and
+// the reason sentences built from `.label` stay as published. Fails if the option text is read from `.label` again.
+const sourceOptions = html => [...html.matchAll(/<option(?: selected)? value="([^"]+)">([^<]*)<\/option>/g)].map(m => [m[1], m[2]]);
+const EN_SOURCES = [['off', 'Off'], ['wcofs', 'NOAA WCOFS forecast'], ['hfr-1', 'Observed HF radar · 1 km'], ['hfr-6', 'Observed HF radar · 6 km']];
+const ES_SOURCES = [['off', 'Desactivada'], ['wcofs', 'Pronóstico de NOAA WCOFS'], ['hfr-1', 'Observaciones de HF radar · 1 km'], ['hfr-6', 'Observaciones de HF radar · 6 km']];
+test('current_source_options_bilingual', async () => {
+  const out = join(await mkdtemp(join(tmpdir(), 'rail-src-')), 'rail.mjs');
+  await build({
+    stdin: {resolveDir: ROOT, loader: 'ts', contents: `
+      export {CurrentSource} from './web/app/LayerRail.tsx';
+      export {CURRENT_SOURCES, currentsStatus} from './web/map/currents.ts';
+      export {prepareCatalogue} from './web/i18n-catalogue.ts';
+      export {language} from './web/i18n.ts';
+      export * as state from './web/state.ts';
+      export {render} from 'preact-render-to-string';
+      export {h} from 'preact';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
+  });
+  const m = await import(pathToFileURL(out).href);
+  m.state.configureStore({v2: true, storage: null});
+  m.state.syncFromURL(`${ORIGIN}?region=morro-bay&layers=currents&current=hfr-6`);
+  const show = () => m.render(m.h(m.CurrentSource));
+  assert.ok(util.isDeepStrictEqual(sourceOptions(show()), EN_SOURCES), 'English: exact [value, text] pairs, in order');
+  assert.ok(util.isDeepStrictEqual(m.CURRENT_SOURCES.map(s => [s.value, s.label]), EN_SOURCES), 'the English labels the reasons use are unchanged');
+  await m.prepareCatalogue('es');
+  m.language.value = 'es';
+  try {
+    const html = show();
+    assert.ok(util.isDeepStrictEqual(sourceOptions(html), ES_SOURCES), 'Spanish: values unchanged, text in Spanish');
+    assert.match(html, /<label class="app-rail-source">Fuente/);
+    assert.match(html, /<option selected value="hfr-6">Observaciones de HF radar · 6 km<\/option>/, '?current=hfr-6 stays the selected value');
+    assert.equal(m.state.current.value, 'hfr-6');
+    m.state.syncFromURL(`${ORIGIN}?region=morro-bay&layers=currents&current=bogus`);
+    assert.match(show(), /<option selected value="[^"]+">Fuente no compatible<\/option>/, 'the unsupported option is unchanged');
+    assert.ok(util.isDeepStrictEqual(sourceOptions(show()).slice(0, 4), ES_SOURCES), 'Spanish pairs also hold beside the unsupported option');
+  } finally { m.language.value = 'en'; }
+  m.state.syncFromURL(`${ORIGIN}?region=morro-bay&layers=currents&current=hfr-6`);
+  assert.ok(util.isDeepStrictEqual(sourceOptions(show()), EN_SOURCES), 'back in English: same pairs, byte for byte');
+  // The English reason sentence is built from `.label`, not the catalogue, whatever the page language.
+  const now = new Date('2026-10-07T12:00:00Z');
+  const status = m.currentsStatus('wcofs', 'ready', {currents: []}, now, now, 'UTC');
+  assert.equal(status.drawn, null);
+  assert.match(status.reason, /NOAA WCOFS forecast/, 'reason names the English label');
+  assert.doesNotMatch(status.reason, /Pronóstico/, 'reason is not translated by this unit');
 });

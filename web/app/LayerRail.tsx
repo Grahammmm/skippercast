@@ -66,7 +66,7 @@ export function CurrentSource() {
   return (
     <label class="app-rail-source">{t('rail.source', lang)}
       <select value={value} onChange={event => chooseCurrent((event.currentTarget as HTMLSelectElement).value)}>
-        {CURRENT_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        {CURRENT_SOURCES.map(s => <option key={s.value} value={s.value}>{t(s.labelId, lang)}</option>)}
         {value === UNSUPPORTED ? <option value={UNSUPPORTED}>{t('rail.unsupported', lang)}</option> : null}
       </select>
     </label>

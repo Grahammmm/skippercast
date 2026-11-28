@@ -242,7 +242,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1922-07: LayerRail.tsx sets disabled and a catalogue note on its existing rail buttons while the Chart cannot start (a state the contrast pages never reach). No CSS, token or catch markup change. Rebind only LayerRail.tsx.
   // MB-13 regroups rail rows, adds a theme row and 24px checkbox targets; MSK-7 changes terrain fixed-ramp and readout states.
   // BODY09 mounts Reports/CatchCards, not the rail or terrain options; catch markup, CSS, tokens and contrast thresholds are unchanged.
-  "web/app/LayerRail.tsx": "aef6ccee7caa3c62f3a440620594a70331e7317b0b965481b8327b0b80ae431c",
+  // SC2137-04: LayerRail.tsx's Currents source select renders each option's text through the catalogue (t(s.labelId, lang)) instead of the English label. Same option elements; no CSS, token or catch markup change; BODY09 mounts Reports, not the rail. Rebind only LayerRail.tsx.
+  "web/app/LayerRail.tsx": "fbe3e5b18b28a8d83c98df44d1c4324e4e64aa0e4403779dc2b66fdf4f131c9e",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
