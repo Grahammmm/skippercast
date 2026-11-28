@@ -13,6 +13,8 @@
 //                                      Labeller becomes the admin's users.id and basis gains "approved from agent:<name>: " (N7)
 //   POST /api/fleet/jobs/labels        {trip_id, labeller: "agent:<name>", labels: [{started_at, ended_at, label, basis}]}:
 //                                      replaces that agent's labels on the trip (N7; `python -m skippercast.fleet.ais label import`)
+//   POST /api/fleet/jobs/labels/approve {trip_id, labeller, approver, labels: [{started_at, ended_at, label}]}: a second agent
+//                                      approves the labeller's exact set -> `agent-approved:<approver>` (`label approve`)
 //   GET  /api/fleet/jobs/labels        ?region= &cursor=   labelled trips with their labels, by trip id, for
 //                                      `python -m skippercast.fleet.ais validate` (src/skippercast/fleet/ais/validate.py)
 //
@@ -251,6 +253,45 @@ export async function approveTrip(db: D1Database, tripId: string, owner: string,
   const approved = result.meta.changes ?? 0;
   if (!approved) return {status: 'conflict', error: 'The agent labels changed. Reload the trip and review them again.'};
   return {status: 'ok', value: {approved, labels: await labelsOf(db, tripId)}};
+}
+
+/**
+ * POST /api/fleet/jobs/labels/approve: a SECOND agent approves another agent's whole label set on one trip
+ * (agent labelling delegated by the owner, 2026-11-28). `labels` is the exact set the approver reviewed
+ * ({started_at, ended_at, label}); the proposer's current set must equal it, compared inside the UPDATE as
+ * approveTrip does, or nothing changes (409). The rows become `agent-approved:<approver>` with basis
+ * "approved from agent:<proposer> by agent:<approver> (agent-approved): ...", so they never pass for an admin's
+ * labels, and a later import by the proposer cannot replace them. Admin labels are never touched.
+ */
+export async function approveAgentLabels(db: D1Database, input: Record<string, unknown>):
+  Promise<{status: number; body: Record<string, unknown>}> {
+  const bad = (error: string, status = 400): {status: number; body: Record<string, unknown>} => ({status, body: {error}});
+  const {trip_id: tripId, labeller, approver, labels: reviewed, ...extra} = input;
+  if (Object.keys(extra).length) return bad(`unknown field ${Object.keys(extra)[0]}`);
+  if (typeof labeller !== 'string' || !AGENT.test(labeller)) return bad('labeller must be agent:<name>');
+  if (typeof approver !== 'string' || !AGENT.test(approver)) return bad('approver must be agent:<name>');
+  if (approver === labeller) return bad('the approver must be a different agent from the labeller');
+  if (!Array.isArray(reviewed) || !reviewed.length || reviewed.length > MAX_LABELS) return bad(`labels must list 1 to ${MAX_LABELS} reviewed labels`);
+  const keys: string[] = [];
+  for (const [i, one] of reviewed.entries()) {
+    const fields = one && typeof one === 'object' && !Array.isArray(one) ? one as Record<string, unknown> : null;
+    const unknown = fields && Object.keys(fields).find(k => !['started_at', 'ended_at', 'label'].includes(k));
+    if (!fields || unknown) return bad(`labels[${i}]: ${unknown ? `unknown field ${unknown}` : 'a label must be an object'}`);
+    const s = isoTime(fields.started_at), e = isoTime(fields.ended_at);
+    if (!s || !e || typeof fields.label !== 'string') return bad(`labels[${i}]: started_at, ended_at (ISO UTC) and label are required`);
+    keys.push(`${s}~${e}~${fields.label}`);
+  }
+  const trip = typeof tripId === 'string' ? await tripRow(db, tripId) : null;
+  if (!trip) return bad('trip not found', 404);
+  const result = await db.prepare(`UPDATE fleet_segment_labels SET labeller=?,basis=?||COALESCE(basis,'')
+    WHERE trip_id=? AND labeller=?
+      AND (SELECT group_concat(k) FROM (
+        SELECT started_at||'~'||ended_at||'~'||label AS k FROM fleet_segment_labels WHERE trip_id=? AND labeller=? ORDER BY k
+      ))=?`).bind(`agent-approved:${approver.slice('agent:'.length)}`, `${APPROVED_PREFIX}${labeller} by ${approver} (agent-approved): `,
+    trip.id, labeller, trip.id, labeller, [...keys].sort().join(',')).run();
+  const approved = result.meta.changes ?? 0;
+  if (!approved) return bad('the labeller\'s labels on this trip differ from the reviewed set; nothing approved', 409);
+  return {status: 200, body: {ok: true, trip_id: trip.id, approved}};
 }
 
 /** POST /api/admin/fleet/labels/:id/delete: the trip's labels after it. */

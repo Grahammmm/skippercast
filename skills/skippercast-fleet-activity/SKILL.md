@@ -109,7 +109,10 @@ copies and writes the report to the run summary. Or, *on the runner*:
 fishing precision and recall overall and per mode against the targets (0.8
 and 0.7), `transit_lost` minutes and the coverage counts. Labelling itself
 follows [fleet-labelling.md](../../docs/operations/runbooks/fleet-labelling.md):
-the owner approves every agent-proposed label.
+the owner approves every agent-proposed label, or a second, different agent
+approves the exact set with `python -m skippercast.fleet.ais label approve`
+(recorded as `agent-approved:<approver>`, scored with `--labeller agent-approved`,
+never counted as the owner's).
 
 ### `tune`
 

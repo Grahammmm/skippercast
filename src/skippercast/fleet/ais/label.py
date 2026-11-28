@@ -20,6 +20,12 @@ admin view's rules, ``server/fleet/admin/labels.ts``, plus each trip's export wi
 posts nothing; a Worker refusal stops at that trip and leaves the earlier ones imported, and a
 re-run is safe. Posting needs ``fleet-ais.yml``'s job token; ``--dry-run`` only checks. Errors
 and output name entries and labels by position, never by trip id or time.
+
+``label approve <file.json>`` posts a SECOND agent's approval: a list of ``{trip_id, labeller:
+"agent:<proposer>", approver: "agent:<other>", labels: [{started_at, ended_at, label}]}``, the exact set
+the approver reviewed, to ``POST /api/fleet/jobs/labels/approve``. The Worker approves a trip only when the
+proposer's labels on it are exactly that set, and records them as ``agent-approved:<approver>``, apart from
+admin labels. The approver must differ from the proposer. Same job token and ``--dry-run`` as ``import``.
 """
 from __future__ import annotations
 
@@ -43,7 +49,7 @@ from .segment import BASIS, ActivityThresholds, offshore_nm, prepare, split_trip
 from .store import ais_root, fleet_var
 from .validate import LABELS, LABELS_FILE, TRIP_ID, _ms, _write_json, job_worker, validation_dir
 
-__all__ = ["COLUMNS", "check", "export", "import_labels", "main", "refusal", "summary"]
+__all__ = ["COLUMNS", "approve_check", "approve_labels", "check", "export", "import_labels", "main", "refusal", "summary"]
 
 COLUMNS = ("t", "sog_kn", "course_change_deg", "port_nm", "local_hour", "classifier_hint")
 HINT = "classifier_hint is the classifier's current kind: a hint, do not copy it as a label"
@@ -223,6 +229,64 @@ def import_labels(path: Path, worker=None, exports: Path | None = None) -> dict:
             "posted": 0 if worker is None else len(bodies)}
 
 
+def approve_check(entries) -> tuple[list[dict], list[str]]:
+    """Request bodies for ``label approve`` and every error by entry position (never by trip id or time).
+
+    Each entry: ``{trip_id, labeller: "agent:<proposer>", approver: "agent:<other>", labels: [{started_at,
+    ended_at, label}]}``, the exact set the approver reviewed (the Worker approves it only if the proposer's
+    labels on the trip are exactly that set)."""
+    bodies, errors, seen = [], [], set()
+    for n, entry in enumerate(entries if isinstance(entries, list) else [entries], 1):
+        where = f"entry {n}"
+        if not isinstance(entry, dict) or set(entry) != {"trip_id", "labeller", "approver", "labels"}:
+            errors.append(f"{where}: an object with trip_id, labeller, approver and labels only")
+            continue
+        tid, labeller, approver, labels = (entry[k] for k in ("trip_id", "labeller", "approver", "labels"))
+        if not isinstance(tid, str) or not TRIP_ID.fullmatch(tid) or tid in seen:
+            errors.append(f"{where}: trip_id must be 32 hex characters, once per file")
+            continue
+        seen.add(tid)
+        if not all(isinstance(x, str) and LABELLER.fullmatch(x) for x in (labeller, approver)):
+            errors.append(f"{where}: labeller and approver must be agent:<name>")
+            continue
+        if approver == labeller:
+            errors.append(f"{where}: the approver must be a different agent from the labeller")
+            continue
+        if not isinstance(labels, list) or not 1 <= len(labels) <= MAX_LABELS:
+            errors.append(f"{where}: labels must list 1 to {MAX_LABELS} reviewed labels")
+            continue
+        done = []
+        for k, x in enumerate(labels, 1):
+            try:
+                if not isinstance(x, dict) or set(x) != {"started_at", "ended_at", "label"} or x["label"] not in LABELS \
+                        or not all(isinstance(x[t], str) and ISO.match(x[t]) for t in ("started_at", "ended_at")):
+                    raise ValueError
+                done.append({"started_at": iso_utc(_ms(x["started_at"])), "ended_at": iso_utc(_ms(x["ended_at"])),
+                             "label": x["label"]})
+            except (ValueError, KeyError):
+                errors.append(f"{where} label {k}: started_at, ended_at (ISO UTC) and a known label only")
+        if len(done) == len(labels):
+            bodies.append({"trip_id": tid, "labeller": labeller, "approver": approver, "labels": done})
+    return bodies, errors
+
+
+def approve_labels(path: Path, worker=None) -> dict:
+    """Check the file; post each trip's approval unless ``worker`` is None (a dry run). A failed check posts
+    nothing; a Worker refusal stops at that trip (the earlier approvals stand; a re-run gets 409 for them)."""
+    bodies, errors = approve_check(json.loads(Path(path).read_text(encoding="utf-8")))
+    if errors:
+        raise ValueError("; ".join(errors))
+    approved = 0
+    for posted, body in enumerate(bodies if worker is not None else ()):
+        try:
+            approved += int(worker.post("labels/approve", body).get("approved") or 0)  # type: ignore[union-attr]
+        except WorkerError as error:
+            raise WorkerError(f"{refusal(str(error))} at entry {posted + 1}; {posted} of {len(bodies)} trips approved "
+                              "before it") from None
+    return {"trips": len(bodies), "labels": sum(len(b["labels"]) for b in bodies),
+            "approved": approved, "posted": 0 if worker is None else len(bodies)}
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="python -m skippercast.fleet.ais label", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -236,9 +300,14 @@ def main(argv=None) -> int:
     im.add_argument("file")
     im.add_argument("--exports", help="the export files' directory (default: the proposals file's own)")
     im.add_argument("--dry-run", action="store_true", help="check only; no Worker call")
+    ap = sub.add_parser("approve", help="post a second agent's approval of reviewed agent label sets")
+    ap.add_argument("file")
+    ap.add_argument("--dry-run", action="store_true", help="check only; no Worker call")
     args = parser.parse_args(argv)
     try:
-        if args.command == "import":
+        if args.command == "approve":
+            counts = approve_labels(Path(args.file), None if args.dry_run else job_worker("use --dry-run to check only"))
+        elif args.command == "import":
             counts = import_labels(Path(args.file), None if args.dry_run else job_worker("use --dry-run to check only"),
                                    args.exports)
         else:

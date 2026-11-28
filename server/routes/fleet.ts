@@ -18,6 +18,7 @@
 //   GET|POST /api/fleet/jobs/watch                                  CF-46 (server/fleet/watch.ts)
 //   GET /api/fleet/jobs/labels                                      CF-48 (server/fleet/admin/labels.ts labelledTrips)
 //   POST /api/fleet/jobs/labels                                     N7: an agent's proposed labels (labels.ts importAgentLabels)
+//   POST /api/fleet/jobs/labels/approve                             a second agent approves them (labels.ts approveAgentLabels)
 //   /api/admin/fleet/reviews*, /api/admin/fleet/vessels*            CF-30, registered in routes/admin.ts (fleet/admin/*.ts)
 //   /api/admin/fleet/operators*, /api/admin/fleet/outreach/:id      CF-32, registered in routes/admin.ts (fleet/admin/operators.ts)
 //   GET /api/admin/fleet/coverage, GET /api/admin/fleet/ais/health   CF-35, registered in routes/admin.ts (fleet/admin/coverage.ts, ais-health.ts)
@@ -39,7 +40,7 @@ import {rateLimit} from '../middleware/rate-limit.ts';
 import {fleetGo} from '../fleet/go.ts';
 import {activity, health, heartbeat} from '../fleet/activity.ts';
 import {watchList, watchUpdate} from '../fleet/watch.ts';
-import {labelledTrips, importAgentLabels} from '../fleet/admin/labels.ts';   // CF-48, N7
+import {labelledTrips, importAgentLabels, approveAgentLabels} from '../fleet/admin/labels.ts';   // CF-48, N7
 import {ClientError} from '../errors.ts';
 
 const NOT_FOUND = (): Response => json({error: 'Not found'}, 404);
@@ -166,5 +167,16 @@ fleetRouter.post('/api/fleet/jobs/labels', async c => {   // N7: one trip's agen
     throw error;
   }
   const result = await importAgentLabels(c.env.DB, input, new Date().toISOString());
+  return json(result.body, result.status);
+});
+fleetRouter.post('/api/fleet/jobs/labels/approve', async c => {   // a second agent approves one trip's agent labels
+  if (!c.env.DB) return UNAVAILABLE();
+  let input: Record<string, unknown>;
+  try { input = await body(c.req.raw, MAX_LABEL_BYTES); }
+  catch (error) {
+    if (error instanceof ClientError && error.message === 'body too large') return json({error: 'body too large'}, 413);
+    throw error;
+  }
+  const result = await approveAgentLabels(c.env.DB, input);
   return json(result.body, result.status);
 });
