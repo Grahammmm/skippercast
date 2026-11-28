@@ -254,3 +254,83 @@ def test_exclude_source_cannot_widen_selection_or_use_aliases(tmp_path):
         with pytest.raises(SystemExit) as refused:
             main([*argv, '--exclude-source', alias])
         assert refused.value.code == 1
+
+
+def test_config_files_from_another_checkout_reuse_select(tmp_path):
+    # Contract: the region config, registry and labels are pinned by content, not by where the checkout
+    # sits; the same files at another path give the same generation and no new work. Bug caught: every
+    # run from a new worktree made a new select generation, so identical data paid a multi-hour mosaic
+    # and tiles rebuild (the dry-run plan said reuse). Control: an edited registry is still new work.
+    region, cache, argv = fixture(tmp_path)
+    values = np.full((2, 2), -5, dtype='float32')
+    raw = raster(tmp_path / 'survey.tif', values)
+    normalized(cache, raw, values, np.full(values.shape, 3, dtype='uint8'))
+    put(region / 'census.json', dict(summary={'region': region.name}, files=[row_for(raw, 'survey')]))
+    put(tmp_path / 'registry.json', {'sources': [registry_row('survey')]})
+    check = receipts.Region(region.parent, region.name)
+    assert main(argv) == 0
+    first = read(check.receipt_path('select'))
+    outputs = {p.name: p.read_bytes() for p in (region / 'select').iterdir()}
+
+    other = tmp_path / 'other-checkout'
+    other.mkdir()
+    moved = list(argv)
+    for flag in ('--registry', '--provenance', '--region-config'):
+        at = moved.index(flag) + 1
+        source = Path(moved[at])
+        (other / source.name).write_bytes(source.read_bytes())
+        moved[at] = str(other / source.name)
+    assert main(moved) == 0
+    again = read(check.receipt_path('select'))
+    assert (again['generation'], again['attempt'], again['ended']) == (
+        first['generation'], first['attempt'], first['ended'])
+    assert {p.name: p.read_bytes() for p in (region / 'select').iterdir()} == outputs
+
+    put(other / 'registry.json', {'sources': [registry_row('survey', notes='edited')]})
+    assert main(moved) == 0
+    assert read(check.receipt_path('select'))['generation'] != first['generation']
+
+
+def test_run_from_a_new_checkout_re_records_select_inputs(tmp_path, capsys):
+    # Contract: once the checkout select last read is removed, a real select run from the new
+    # checkout does no work (same content) and re-records the paths it read, so the rebuild plan
+    # reuses select afterwards. Bug caught: select did no work while the plan reported the old
+    # paths input-missing for ever (and so a rebuild of every stage after select). Before that
+    # run the plan still names the old paths: a pessimistic rebuild, never a wrong reuse.
+    # Control: an edited input at the new checkout is still a select rebuild in the plan.
+    from scripts.relief import rebuild_plan as plan_cli
+
+    def plan_row():
+        capsys.readouterr()
+        assert plan_cli.main(['--out', str(out), 'morro-bay']) == 0
+        [row] = [line for line in capsys.readouterr().out.splitlines() if line.startswith('  select ')]
+        return row.split()
+    region, cache, _ = fixture(tmp_path)
+    out = region.parent
+    base = ['select', '--region', 'morro-bay', '--out', str(out), '--cache', str(cache)]
+
+    def at(root):  # the runner's defaults: this checkout's region config and registry
+        return ['--region-config', str(root / 'regions/morro-bay/region.json'),
+                '--registry', str(root / 'catalog/sources.json'), '--provenance', str(root / 'labels.json')]
+
+    old, new = tmp_path / 'old-checkout', tmp_path / 'new-checkout'
+    put(old / 'regions/morro-bay/region.json', read(tmp_path / 'region.json'))
+    put(old / 'catalog/sources.json', {'sources': []})
+    put(old / 'labels.json', read(tmp_path / 'labels.json'))
+    put(region / 'census.json', {'summary': {'region': 'morro-bay'}, 'files': []})
+    assert main([*base, *at(old)]) == 0
+    receipt = receipts.Region(out, 'morro-bay').receipt_path('select')
+    first = read(receipt)
+    assert plan_row()[:2] == ['select', 'reuse']
+    old.rename(new)
+
+    assert plan_row()[:2] == ['select', 'rebuild'] and 'input-missing' in plan_row()[2]
+    assert main([*base, *at(new)]) == 0
+    again = read(receipt)
+    assert (again['generation'], again['attempt'], again['ended']) == (
+        first['generation'], first['attempt'], first['ended'])
+    assert not [item for item in again['inputs'] if 'old-checkout' in item['path']]
+    assert plan_row()[:2] == ['select', 'reuse']
+
+    put(new / 'catalog/sources.json', {'sources': [], 'edited': True})
+    assert plan_row()[:3] == ['select', 'rebuild', 'input:registry']

@@ -29,6 +29,7 @@ DATUMS = {'MLLW', 'NAVD88', 'MSL', 'EGM2008', 'unstated', 'instantaneous_sea_lev
 UP = 'elevation_positive_up'
 DOWN = 'depth_positive_down'
 CAPS = {'interpolated': 1, 'unknown': 2, 'compiled': 2, 'measured': 3}
+CONTENT_ONLY_ROLES = frozenset({'region', 'registry', 'provenance'})  # inputs keyed by content, not location
 # Exact census family aliases for single known deliveries (no fuzzy match on
 # distributor, attribution, or an unrelated product with the same resolution).
 FAMILY_IDS = {
@@ -397,8 +398,11 @@ def main(argv=None):
                     planned.append((report, row, bound, folder, reason, basis, caps, bounds))
                 except (OSError, ValueError) as exc:
                     report['reason'] = str(exc)
-            # Paths matter to a manifest even when content is identical.
-            params = {'scope': 'public', 'cache': str(cache), 'input_paths': [str(i.path) for i in inputs]}
+            # Data paths matter to a manifest even when content is identical (sources.json names them). The
+            # region config, registry and labels are pinned by content only: where the checkout sits never
+            # reaches the outputs, so a run from another worktree reuses select and everything after it.
+            params = {'scope': 'public', 'cache': str(cache),
+                      'input_paths': [str(i.path) for i in inputs if i.role not in CONTENT_ONLY_ROLES]}
             if excluded:  # absent when unused, so existing receipts stay valid
                 params['exclude_sources'] = excluded
             return receipts.Plan(inputs=inputs, params=params)
