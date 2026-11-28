@@ -218,17 +218,22 @@ def code_files() -> list[tuple[str, Path]]:
     return [('package.py', Path(__file__)), ('survey_delivery.py', Path(survey_delivery.__file__))]
 
 
-def check_survey(root: Path, rows: list[dict]) -> None:
-    """A survey gap companion ships only with, and byte-derived from, the packaged survey detail.
+def check_survey(root: Path, rows: list[dict], source_ids) -> None:
+    """A packaged survey detail must be one the Chart can draw; a gap companion ships only with, and byte-derived
+    from, that detail.
 
-    Releases without the companion are unchanged. With it, both wires must decode to their pinned
-    representations and the companion must equal the detail's tier-none subset (survey_delivery.gap_document)."""
+    With a detail, its wire must decode to its pinned representation and every surveyed area must name exactly one
+    of the release's ``source_ids`` (survey_delivery.check_detail_sources). With the companion too, its wire must
+    decode to its pins and it must equal the detail's tier-none subset (survey_delivery.gap_document)."""
     survey = {row['path']: row for row in rows if survey_delivery.is_survey_path(row['path'])}
     try:
         members = survey_delivery.pointer_members(survey)
-        if 'survey_gap' not in members:
+        if not members:
             return
         detail = survey_delivery.check_decoded(artifact_path(root, survey_delivery.WIRE_PATH), members['survey_detail'])
+        survey_delivery.check_detail_sources(detail, source_ids)
+        if 'survey_gap' not in members:
+            return
         wire, decoded = survey_delivery.LIMITS['survey_gap']
         gap = survey_delivery.check_decoded(artifact_path(root, survey_delivery.GAP_WIRE_PATH), members['survey_gap'],
                                             wire_limit=wire, decoded_limit=decoded)
@@ -346,7 +351,7 @@ def main(argv=None) -> int:
             producer = provenance.get(row['path'], {})
             if any(producer.get(key) != row[key] for key in ('sha256', 'bytes')):
                 raise ReleaseError(f'layer bytes are not in the current upstream outputs: {row["path"]}')
-        check_survey(region.dir, rows)
+        check_survey(region.dir, rows, {source['id'] for source in metadata['sources']})
         code_sha = pending['code']['repo_sha']
         if not isinstance(code_sha, str) or not re.fullmatch(r'[a-f0-9]{40}', code_sha):
             raise ReleaseError('package must run from a pinned repository checkout')

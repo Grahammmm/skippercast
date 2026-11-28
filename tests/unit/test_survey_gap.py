@@ -14,10 +14,11 @@ import pytest
 from scripts.relief import region as cli
 from skippercast.relief import envelope, package, receipts, stage_transport, survey_delivery as sd
 from skippercast.relief.package import ReleaseError
-from tests.unit.test_relief_package import assembly, inputs  # noqa: F401  (fixture and producer chain)
+from tests.unit.test_relief_package import SOURCE, assembly, inputs  # noqa: F401  (fixture and producer chain)
 
 SQUARE = [[[-121.0, 35.0], [-120.5, 35.0], [-120.5, 35.5], [-121.0, 35.0]]]
 SURVEY_PATHS = [sd.DECODED_PATH, sd.WIRE_PATH, sd.GAP_DECODED_PATH, sd.GAP_WIRE_PATH]
+CREDITED = {SOURCE}  # the release's source ids
 
 
 def feature(tier, sources=()):
@@ -33,7 +34,7 @@ def canonical(doc):
 
 def detail_bytes(*tiers):
     return canonical({'type': 'FeatureCollection', 'region': 'fixture', 'navigation': 'NOT FOR NAVIGATION',
-                      'features': [feature(t, [] if t == 'none' else ['src']) for t in tiers]})
+                      'features': [feature(t, [] if t == 'none' else [SOURCE]) for t in tiers]})
 
 
 def pins(raw, wire):
@@ -102,7 +103,7 @@ def test_package_check_accepts_the_derived_pair(root):
     gap = (root / sd.GAP_DECODED_PATH).read_bytes()
     assert len((root / sd.GAP_WIRE_PATH).read_bytes()) < len((root / sd.WIRE_PATH).read_bytes())
     rows = rows_for(root)
-    package.check_survey(root, rows)
+    package.check_survey(root, rows, CREDITED)
     members = sd.pointer_members({r['path']: r for r in rows})
     assert members['survey_gap'] == pins(gap, (root / sd.GAP_WIRE_PATH).read_bytes())
     assert list(members) == ['survey_detail', 'survey_gap']
@@ -113,26 +114,37 @@ def test_package_check_refuses_mixed_or_partial_survey_pairs(root):
     other = sd.gap_document(detail_bytes('none', 'estimated', 'none', 'estimated'))
     write_pair(root / sd.GAP_PREFIX, 'gap.geojson', other)
     with pytest.raises(ReleaseError, match='not derived'):
-        package.check_survey(root, rows_for(root))
+        package.check_survey(root, rows_for(root), CREDITED)
     # A wire that does not decode to its own decoded pin.
     (root / sd.GAP_DECODED_PATH).write_bytes(sd.gap_document((root / sd.DECODED_PATH).read_bytes()))
     with pytest.raises(ReleaseError, match='does not match reviewed pins'):
-        package.check_survey(root, rows_for(root))
+        package.check_survey(root, rows_for(root), CREDITED)
     # Half a companion pair, or a companion without the detail pair.
     (root / sd.GAP_WIRE_PATH).unlink()
     with pytest.raises(ReleaseError, match='incomplete or unexpected'):
-        package.check_survey(root, rows_for(root))
+        package.check_survey(root, rows_for(root), CREDITED)
     (root / sd.GAP_WIRE_PATH).write_bytes(sd.encode((root / sd.GAP_DECODED_PATH).read_bytes()))
     with pytest.raises(ReleaseError, match='incomplete or unexpected'):
-        package.check_survey(root, rows_for(root, [sd.GAP_DECODED_PATH, sd.GAP_WIRE_PATH]))
+        package.check_survey(root, rows_for(root, [sd.GAP_DECODED_PATH, sd.GAP_WIRE_PATH]), CREDITED)
 
 
 def test_original_and_detail_only_releases_are_unchanged(root):
     detail_only = rows_for(root, [sd.DECODED_PATH, sd.WIRE_PATH])
-    package.check_survey(root, [])  # no survey layers at all
-    package.check_survey(root, detail_only)  # the detail pair alone needs no decoder pass
+    package.check_survey(root, [], set())  # no survey layers at all: nothing to check
+    package.check_survey(root, detail_only, CREDITED)
     assert sd.pointer_members({}) == {}
     assert list(sd.pointer_members({r['path']: r for r in detail_only})) == ['survey_detail']
+
+
+@pytest.mark.parametrize('paths', [[sd.DECODED_PATH, sd.WIRE_PATH], SURVEY_PATHS], ids=['detail-only', 'with-gap'])
+def test_package_check_refuses_a_detail_naming_a_source_the_release_does_not_credit(root, paths):
+    # decodeSurveyDetail drops the whole layer for an unknown source id; the release must not carry such a detail.
+    with pytest.raises(ReleaseError, match='does not credit'):
+        package.check_survey(root, rows_for(root, paths), {'another-source'})
+    # A detail-only wire that does not decode to its pins is refused too (it is now always decoded).
+    (root / sd.WIRE_PATH).write_bytes(sd.encode(detail_bytes('estimated')))
+    with pytest.raises(ReleaseError, match='does not match reviewed pins'):
+        package.check_survey(root, rows_for(root, paths), CREDITED)
 
 
 def test_pointer_members_bound_the_companion_and_refuse_a_copy_of_the_detail():
