@@ -10,6 +10,7 @@ real are assembled at run time, so this file never holds one either.
 """
 import importlib.util
 import json
+import os
 from pathlib import Path, PurePosixPath
 import tempfile
 import unittest
@@ -21,6 +22,14 @@ from tests._support import ROOT
 _spec = importlib.util.spec_from_file_location('check_repository', ROOT / 'scripts/check_repository.py')
 check_repository = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(check_repository)
+
+
+def repo_files():
+    """Every file under ROOT. os.walk skips a directory that vanishes mid-walk;
+    Path.rglob raises, and parallel tests make and remove temp dirs under tests/fixtures."""
+    for directory, _, names in os.walk(ROOT):
+        for name in names:
+            yield Path(directory, name)
 
 FIXTURE = PurePosixPath('tests/fixtures/advisor/meta/example.json')
 PLAN = PurePosixPath('docs/plans/text-advisor/03-channels.md')
@@ -216,7 +225,7 @@ class FleetScopeTests(unittest.TestCase):
 
     def test_the_committed_fleet_fixtures_and_plan_pass(self):
         allowed, _ = check_repository.load_fixture_handles()
-        files = sorted(p for p in ROOT.rglob('*') if p.is_file() and check_repository.fleet_scoped(p.relative_to(ROOT)))
+        files = sorted(p for p in repo_files() if p.is_file() and check_repository.fleet_scoped(p.relative_to(ROOT)))
         self.assertGreaterEqual(len(files), 6, 'the fleet fixtures and the plan are found')
         errors = []
         for path in files:
@@ -227,7 +236,7 @@ class FleetScopeTests(unittest.TestCase):
 class RepositoryTests(unittest.TestCase):
     def test_the_committed_fixtures_plan_and_runbooks_pass(self):
         allowed, _ = check_repository.load_fixture_handles()
-        files = sorted(p for p in ROOT.rglob('*') if p.is_file() and check_repository.advisor_scoped(p.relative_to(ROOT))
+        files = sorted(p for p in repo_files() if p.is_file() and check_repository.advisor_scoped(p.relative_to(ROOT))
                        and 'var' not in p.relative_to(ROOT).parts)
         self.assertGreater(len(files), 100, 'the fixtures, the plan and the runbooks are all found')
         errors = []
