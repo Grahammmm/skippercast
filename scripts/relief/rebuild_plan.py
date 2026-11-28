@@ -11,9 +11,9 @@ import stat
 from skippercast.relief import rebuild_plan, receipts
 
 if __package__:
-    from .run_region import STAGES
+    from .run_region import STAGES, SURVEY_STAGES
 else:
-    from run_region import STAGES
+    from run_region import STAGES, SURVEY_STAGES
 
 HEAVY = {'mosaic', 'tiles'}
 
@@ -67,7 +67,13 @@ def _input_hasher(location, memo):
     return hasher
 
 
-def _region_plan(out, region, current, memo=None, *, default=None, pin=None):
+def _region_plan(out, region, current, memo=None, *, default=None, pin=None, survey=()):
+    """``survey`` names the opt-in survey stages this run selects (run_region's ``--survey``).
+
+    A survey stage is planned only when it is selected, has a receipt, or a receipt takes it
+    upstream (plan() adds such links itself, as ``missing`` without a receipt); otherwise a
+    region that never runs them would always show two missing rebuilds.
+    """
     # run_region's dry run calls this without a memo; each call then hashes for itself.
     memo = {} if memo is None else memo
     # Region.keys() globs, which can hide permission errors as an empty directory.
@@ -82,7 +88,8 @@ def _region_plan(out, region, current, memo=None, *, default=None, pin=None):
     styles = rebuild_plan.style_digests(region, default=default, pin=pin)
     # Compare existing scoped receipts too, even if the current runner doesn't emit that scope.
     by_stage = {key.partition('.')[0]: digest for key, digest in current.items()}
-    digests = dict(current)
+    digests = {key: digest for key, digest in current.items()
+               if key.partition('.')[0] not in SURVEY_STAGES or key.partition('.')[0] in survey}
     for key in docs:
         stage = key.partition('.')[0]
         if stage in by_stage:

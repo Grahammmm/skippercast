@@ -14,15 +14,18 @@ from skippercast.relief.receipts import REGION_ID, SCOPE_NAME, STAGE_NAME
 if __package__:
     from .rebuild_blast_radius import _unique_object, summarize
     from .rebuild_plan import HEAVY
-    from .run_region import SCOPED_STAGES, STAGES
+    from .run_region import SCOPED_STAGES, STAGES, SURVEY_STAGES
 else:
     from rebuild_blast_radius import _unique_object, summarize
     from rebuild_plan import HEAVY
-    from run_region import SCOPED_STAGES, STAGES
+    from run_region import SCOPED_STAGES, STAGES, SURVEY_STAGES
 
 # The planner always emits the runner's current keys, even without receipts.
 # Historical receipt keys can add rows, but cannot replace these required rows.
-REQUIRED_STAGES = {f'{stage}.public' if stage in SCOPED_STAGES else stage for stage in STAGES}
+# The opt-in survey stages are required only where the inventory lists them (a region that
+# runs or records them); the plan and the inventory must then agree on them like any key.
+REQUIRED_STAGES = {f'{stage}.public' if stage in SCOPED_STAGES else stage
+                   for stage in STAGES if stage not in SURVEY_STAGES}
 
 
 def _allowed_pairs(ceiling):

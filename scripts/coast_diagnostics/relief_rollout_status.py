@@ -18,10 +18,14 @@ if __package__ in (None, ''):
     root = Path(__file__).resolve().parents[2]
     sys.path[:0] = [str(root), str(root / 'src')]
 
-from scripts.relief.run_region import SCOPED_STAGES, STAGES
+from scripts.relief.run_region import SCOPED_STAGES, STAGES as RUN_STAGES, SURVEY_STAGES
 from skippercast.relief import receipts
 
 COMPLETE = 'complete through envelope (ready for review, not live)'
+# The opt-in survey stages (run_region.py --survey) get no row of their own: receipts alone do not
+# say which survey choice the latest run made. A survey stage the inventory receipt takes is still
+# checked as inventory's upstream, so a held, failed or changed one makes inventory stale here.
+STAGES = tuple(stage for stage in RUN_STAGES if stage not in SURVEY_STAGES)
 
 
 class Status(TypedDict):
