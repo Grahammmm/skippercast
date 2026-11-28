@@ -463,7 +463,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // plus transitive maplibre entries): only dependency pins change. BODY09 renders Reports with preact; hono is server-only,
   // workers-types is type-only and Reports never mounts MapStage, so maplibre-gl is not loaded. No CSS, token, font or catch
   // markup input changes; contrast(), assertions and thresholds are untouched. Rebind only these two.
-  "package.json": "b7aa7ef9e8b23b5f7118630f9d7e83948ec39d18f54856b8cb490b9b4ab2de9f",
+  // #3824 (fast local check): package.json gains only the "check:fast" script line; no dependency, CSS, token, font or
+  // catch markup input changes and pnpm-lock.yaml is untouched; contrast(), assertions and thresholds unchanged. Rebind package.json only.
+  "package.json": "9ff96b7c064a30145df28566e125c916745799b4fcfe6c0bfcd37248fe9c0671",
   // SCA-026: The dev-only esbuild lock resolution changes no contrast or catch-sheet inputs.
   "pnpm-lock.yaml": "23341b4b4685f91021792a746016e33fe1fd09984e0c2ecb352d6e85b95fd43b",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
