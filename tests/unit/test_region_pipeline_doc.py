@@ -122,7 +122,8 @@ def stage_cli(host, tmp_path, monkeypatch):
     return run
 
 
-@pytest.mark.parametrize('stage', RR.STAGES)
+@pytest.mark.parametrize('stage', [pytest.param(stage, marks=pytest.mark.gis) if stage == 'select' else stage
+                                   for stage in RR.STAGES])  # select imports the survey stack
 def test_each_documented_stage_command_is_accepted_by_its_cli(stage_cli, capsys, stage):
     result = stage_cli(stage, _documented_options()[stage])
     assert isinstance(result, Parsed), capsys.readouterr().err
