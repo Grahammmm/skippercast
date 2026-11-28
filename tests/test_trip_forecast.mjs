@@ -12,7 +12,7 @@ import util from 'node:util';
 import {pathToFileURL} from 'node:url';
 import {chromium} from '@playwright/test';
 import {build} from 'esbuild';
-import {rendererPlugins} from './helpers/esbuild-url.mjs';
+import {preparedRendererPlugins, rendererPlugins} from './helpers/esbuild-url.mjs';
 
 const {parseConditionsForecast} = await import('../web/conditions.ts');
 const {markForecast, runText} = await import('../web/brief/mark-forecast.ts');
@@ -222,6 +222,7 @@ const entry = `
   export {createPlanner} from './web/planner.ts';
   export {cruiseSpeed, savedLimits} from './web/limits.ts';
   export {regionInfo} from './web/app/region-info.ts';
+  export {language} from './web/i18n.ts';
   export {savedBrief, savedForecast} from './web/brief/Brief.tsx';
   export {ensureRegionalForecast, regionalForecast} from './web/brief/Brief.tsx';
   export {buildExport} from './dist/trip-export.js';
@@ -340,6 +341,40 @@ test('six_stops_one_request, failed_once and stale completion: the plan shares t
       assert.equal(net.calls.length, 4);
       net.ok(3); await tick();
       assert.equal(count(html(), /data-stop-forecast=/g), 6);
+    } finally { model.dispose(); }
+  } finally { globalThis.fetch = saved.fetch; globalThis.location = saved.location; await rm(dir, {recursive: true, force: true}); }
+});
+
+// SCB2222-07 forecast_point_names_in_renderers (planner basis). Contract: the plan's forecast basis names the forecast point from the loaded
+// region file, in English and Spanish, and reads the id when that file names no such point or is another region's. Believable bug: the
+// basis prints arrival.point (the id), or a decoy region's name for the same id. Stop lines and the id in the data are untouched.
+test('SCB2222-07: the plan\'s forecast basis names the forecast point from the region file, in English and Spanish; the id when unnamed', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'trip-forecast-name-')), out = join(dir, 'ui.mjs');
+  const saved = {fetch: globalThis.fetch, location: globalThis.location};
+  try {
+    await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: entry}, bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent',
+      jsx: 'automatic', jsxImportSource: 'preact', plugins: preparedRendererPlugins});
+    const m = await import(pathToFileURL(out).href), net = deferredFetch();
+    globalThis.fetch = net.fetchFn; globalThis.location = {href: 'https://skippercast.test/map'};
+    const model = await sixStopPlan(m, new Map());
+    try {
+      const basis = (info, lang) => {
+        m.regionInfo.value = info; m.language.value = lang;
+        try { return m.renderString(m.h(m.Planner, {model, open: true, now: () => NOW})).match(/id="export-forecast-basis">([^<]*)</)[1]; } finally { m.language.value = 'en'; }
+      };
+      const card = m.ensureRegionalForecast(INFO.id, INFO.center);
+      net.ok(0); await card; await tick();
+      assert.equal(m.regionalForecast.value.point.id, 'central', 'the id stays the point\'s identity in the feed');
+      const named = {...INFO, forecastPoints: {central: 'Estero Bay'}};
+      assert.equal(basis(named, 'en'), 'Regional model values at forecast point Estero Bay, not readings at these stops.');
+      assert.equal(basis(named, 'es'), 'Valores del modelo regional en el punto de pronóstico Estero Bay, no mediciones en estas paradas.');
+      for (const [why, info] of [['the file names other points only', {...INFO, forecastPoints: {north: 'Point Estero'}}], ['the file names none', INFO]]) {
+        assert.match(basis(info, 'en'), /at forecast point central,/, `English id: ${why}`);
+        assert.match(basis(info, 'es'), /en el punto de pronóstico central,/, `Spanish id: ${why}`);
+      }
+      // another region's file never reaches this plan's basis, whatever it names the id
+      m.regionInfo.value = {...INFO, id: 'cambria-san-simeon', forecastPoints: {central: 'Decoy'}};
+      assert.doesNotMatch(m.renderString(m.h(m.Planner, {model, open: true, now: () => NOW})), /Decoy/);
     } finally { model.dispose(); }
   } finally { globalThis.fetch = saved.fetch; globalThis.location = saved.location; await rm(dir, {recursive: true, force: true}); }
 });

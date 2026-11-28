@@ -303,11 +303,11 @@ export function markForecast(f: ConditionsForecast | null, region: string, mark:
   return {kind: 'points', at, point: f.point.id, families, current: currentRow(feed, points, mark, regional, at, now, tz, lang)};
 }
 
-/** A row's source line: model, grid, where it was read, and its hour when that differs from the dock's. */
-export function readingSource(r: MarkReading, at: number, tz: string, lang: Language = 'en'): string {
+/** A row's source line: model, grid, where it was read, and its hour when that differs from the dock's. `pointName` turns the point's id into the name the line shows (SCB2222-07; the id when omitted). */
+export function readingSource(r: MarkReading, at: number, tz: string, lang: Language = 'en', pointName: (id: string) => string = id => id): string {
   return [
     t('markForecast.src.model', lang, {model: r.model, grid: r.grid}),
-    r.cell ? t('markForecast.src.cell', lang, {km: km1(r.cell.km)}) : r.point ? t('markForecast.src.point', lang, {point: r.point}) : '',
+    r.cell ? t('markForecast.src.cell', lang, {km: km1(r.cell.km)}) : r.point ? t('markForecast.src.point', lang, {point: pointName(r.point)}) : '',
     r.validAt !== null && r.validAt !== at ? t('markForecast.valid', lang, {hour: hourText(r.validAt, tz, lang)}) : '',
     r.issuedAt !== null && r.value !== null ? t('markForecast.src.run', lang, {run: runText(r.issuedAt, tz, lang)}) : '',
   ].filter(Boolean).join(' · ');

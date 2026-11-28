@@ -14,7 +14,7 @@ import {daylightText} from '../../conditions-daylight.ts';
 import {Segmented} from '../../ui/Chip.tsx';
 import {currentBrief, ensureRegionalForecast, ForecastFailure, regionalForecast, regionalForecastState, verdictEpoch} from '../../brief/Brief.tsx';
 import {coastBinding, coastData, coastReport} from '../../coast-data.ts';
-import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastRows, readingsAt, sourceClocks, type Family, type ForecastFailureReason} from '../../conditions.ts';
+import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastPointName, forecastRows, readingsAt, sourceClocks, type Family, type ForecastFailureReason} from '../../conditions.ts';
 import {CDFW_REGULATIONS} from '../../map/habitat.ts';
 import {disagreements, sentence} from '../../model-disagreement.ts';
 import disagreeStyles from './model-disagreement.css?url';
@@ -152,7 +152,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
         <CoastMarkup renderer="chart" args={[rows, span.start, span.end, selected, tz, {windows: [...brief?.windows ?? []], ...copy.chart ? {copy: copy.chart} : {}}]}
           onCursor={at => selectHour(now, tz, Date.parse(at))} />
       </div>
-      <p class="app-conditions-caption">{t(local.rows.length ? 'conditions.caption.local' : 'conditions.caption.nolocal', lang, {model: FAMILIES[family].label, point: forecast?.point.id ?? '—'})}</p>
+      <p class="app-conditions-caption">{t(local.rows.length ? 'conditions.caption.local' : 'conditions.caption.nolocal', lang, {model: FAMILIES[family].label, point: forecast ? forecastPointName(regionInfo.value, forecast.region, forecast.point.id) : '—'})}</p>
       <HourlyTable forecast={forecast} tide={local.rows.find(r => r.label === 'Tide') ?? null} at={state.at} tz={tz} now={now} />
       <h3 class="ui-eyebrow">{t('conditions.clocks', lang)}</h3>
       <ul class="app-conditions-clocks">

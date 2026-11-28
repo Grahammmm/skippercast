@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import report from './fixtures/coast/skippercast-report.json' with {type: 'json'};
 
 const {chart} = await import('../packages/coast/src/charts/series.ts');
-const {briefForecast, coastRows, conditionsRows, conditionsSpan, forecastRows, parseConditionsForecast, readingsAt, sourceClocks, SPAN_HOURS} = await import('../web/conditions.ts');
+const {briefForecast, coastRows, conditionsRows, conditionsSpan, forecastPointName, forecastRows, parseConditionsForecast, readingsAt, sourceClocks, SPAN_HOURS} = await import('../web/conditions.ts');
 
 const HOUR = 3_600_000;
 const now = new Date(Date.parse(report.generatedAt) + 10 * 60_000);
@@ -186,4 +186,22 @@ test('reading_tolerance_is_strict_and_inputs_are_unchanged', () => {
   const before = JSON.stringify(frozen);
   assert.equal(valueOf(frozen), 2);
   assert.equal(JSON.stringify(frozen), before);
+});
+
+// SCB2222-07 forecast_point_names_in_renderers (tile source). Contract: the brief's Wind and Swell tile source names the forecast point
+// from the loaded region file, and falls back to the id only when that file names no such point. Believable bug: the label prints the raw
+// point id ('carmel-bay-outer'), or reads another region's name for the same id.
+test('SCB2222-07: the tile source names the forecast point from the region file; the id when unnamed, blank or another region\'s', () => {
+  const f = parseConditionsForecast(feed(), 'morro-bay', [35.34, -120.965]);
+  const named = {id: 'morro-bay', forecastPoints: {central: 'Estero Bay', north: 'Point Estero'}};
+  assert.equal(briefForecast(f, 'gfs', named).label, 'NOAA GFS model · Estero Bay');
+  assert.equal(briefForecast(f, 'ecmwf', named).label, 'ECMWF model · Estero Bay', 'the other family names it the same way');
+  for (const [why, info] of [['no region file', null], ['file names other points only', {id: 'morro-bay', forecastPoints: {north: 'Point Estero'}}],
+    ['file names none', {id: 'morro-bay'}], ['a blank name', {id: 'morro-bay', forecastPoints: {central: '  '}}],
+    ['another region names the same id', {id: 'cambria-san-simeon', forecastPoints: {central: 'Decoy'}}]]) {
+    assert.equal(briefForecast(f, 'gfs', info).label, 'NOAA GFS model · central', why);
+  }
+  assert.equal(briefForecast(f).label, 'NOAA GFS model · central', 'no region argument: the id, as before');
+  assert.equal(f.point.id, 'central', 'the id stays the point\'s identity in the data');
+  assert.equal(forecastPointName({id: 'morro-bay', forecastPoints: {}}, 'morro-bay', 'constructor'), 'constructor', 'an inherited property is not a name');
 });

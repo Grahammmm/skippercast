@@ -54,6 +54,19 @@ export interface ConditionsForecast {
   readonly feed?: unknown;
 }
 
+/** What the forecast lines read of the loaded region file (web/app/region-info.ts RegionInfo): its id and its published point names, point id → name. */
+export interface PointNameSource {readonly id: string; readonly forecastPoints?: Readonly<Record<string, string>>}
+
+/**
+ * SCB2222-07: the name a forecast line shows for forecast point `pointId` of `region`: the name the loaded region file publishes
+ * (forecast_points[].name), else the id itself when there is no region file, it is another region's, or it names no such point.
+ * Display only: ids stay the keys in the feed, the sampler, links and logs.
+ */
+export function forecastPointName(info: PointNameSource | null | undefined, region: string, pointId: string): string {
+  const names = info?.id === region ? info.forecastPoints : undefined;
+  return names && Object.hasOwn(names, pointId) && names[pointId]!.trim() ? names[pointId]! : pointId;
+}
+
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 /** A finite clock a Date can hold: `ms` is epoch milliseconds (convert seconds first, `s * 1000`). Zero, negatives and the exact Date endpoints pass; no freshness policy. */
 const dateOk = (ms: unknown): ms is number => finite(ms) && Number.isFinite(new Date(ms).getTime());
@@ -113,9 +126,10 @@ export async function loadConditionsForecast(region: string, near: readonly [num
  * clock is the older of the two runs, so a stale run never reads fresh; null
  * when there is no feed or no run clock to measure it by. An unrepresentable
  * retrieval or run clock counts as missing: the other run's clock is never
- * borrowed in its place.
+ * borrowed in its place. The label names the point from `info`, the loaded
+ * region file (its id when that names no such point).
  */
-export function briefForecast(f: ConditionsForecast | null, family: Family = 'gfs'): RegionalForecast | null {
+export function briefForecast(f: ConditionsForecast | null, family: Family = 'gfs', info: PointNameSource | null = null): RegionalForecast | null {
   const {label, wind: windId, wave: waveId} = FAMILIES[family];
   const wind = f?.models[windId], wave = f?.models[waveId];
   const issued = [wind?.issued, wave?.issued].filter((s): s is number => finite(s) && dateOk(s * 1000));
@@ -137,7 +151,7 @@ export function briefForecast(f: ConditionsForecast | null, family: Family = 'gf
     };
   });
   return {
-    label: `${label} ${family === 'gfs' ? 'GFS ' : ''}model · ${f.point.id}`, url: '/sources',
+    label: `${label} ${family === 'gfs' ? 'GFS ' : ''}model · ${forecastPointName(info, f.region, f.point.id)}`, url: '/sources',
     issuedAt: new Date(Math.min(...issued) * 1000).toISOString(), fetchedAt: new Date(f.retrieved).toISOString(), hours,
   };
 }

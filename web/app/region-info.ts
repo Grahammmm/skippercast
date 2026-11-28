@@ -30,6 +30,8 @@ export interface RegionInfo {
   readonly chartFiles?: readonly string[];
   /** The region.json fields web/regs.ts reads (SC-LAUNCH-3: the brief's lead states the target's legality). */
   readonly rules?: RulesRegion;
+  /** The forecast points' published names (region.json `forecast_points[].name`), point id → name; absent where it names none. Display only (web/conditions.ts forecastPointName). */
+  readonly forecastPoints?: Readonly<Record<string, string>>;
   /** The package's own lifecycle (region.json `status`), kept only when it is a recognized value; absent otherwise (SCB2222-14). */
   readonly status?: RegionStatus;
 }
@@ -53,6 +55,14 @@ const validCenter = (c: unknown): c is [number, number] => Array.isArray(c) && c
   && typeof c[0] === 'number' && typeof c[1] === 'number' && Number.isFinite(c[0]) && Number.isFinite(c[1])
   && Math.abs(c[0]) <= 90 && Math.abs(c[1]) <= 180;
 
+/** SCB2222-07: the id → name pairs of region.json `forecast_points`; an entry without a string id and a non-blank string name is skipped. */
+function forecastPointNames(points: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!Array.isArray(points)) return out;
+  for (const p of points as {id?: unknown; name?: unknown}[]) if (typeof p?.id === 'string' && typeof p.name === 'string' && p.name.trim()) out[p.id] = p.name;
+  return out;
+}
+
 /** Share parsed cold reads, not just headers: each admitted slot includes JSON consumption.
  * Caller cancellation withdraws publication without freeing an abort-ignoring task's slot. */
 export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs = REGION_READ_TIMEOUT_MS} = {}) {
@@ -60,7 +70,7 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
   return (id: string, retry = false): Promise<RegionInfo | typeof REGION_MISSING | null> => admission.read(`${retry ? 'retry' : 'cached'}:${id}`, async signal => {
     const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`, {signal, ...(retry ? {cache: 'reload' as const} : {})});
     if (!response.ok) { void response.body?.cancel().catch(() => {}); return response.status === 404 ? REGION_MISSING : null; }
-    const json = await response.json() as {id?: unknown; name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown; status?: unknown}
+    const json = await response.json() as {id?: unknown; name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown; forecast_points?: unknown; status?: unknown}
       & Omit<RulesRegion, 'id' | 'assets'>;
     if (!json || typeof json !== 'object' || Array.isArray(json) || json.id !== id) return null;
     const center = json.map?.center;
@@ -70,8 +80,10 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
     const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
     const status = regionStatus(json.status);
     const aerial = aerialBase(json), tide = tideRegion(id, json), unavailable = unavailableTargets(json), chartFiles = chartFilesOf(json.chart_files);
+    const pointNames = forecastPointNames(json.forecast_points);
     return {id, name: json.name, center: [center[0], center[1]], timezone,
       ...status ? {status} : {}, ...tide ? {tide} : {}, ...chartFiles ? {chartFiles} : {},
+      ...Object.keys(pointNames).length ? {forecastPoints: pointNames} : {},
       localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {},
       ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {},
       ...Object.keys(unavailable).length ? {unavailableTargets: unavailable} : {},

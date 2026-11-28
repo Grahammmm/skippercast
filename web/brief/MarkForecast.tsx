@@ -12,15 +12,16 @@ import {Popover} from '../ui/Popover.tsx';
 import {language, t, type Language} from '../i18n.ts';
 import {ensureRegionalForecast, regionalForecast} from './Brief.tsx';
 import {CELL_REACH, hourText, markForecast, readingSource, type LatLon, type MarkReading} from './mark-forecast.ts';
+import {forecastPointName} from '../conditions.ts';
 
 const basis = (point: string, lang: Language) => t('markForecast.basis', lang, {point, reach: CELL_REACH});
 
-function Row({name, r, at, tz, lang}: {name: string; r: MarkReading; at: number; tz: string; lang: Language}) {
+function Row({name, r, at, tz, lang, pointName}: {name: string; r: MarkReading; at: number; tz: string; lang: Language; pointName: (id: string) => string}) {
   return (
     <div data-gap={r.value === null ? 'true' : undefined}>
       <dt>{name}</dt>
       <dd class="ui-mono">{r.value ?? '—'}</dd>
-      <dd class="app-mark-forecast-source">{r.value === null ? t('markForecast.gapLine', lang, {reason: r.gap}) : readingSource(r, at, tz, lang)}</dd>
+      <dd class="app-mark-forecast-source">{r.value === null ? t('markForecast.gapLine', lang, {reason: r.gap}) : readingSource(r, at, tz, lang, pointName)}</dd>
     </div>
   );
 }
@@ -31,17 +32,18 @@ export function MarkForecast({place, now = new Date()}: {place: LatLon; now?: Da
   useEffect(() => { if (info) void ensureRegionalForecast(info.id, info.center); }, [id]);
   if (!info) return null;
   const tz = zone(), at = dockState(now, tz).at, lang = language.value, f = markForecast(regionalForecast.value, info.id, place, at, now.getTime(), tz, lang);
+  const pointName = (point: string) => forecastPointName(info, info.id, point);
   return (
     <section class="app-mark-forecast" aria-label={t('markForecast.aria', lang)}>
       <p class="app-mark-forecast-head"><span class="ui-eyebrow">{t('markForecast.eyebrow', lang)}</span> <span class="ui-mono">{t('markForecast.valid', lang, {hour: hourText(at, tz, lang)})}</span></p>
       {!f ? <p class="app-mark-forecast-note">{t('markForecast.unloaded', lang)}</p> : (
         <>
-          <p class="app-mark-forecast-note">{t('markForecast.note', lang, {point: f.point})}</p>
+          <p class="app-mark-forecast-note">{t('markForecast.note', lang, {point: pointName(f.point)})}</p>
           <dl>
-            {f.families.flatMap(family => family.rows.map(r => <Row key={`${family.family}-${r.label}`} name={t(r.label === 'Wind' ? 'markForecast.rowWind' : 'markForecast.rowSeas', lang, {family: family.label})} r={r} at={at} tz={tz} lang={lang} />))}
-            <Row name={t('markForecast.current', lang)} r={f.current} at={at} tz={tz} lang={lang} />
+            {f.families.flatMap(family => family.rows.map(r => <Row key={`${family.family}-${r.label}`} name={t(r.label === 'Wind' ? 'markForecast.rowWind' : 'markForecast.rowSeas', lang, {family: family.label})} r={r} at={at} tz={tz} lang={lang} pointName={pointName} />))}
+            <Row name={t('markForecast.current', lang)} r={f.current} at={at} tz={tz} lang={lang} pointName={pointName} />
           </dl>
-          <Popover>{basis(f.point, lang)}</Popover>
+          <Popover>{basis(pointName(f.point), lang)}</Popover>
         </>
       )}
     </section>
