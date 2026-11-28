@@ -53,10 +53,16 @@ export type Gate = 'pass' | 'advisory' | 'rough' | 'unchecked' | 'incomplete';
  */
 export const ALERT_CHECK_MAX_HOURS = 26;
 const HOUR_MS = 3_600_000;
-/** True when the oldest required-zone check (advisoryCheckTime) is current at `now`. */
-export function alertCheckCurrent(checkedAt: string | null, now: number): boolean {
-  const age = checkedAt === null ? NaN : now - Date.parse(checkedAt);
-  return Number.isFinite(age) && age >= -HOUR_MS && age <= ALERT_CHECK_MAX_HOURS * HOUR_MS;
+/**
+ * True when the check is complete (advisoryCheckTime) and EVERY required zone's checked_at is current at `now`: no older than
+ * ALERT_CHECK_MAX_HOURS and no more than an hour ahead. Each zone is bounded on its own, so a valid zone cannot hide a future-stamped one.
+ */
+export function alertCheckCurrent(sources: Record<string, unknown> | undefined, zones: readonly string[], now: number): boolean {
+  if (advisoryCheckTime(sources, zones) === null) return false;
+  return zones.every(zone => {
+    const age = now - Date.parse((sources?.[`alerts-${zone}`] as {checked_at: string}).checked_at);
+    return age >= -HOUR_MS && age <= ALERT_CHECK_MAX_HOURS * HOUR_MS;
+  });
 }
 
 /**
@@ -132,7 +138,7 @@ export function habitatFit(ground: Ground, targets: readonly TargetIn[]): Part {
 
 /**
  * C from one block's DayConditions: Comfortable 1, Bumpy 0.5, Unknown none; Rough or an advisory closes the gate; model disagreement scales C down.
- * `checked` is alertCheckCurrent(advisoryCheckTime(...)): without a complete, current marine alert check for every zone the block abstains (gate 'unchecked', no value),
+ * `checked` is alertCheckCurrent(...): without a complete, current marine alert check for every zone the block abstains (gate 'unchecked', no value),
  * because a missing or old check is not evidence of calm. An advisory found in a zone that was checked still closes the gate first.
  * `coverage` (blockCoverage): a block with any hour unrated abstains (gate 'incomplete', no value), so one forecast hour never stands for three;
  * a Rough reading in the hours present still closes it first.
@@ -191,7 +197,7 @@ export function scoresFromCatalog(input: CatalogInput): ScoreFile {
   const {region, intel, daily, grounds, dates, now} = input;
   const weights = input.weights ?? WEIGHTS_V1;
   const tz = region.timezone, zones = regionZones(region), clock = forecastClock(intel, now);
-  const checked = alertCheckCurrent(advisoryCheckTime((daily as {sources?: Record<string, unknown>} | null)?.sources, zones), now);
+  const checked = alertCheckCurrent((daily as {sources?: Record<string, unknown>} | null)?.sources, zones, now);
   const rows: ScoreRow[] = [];
   for (const date of dates) for (const block of BLOCKS) {
     const window = {start: block.start, end: block.end};

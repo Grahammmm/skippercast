@@ -163,15 +163,37 @@ test('a recommendation needs a current alert check: old or future-dated checks a
     assert.ok(file.rows.every(r => r.gate === 'unchecked' && r.rank === null && r.conditions.reasons.includes('the marine alert check is unavailable')), `${h} h`);
     assert.deepEqual(bestBets(file, {n: 50}), [], `${h} h`);
   }
-  // One zone stale, the other fresh: the oldest required check decides.
+  // One zone stale, the other fresh: every required zone must be current.
   const mixed = daily(), [first] = Object.keys(mixed.sources);
   mixed.sources[first].checked_at = new Date(NOW - 7 * 24 * 3600000).toISOString();
   assert.equal(buildScores({region: REGION, intel: feed(), daily: mixed, grounds: GROUNDS, targets: TARGETS, dates: [DATE], now: NOW}).advisories_checked, false);
+  // The checker's second probe: one zone checked half an hour ago, the other stamped two hours ahead, in both orders, abstains;
+  // the same file with both zones half an hour old ranks (the valid control).
+  const zoneKeys = Object.keys(daily().sources);
+  const stamped = (offsets, alerts = []) => {
+    const day = daily(alerts);
+    zoneKeys.forEach((k, i) => { day.sources[k].checked_at = new Date(NOW + offsets[i] * 3600000).toISOString(); });
+    return buildScores({region: REGION, intel: feed(), daily: day, grounds: GROUNDS, targets: TARGETS, dates: [DATE], now: NOW});
+  };
+  assert.equal(stamped([-0.5, -0.5]).rows.filter(r => r.rank !== null).length, GROUNDS.length * BLOCKS.length, 'valid control');
+  for (const offsets of [[-0.5, 2], [2, -0.5]]) {
+    const file = stamped(offsets);
+    assert.equal(file.advisories_checked, false, `${offsets}`);
+    assert.ok(file.rows.every(r => r.gate === 'unchecked' && r.rank === null), `${offsets}`);
+    assert.deepEqual(bestBets(file, {n: 50}), [], `${offsets}`);
+  }
   // A week-old check that still lists an overlapping advisory closes the block (not merely unchecked).
   const sca = [{event: 'Small Craft Advisory', onset: '2026-09-28T06:00:00-07:00', ends: '2026-09-28T21:00:00-07:00'}];
   assert.ok(checkedAgo(7 * 24, sca).rows.every(r => r.gate === 'advisory' && r.rank === null && r.conditions.reasons[0] === 'Small Craft Advisory'));
-  assert.equal(alertCheckCurrent(null, NOW), false);
-  assert.equal(alertCheckCurrent('not a time', NOW), false);
+  // So does a future-stamped zone next to a valid one.
+  assert.ok(stamped([-0.5, 2], sca).rows.every(r => r.gate === 'advisory' && r.rank === null && r.conditions.reasons[0] === 'Small Craft Advisory'));
+  const zones = zoneKeys.map(k => k.replace(/^alerts-/, ''));
+  assert.equal(alertCheckCurrent(daily().sources, zones, NOW), true);
+  assert.equal(alertCheckCurrent(undefined, zones, NOW), false);
+  assert.equal(alertCheckCurrent(daily().sources, [], NOW), false);
+  const bad = daily();
+  bad.sources[zoneKeys[0]].checked_at = 'not a time';
+  assert.equal(alertCheckCurrent(bad.sources, zones, NOW), false);
 });
 
 test('a block is ranked only when every one of its hours has a rated forecast (missing timestamps or missing values); Rough still closes', () => {
@@ -301,6 +323,12 @@ test('get_best_bets: an advisory day is listed closed; a stale forecast or an in
   for (const z of Object.values(weekOld.sources)) z.checked_at = '2026-09-21T12:00:00Z';
   const old = await bets({date: DATE}, {day: {...weekOld, generated_at: '2026-09-21T12:00:00Z'}});
   assert.deepEqual([old.best_bets, old.advisories_checked], [[], false]);
+  // The checker's second probe: one zone checked half an hour ago, the other two hours ahead, makes no call.
+  const ahead = daily(), [z0, z1] = Object.values(ahead.sources);
+  z0.checked_at = new Date(NOW - 1_800_000).toISOString();
+  z1.checked_at = new Date(NOW + 2 * 3_600_000).toISOString();
+  const future = await bets({date: DATE}, {day: ahead});
+  assert.deepEqual([future.best_bets, future.advisories_checked], [[], false]);
   // The checker's probe: 07:00 and 08:00 missing from GFS, so 06:00-09:00 is never a call; the rest of the day still is.
   const thin = feed();
   for (const p of thin.forecast.models.gfs_global.data) p.hourly.time = HOURS.map(t => [at(DATE, 7), at(DATE, 8)].includes(t) ? null : t);
