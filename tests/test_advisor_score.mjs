@@ -111,19 +111,37 @@ test('a small craft advisory closes every overlapping block, even when the forec
   assert.ok(buildScores({region: REGION, intel: feed(), daily: daily(sca), grounds: GROUNDS, targets: TARGETS, dates: [DATE], now: NOW}).rows.every(r => r.gate === 'pass'));
 });
 
-test('a forecast past the drop age, or no alert check, is never a best bet; model disagreement lowers conditions and evidence', () => {
+test('a forecast past the drop age is never a best bet; model disagreement lowers conditions and evidence', () => {
   const stale = build({ageH: 40});
   assert.ok(stale.rows.every(r => r.conditions.value === null && r.conditions.evidence === 'Insufficient' && r.rank === null && r.evidence === 'Insufficient'));
   assert.deepEqual(bestBets(stale), []);
-  const unchecked = buildScores({region: REGION, intel: feed(), daily: {sources: {}}, grounds: GROUNDS, targets: TARGETS, dates: [DATE], now: NOW});
-  assert.equal(unchecked.advisories_checked, false);
-  assert.ok(unchecked.rows.every(r => r.conditions.comfort === 'bumpy' && r.conditions.reasons.includes('the marine alert check is unavailable')));
   // The second model 5 kt windier (MODEL_GAP.wind is 4): the comfort word comes from the rougher model as always, then disagreement scales it.
   const split = build({by: p => p === 'central' ? {ecmwf_wind: 11} : {}});
   const r = row(split, 'Morro Bay coast', DATE, 'morning');
   const raw = {comfortable: 1, bumpy: 0.5}[r.conditions.comfort];
   assert.deepEqual([r.conditions.value, r.conditions.evidence, r.evidence], [Math.round(raw * WEIGHTS_V1.models_disagree * 100) / 100, 'Low', 'Low']);
   assert.ok(r.conditions.reasons.includes('forecast models disagree'));
+});
+
+test('an incomplete marine alert check (one zone or both missing) is never ranked; a found advisory still closes; a complete check ranks', () => {
+  const full = daily().sources, [first] = Object.keys(full);
+  const scores = sources => buildScores({region: REGION, intel: feed(), daily: {sources}, grounds: GROUNDS, targets: TARGETS, dates: [DATE], now: NOW});
+  // Control: the same calm forecast with every zone checked ranks every block.
+  const complete = scores(full);
+  assert.equal(complete.advisories_checked, true);
+  assert.equal(complete.rows.filter(r => r.rank !== null).length, GROUNDS.length * BLOCKS.length);
+  assert.equal(bestBets(complete).length, 3);
+  for (const [name, sources] of [['both missing', {}], ['one missing', {[first]: full[first]}], ['one failed', {...full, [first]: {...full[first], status: 'error'}}]]) {
+    const file = scores(sources);
+    assert.equal(file.advisories_checked, false, name);
+    assert.ok(file.rows.every(r => r.gate === 'unchecked' && r.rank === null && r.conditions.value === null && r.evidence === 'Insufficient'), name);
+    assert.ok(file.rows.every(r => r.conditions.reasons.some(x => x.includes('the marine alert check is unavailable')) && r.conditions.reasons.some(x => /^wind /.test(x))), name);
+    assert.deepEqual(bestBets(file, {n: 50}), [], name);
+  }
+  // An advisory in the zone that was checked closes the block even though the other zone was not checked.
+  const sca = [{event: 'Small Craft Advisory', onset: '2026-09-28T06:00:00-07:00', ends: '2026-09-28T21:00:00-07:00'}];
+  const partial = scores({[first]: {...full[first], data: {alerts: sca}}});
+  assert.ok(partial.rows.every(r => r.gate === 'advisory' && r.rank === null && r.conditions.reasons[0] === 'Small Craft Advisory'));
 });
 
 test('blocks that have already ended today are left out', () => {

@@ -6,7 +6,8 @@
 //  - C, conditions: the advisor's one comfort model (answers/conditions.ts
 //    windowConditions, the same web/score.ts rubric get_conditions and the brief use)
 //    at the ground's nearest coastal forecast point, held by the forecast clock; a
-//    boating advisory or a Rough block is a gate, not a low score.
+//    boating advisory or a Rough block is a gate, not a low score, and an incomplete
+//    marine alert check (any zone) abstains: never ranked.
 //  - H, habitat: the mean of the three best terrain scores among the reef search
 //    targets mapped inside the ground (dist/data/atlas.json habitat_score via
 //    dist/data/charter-grounds.json nearby_target_ids). Structure, not abundance.
@@ -16,7 +17,7 @@
 // Pure: no I/O, no clock, no model call. Nothing here is a catch probability, and the
 // output names only allowlisted public grounds and forecast point ids: never a
 // coordinate (tests/test_advisor_score.mjs checks it). Not registered as a tool yet.
-import {advisoriesFrom, advisoryCheckTime, regionZones, windowConditions, windowEpochs, withForecastClock, type DayConditions} from '../answers/conditions.ts';
+import {ALERT_CHECK_UNAVAILABLE, advisoriesFrom, advisoryCheckTime, regionZones, windowConditions, windowEpochs, withForecastClock, type DayConditions} from '../answers/conditions.ts';
 import {forecastClock} from '../answers/forecast-clock.ts';
 import {COMFORT_WORD} from '../answers/comfort.ts';
 import type {Confidence} from '../answers/confidence.ts';
@@ -38,7 +39,8 @@ export interface CharterGroundIn {id: string; latitude: number; longitude: numbe
 export interface TargetIn {id: string; habitat_score: number; habitat_grade?: string; confidence?: string}
 export interface Ground {name: string; ground_id: string; point: string; target_ids: string[]}
 
-export type Gate = 'pass' | 'advisory' | 'rough';
+/** 'unchecked': the marine alert check is incomplete, so the block is never ranked (an advisory found still wins). */
+export type Gate = 'pass' | 'advisory' | 'rough' | 'unchecked';
 export interface Part {value: number | null; evidence: Confidence; reasons: string[]}
 export interface ConditionsPart extends Part {gate: Gate; comfort: string}
 export interface ScoreRow {
@@ -94,13 +96,18 @@ export function habitatFit(ground: Ground, targets: readonly TargetIn[]): Part {
   return {value, evidence, reasons: [`${mine.length} mapped reef search targets${grade}`, 'terrain grade measures structure, not fish']};
 }
 
-/** C from one block's DayConditions: Comfortable 1, Bumpy 0.5, Unknown none; Rough or an advisory closes the gate; model disagreement scales C down. */
-export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1, advisory: string | null = null): ConditionsPart {
+/**
+ * C from one block's DayConditions: Comfortable 1, Bumpy 0.5, Unknown none; Rough or an advisory closes the gate; model disagreement scales C down.
+ * `checked` is advisoryCheckTime !== null: without a complete marine alert check for every zone the block abstains (gate 'unchecked', no value),
+ * because a missing check is not evidence of calm. An advisory found in a zone that was checked still closes the gate first.
+ */
+export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1, advisory: string | null = null, checked = true): ConditionsPart {
   const base = {comfort: day.comfort};
   // An advisory closes the gate even when the forecast itself is unusable (withForecastClock drops day.advisory then).
   const event = day.advisory ?? advisory;
   if (event) return {...base, gate: 'advisory', value: 0, evidence: 'Moderate', reasons: [event]};
-  if (!day.available) return {...base, gate: 'pass', value: null, evidence: 'Insufficient', reasons: [day.reason ?? 'no forecast']};
+  if (!day.available) return {...base, gate: checked ? 'pass' : 'unchecked', value: null, evidence: 'Insufficient',
+    reasons: [day.reason ?? 'no forecast', ...(checked ? [] : [ALERT_CHECK_UNAVAILABLE])]};
   const span = (r: [number, number]) => r[0] === r[1] ? `${r[0]}` : `${r[0]}-${r[1]}`;
   const reasons = [
     day.wind_kt ? `wind ${span(day.wind_kt)} kt${day.wind_from ? ` ${day.wind_from}` : ''}` : null,
@@ -108,6 +115,9 @@ export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1,
     day.comfort_held ?? null,
   ].filter((r): r is string => r !== null);
   if (day.comfort === COMFORT_WORD['no-go']) return {...base, gate: 'rough', value: 0, evidence: 'Moderate', reasons};
+  // The readings stay as reasons, but an incomplete alert check is never ranked (windowConditions already names it in comfort_held when it held a Comfortable day).
+  if (!checked) return {...base, gate: 'unchecked', value: null, evidence: 'Insufficient',
+    reasons: reasons.some(r => r.includes(ALERT_CHECK_UNAVAILABLE)) ? reasons : [...reasons, ALERT_CHECK_UNAVAILABLE]};
   const raw = day.comfort === COMFORT_WORD.go ? 1 : day.comfort === COMFORT_WORD.marginal ? 0.5 : null;
   if (raw === null) return {...base, gate: 'pass', value: null, evidence: 'Insufficient', reasons};
   if (day.models_agree === false) reasons.push('forecast models disagree');
@@ -137,7 +147,7 @@ export function buildScores(input: BuildInput): ScoreFile {
     for (const g of grounds) {
       if (!byPoint.has(g.point)) {
         const day = withForecastClock(windowConditions(intel as never, region, g.point, date, window, null, advisories, checked), clock);
-        byPoint.set(g.point, conditionsFit(day, weights, advisories[0]?.event ?? null));
+        byPoint.set(g.point, conditionsFit(day, weights, advisories[0]?.event ?? null, checked));
       }
       const c = byPoint.get(g.point)!, h = habitat.get(g.ground_id)!;
       const open = c.gate === 'pass' && c.value !== null && h.value !== null;
