@@ -57,7 +57,11 @@ Before every stage (and so before the first) the run is refused, exit 3, while a
   free space of the directory's parent filesystem is);
 * ``--out`` or the effective normalized cache (``--norm``, else ``$SC_RELIEF_NORM`` even when
   empty, i.e. the working directory, else the built-in default) is, or resolves to, a path under
-  ``/mnt/privatevault``.
+  ``/mnt/privatevault``;
+* the open-file limit cannot reach 4096: mosaic holds many source rasters open at once, and a
+  systemd user unit starts with a soft limit of 1024, so mosaic failed 'Too many open files'. Before the
+  first stage a real run raises its soft limit to 4096 when the hard limit allows; every stage
+  inherits it. A hard limit under 4096, or a limit that cannot be read or raised, refuses the run.
 
 Before the first stage, the run is refused with exit 5 when this region already has a run
 (an exclusive lock on ``OUT/<region>/.run_region.lock``, released by the kernel if the
@@ -99,6 +103,7 @@ import json
 import os
 from pathlib import Path
 import re
+import resource
 import shutil
 import stat
 import subprocess
@@ -156,6 +161,14 @@ def _default_free_bytes(path):
     return shutil.disk_usage(path).free
 
 
+def _get_open_files():
+    return resource.getrlimit(resource.RLIMIT_NOFILE)
+
+
+def _set_open_files(limits):
+    resource.setrlimit(resource.RLIMIT_NOFILE, limits)
+
+
 @dataclass
 class Config:
     """Every host-dependent value, so a test can point it at a temporary directory."""
@@ -175,6 +188,9 @@ class Config:
     prefix: tuple = ('nice', '-n', '19', 'ionice', '-c3')
     python: str = sys.executable
     free_bytes: object = field(default=_default_free_bytes)
+    open_files_min: int = 4096  # soft RLIMIT_NOFILE a run needs (mosaic); systemd user units start at 1024
+    get_open_files: object = field(default=_get_open_files)
+    set_open_files: object = field(default=_set_open_files)
     pid: int = field(default_factory=os.getpid)
     r8_packet_py: Path = Path(__file__).resolve().with_name('r8_packet.py')
     clock: object = field(default=lambda: datetime.now(timezone.utc))
@@ -498,7 +514,47 @@ def check_guards(cfg, out, norm, inputs=(), *, basemap=None):
         except OSError:
             ok = False
         checks.append(('basemap', ok, f'{basemap} must be an existing file in an allowed read root'))
+    checks.append(open_files_check(cfg))
     return checks
+
+
+def _limit(value):
+    return 'unlimited' if value == resource.RLIM_INFINITY else str(value)
+
+
+def open_files_check(cfg):
+    """Whether this run's soft open-file limit is, or can be raised to, ``cfg.open_files_min``."""
+    need = cfg.open_files_min
+    try:
+        soft, hard = cfg.get_open_files()
+    except (OSError, ValueError) as exc:
+        return 'open-files', False, f'cannot read the open-file limit: {exc}'
+    state = f'soft {_limit(soft)}, hard {_limit(hard)}'
+    if soft == resource.RLIM_INFINITY or soft >= need:
+        return 'open-files', True, f'{state} (a run needs {need})'
+    if hard == resource.RLIM_INFINITY or hard >= need:
+        return 'open-files', True, f'{state}; a run raises the soft limit to {need}'
+    return 'open-files', False, f'{state}: the hard limit is under the {need} a run needs (raise LimitNOFILE)'
+
+
+def raise_open_files(cfg):
+    """Raise the soft open-file limit to ``cfg.open_files_min`` for this run and the stages it
+    starts (children inherit it). Returns a refusal detail, or None when the limit is enough."""
+    need = cfg.open_files_min
+    try:
+        soft, hard = cfg.get_open_files()
+        if soft == resource.RLIM_INFINITY or soft >= need:
+            return None
+        if hard != resource.RLIM_INFINITY and hard < need:
+            return f'open-files: hard limit {hard} is under the {need} a run needs (raise LimitNOFILE)'
+        cfg.set_open_files((need, hard))
+        soft, _ = cfg.get_open_files()
+    except (OSError, ValueError) as exc:
+        return f'open-files: cannot raise the soft limit to {need}: {exc}'
+    if soft != resource.RLIM_INFINITY and soft < need:
+        return f'open-files: soft limit is still {soft} after raising it to {need}'
+    say(f'run_region: open-file soft limit raised to {need} for this run')
+    return None
 
 
 def runs_script(argv):
@@ -856,6 +912,9 @@ def run_chain(cfg, region, out, norm, through, extra, inputs, basemap):
     if problems:
         first = 'census-bind' if 'census-bind' in extra else STAGES[0]
         say(f'run_region: refused before {first}: ' + '; '.join(problems))
+        return EXIT_REFUSED
+    if problem := raise_open_files(cfg):  # before any lock or slot; every stage inherits the raised limit
+        say(f'run_region: refused: {problem}')
         return EXIT_REFUSED
     try:
         slot = acquire_slot(cfg)  # the atomic box-wide cap; the /proc scan above is only a second check

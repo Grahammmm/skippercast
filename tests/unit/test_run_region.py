@@ -25,12 +25,14 @@ GEN = 'a' * 64
 SHOT_GEN = 'b' * 64
 RELEASE = b'{"example":true}\n'
 STUB = '''\
-import json, os, sys
+import json, os, resource, sys
 from pathlib import Path
 here = os.path.dirname(os.path.abspath(__file__))
 stage = sys.argv[1]
 with open(os.path.join(here, 'calls.jsonl'), 'a') as log:
     log.write(json.dumps(sys.argv[1:]) + '\\n')
+with open(os.path.join(here, 'nofile.jsonl'), 'a') as log:  # the open-file limit the stage inherited
+    log.write(json.dumps([stage, *resource.getrlimit(resource.RLIMIT_NOFILE)]) + '\\n')
 plan = json.load(open(os.path.join(here, 'codes.json')))
 trip = plan.get('trip_after')
 if trip == stage:  # a guard condition appearing while the stage runs
@@ -92,12 +94,19 @@ class Box:
         self.pressure_cpu.write_text('some avg10=1.00 avg60=1.00 avg300=1.00 total=1000\n')
         self.slots = root / 'slots'
         self.free = {'/': 900 * RR.GB, '/mnt/agentorange-backup': 900 * RR.GB}
+        self.nofile = (65536, 65536)  # a scripted RLIMIT_NOFILE: no test changes pytest's own limit by default
+        self.nofile_sets = []
         self.cfg = RR.Config(region_py=self.stub_dir / 'region.py', stop_files=(self.local_stop, self.unitfeed_stop),
                              r8_packet_py=self.stub_dir / 'r8_packet.py',
                              proc_root=str(self.proc), prefix=(), pid=424242, slot_dir=self.slots,
                              basemap_roots=(self.root,),
                              free_bytes=lambda path: self.free[path],
+                             get_open_files=lambda: self.nofile, set_open_files=self.set_nofile,
                              is_mount=lambda path: True)
+
+    def set_nofile(self, limits):
+        self.nofile_sets.append(limits)
+        self.nofile = limits
 
     def codes(self, codes, **extra):
         (self.stub_dir / 'codes.json').write_text(json.dumps({'codes': codes, **extra}))
@@ -1104,6 +1113,65 @@ def test_unsafe_slot_directory_refuses(box, capsys, make):
     assert box.ran() == [] and 'cannot take a run slot' in capsys.readouterr().out
 
 
+def stage_open_files(box):
+    log = box.stub_dir / 'nofile.jsonl'
+    return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+
+
+def test_open_file_limit_is_raised_for_every_stage(box, capsys):
+    # Contract: a run started with the systemd user-unit soft limit (1024) raises its soft limit to
+    # 4096 before the first stage, so mosaic does not fail 'Too many open files' mid-run, and every
+    # stage process inherits the raised limit. Uses the real limit of this process, restored after.
+    # Bug caught: the run inherited 1024 from its unit and mosaic stopped half way (first Morro rehearsal).
+    saved = RR.resource.getrlimit(RR.resource.RLIMIT_NOFILE)
+    if saved[1] != RR.resource.RLIM_INFINITY and saved[1] < 4096:
+        pytest.skip('hard open-file limit under 4096 on this host')
+    box.cfg.get_open_files, box.cfg.set_open_files = RR._get_open_files, RR._set_open_files
+    RR.resource.setrlimit(RR.resource.RLIMIT_NOFILE, (1024, saved[1]))
+    try:
+        assert box.run(through='mosaic') == 0
+        assert [row[:2] for row in stage_open_files(box)] == [['select', 4096], ['mosaic', 4096]]
+        assert 'open-file soft limit raised to 4096 for this run' in capsys.readouterr().out
+    finally:
+        RR.resource.setrlimit(RR.resource.RLIMIT_NOFILE, saved)
+
+
+def test_open_file_limit_already_enough_is_left_alone(box):
+    # Contract: a soft limit at or over 4096 (or unlimited) is never lowered or rewritten.
+    for limits in ((8192, 8192), (RR.resource.RLIM_INFINITY, RR.resource.RLIM_INFINITY)):
+        box.nofile = limits
+        assert box.run(through='select') == 0
+    assert box.nofile_sets == [] and box.ran() == ['select', 'select']
+
+
+@pytest.mark.parametrize('case', ['hard-too-low', 'unreadable', 'raise-fails', 'raise-ignored'])
+def test_open_file_limit_that_cannot_reach_4096_refuses(box, capsys, case):
+    # Contract: when the soft limit cannot be made 4096 the run is refused (exit 3) before any lock,
+    # slot, run log or stage, and the dry run says REFUSE open-files where the cause is visible up front.
+    # Bug caught: starting a long chain that is bound to fail in mosaic, or trusting a raise that did not take.
+    box.nofile = (1024, 1024 if case == 'hard-too-low' else 524288)
+    if case == 'unreadable':
+        def unreadable():
+            raise OSError('no limits here')
+        box.cfg.get_open_files = unreadable
+    elif case == 'raise-fails':
+        def refused(limits):
+            raise ValueError('not allowed')
+        box.cfg.set_open_files = refused
+    elif case == 'raise-ignored':
+        box.cfg.set_open_files = box.nofile_sets.append
+    assert box.run(through='select') == 3
+    text = capsys.readouterr().out
+    assert 'open-file' in text and box.ran() == [] and box.out_tree() == [] and not box.slots.exists()
+    assert box.run('--dry-run', through='select') == 0
+    text = capsys.readouterr().out
+    if case in ('hard-too-low', 'unreadable'):
+        assert 'REFUSE open-files' in text and 'a real run would be refused now' in text
+    else:  # the limit looks raisable; only the real raise can show that it did not take
+        assert 'ok     open-files: soft 1024, hard 524288; a run raises the soft limit to 4096' in text
+    assert box.ran() == [] and box.out_tree() == []
+
+
 def test_c2_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys):
     """C2: Preview preserves commands and guards without starting a stage or taking a slot."""
     assert box.run('--dry-run', through='mosaic') == 0
@@ -1112,7 +1180,8 @@ def test_c2_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys
     assert [line.split()[3] for line in lines] == ['select', 'mosaic']  # '<n>. python region.py <stage>'
     assert '--scope public' in lines[1] and '--scope' not in lines[0]
     assert 'not run: tiles, zone, digests, inventory, contours, nearshore_vectors, package, shots, qa, envelope' in text
-    for name in ('stop-file', 'cpu-pressure', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap'):
+    for name in ('stop-file', 'cpu-pressure', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap',
+                 'open-files'):
         assert f'ok     {name}' in text
     assert text.splitlines()[-1] == 'dry run: a real run would start; nothing was run and nothing was written'
     assert box.ran() == [] and box.out_tree() == [] and not box.slots.exists()
