@@ -347,6 +347,56 @@ test('N7: the owner approves a trip\'s agent labels; the list filters and flags 
   assert.match(view, /t\.agent_labels \? <span class="admin-reason">\{COPY\.awaiting\}<\/span>/);
 });
 
+test('agent-approved: a second agent approves another agent\'s exact set; tagged apart from admin labels', {skip}, async () => {
+  const {sql, db} = database();
+  await labels.importAgentLabels(db, proposal([lab(0, 30), lab(30, 90, 'drift-anchor', 'slow drift')]), NOW);
+  await labels.addLabel(db, TRIP, {...iso(90, 120), label: 'transit', basis: 'skipper log'}, ADMIN, NOW);
+  const saved = fleetJobs.verify;
+  fleetJobs.verify = async token => token === 'good' ? {jti: 'run-approve'} : false;
+  const APPROVER = 'agent:second-reviewer';
+  const reviewed = [{...iso(30, 90), label: 'drift-anchor'}, {...iso(0, 30), label: 'transit'}];   // any order
+  const ask = (extra = {}) => ({trip_id: TRIP, labeller: AGENT, approver: APPROVER, labels: reviewed, ...extra});
+  const rows = () => sql.prepare('SELECT started_at,label,labeller,basis FROM fleet_segment_labels WHERE trip_id=? ORDER BY started_at')
+    .all(TRIP).map(r => [r.started_at, r.label, r.labeller, r.basis]);
+  try {
+    const call = (payload, token = 'good', extra = ON) => worker.fetch(new Request(`${ORIGIN}/api/fleet/jobs/labels/approve`, {method: 'POST',
+      headers: {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'}, body: JSON.stringify(payload)}), {ASSETS, DB: db, ...extra});
+    const before = rows();
+    assert.equal((await call(ask(), 'bad')).status, 401);
+    assert.equal((await call(ask(), 'good', {})).status, 404, 'fleet off');
+    const bad = async (payload, status, pattern) => {
+      const r = await call(payload);
+      assert.equal(r.status, status, JSON.stringify(payload));
+      if (pattern) assert.match((await r.json()).error, pattern);
+    };
+    await bad(ask({approver: AGENT}), 400, /different agent/);                     // an agent never approves itself
+    await bad(ask({approver: ADMIN}), 400, /approver must be agent:<name>/);       // the job never approves as an admin
+    await bad(ask({labeller: ADMIN}), 400, /labeller must be agent:<name>/);       // admin labels are never touched
+    await bad(ask({labels: []}), 400, /1 to 200/);
+    await bad(ask({labels: [{...iso(0, 30), label: 'transit', basis: 'x y'}]}), 400, /labels\[0\]: unknown field basis/);
+    await bad(ask({region: 'CA'}), 400, /unknown field region/);
+    await bad(ask({trip_id: hex('9')}), 404);
+    await bad(ask({labels: reviewed.slice(0, 1)}), 409, /differ from the reviewed set/);   // a part of the set
+    await bad(ask({labels: [reviewed[0], {...iso(0, 31), label: 'transit'}]}), 409);        // a changed range
+    await bad(ask({labels: [reviewed[0], {...iso(0, 30), label: 'troll-slow'}]}), 409);     // a changed label
+    assert.deepEqual(rows(), before, 'a refused approval changes nothing');
+
+    const ok = await call(ask());
+    assert.equal(ok.status, 200);
+    assert.deepEqual(await ok.json(), {ok: true, trip_id: TRIP, approved: 2});
+    const by = 'approved from agent:test-labeller by agent:second-reviewer (agent-approved): ';
+    assert.deepEqual(rows(), [
+      [at(0), 'transit', 'agent-approved:second-reviewer', by + 'track shape'],
+      [at(30), 'drift-anchor', 'agent-approved:second-reviewer', by + 'slow drift'],
+      [at(90), 'transit', ADMIN, 'skipper log']]);
+    assert.equal((await call(ask())).status, 409, 'nothing left to approve');
+    // Approved: no longer awaiting, listed as approved; the proposer's next import cannot replace them.
+    assert.deepEqual((await labels.listTrips(db, {labelled: 'approved'})).trips.map(t => [t.id, t.agent_labels]), [[TRIP, 0]]);
+    assert.equal((await labels.importAgentLabels(db, proposal([lab(0, 30)]), NOW)).status, 409);
+    assert.equal(sql.prepare('SELECT count(*) n FROM fleet_segment_labels WHERE trip_id=?').get(TRIP).n, 3);
+  } finally { fleetJobs.verify = saved; }
+});
+
 // ---- RF0844-8: a written day that is not on the calendar is refused, never rolled into the next month ----
 const ISO_ERROR = 'started_at and ended_at must be ISO UTC times';
 const WIDE = {from: '2026-01-01T00:00:00.000Z', to: '2026-08-01T00:00:00.000Z'};

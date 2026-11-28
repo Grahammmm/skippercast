@@ -79,7 +79,8 @@ test('SCA-017: the limits name only fleet job workflows, and the matrix covers t
   assert.deepEqual([...FLEET_JOB_LIMITS.get(claimsOf(MONITOR).workflow_ref)].sort(), [HEALTH, PING]);
   for (const workflow of PROCESSORS) assert.equal(FLEET_JOB_LIMITS.has(claimsOf(workflow).workflow_ref), false, workflow);
   for (const route of [HEALTH, 'GET /api/fleet/jobs/snapshot', 'GET /api/fleet/jobs/watch', 'GET /api/fleet/jobs/labels', 'POST /api/fleet/jobs/registry',
-    'POST /api/fleet/jobs/activity', 'POST /api/fleet/jobs/heartbeat', 'POST /api/fleet/jobs/watch', 'POST /api/fleet/jobs/labels']) assert.ok(ROUTES.includes(route), route);
+    'POST /api/fleet/jobs/activity', 'POST /api/fleet/jobs/heartbeat', 'POST /api/fleet/jobs/watch', 'POST /api/fleet/jobs/labels',
+    'POST /api/fleet/jobs/labels/approve']) assert.ok(ROUTES.includes(route), route);
 });
 
 test('SCA-017: the monitor identity reads the health contract and nothing else, refused before any storage work', {skip}, async () => {

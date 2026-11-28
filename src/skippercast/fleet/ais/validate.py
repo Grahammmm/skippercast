@@ -39,7 +39,8 @@
    carry aggregates only, no MMSI, trip id or labeller id.
 
 ``--offline`` skips the sync and scores the copies and ``labels.json`` already
-on disk; ``--labeller admin|agent`` scores one kind of labeller's labels, so the
+on disk; ``--labeller admin|agent|agent-approved`` scores one kind of labeller's labels
+(``agent-approved``: an agent's labels approved by a second, different agent), so the
 owner can review an agent-labelled set before approving it.
 
 Everything the classifier outputs is inferred from movement, never confirmed
@@ -247,7 +248,9 @@ def _ms(iso: str) -> int:
 
 
 def _labeller_kind(labeller) -> str:
-    return "agent" if str(labeller or "").startswith("agent:") else "admin"
+    """``agent`` (proposed), ``agent-approved`` (approved by a second agent) or ``admin`` (a person)."""
+    text = str(labeller or "")
+    return "agent" if text.startswith("agent:") else "agent-approved" if text.startswith("agent-approved:") else "admin"
 
 
 def job_worker(instead: str) -> Worker:
@@ -489,7 +492,7 @@ def main(argv=None) -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--sync-only", action="store_true", help="copy labelled trips' positions; no report")
     mode.add_argument("--offline", action="store_true", help="score the copies on disk; no Worker call")
-    parser.add_argument("--labeller", choices=("all", "admin", "agent"), default="all")
+    parser.add_argument("--labeller", choices=("all", "admin", "agent", "agent-approved"), default="all")
     parser.add_argument("--thresholds", help="a JSON file of activity thresholds to re-test instead of the region's")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
