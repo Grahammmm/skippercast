@@ -98,6 +98,40 @@ def test_restored_earlier_receipt_is_done(box, monkeypatch):
     assert [(s['step'], s['state']) for s in doc['steps']] == [('select', 'done')]
 
 
+@pytest.mark.parametrize('bad', [
+    {'generation': 'a' * 64, 'attempt': [1], 'started': STAMP},        # unhashable attempt
+    {'generation': {'x': 1}, 'attempt': 1, 'started': STAMP},          # unhashable generation
+    {'generation': 'a' * 64, 'attempt': 1},                            # no start time
+    'not a receipt',
+])
+def test_malformed_history_entry_is_ignored_and_the_stage_still_runs(box, bad):
+    # RETURN #3825 r2 item 1: the log read is diagnostic. A mistyped history entry must not stop
+    # the chain before the stage starts; the usable keys still decide done/built.
+    receipt(box, 'select.json', attempt('b' * 64, 1, history={'a' * 64: bad}))
+    assert box.run(through='mosaic') == 0
+    assert box.ran() == ['select', 'mosaic']
+    _, doc = the_log(box)
+    assert doc['outcome'] == 'complete'
+    assert [(s['step'], s['state']) for s in doc['steps']] == [('select', 'done'), ('mosaic', 'ok')]
+
+
+@pytest.mark.parametrize('current', [
+    {'schema': 'sc-stage-receipt/1', 'status': 'ok'},                  # no attempt fields at all
+    {'generation': 'a' * 64, 'attempt': True, 'started': STAMP},       # bool is not an attempt number
+    {'generation': 'a' * 64, 'attempt': 0, 'started': STAMP},
+    {'generation': '', 'attempt': 1, 'started': STAMP},
+    {'generation': 'a' * 64, 'attempt': '1', 'started': STAMP},
+    [1, 2, 3],
+])
+def test_receipt_without_a_valid_current_attempt_is_unknown_not_done(box, current):
+    # A receipt with no usable current attempt key says nothing about this run: ok, never done.
+    receipt(box, 'select.json', current)
+    assert box.run(through='select') == 0
+    assert box.ran() == ['select']
+    _, doc = the_log(box)
+    assert [(s['step'], s['exit'], s['state']) for s in doc['steps']] == [('select', 0, 'ok')]
+
+
 def test_redirected_runs_directory_is_refused_and_nothing_is_written_there(box, tmp_path, capsys):
     # RETURN #3825 item 1: a copied tree whose runs/ is a symlink must not receive the log.
     elsewhere = tmp_path / 'elsewhere'

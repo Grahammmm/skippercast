@@ -632,27 +632,40 @@ def stage_receipt_path(out, region, stage, extra):
 
 
 def _attempt_key(doc):
-    return tuple(doc.get(k) for k in ('generation', 'attempt', 'started')) if isinstance(doc, dict) else None
+    """(generation, attempt, started) of one receipt or history entry; None unless all three
+    have the receipt's own types (a non-empty string, an int >= 1, a non-empty string)."""
+    if not isinstance(doc, dict):
+        return None
+    generation, attempt, started = doc.get('generation'), doc.get('attempt'), doc.get('started')
+    if not (isinstance(generation, str) and generation and isinstance(started, str) and started
+            and type(attempt) is int and attempt >= 1):
+        return None
+    return generation, attempt, started
 
 
 def receipt_attempts(path):
-    """(current attempt key, every attempt key the receipt holds) or None when unreadable.
+    """(current attempt key, every attempt key the receipt holds) or None when unknown.
 
     The keys come from the stage's own receipt rules: a rebuild always records a new attempt
     (new generation, or the next attempt number with a new start time), while a no-op leaves
     the receipt as it is and a restore copies an earlier ok receipt out of its history.
+    This read is only diagnostic and never stops the chain: an unreadable receipt or one whose
+    current attempt key is missing or mistyped is unknown (None); unusable history entries
+    are ignored.
     """
     if path is None:
         return None
     try:
         doc = json.loads(path.read_bytes())
-    except (OSError, ValueError):
+    except (OSError, ValueError, RecursionError):
         return None
     current = _attempt_key(doc)
     if current is None:
         return None
     history = doc.get('generation_history')
-    held = {current, *(_attempt_key(d) for d in history.values())} if isinstance(history, dict) else {current}
+    held = {current}
+    if isinstance(history, dict):
+        held.update(key for key in map(_attempt_key, history.values()) if key is not None)
     return current, held
 
 
