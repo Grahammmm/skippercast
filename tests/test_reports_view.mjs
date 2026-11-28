@@ -219,14 +219,17 @@ test('SC-FEED-DEGRADE-1: a feed whose charter section is not available shows "No
   assert.equal(evidenceFrom(evidenceFeed({charter_reports: undefined}), 'morro-bay', 'reef', NOW.getTime()).trips, 2, 'a fresh feed is unchanged');
 });
 
-test('a region with no landing-report coverage (report_ports []) shows "Not available", never zero trips; covered-but-empty keeps its row', async () => {
+test('a region with no landing-report coverage (report_ports []) says no local reports, never zero trips or a stale source; covered-but-empty keeps its row', async () => {
   const {evidenceFrom, EvidenceSection, render, h} = await load();
   const uncovered = evidenceFeed({region_id: 'monterey-point-sur', report_ports: [], reports: [], sources: {}});
   const e = evidenceFrom(uncovered, 'monterey-point-sur', 'reef', NOW.getTime());
-  assert.deepEqual(e, {notAvailable: true, lastSourceDay: null});
+  assert.deepEqual(e, {notAvailable: true, lastSourceDay: null, notCovered: true});
   const html = render(h(EvidenceSection, {evidence: e}));
-  assert.match(html, /Not available\./);
-  assert.doesNotMatch(html, /0 trips|Insufficient|report pages verified|not updated since/);
+  assert.match(html, /No local charter reports are available for this area\./);
+  assert.doesNotMatch(html, /0 trips|Insufficient|report pages verified|not updated|has not updated|Not available/);
+  // A stale section on a fresh-but-uncovered feed keeps the stale wording (the stale check comes first).
+  const staleUncovered = evidenceFeed({report_ports: [], charter_reports: {status: 'not_available', reason: 'source_stale', last_source_day: '2026-11-12'}});
+  assert.deepEqual(evidenceFrom(staleUncovered, 'morro-bay', 'reef', NOW.getTime()), {notAvailable: true, lastSourceDay: '2026-11-12'});
   const covered = evidenceFrom(evidenceFeed({report_ports: ['Morro Bay', 'Avila Beach'], reports: []}), 'morro-bay', 'reef', NOW.getTime());
   assert.equal(covered.notAvailable, undefined, 'a covered port with no trips is evidence, not unavailable');
   assert.equal(covered.trips, 0);

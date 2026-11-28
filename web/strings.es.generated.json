@@ -2580,6 +2580,7 @@
 "reports.cards.post":".",
 "reports.cards.unsafe":"Los conteos de capturas de la flota de este informe no pasaron una comprobación y no se muestran.",
 "reports.evidence.not_available":"No disponible. La fuente de reportes de charters no se ha actualizado recientemente, por lo que no se muestran capturas.",
+"reports.evidence.not_covered":"No hay reportes locales de charters disponibles para esta zona.",
 "reports.evidence.not_available_since":"No disponible. La fuente de reportes de charters no se actualiza desde {date}, por lo que no se muestran capturas.",
 "reports.evidence.unavailable":"La fuente diaria de evidencia de esta región no está disponible. No se supone ninguna puntuación de captura.",
 "reports.evidence.eyebrow":"Evidencia de actividad reciente",
