@@ -17,6 +17,9 @@ from tests.unit.test_run_region import STAGE_ORDER, Box
 
 DETAIL = [sd.DECODED_PATH, sd.WIRE_PATH]
 GAP = [sd.GAP_DECODED_PATH, sd.GAP_WIRE_PATH]
+# The chain with every survey stage (--survey detail-and-gap); STAGE_ORDER is the default chain.
+FULL_ORDER = [*STAGE_ORDER[:STAGE_ORDER.index('zone') + 1], 'survey_detail', 'survey_gap',
+              *STAGE_ORDER[STAGE_ORDER.index('zone') + 1:]]
 
 
 @pytest.fixture
@@ -39,37 +42,48 @@ def upstream_of(call):
     ('detail-and-gap', [], ['survey_detail:public', 'survey_gap:public']),
     ('detail', ['survey_gap'], ['survey_detail:public']),
     ('none', ['survey_detail', 'survey_gap'], []),
+    (None, ['survey_detail', 'survey_gap'], []),
 ])
 def test_survey_choice_sets_the_chain_inventory_and_package(box, survey, skipped, listed):
     # Bug caught: a release built by the chain without the survey layers live Morro ships (the old
     # chain), or a gap-less region forced through a survey_gap stage that holds.
-    args = [] if survey == 'detail-and-gap' else ['--survey', survey]
+    args = [] if survey is None else ['--survey', survey]
     assert box.run(*args, through='package') == 0
-    expected = [stage for stage in STAGE_ORDER[:STAGE_ORDER.index('package') + 2] if stage not in skipped]
+    expected = [stage for stage in FULL_ORDER[:FULL_ORDER.index('package') + 2] if stage not in skipped]
     assert box.ran() == expected
     for stage in ('survey_detail', 'survey_gap'):
         if stage not in skipped:
             assert argv_of(box, stage)[5:] == ['--scope', 'public']
     inventory_args = argv_of(box, 'inventory')[5:]
-    assert inventory_args == ([] if survey == 'none' else ['--survey', survey])
+    assert inventory_args == ([] if survey in (None, 'none') else ['--survey', survey])
     assert upstream_of(argv_of(box, 'package')) == [
         'tiles:public', 'digests', 'zone:public', 'inventory', 'contours', *listed]
+
+
+def test_an_unchanged_invocation_runs_the_old_chain_without_survey_stages(box):
+    # Bug caught (#3832 RETURN 1): a no-flag run defaulted to detail-and-gap, so a gapless region
+    # (Big Sur) that used to reach package now stopped in survey_gap.
+    assert box.run(through='envelope') == 0
+    assert box.ran()[:len(STAGE_ORDER)] == STAGE_ORDER
+    assert not set(RR.SURVEY_STAGES) & set(box.ran())
+    assert argv_of(box, 'inventory')[5:] == []
 
 
 def test_region_config_is_not_forwarded_to_the_survey_stages(box, tmp_path):
     config = tmp_path / 'region.json'
     config.write_text('{}')
-    assert box.run('--region-config', str(config), through='survey_gap') == 0
+    assert box.run('--region-config', str(config), '--survey', 'detail-and-gap', through='survey_gap') == 0
     assert '--region-config' in argv_of(box, 'zone')
     assert '--region-config' not in argv_of(box, 'survey_detail')
     assert '--region-config' not in argv_of(box, 'survey_gap')
 
 
 @pytest.mark.parametrize('args, message', [
+    (['--through', 'survey_detail'], '--survey none skips survey_detail'),
     (['--survey', 'detail', '--through', 'survey_gap'], '--survey detail skips survey_gap'),
     (['--survey', 'none', '--through', 'survey_detail'], '--survey none skips survey_detail'),
-    (['--scope', 'private', '--through', 'survey_detail'], 'public-only survey stages'),
-    (['--scope', 'private', '--through', 'inventory'], 'public-only survey stages'),
+    (['--scope', 'private', '--survey', 'detail', '--through', 'survey_detail'], 'public-only survey stages'),
+    (['--scope', 'private', '--survey', 'detail-and-gap', '--through', 'inventory'], 'public-only survey stages'),
 ])
 def test_unrunnable_survey_requests_are_usage_errors(box, capsys, args, message):
     with pytest.raises(SystemExit) as exc:
@@ -79,9 +93,9 @@ def test_unrunnable_survey_requests_are_usage_errors(box, capsys, args, message)
 
 
 def test_private_scope_runs_when_the_chain_skips_the_survey_stages(box):
-    assert box.run('--scope', 'private', through='zone') == 0
-    assert box.run('--scope', 'private', '--survey', 'none', through='digests') == 0
+    assert box.run('--scope', 'private', through='digests') == 0
     assert 'survey_detail' not in box.ran()
+    assert box.run('--scope', 'private', '--survey', 'none', through='digests') == 0
 
 
 def test_dry_run_names_the_skipped_survey_stage(box, capsys):

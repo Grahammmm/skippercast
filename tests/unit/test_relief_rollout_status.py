@@ -6,7 +6,7 @@ import sys
 import pytest
 
 from scripts.coast_diagnostics import relief_rollout_status as rollout
-from scripts.relief.run_region import SCOPED_STAGES, STAGES
+from scripts.relief.run_region import SCOPED_STAGES, STAGES, SURVEY_STAGES
 from skippercast.relief import receipts
 from tests._support import ROOT
 
@@ -29,17 +29,25 @@ def dependency(doc):
     return {key: doc[key] for key in ('stage', 'scope', 'generation')}
 
 
-def populate(region, *, contour_fails=False):
+def populate(region, *, contour_fails=False, survey=SURVEY_STAGES):
+    # A linear chain; inventory also takes the survey stages the run chose (run_region.py --survey).
     upstream = ()
     doc = {}
+    surveyed = []
     for stage in STAGES:
+        if stage in SURVEY_STAGES and stage not in survey:
+            continue
         fields = {}
         if stage == 'mosaic':
             fields['params'] = {'review_required': True}
         if contour_fails and stage == 'contours':
             fields.update(status='failed', error="KeyError: 'survey_year'")
+        if stage == 'inventory':
+            upstream = (*upstream, *(dependency(survey_doc) for survey_doc in surveyed))
         doc = record(region, stage, scope='public' if stage in SCOPED_STAGES else None,
                      upstream=upstream, **fields)
+        if stage in SURVEY_STAGES:
+            surveyed.append(doc)
         if doc['status'] == 'failed':
             break
         upstream = (dependency(doc),)
@@ -77,9 +85,12 @@ def test_first_missing_stage_ignores_later_receipts_and_other_scopes(tmp_path, s
     # The rollout order is not alphabetical or inferred from which receipts happen to exist.
     region = receipts.Region(tmp_path, 'gap')
     scope = 'public' if stage in SCOPED_STAGES else None
+    # when the missing stage is a survey stage, inventory takes it, so its receipt is a required one
+    takes = [dict(stage=name, scope='public', generation='0' * 64) for name in SURVEY_STAGES]
     for candidate in reversed(STAGES):
         if candidate != stage:
-            record(region, candidate, scope='public' if candidate in SCOPED_STAGES else None)
+            record(region, candidate, scope='public' if candidate in SCOPED_STAGES else None,
+                   upstream=takes if candidate == 'inventory' and stage in SURVEY_STAGES else ())
     if scope:
         record(region, stage, scope='private')
     row = rollout.region_status(region)
@@ -222,3 +233,48 @@ def test_stages_text_is_a_region_by_stage_table(tmp_path):
                                 *['missing'] * (len(STAGES) - failed_at - 1)]
     assert lines[2].split() == ['never-started', *['missing'] * len(STAGES)]
     assert lines[1].index('failed') == lines[0].index('contours')  # each state sits under its stage name
+
+
+@pytest.mark.parametrize('survey', [('survey_detail',), ()], ids=['detail', 'none'])
+def test_survey_stages_a_run_skipped_do_not_block_completion(tmp_path, survey):
+    # Bug caught (#3832 RETURN 2): a run through envelope with --survey detail or none reported
+    # survey_gap / survey_detail 'missing' and never 'complete'.
+    region = receipts.Region(tmp_path, 'gapless-fixture')
+    envelope = populate(region, survey=survey)
+    row = rollout.region_status(region)
+    assert (row['stage'], row['state'], row['generation']) == (None, 'complete', envelope['generation'])
+    [entry] = json.loads(invoke(tmp_path, 'gapless-fixture', '--stages', '--json'))
+    states = {row['stage']: row['state'] for row in entry['stages']}
+    for stage in SURVEY_STAGES:
+        assert states[f'{stage}.public'] == ('done' if stage in survey else 'skipped')
+    assert {state for key, state in states.items() if key.split('.')[0] not in SURVEY_STAGES} == {'done'}
+    table = invoke(tmp_path, 'gapless-fixture', '--stages').splitlines()
+    assert table[1].split().count('skipped') == len(SURVEY_STAGES) - len(survey)
+
+
+def test_a_survey_stage_the_inventory_takes_is_still_required(tmp_path):
+    # Skipping must not hide a required survey receipt: inventory took survey_gap, its receipt is gone.
+    region = receipts.Region(tmp_path, 'lost-gap')
+    populate(region)
+    region.receipt_path('survey_gap', 'public').unlink()
+    row = rollout.region_status(region)
+    assert (row['stage'], row['state']) == ('survey_gap.public', 'missing')
+
+
+def test_survey_stages_before_an_inventory_receipt_are_judged_by_their_own_receipts(tmp_path):
+    # Until inventory records the choice, a survey stage that never ran cannot be called skipped.
+    region = receipts.Region(tmp_path, 'mid-run')
+    upstream = ()
+    for stage in ('select', 'mosaic', 'tiles', 'zone'):
+        upstream = (dependency(record(region, stage, scope='public' if stage in SCOPED_STAGES else None,
+                                      upstream=upstream)),)
+    states = [(row['stage'], row['state']) for row in rollout.stage_states(region)][4:6]
+    assert states == [('survey_detail.public', 'missing'), ('survey_gap.public', 'missing')]
+
+
+def test_a_leftover_survey_receipt_the_inventory_does_not_take_is_skipped(tmp_path):
+    # An older detail-and-gap run left a now-stale survey_gap receipt; the current release dropped it.
+    region = receipts.Region(tmp_path, 'dropped-gap')
+    populate(region, survey=('survey_detail',))
+    record(region, 'survey_gap', scope='public', upstream=[dict(stage='zone', scope='public', generation='0' * 64)])
+    assert rollout.region_status(region)['state'] == 'complete'

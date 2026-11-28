@@ -2,7 +2,8 @@
 """Report the first incomplete stage in each region's public relief rollout.
 
 With ``--stages`` it reports every stage of every region instead (a region x stage table of
-receipt states: done, stale, failed, held, missing, invalid, unproved), the pipeline's status
+receipt states: done, stale, failed, held, missing, invalid, unproved, or skipped for a survey stage
+the region's inventory receipt does not take), the pipeline's status
 page. Only receipt and artifact reads are performed. This is a point-in-time
 observation, not a release check. An interrupted attempt may still be active:
 this diagnostic does not probe or acquire stage locks.
@@ -18,7 +19,7 @@ if __package__ in (None, ''):
     root = Path(__file__).resolve().parents[2]
     sys.path[:0] = [str(root), str(root / 'src')]
 
-from scripts.relief.run_region import SCOPED_STAGES, STAGES
+from scripts.relief.run_region import SCOPED_STAGES, STAGES, SURVEY_STAGES
 from skippercast.relief import receipts
 
 COMPLETE = 'complete through envelope (ready for review, not live)'
@@ -107,11 +108,39 @@ class StageState(TypedDict):
     generation: str | None
 
 
+def taken_by_inventory(region: receipts.Region):
+    """The upstream keys the region's inventory receipt records, or None before a readable one exists.
+
+    The inventory receipt states which survey stages this region's release takes (run_region.py
+    --survey); its outputs are not re-hashed here, so the first-incomplete view stays lazy.
+    """
+    try:
+        path = region.receipt_path('inventory', None)
+        if not stat.S_ISREG(path.lstat().st_mode):
+            return None
+        doc = receipts.read_receipt(path)
+    except (OSError, ValueError, RecursionError):
+        return None
+    if doc is None or receipts.validate_receipt(doc, region.id, 'inventory', None):
+        return None
+    return {receipts.Ref(row['stage'], row.get('scope')).key for row in doc['upstream']}
+
+
 def stage_states(region: receipts.Region):
-    """Every public stage of the region in rollout order, each with its receipt verdict (lazy)."""
+    """Every public stage of the region in rollout order, each with its receipt verdict (lazy).
+
+    A survey stage that the region's inventory receipt does not take is 'skipped' (the run chose
+    --survey detail or none); before inventory has a readable receipt every survey stage is judged
+    by its own receipt, so a required one that never ran still reads 'missing'.
+    """
     reader = ReceiptReader(region)
+    taken = taken_by_inventory(region)
     for stage in STAGES:
         ref = receipts.Ref(stage, 'public' if stage in SCOPED_STAGES else None)
+        if stage in SURVEY_STAGES and taken is not None and ref.key not in taken:
+            yield StageState(stage=ref.key, state='skipped', reason='not taken by the inventory receipt (--survey)',
+                             generation=None)
+            continue
         verdict = reader.check(ref)
         yield StageState(stage=ref.key, state=verdict.state, reason=verdict.reason,
                          generation=(verdict.receipt or {}).get('generation'))
@@ -120,6 +149,8 @@ def stage_states(region: receipts.Region):
 def region_status(region: receipts.Region) -> Status:
     generation = None
     for row in stage_states(region):
+        if row['state'] == 'skipped':
+            continue
         generation = row['generation']
         if row['state'] != 'done':
             return Status(region=region.id, **row)

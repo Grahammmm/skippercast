@@ -18,8 +18,8 @@ from skippercast.relief import receipts
 from tests._support import ROOT
 
 
-STAGE_ORDER = ['select', 'mosaic', 'tiles', 'zone', 'survey_detail', 'survey_gap', 'digests', 'inventory', 'contours',
-               'nearshore_vectors', 'package', 'status', 'shots', 'status', 'qa', 'envelope']
+STAGE_ORDER = ['select', 'mosaic', 'tiles', 'zone', 'digests', 'inventory', 'contours', 'nearshore_vectors', 'package',
+               'status', 'shots', 'status', 'qa', 'envelope']
 ZONE_ARGS = ['--coarse', '/in/coarse.tif', '--water', '/in/water.geojson', '--coarse-source', 'src-1']
 GEN = 'a' * 64
 SHOT_GEN = 'b' * 64
@@ -115,9 +115,9 @@ class Box:
         (directory / 'cmdline').write_bytes(b'\0'.join(a.encode() for a in argv) + b'\0')
 
     def run(self, *args, region='morro-bay', through='envelope'):
-        stage = STAGE_ORDER.index(through)
-        required = [*(ZONE_ARGS if stage >= STAGE_ORDER.index('zone') else []),
-                    *(['--basemap', str(self.basemap)] if stage >= STAGE_ORDER.index('shots') else [])]
+        stage = RR.STAGES.index(through)
+        required = [*(ZONE_ARGS if stage >= RR.STAGES.index('zone') else []),
+                    *(['--basemap', str(self.basemap)] if stage >= RR.STAGES.index('shots') else [])]
         return RR.main([region, '--out', str(self.out), '--through', through, *required, *args], self.cfg)
 
     def out_tree(self):
@@ -377,12 +377,10 @@ def test_chain_order_and_stage_arguments(box, capsys, packet_code, expected):
     extras = {
         'select': ['--cache', RR.DEFAULT_NORM],
         'mosaic': ['--scope', 'public'], 'tiles': ['--scope', 'public'], 'zone': ['--scope', 'public', *ZONE_ARGS],
-        'survey_detail': ['--scope', 'public'], 'survey_gap': ['--scope', 'public'],
-        'inventory': ['--survey', 'detail-and-gap'],
         'nearshore_vectors': ['--scope', 'public'],
         'package': ['--manifest', str(root / 'inventory/manifest.json'), '--upstream', 'tiles:public',
                     '--upstream', 'digests', '--upstream', 'zone:public', '--upstream', 'inventory',
-                    '--upstream', 'contours', '--upstream', 'survey_detail:public', '--upstream', 'survey_gap:public'],
+                    '--upstream', 'contours'],
         'status': ['--json'], 'shots': ['--basemap', str(box.basemap)],
         'qa': ['--generation', GEN, '--release-sha256', hashlib.sha256(RELEASE).hexdigest(),
                '--elevation', str(mosaic / 'elevation.tif'), '--contributor', str(mosaic / 'contributor.tif'),
@@ -1113,8 +1111,7 @@ def test_c2_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
     assert [line.split()[3] for line in lines] == ['select', 'mosaic']  # '<n>. python region.py <stage>'
     assert '--scope public' in lines[1] and '--scope' not in lines[0]
-    assert ('not run: tiles, zone, survey_detail, survey_gap, digests, inventory, contours, nearshore_vectors, '
-            'package, shots, qa, envelope') in text
+    assert 'not run: tiles, zone, digests, inventory, contours, nearshore_vectors, package, shots, qa, envelope' in text
     for name in ('stop-file', 'cpu-pressure', 'disk-root', 'disk-backup', 'out-root', 'norm-root', 'region-lock', 'run-cap'):
         assert f'ok     {name}' in text
     assert text.splitlines()[-1] == 'dry run: a real run would start; nothing was run and nothing was written'
@@ -1255,7 +1252,7 @@ def test_c3_dry_run_without_through_previews_full_chain_only(box, capsys, partia
     lines = [line for line in text.splitlines() if re.match(r'\s+\d+\. ', line)]
     assert [line.split()[3] for line in lines] == (['census-bind'] if census else []) + STAGE_ORDER
     package_command = lines[STAGE_ORDER.index('package') + int(census)]
-    assert package_command.endswith('--upstream contours --upstream survey_detail:public --upstream survey_gap:public')
+    assert package_command.endswith('--upstream contours')
     assert re.search(r'tiles style: nearshore-v1\.0\.0; B=[0-9a-f]{64}', text)
     assert [line for line in text.splitlines() if line.startswith('inputs for ')] == input_lines
     assert ('REFUSE zone inputs' in text) == (partial == ZONE_ARGS[:2])

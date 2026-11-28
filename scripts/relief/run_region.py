@@ -14,11 +14,11 @@ Runs ``region.py <stage> --region <region> --out <OUT>`` through the requested s
     select mosaic tiles zone survey_detail survey_gap digests inventory contours nearshore_vectors
     package shots qa envelope
 
-The survey stages (public only) derive the Chart's survey-confidence detail and its no-survey gap
-companion from the zone output; inventory lists both pairs as release layers and package takes them
-as upstream, so a release carries the survey detail and gap the Chart draws. ``--survey detail``
-skips survey_gap (a region whose detail has no unsurveyed area); ``--survey none`` skips both and
-packages relief without survey layers.
+The survey stages (public only) are opt-in. They derive the Chart's survey-confidence detail and its
+no-survey gap companion from the zone output; inventory lists their pairs as release layers and
+package takes them as upstream. ``--survey detail-and-gap`` runs both (Morro Bay); ``--survey
+detail`` runs survey_detail only (a region whose detail has no unsurveyed area, e.g. Big Sur); the
+default ``--survey none`` skips both and packages relief without survey layers, as before.
 
 With --census, census-bind runs before select. Normalize separately, per source. Select reads
 the resulting cache and the source-label file given by --provenance (without it, select falls
@@ -964,9 +964,9 @@ def parse(argv):
                         f'to select as --cache (default $SC_RELIEF_NORM when set, else {DEFAULT_NORM})')
     parser.add_argument('--scope', default='public', choices=('public', 'private'),
                         help='scope of the scoped stages mosaic, tiles and zone (default public)')
-    parser.add_argument('--survey', default='detail-and-gap', choices=tuple(SURVEY_SKIPS),
-                        help='survey layers in the release: detail-and-gap (default), detail (skip survey_gap) '
-                        'or none (skip both survey stages)')
+    parser.add_argument('--survey', default='none', choices=tuple(SURVEY_SKIPS),
+                        help='survey layers in the release: none (default; no survey stage), detail '
+                        '(survey_detail only) or detail-and-gap (survey_detail and survey_gap)')
     parser.add_argument('--basemap', help='local basemap PMTiles (required for shots, qa and envelope)')
     parser.add_argument('--qa-support', help='qa option: mosaic support_class TIFF')
     parser.add_argument('--qa-fine-proof', nargs=2, action='append', metavar=('ZOOM', 'PATH'),
@@ -1019,7 +1019,8 @@ def main(argv=None, cfg=None):
     if args.through not in STAGES:
         parser.error(f'unknown stage {args.through!r}; stages: {", ".join(STAGES)}')
     if args.through in SURVEY_SKIPS[args.survey]:
-        parser.error(f'--survey {args.survey} skips {args.through}; choose a stage this chain runs')
+        parser.error(f'--survey {args.survey} skips {args.through}; choose a stage this chain runs '
+                     '(survey stages run only with --survey detail or detail-and-gap)')
     if args.scope != 'public' and any(stage in chain_through(args.through, SURVEY_SKIPS[args.survey])
                                       for stage in SURVEY_STAGES):
         parser.error(f'the chain reaches the public-only survey stages; with --scope {args.scope} '
