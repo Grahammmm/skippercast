@@ -6,7 +6,8 @@
 // (tools/index.ts toolsForRole). Never a percentage, a score number or a coordinate: the
 // result carries the call, its reasons and how sure it is in words. A stale or unreadable
 // forecast, an incomplete or old marine alert check, or a block with an hour of no
-// forecast makes no call.
+// forecast makes no call. Each call carries its factors (score/explain.ts): every input marked
+// helps / neutral / hurts with its source, so the friend can say why.
 import type {AdvisorTool} from './tool.ts';
 import type {Language} from '../types.ts';
 import catalog from '../../../catalog/advisor/best-bet-grounds.json' with {type: 'json'};
@@ -19,6 +20,7 @@ import {forecastClock} from '../answers/forecast-clock.ts';
 import {dayWord} from '../answers/planning.ts';
 import {addDays, localDate} from '../answers/time.ts';
 import {BLOCKS, bestBets, scoresFromCatalog, type CatalogGround, type ScoreRow} from '../score/best-bets.ts';
+import {factorsFor} from '../score/explain.ts';
 
 const GROUNDS = (catalog as {regions: Record<string, CatalogGround[]>}).regions;
 const WEEK = 7;   // today and the next six days, as the offline builder scores
@@ -65,7 +67,7 @@ export const getBestBets: AdvisorTool = {
         ? [{date, day: dayWord(date, today, language), why: shut.find(r => r.gate === 'advisory')?.conditions.reasons[0] ?? 'rough seas'}] : [];
     });
     const call = (r: ScoreRow) => ({area: r.area, date: r.date, day: dayWord(r.date, today, language), hours: HOURS.get(r.block),
-      comfort: r.conditions.comfort, reasons: [...r.conditions.reasons, ...r.habitat.reasons],
+      comfort: r.conditions.comfort, factors: factorsFor(r),
       confidence_words: SURE_WORDS[language][r.evidence as 'Moderate' | 'Low']});
     const best = bestBets(file, {n: 3}).map(call);
     return {result: {
@@ -73,7 +75,7 @@ export const getBestBets: AdvisorTool = {
       advisories_checked: file.advisories_checked, forecast_issued: file.forecast_issued, forecast_age_hours: file.forecast_age_hours,
       limitations: file.limitations,
       note: [!file.advisories_checked ? 'NWS advisories could not be checked or the check is old: make no call, say so and point to the NWS forecast.'
-        : best.length ? 'Make one clear call from the first best bet (area, day, hours) with two or three of its reasons and its confidence_words word for word. It is a call on weather and seafloor structure, not a catch prediction.'
+        : best.length ? 'Make one clear call from the first best bet (area, day, hours): say what helps and anything that hurts from its factors, in plain words, and its confidence_words word for word. Never give a neutral "not used" factor as a reason. It is a call on weather and seafloor structure, not a catch prediction.'
         : 'No open block on these days: say so, with closed_days\' reasons.',
       closed.length ? 'Name the closed days and why.' : null,
       'Never a percentage, odds or a score number.'].filter(Boolean).join(' '),

@@ -295,7 +295,8 @@ test('get_best_bets: one clear call per open block, reasons and confidence in wo
   const top = Object.entries(H).sort((a, b) => b[1] - a[1])[0][0];
   assert.deepEqual(r.best_bets.map(b => [b.area, b.date, b.hours]), [[top, DATE, '06:00-09:00'], [top, DATE, '09:00-12:00'], [top, DATE, '12:00-15:00']]);
   assert.ok(r.best_bets.every(b => b.day === 'today' && b.comfort === 'comfortable' && b.confidence_words === SURE_WORDS.en.Moderate
-    && b.reasons.some(x => /^wind /.test(x)) && b.reasons.includes('terrain grade measures structure, not fish')));
+    && b.factors.find(f => f.factor === 'sea comfort').reading.includes('wind ')
+    && b.factors.find(f => f.factor === 'reef structure').reading.includes('terrain grade measures structure, not fish') && !('reasons' in b)));
   assert.deepEqual([r.closed_days, r.advisories_checked], [[], true]);
   const text = JSON.stringify(r), data = JSON.stringify({...r, note: undefined});   // the note itself says "Never a percentage"
   assert.equal(/\d\s*%/.test(text), false, text);
@@ -337,4 +338,58 @@ test('get_best_bets: an advisory day is listed closed; a stale forecast or an in
   assert.equal((await bets({port: 'monterey'})).unavailable, true);
   assert.equal((await bets({date: '2026-09-01'})).error, 'that date has passed');
   assert.equal((await bets({date: '2026-10-20'})).beyond_horizon, true);
+});
+
+// ---- slice 3: the per-factor explainer (helps / neutral / hurts) behind every call ----
+
+const {factorsFor, GRADE_A, GRADE_B, UNTESTED} = await import('../server/advisor/score/explain.ts');
+const NAMES = ['sea comfort', 'forecast agreement', 'marine alerts', 'reef structure', 'moon and pressure'];
+const effects = fs => Object.fromEntries(fs.map(f => [f.factor, f.effect]));
+
+test('explainer: a calm, agreed, checked block on grade A reef shows every input helping, and moon/pressure as untested', () => {
+  const r = row(build(), 'Pecho Rock', DATE, 'morning');
+  const fs = factorsFor(r);
+  assert.deepEqual(fs.map(f => f.factor), NAMES);
+  assert.ok(H['Pecho Rock'] >= GRADE_A, 'the fixture ground is grade A on the atlas cut-offs');
+  assert.deepEqual(effects(fs), {'sea comfort': 'helps', 'forecast agreement': 'helps', 'marine alerts': 'helps', 'reef structure': 'helps', 'moon and pressure': 'neutral'});
+  assert.match(fs[0].reading, /^comfortable, wind 6 kt NW, seas /);
+  assert.match(fs[3].reading, /^best reef marks average grade A, 11 mapped reef search targets/);
+  assert.deepEqual(fs[4], UNTESTED);
+  assert.ok(fs.every(f => typeof f.source === 'string' && f.source.length && ['helps', 'neutral', 'hurts'].includes(f.effect)));
+  assert.equal(/\d\s*%|0\.\d|rank|latitude|longitude/i.test(JSON.stringify(fs)), false, JSON.stringify(fs));
+});
+
+test('explainer: a bumpy block is neutral, disagreeing models hurt, and the reef grade follows the atlas cut-offs', () => {
+  const bumpy = build({by: (p, t) => p === 'central' && [6, 7, 8].some(h => at(DATE, h) === t) ? {wind_speed_10m: 16, ecmwf_wind: 16, wind_gusts_10m: 20, ecmwf_gust: 20} : {}});
+  assert.equal(effects(factorsFor(row(bumpy, 'Morro Bay coast', DATE, 'morning')))['sea comfort'], 'neutral');
+  const split = row(build({by: p => p === 'central' ? {ecmwf_wind: 11} : {}}), 'Morro Bay coast', DATE, 'morning');
+  const fs = factorsFor(split);
+  assert.deepEqual([fs[1].effect, fs[1].reading], ['hurts', 'forecast models disagree']);
+  assert.equal(fs[0].reading.includes('disagree'), false, 'disagreement is its own factor, not a sea reading');
+  const one = factorsFor({...split, conditions: {...split.conditions, models_agree: null}});
+  assert.deepEqual([one[1].effect, one[1].reading], ['neutral', 'one forecast model only']);
+  const graded = v => factorsFor({...split, habitat: {...split.habitat, value: v}})[3];
+  assert.deepEqual([GRADE_A, GRADE_B].map(graded).map(f => f.effect), ['helps', 'neutral']);
+  assert.deepEqual([graded(0.6).reading.split(',')[0], graded(0.6).effect], ['best reef marks average grade B', 'neutral']);
+  assert.deepEqual([graded(0.54).reading.split(',')[0], graded(0.54).effect], ['best reef marks average grade C', 'hurts']);
+});
+
+test('explainer: a row a gate closed or that has no rank explains nothing (no call, no reasons for one)', () => {
+  const rough = build({by: (p, t) => p === 'avila' && [12, 13, 14].some(h => at(DATE, h) === t) ? ROUGH : {}});
+  assert.deepEqual(factorsFor(row(rough, 'Pecho Rock', DATE, 'afternoon')), []);
+  assert.ok(build({ageH: 40}).rows.every(r => factorsFor(r).length === 0));
+  const unchecked = buildScores({region: REGION, intel: feed(), daily: {sources: {}}, grounds: GROUNDS, targets: TARGETS, dates: [DATE], now: NOW});
+  assert.ok(unchecked.rows.every(r => r.gate === 'unchecked' && factorsFor(r).length === 0));
+  // Every open row is explained, and get_best_bets' calls carry exactly the rows' factors.
+  assert.ok(build().rows.every(r => factorsFor(r).length === NAMES.length));
+  assert.match(BEST_BETS_RULE, /what helps and anything that hurts from its factors/);
+});
+
+test('get_best_bets: each call carries its factors, the untested ones neutral, and the whole result stays short', async () => {
+  const r = await bets();
+  const file = buildScores({region: REGION, intel: feed(), daily: daily(), grounds: GROUNDS, targets: TARGETS, dates: r.dates, now: NOW});
+  assert.deepEqual(r.best_bets.map(b => b.factors), bestBets(file, {n: 3}).map(factorsFor));
+  assert.ok(r.best_bets.every(b => b.factors.find(f => f.factor === 'moon and pressure').effect === 'neutral'));
+  assert.match(r.note, /what helps and anything that hurts from its factors/);
+  assert.ok(JSON.stringify(r).length < 4000);
 });

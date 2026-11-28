@@ -82,7 +82,9 @@ export function blockCoverage(intel: unknown, region: Region, pointId: string, f
   return {rated: rated.size, expected};
 }
 export interface Part {value: number | null; evidence: Confidence; reasons: string[]}
-export interface ConditionsPart extends Part {gate: Gate; comfort: string}
+/** models_agree: windowConditions' check that the forecast models agree in the block (null: one model only, or no forecast). */
+export interface ConditionsPart extends Part {gate: Gate; comfort: string; models_agree: boolean | null}
+export const MODELS_DISAGREE = 'forecast models disagree';
 export interface ScoreRow {
   area: string; ground_id: string; point: string; date: string; block: BlockId;
   gate: Gate; conditions: ConditionsPart; habitat: Part; rank: number | null; evidence: Confidence;
@@ -145,7 +147,7 @@ export function habitatFit(ground: Ground, targets: readonly TargetIn[]): Part {
  */
 export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1, advisory: string | null = null, checked = true,
   coverage: {rated: number; expected: number} | null = null): ConditionsPart {
-  const base = {comfort: day.comfort};
+  const base = {comfort: day.comfort, models_agree: day.models_agree ?? null};
   // An advisory closes the gate even when the forecast itself is unusable (withForecastClock drops day.advisory then).
   const event = day.advisory ?? advisory;
   if (event) return {...base, gate: 'advisory', value: 0, evidence: 'Moderate', reasons: [event]};
@@ -167,7 +169,7 @@ export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1,
   }
   const raw = day.comfort === COMFORT_WORD.go ? 1 : day.comfort === COMFORT_WORD.marginal ? 0.5 : null;
   if (raw === null) return {...base, gate: 'pass', value: null, evidence: 'Insufficient', reasons};
-  if (day.models_agree === false) reasons.push('forecast models disagree');
+  if (day.models_agree === false) reasons.push(MODELS_DISAGREE);
   return {...base, gate: 'pass', value: day.models_agree === false ? round(raw * weights.models_disagree, 2) : raw,
     evidence: day.models_agree === true ? 'Moderate' : 'Low', reasons};
 }
