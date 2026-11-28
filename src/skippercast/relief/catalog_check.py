@@ -33,7 +33,19 @@ def _release_regions(path: Path) -> set[str]:
         return set()
 
 
-def _contours_error(path: Path, region: object) -> str:
+def _terrain_only(doc: dict) -> bool:
+    """A pointer whose style explicitly pins no contours is a terrain-only release."""
+    style = doc.get('style')
+    return isinstance(style, dict) and 'contours' in style and style['contours'] is None
+
+
+def _contours_error(path: Path, region: object, terrain_only: bool) -> str:
+    if terrain_only:
+        # Terrain-only regions ship relief shading alone; a contour file beside such a
+        # pointer would be served without the release that reviewed it.
+        exists = path.exists() or path.is_symlink()
+        return f'terrain-only pointer (style.contours null) but catalog/depth-contours/{path.name} exists' \
+            if exists else ''
     try:
         provenance = _read_object(path).get('provenance')
     except FileNotFoundError:
@@ -46,7 +58,11 @@ def _contours_error(path: Path, region: object) -> str:
 
 
 def check_catalog(root: str | Path) -> list[dict]:
-    """Return five rows per pointer, ordered by filename; contours alone are allowed."""
+    """Return five rows per pointer, ordered by filename; contours alone are allowed.
+
+    A pointer with style.contours null is terrain-only: its contours row passes only
+    when no contour file exists for it. Every other pointer needs matching contours.
+    """
     root = Path(root)
     pointers = sorted(path for path in (root / _RELIEF).glob('*.json') if path.name != _SCHEMA)
     if not pointers:
@@ -77,7 +93,8 @@ def check_catalog(root: str | Path) -> list[dict]:
             ('schema', schema_error),
             ('filename', '' if region == region_id else 'filename id does not match pointer region'),
             ('release-region', '' if listed else f'pointer region not listed in {_INDEX.as_posix()}'),
-            ('contours', _contours_error(root / 'catalog/depth-contours' / f'{region_id}.geojson', region)),
+            ('contours', _contours_error(root / 'catalog/depth-contours' / f'{region_id}.geojson', region,
+                                         _terrain_only(doc))),
             ('lineage', 'previous must be null or match the pointer lineage schema'
              if _validation_error(doc, lineage_schema) else ''),
         )

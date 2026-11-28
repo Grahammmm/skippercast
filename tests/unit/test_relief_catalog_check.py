@@ -170,6 +170,31 @@ def test_c1_v1_contours_only(tree):
     assert check_catalog(tree) == []
 
 
+STYLE = {'baked': 'f' * 64, 'contours': None, 'habitat': None, 'built_with': 'fixture-v1'}
+TERRAIN_WITH_FILE = 'terrain-only pointer (style.contours null) but catalog/depth-contours/test-bay.geojson exists'
+
+
+def test_c1_terrain_only_pointer_needs_no_contours(tree):
+    """C1: A release that pins no contour style (terrain-only region) passes without a contour file."""
+    write_json(tree / POINTER, {**pointer(), 'style': STYLE})
+    assert check_catalog(tree) == expected()
+
+
+@pytest.mark.parametrize('content', [json.dumps(contours('test-bay')), '{'], ids=['matching', 'corrupt'])
+def test_c1_terrain_only_pointer_refuses_a_contour_file(tree, content):
+    """C1: Contours beside a terrain-only pointer were not reviewed with that release."""
+    write_json(tree / POINTER, {**pointer(), 'style': STYLE})
+    (tree / CONTOURS).parent.mkdir(parents=True)
+    (tree / CONTOURS).write_text(content, encoding='utf-8')
+    assert check_catalog(tree) == expected(contours=TERRAIN_WITH_FILE)
+
+
+def test_c1_contour_style_still_needs_its_file(tree):
+    """C1: A pointer that pins a contour style keeps the strict contour check."""
+    write_json(tree / POINTER, {**pointer(), 'style': {**STYLE, 'contours': '9' * 64}})
+    assert check_catalog(tree) == expected(contours='missing catalog/depth-contours/test-bay.geojson')
+
+
 def test_c2_text_success_and_read_only(pair, capsys):
     """C2: The default text output includes every check without touching the checkout."""
     def snapshot():
