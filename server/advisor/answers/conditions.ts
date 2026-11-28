@@ -106,6 +106,11 @@ export function readHour(feed: Feed, point: number, time: number): Hour {
   };
 }
 
+/** An hour where both forecast models can be compared (models_agree): GFS and ECMWF wind, GFS-Wave and WAM seas all present. */
+export const modelsPaired = (h: Hour): boolean => [h.wind, h.other_wind, h.sea, h.other_sea].every(finite);
+/** An hour with any second-model reading (ECMWF wind or WAM seas), compared or not. */
+export const hasSecondModel = (h: Hour): boolean => finite(h.other_wind) || finite(h.other_sea);
+
 /** Comfort score for one hour, as the app scores it: the full rubric when every part is there, else the limited one (capped); for `boat`'s factors (the reference boat by default). */
 export function rateHour(h: Hour, boat: BoatFactors = REFERENCE_BOAT): number | null {
   return rateComfort(h, boat)?.score ?? null;
@@ -197,7 +202,7 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
   // SC0237-01: the brief's thin-evidence holds (verdict.ts unrated hours, unavailable alert check), in a fixed order after the long-period reason; none for a raw Bumpy/Rough/Unknown word.
   const unrated = rows.length - rated.length;
   const holds = verdict === 'go' && !advisories.length ? [swell, unrated > 0 ? `${unrated} of ${rows.length} hours have no forecast` : null, advisoriesChecked ? null : ALERT_CHECK_UNAVAILABLE].filter((r): r is string => r !== null) : [];
-  const agree = hours.filter(h => [h.wind, h.other_wind, h.sea, h.other_sea].every(finite));
+  const agree = hours.filter(modelsPaired);
   return {...base, available: true,
     wind_kt: range(hours.map(h => h.wind)), wind_from: compass(meanBearing(hours.map(h => h.wind_from))),
     gusts_kt: round(Math.max(...hours.map(h => h.gust).filter(finite), -Infinity)) ?? null,

@@ -19,7 +19,7 @@
 // output names only allowlisted public grounds and forecast point ids: never a
 // coordinate (tests/test_advisor_score.mjs checks it). The reply path (tools/get_best_bets.ts, behind
 // ADVISOR_BEST_BETS) reads H from catalog/advisor/best-bet-grounds.json via scoresFromCatalog.
-import {ALERT_CHECK_UNAVAILABLE, advisoriesFrom, advisoryCheckTime, rateHour, readHour, regionZones, windowConditions, windowEpochs, withForecastClock, type DayConditions} from '../answers/conditions.ts';
+import {ALERT_CHECK_UNAVAILABLE, advisoriesFrom, advisoryCheckTime, hasSecondModel, modelsPaired, rateHour, readHour, regionZones, windowConditions, windowEpochs, withForecastClock, type DayConditions} from '../answers/conditions.ts';
 import {forecastClock} from '../answers/forecast-clock.ts';
 import {COMFORT_WORD} from '../answers/comfort.ts';
 import type {Confidence} from '../answers/confidence.ts';
@@ -68,21 +68,32 @@ export function alertCheckCurrent(sources: Record<string, unknown> | undefined, 
 /**
  * How many whole hours of [from, to] (windowEpochs) the point's GFS series rates (a timestamp in the hour with a rateHour score, as windowConditions
  * rates it for the reference boat), against how many hours the block spans. A missing timestamp and a timestamp with no usable values both count as unrated.
+ * `paired`: hours where both forecast models can be compared (modelsPaired, the hours behind models_agree); `second`: hours with any second-model reading.
  */
-export function blockCoverage(intel: unknown, region: Region, pointId: string, from: number, to: number): {rated: number; expected: number} {
+export interface Coverage {rated: number; expected: number; paired?: number; second?: number}
+export function blockCoverage(intel: unknown, region: Region, pointId: string, from: number, to: number): Required<Coverage> {
   const expected = Math.round((to + 1 - from) / HOUR_MS);
   const index = region.forecast_points.findIndex(p => p.id === pointId);
   const times = (intel as {forecast?: {models?: {gfs_global?: {data?: {hourly?: {time?: unknown[]}}[]}}}} | null)?.forecast?.models?.gfs_global?.data?.[index]?.hourly?.time;
-  const rated = new Set<number>();
+  const rated = new Set<number>(), paired = new Set<number>(), second = new Set<number>();
   if (index >= 0 && Array.isArray(times)) for (const t of times) {
     if (typeof t !== 'number' || !Number.isFinite(t) || t * 1000 < from || t * 1000 > to) continue;
-    const score = rateHour(readHour(intel as never, index, t));
-    if (typeof score === 'number' && Number.isFinite(score)) rated.add(Math.floor((t * 1000 - from) / HOUR_MS));
+    const hour = readHour(intel as never, index, t), slot = Math.floor((t * 1000 - from) / HOUR_MS);
+    const score = rateHour(hour);
+    if (typeof score === 'number' && Number.isFinite(score)) rated.add(slot);
+    if (modelsPaired(hour)) paired.add(slot);
+    if (hasSecondModel(hour)) second.add(slot);
   }
-  return {rated: rated.size, expected};
+  return {rated: rated.size, expected, paired: paired.size, second: second.size};
 }
 export interface Part {value: number | null; evidence: Confidence; reasons: string[]}
-export interface ConditionsPart extends Part {gate: Gate; comfort: string}
+/**
+ * models_agree: windowConditions' check that the forecast models agree in the block's paired hours (null: no hour could be compared, or no forecast).
+ * models_compared: of the block's `hours`, how many had both models' wind and seas (`paired`) and any second-model reading (`second`); null when no coverage was read.
+ */
+export interface ModelsCompared {paired: number; second: number; hours: number}
+export interface ConditionsPart extends Part {gate: Gate; comfort: string; models_agree: boolean | null; models_compared: ModelsCompared | null}
+export const MODELS_DISAGREE = 'forecast models disagree';
 export interface ScoreRow {
   area: string; ground_id: string; point: string; date: string; block: BlockId;
   gate: Gate; conditions: ConditionsPart; habitat: Part; rank: number | null; evidence: Confidence;
@@ -144,8 +155,10 @@ export function habitatFit(ground: Ground, targets: readonly TargetIn[]): Part {
  * a Rough reading in the hours present still closes it first.
  */
 export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1, advisory: string | null = null, checked = true,
-  coverage: {rated: number; expected: number} | null = null): ConditionsPart {
-  const base = {comfort: day.comfort};
+  coverage: Coverage | null = null): ConditionsPart {
+  const compared = coverage && coverage.paired !== undefined && coverage.second !== undefined
+    ? {paired: coverage.paired, second: coverage.second, hours: coverage.expected} : null;
+  const base = {comfort: day.comfort, models_agree: day.models_agree ?? null, models_compared: compared};
   // An advisory closes the gate even when the forecast itself is unusable (withForecastClock drops day.advisory then).
   const event = day.advisory ?? advisory;
   if (event) return {...base, gate: 'advisory', value: 0, evidence: 'Moderate', reasons: [event]};
@@ -167,7 +180,7 @@ export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1,
   }
   const raw = day.comfort === COMFORT_WORD.go ? 1 : day.comfort === COMFORT_WORD.marginal ? 0.5 : null;
   if (raw === null) return {...base, gate: 'pass', value: null, evidence: 'Insufficient', reasons};
-  if (day.models_agree === false) reasons.push('forecast models disagree');
+  if (day.models_agree === false) reasons.push(MODELS_DISAGREE);
   return {...base, gate: 'pass', value: day.models_agree === false ? round(raw * weights.models_disagree, 2) : raw,
     evidence: day.models_agree === true ? 'Moderate' : 'Low', reasons};
 }
