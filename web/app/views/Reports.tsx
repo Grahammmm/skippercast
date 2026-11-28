@@ -74,7 +74,8 @@ export function EvidenceSection({evidence: found, timeZone = DEFAULT_ZONE}: {evi
   const lang = language.value;
   if (!found) return <p>{t('reports.evidence.unavailable', lang)}</p>;
   // Type-only import above: reports.ts and its v1 modules load with the view's dynamic import, not the entry.
-  if ('notAvailable' in found) return <p>{found.lastSourceDay ? t('reports.evidence.not_available_since', lang, {date: reportDay(found.lastSourceDay, lang, timeZone)}) : t('reports.evidence.not_available', lang)}</p>;
+  if ('notAvailable' in found) return <p>{found.notCovered ? t('reports.evidence.not_covered', lang)
+    : found.lastSourceDay ? t('reports.evidence.not_available_since', lang, {date: reportDay(found.lastSourceDay, lang, timeZone)}) : t('reports.evidence.not_available', lang)}</p>;
   const evidence = found;
   const text = evidenceCopy(evidence, lang);
   return (

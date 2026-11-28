@@ -2580,6 +2580,7 @@
 "reports.cards.post":{"en":"."},
 "reports.cards.unsafe":{"en":"The fleet catch counts in this report failed a check and are not shown."},
 "reports.evidence.not_available":{"en":"Not available. The charter report source has not updated recently, so no catch counts are shown."},
+"reports.evidence.not_covered":{"en":"No local charter reports are available for this area."},
 "reports.evidence.not_available_since":{"en":"Not available. The charter report source has not updated since {date}, so no catch counts are shown."},
 "reports.evidence.unavailable":{"en":"The daily evidence feed for this region is unavailable. No catch score is assumed."},
 "reports.evidence.eyebrow":{"en":"Evidence for recent activity"},

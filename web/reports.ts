@@ -57,8 +57,9 @@ export interface Evidence {
   readonly fresh?: boolean; readonly coverage?: number; readonly reasonKind?: ReasonKind;
 }
 
-/** The feed marked its charter-report section not available (source stale): no trip facts, and never a count of zero. */
-export interface EvidenceNotAvailable {readonly notAvailable: true; readonly lastSourceDay: string | null}
+/** No trip facts, and never a count of zero: the feed marked its charter-report section not available (source stale), or
+ *  `notCovered` - no publisher reports this region's landings at all (a fresh feed, so no "has not updated" wording). */
+export interface EvidenceNotAvailable {readonly notAvailable: true; readonly lastSourceDay: string | null; readonly notCovered?: true}
 export const isNotAvailable = (e: Evidence | EvidenceNotAvailable | null): e is EvidenceNotAvailable => !!e && 'notAvailable' in e;
 
 type FeedCatch = {species?: unknown; label?: unknown; count?: unknown; disposition?: unknown};
@@ -74,7 +75,7 @@ export function evidenceFrom(data: unknown, region: string, species: string, now
   // `report_ports: []` = no publisher reports this region's landings: not available, not zero trips (and not stale).
   // A covered port with no trips keeps its evidence row; a feed without the field (older producer) is unchanged.
   const ports = (data as {report_ports?: unknown}).report_ports;
-  if (Array.isArray(ports) && ports.length === 0) return {notAvailable: true, lastSourceDay: null};
+  if (Array.isArray(ports) && ports.length === 0) return {notAvailable: true, lastSourceDay: null, notCovered: true};
   const e = reportEvidence(data, species, now);
   const rows = (e.reports as FeedReport[]).slice(0, 5).map(r => {
     const items = (r.catches ?? []).filter(c => matchesTargetSpecies(c.species, species) && Number(c.count) > 0)
