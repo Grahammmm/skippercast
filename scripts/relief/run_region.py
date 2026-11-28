@@ -729,7 +729,18 @@ class RunLog:
         return '\n'.join(lines)
 
 
-def show_rebuild_plan(cfg, out, region, survey=()):
+def select_inputs(cfg, region, extra):
+    """``{role: path}`` where select will read its content-pinned inputs, given its arguments in
+    ``extra`` and otherwise its own defaults (this checkout's config + registry; labels from
+    ``$SC_RELIEF_PROVENANCE`` or the working directory)."""
+    given = dict(zip(extra.get('select', ())[::2], extra.get('select', ())[1::2]))  # flag, value pairs
+    root = Path(cfg.region_py).resolve().parents[2]
+    labels = given.get('--provenance', os.environ.get('SC_RELIEF_PROVENANCE', 'PROVENANCE-LABELS.json'))
+    return {'region': Path(given.get('--region-config', root / 'regions' / region / 'region.json')),
+            'registry': root / 'catalog/sources.json', 'provenance': Path(os.path.expanduser(labels))}
+
+
+def show_rebuild_plan(cfg, out, region, extra, survey=()):
     if __package__:
         from . import rebuild_plan as report
     else:
@@ -744,7 +755,8 @@ def show_rebuild_plan(cfg, out, region, survey=()):
         if any(under(path, cfg.forbidden_root) for path in stages.glob('*.json')):
             say('rebuild plan unavailable: receipt is under the forbidden root')
             return
-        rows = report._region_plan(out, region, report._stage_digests(), survey=survey)
+        rows = report._region_plan(out, region, report._stage_digests(), survey=survey,
+                                   inputs_at={'select': select_inputs(cfg, region, extra)})
     except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
         say(f'rebuild plan unavailable: {exc}')
         return
@@ -795,7 +807,7 @@ def dry_run(cfg, region, out, norm, through, extra, inputs, missing, basemap, *,
     if through == 'envelope':
         say('r8 packet: after envelope')
     if show_plan:
-        show_rebuild_plan(cfg, out, region,
+        show_rebuild_plan(cfg, out, region, extra,
                           tuple(stage for stage in SURVEY_STAGES if stage not in extra.get(SKIP, ())))
     say('guards (re-checked before every stage):')
     refused = bool(missing)

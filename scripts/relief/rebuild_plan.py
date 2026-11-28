@@ -67,12 +67,16 @@ def _input_hasher(location, memo):
     return hasher
 
 
-def _region_plan(out, region, current, memo=None, *, default=None, pin=None, survey=()):
+def _region_plan(out, region, current, memo=None, *, default=None, pin=None, survey=(), inputs_at=None):
     """``survey`` names the opt-in survey stages this run selects (run_region's ``--survey``).
 
     A survey stage is planned only when it is selected, has a receipt, or a receipt takes it
     upstream (plan() adds such links itself, as ``missing`` without a receipt); otherwise a
     region that never runs them would always show two missing rebuilds.
+
+    ``inputs_at`` (``{receipt key: {role: path}}``) is where the run will read those inputs; they
+    are compared there instead of at the recorded path, as the stage itself keys them by content
+    (a run from a moved checkout reuses, and re-records the path).
     """
     # run_region's dry run calls this without a memo; each call then hashes for itself.
     memo = {} if memo is None else memo
@@ -85,6 +89,12 @@ def _region_plan(out, region, current, memo=None, *, default=None, pin=None, sur
     except FileNotFoundError:
         pass
     docs = rebuild_plan.load_receipts(out, region)
+    for key, paths in (inputs_at or {}).items():
+        doc = docs.get(key)
+        if doc is not None and isinstance(doc.get('inputs'), list):
+            docs[key] = dict(doc, inputs=[
+                dict(item, path=location.record(paths[item['role']]))
+                if isinstance(item, dict) and item.get('role') in paths else item for item in doc['inputs']])
     styles = rebuild_plan.style_digests(region, default=default, pin=pin)
     # Compare existing scoped receipts too, even if the current runner doesn't emit that scope.
     by_stage = {key.partition('.')[0]: digest for key, digest in current.items()}

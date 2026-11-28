@@ -289,3 +289,55 @@ def test_config_files_from_another_checkout_reuse_select(tmp_path):
     put(other / 'registry.json', {'sources': [registry_row('survey', notes='edited')]})
     assert main(moved) == 0
     assert read(check.receipt_path('select'))['generation'] != first['generation']
+
+
+def test_preview_and_run_agree_after_the_old_checkout_is_gone(tmp_path, monkeypatch, capsys):
+    # Contract: once the checkout select last read is removed, run_region's dry-run plan and a real
+    # select run agree: both reuse the unchanged content read from the new checkout, and the run
+    # re-records the paths so the plain rebuild-plan report reuses too. Bug caught (#3836 RETURN 1):
+    # select did no work while the plan reported the old paths input-missing for ever (and so a
+    # rebuild of every stage after select). Controls: a changed or a missing current input is
+    # still a select rebuild in the preview.
+    from scripts.relief import rebuild_plan as plan_cli, run_region as RR
+
+    monkeypatch.delenv('SC_RELIEF_PROVENANCE', raising=False)
+    region, cache, _ = fixture(tmp_path)
+    out = region.parent
+    base = ['select', '--region', 'morro-bay', '--out', str(out), '--cache', str(cache)]
+
+    def at(root):  # the runner's defaults: this checkout's region config and registry
+        return ['--region-config', str(root / 'regions/morro-bay/region.json'),
+                '--registry', str(root / 'catalog/sources.json'), '--provenance', str(root / 'labels.json')]
+
+    old, new = tmp_path / 'old-checkout', tmp_path / 'new-checkout'
+    put(old / 'regions/morro-bay/region.json', read(tmp_path / 'region.json'))
+    put(old / 'catalog/sources.json', {'sources': []})
+    put(old / 'labels.json', read(tmp_path / 'labels.json'))
+    put(region / 'census.json', {'summary': {'region': 'morro-bay'}, 'files': []})
+    assert main([*base, *at(old)]) == 0
+    receipt = receipts.Region(out, 'morro-bay').receipt_path('select')
+    first = read(receipt)
+    old.rename(new)
+
+    def preview():
+        capsys.readouterr()
+        cfg = RR.Config(region_py=new / 'scripts/relief/region.py')
+        RR.show_rebuild_plan(cfg, out, 'morro-bay',
+                             {'select': ['--cache', str(cache), '--provenance', str(new / 'labels.json')]})
+        [row] = [line.strip() for line in capsys.readouterr().out.splitlines() if line.startswith('  select ')]
+        return row
+
+    assert preview() == 'select reuse (-)'
+    assert main([*base, *at(new)]) == 0
+    again = read(receipt)
+    assert (again['generation'], again['attempt'], again['ended']) == (
+        first['generation'], first['attempt'], first['ended'])
+    assert not [item for item in again['inputs'] if 'old-checkout' in item['path']]
+    capsys.readouterr()
+    assert plan_cli.main(['--out', str(out), 'morro-bay']) == 0
+    assert '  select  reuse  -' in capsys.readouterr().out.splitlines()
+
+    put(new / 'catalog/sources.json', {'sources': [], 'edited': True})
+    assert preview() == 'select rebuild (input:registry)'
+    (new / 'labels.json').unlink()
+    assert preview() == 'select rebuild (input-missing:provenance, input:registry)'
