@@ -39,7 +39,8 @@ const BUILT = ['update_profile', 'escalate', 'send_upload_link', 'send_contact_c
   'register_boat', 'add_crew', 'remove_crew',                                                                           // TA-I1 (tests/test_advisor_skippers.mjs)
   'read_count_board', 'propose_report', 'edit_report',                                                                  // TA-I2 (tests/test_advisor_reports.mjs)
   'identify_fish', 'share_angler_photo',                                                                                // TA-I3 (tests/test_advisor_fishid.mjs)
-  'propose_post'];                                                                                                      // TA-S1 (tests/test_advisor_social_drafts.mjs)
+  'propose_post',                                                                                                       // TA-S1 (tests/test_advisor_social_drafts.mjs)
+  'get_best_bets'];                                                                                                     // fishing friend 1b, behind ADVISOR_BEST_BETS (tests/test_advisor_score.mjs)
 
 test('the registry has every tool in 04 § Tools, once, with a valid schema and an intent', () => {
   assert.deepEqual(TOOLS.map(t => t.name).sort(), [...STUBS, ...BUILT].sort());
@@ -445,6 +446,29 @@ dbTest('get_port_report: the day\'s answer (composed when none is stored, never 
   assert.equal(storedEs.landing.label, 'reportado por el muelle');
 });
 
+dbTest('get_port_report + daily inputs: a feed whose publisher covers no port of ours is "not covered", never zero trips; a covered port with no trips stays available', async () => {
+  const {coversLanding} = await import('../server/advisor/answers/confidence.ts');
+  const {dailyInputs} = await import('../server/advisor/answers/reports.ts');
+  assert.equal(coversLanding({report_ports: ['Morro Bay', 'Avila Beach']}, ['morro bay']), true);
+  assert.equal(coversLanding({report_ports: []}, ['Morro Bay']), false);
+  assert.equal(coversLanding({report_ports: ['Avila Beach']}, ['Morro Bay']), false);
+  assert.equal(coversLanding({}, ['Morro Bay']), true, 'a feed written before report_ports keeps its old reading');
+  const {sql, db} = advisorDatabase();
+  seedBoats(sql);
+  const at = {...DAILY(), generated_at: '2026-09-28T18:00:00Z'};
+  const run = async feed => (await TOOL_BY_NAME.get('get_port_report').run({port: 'morro-bay'}, dataCtx({db, feeds: feedsFrom(feed)}))).result;
+  const uncovered = await run({...at, report_ports: [], reports: []});
+  assert.deepEqual(uncovered.landing, {available: false, covered: false, note: 'Landing reports: Not available.'});
+  assert.equal(uncovered.freshness.newest_landing_report, null);
+  const empty = await run({...at, report_ports: ['Morro Bay', 'Avila Beach'], reports: []});
+  assert.equal(empty.landing.available, true, 'a covered port whose pages held no trips is still covered');
+  assert.equal(empty.landing.recent_activity.find(a => a.target === 'reef').trips, 0);
+  const inputs = async feed => (await dailyInputs({DB: db}, 'morro-bay', '2026-09-28', {feeds: feedsFrom(feed)}, FEED_NOW)).landing;
+  assert.deepEqual(await inputs({...at, report_ports: [], reports: []}), {available: false, reports: [], activity: []});
+  assert.equal((await inputs({...at, report_ports: ['Morro Bay', 'Avila Beach'], reports: []})).available, true);
+  assert.equal((await inputs(at)).available, true, 'unchanged for a feed without report_ports');
+});
+
 test('get_species: catalog claims with sources, look-alike cues, the group, and the release note; no rule', async () => {
   const tool = TOOL_BY_NAME.get('get_species');
   const verm = (await tool.run({species_key: 'reds'})).result;
@@ -569,6 +593,10 @@ dbTest('planning brief: advisory first, then the season, the recent reports, one
     [['2026-09-27', 'Example Boat One', ['vermilion']], ['2026-09-26', 'a boat', ['vermilion']]]);
   assert.equal(p.recent_activity.skipper_reports[0].day, 'Sun');
   assert.deepEqual([p.recent_activity.landing.label, p.recent_activity.landing.trips], ['reported by the landing', 1]);
+  // A feed whose publisher covers none of this port's landings has no landing facts: not "available, 0 trips".
+  const uncovered = (await plan({port: 'morro-bay', date: 'today', species: 'rockfish'},
+    {db, feeds: feedsFrom({...DAILY(), generated_at: '2026-09-28T18:00:00Z', report_ports: [], reports: []})})).planning.recent_activity.landing;
+  assert.deepEqual([uncovered.available, uncovered.trips, uncovered.window], [false, 0, null]);
   assert.deepEqual([p.confidence, p.confidence_phrase], ['Low', 'recent reported activity: Low']);
   assert.equal(p.closer, 'Check the latest NWS forecast before you go.');
   assert.match(p.note, /advisory_line first/);

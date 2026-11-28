@@ -34,6 +34,7 @@ export interface AdvisorSettings {
   autoPublishAfter: number;         // ADVISOR_AUTO_PUBLISH_AFTER: clean reports before auto-publish is offered
   socialEnabled: boolean;           // ADVISOR_SOCIAL_ENABLED: publishing to Meta
   inboxEnabled: boolean;            // ADVISOR_INBOX_ENABLED: IG DM and comment handling
+  bestBets: boolean;                // ADVISOR_BEST_BETS: offers get_best_bets and the BEST BETS prompt rule
 }
 
 /** The one message shape on ADVISOR_QUEUE: the stored inbound message to process. */

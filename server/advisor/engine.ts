@@ -525,9 +525,9 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
   }
 
   // TA-S6: a public comment reply reads data only.
-  const tools = comment ? toolsForRole(contact).filter(tool => COMMENT_TOOLS.has(tool.name)) : toolsForRole(contact);
+  const tools = comment ? toolsForRole(contact, settings).filter(tool => COMMENT_TOOLS.has(tool.name)) : toolsForRole(contact, settings);
   const ctx: ToolContext = {env, contact, message, deps, db, language, settings, now};
-  const system = [{type: 'text', text: systemPrompt(language), cache_control: {type: 'ephemeral'}},
+  const system = [{type: 'text', text: systemPrompt(language, {bestBets: tools.some(tool => tool.name === 'get_best_bets')}), cache_control: {type: 'ephemeral'}},
     {type: 'text', text: await briefs(db, contact, settings, language, isNew, now, message.created_at)}];
   const usage: LlmUsage = {model: settings.model, turns: 0, input_tokens: 0, output_tokens: 0, web_search_requests: 0};
   let turn: ModelTurn | null = null, outcome = 'error';

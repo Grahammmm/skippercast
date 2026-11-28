@@ -218,3 +218,18 @@ test('SC-FEED-DEGRADE-1: a feed whose charter section is not available shows "No
   assert.match(render(h(EvidenceSection, {evidence: {notAvailable: true, lastSourceDay: null}})), /Not available\./);
   assert.equal(evidenceFrom(evidenceFeed({charter_reports: undefined}), 'morro-bay', 'reef', NOW.getTime()).trips, 2, 'a fresh feed is unchanged');
 });
+
+test('a region with no landing-report coverage (report_ports []) shows "Not available", never zero trips; covered-but-empty keeps its row', async () => {
+  const {evidenceFrom, EvidenceSection, render, h} = await load();
+  const uncovered = evidenceFeed({region_id: 'monterey-point-sur', report_ports: [], reports: [], sources: {}});
+  const e = evidenceFrom(uncovered, 'monterey-point-sur', 'reef', NOW.getTime());
+  assert.deepEqual(e, {notAvailable: true, lastSourceDay: null});
+  const html = render(h(EvidenceSection, {evidence: e}));
+  assert.match(html, /Not available\./);
+  assert.doesNotMatch(html, /0 trips|Insufficient|report pages verified|not updated since/);
+  const covered = evidenceFrom(evidenceFeed({report_ports: ['Morro Bay', 'Avila Beach'], reports: []}), 'morro-bay', 'reef', NOW.getTime());
+  assert.equal(covered.notAvailable, undefined, 'a covered port with no trips is evidence, not unavailable');
+  assert.equal(covered.trips, 0);
+  assert.equal(evidenceFrom(evidenceFeed({report_ports: ['Morro Bay']}), 'morro-bay', 'reef', NOW.getTime()).trips, 2, 'covered feed with trips is unchanged');
+  assert.equal(evidenceFrom(evidenceFeed(), 'morro-bay', 'reef', NOW.getTime()).trips, 2, 'a legacy feed without report_ports is unchanged');
+});

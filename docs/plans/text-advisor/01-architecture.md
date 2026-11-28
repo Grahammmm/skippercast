@@ -203,6 +203,7 @@ Runtime vars (all optional, read only through `advisorSettings()`):
 | `ADVISOR_AUTO_PUBLISH_AFTER` | `5` | SC-5: clean reports before auto-publish is offered. |
 | `ADVISOR_SOCIAL_ENABLED` | `false` | Publishing to Meta; off means drafts queue but nothing posts. |
 | `ADVISOR_INBOX_ENABLED` | `false` | IG DM and comment handling (needs Meta review). |
+| `ADVISOR_BEST_BETS` | `false` | Fishing friend: offers `get_best_bets` (Morro Bay reef grounds, conditions + mapped structure) and the BEST BETS prompt rule. Not passed by the deploy workflow yet. |
 
 Secrets (uploaded by `scripts/cloudflare_deploy.sh`, each optional; a missing
 secret disables the feature that needs it with a logged warning):

@@ -1214,6 +1214,7 @@
 "rail.admin":{"en":"{label} · admin"},
 "rail.basisSummary":{"en":"{label} basis"},
 "rail.chartOnly":{"en":"Chart only"},
+"rail.notPublished":{"en":"Not published for this area"},
 "rail.chartFailed":{"en":"Map could not start on this device or browser."},
 "rail.notDrawn":{"en":"Not drawn yet."},
 "rail.unavailable":{"en":"{label} unavailable."},

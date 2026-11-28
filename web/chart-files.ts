@@ -41,6 +41,15 @@ export function chartFilesOf(raw: unknown): readonly string[] | null {
   return Object.freeze([...names]);
 }
 
+/** Terrain-only regions (Monterey, Santa Cruz): false only when `region`'s published list is known and names
+ * neither contour file, so the menu shows Depth lines as not published. Reads the signal: a view re-renders when
+ * the list arrives. Unknown, pending or another region's list fails open (true). */
+export function contoursPublished(region: string | null): boolean {
+  const published = publishedChartFiles.value;
+  return !(region && published?.region === region && !published.pending && Array.isArray(published.files)
+    && !published.files.includes('depth-contours.geojson') && !published.files.includes('depth-contours-overview.geojson'));
+}
+
 /** False only when `region`'s published list is known and lacks `name`; true otherwise (fail open). */
 export function chartFileListed(region: string, name: string): boolean {
   const published = publishedChartFiles.peek();

@@ -39,6 +39,8 @@ import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
 import {chartOnly, depthLinesOn, drawsIn, layerCopy, menuList, railNoteCopies, railNotes, spotsOn, withDepthLines, withSpots} from '../map/layers.ts';
+import {seafloorUnpublished} from '../map/seafloor.ts';
+import {contoursPublished} from '../chart-files.ts';
 import {statusText} from '../map/status-copy.ts';
 import type {CoastHabitat} from '../../packages/coast/src/embed-types.ts';
 import {
@@ -299,7 +301,10 @@ export function LayerRail() {
   const entry = (id: string) => {
     const e = entries.find(x => x.id === id);
     if (!e) return null;
-    const here = drawsIn(e.id, shown), active = id === 'fleet' ? spotsOn(on) || railOn(e.id, on, source) : railOn(e.id, on, source), label = MENU_LABEL[id] ?? e.label;
+    const here = drawsIn(e.id, shown), label = MENU_LABEL[id] ?? e.label;
+    // Gap 3: on the Chart, a region with no seafloor publication shows Seafloor type off and not published, never pressed.
+    const unpublished = id === 'seafloor' && shown === 'chart' && seafloorUnpublished.value;
+    const active = !unpublished && (id === 'fleet' ? spotsOn(on) || railOn(e.id, on, source) : railOn(e.id, on, source));
     // The one place a list changes: markers and the field and flow rules live in layers.ts (menuList, withSpots).
     // Wind (the swell + wind entry) turning on also ends a chosen current source: one flow at a time.
     const toggle = (_: string, next: boolean) => setParams({layers: layersParam(id === 'fleet' ? withSpots(layers.value, next) : menuList(layers.value, id, next)), ...id === 'swell' && next ? {current: 'off'} : {}});
@@ -309,21 +314,23 @@ export function LayerRail() {
         {active && here && !failed ? <CurrentSource /> : null}
       </RailItem>
     ) : (
-      <RailItem key={id} id={id} label={label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(label)} disabled={!here || failed}
-        note={!here ? chartOnly(lang) : failed ? failedReason : id === 'seafloor' && shown !== 'chart' ? undefined : railNote(id)} onToggle={toggle}>
+      <RailItem key={id} id={id} label={label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(label)} disabled={!here || failed || unpublished}
+        note={!here ? chartOnly(lang) : failed ? failedReason : unpublished ? t('rail.notPublished', lang) : id === 'seafloor' && shown !== 'chart' ? undefined : railNote(id)} onToggle={toggle}>
         {id === 'fleet' && railOn(id, on, source) && here && !failed ? <FleetOptions /> : null}
         {id === 'seafloor' && shown !== 'chart' ? <TerrainOptions on={active} /> : null}
       </RailItem>
     );
   };
   const lines = depthLinesOn(on), drawsLines = shown === 'chart';  // the lines are a Chart layer (layers.ts: depth-contours)
+  // Gap 3: a terrain-only region publishes no contour file, so Depth lines is off and not published there (never pressed).
+  const noLines = !contoursPublished(region.value);
   return (
     <Rail class="app-rail" label={t('rail.aria', lang)} header={<><h2 class="ui-eyebrow app-rail-title">{t('rail.title', lang)}</h2><LookFor /><Presets /></>} footer={<><BaseChoice /><ThemeChoice inMenu /></>}>
       {[
         <RailItem key="depth" id="depth-shading" label={t('rail.depth', lang)} icon="layers" on basis={t('layer.relief.shading', lang)} basisLabel={basisLabel(t('rail.depth', lang))}
           disabled={failed} note={failed ? failedReason : t('rail.depth.note', lang)} onToggle={() => {}} />,
-        <RailItem key="lines" id="depth-lines" label={t('rail.lines', lang)} icon="chart" on={lines} basis={t('layer.depth-contours.v2.basis', lang)} basisLabel={basisLabel(t('rail.lines', lang))}
-          disabled={!drawsLines || failed} note={!drawsLines ? chartOnly(lang) : failed ? failedReason : undefined}
+        <RailItem key="lines" id="depth-lines" label={t('rail.lines', lang)} icon="chart" on={lines && !noLines} basis={t('layer.depth-contours.v2.basis', lang)} basisLabel={basisLabel(t('rail.lines', lang))}
+          disabled={!drawsLines || failed || noLines} note={!drawsLines ? chartOnly(lang) : failed ? failedReason : noLines ? t('rail.notPublished', lang) : undefined}
           onToggle={(_, next) => setParams({layers: layersParam(withDepthLines(layers.value, next))})} />,
         entry('seafloor'),
         <View3dItem key="view3d" basisLabel={basisLabel(t('rail.view3d', lang))} />,

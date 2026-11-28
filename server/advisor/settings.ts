@@ -10,7 +10,7 @@ export type AdvisorVars = Pick<Env, 'TEXT_ADVISOR_ENABLED' | 'ADVISOR_REPLIES_EN
   'BLUEBUBBLES_PRIVATE_API' | 'ADVISOR_ADMIN_CONTACT_ID' | 'ADVISOR_INBOX_PUBLIC_REPLIES' | 'ADVISOR_MODEL' | 'ADVISOR_VISION_MODEL' |
   'ADVISOR_VISION_PROVIDERS' | 'ADVISOR_DAILY_MESSAGES_PER_CONTACT' | 'ADVISOR_DAILY_LLM_PER_CONTACT' | 'ADVISOR_GLOBAL_DAILY_LLM' |
   'ADVISOR_GLOBAL_DAILY_VISION' | 'ADVISOR_DAILY_LLM_PER_IP' | 'ADVISOR_GLOBAL_DAILY_LLM_WEB' | 'ADVISOR_GLOBAL_DAILY_COLD' | 'ADVISOR_PUBLIC_BASE' | 'ADVISOR_REGION_DEFAULT' | 'ADVISOR_AUTO_PUBLISH_AFTER' |
-  'ADVISOR_SOCIAL_ENABLED' | 'ADVISOR_INBOX_ENABLED'>;
+  'ADVISOR_SOCIAL_ENABLED' | 'ADVISOR_INBOX_ENABLED' | 'ADVISOR_BEST_BETS'>;
 
 // Defaults, one place (01 runtime-vars table).
 export const ADVISOR_DEFAULTS: Readonly<AdvisorSettings> = Object.freeze({
@@ -19,7 +19,7 @@ export const ADVISOR_DEFAULTS: Readonly<AdvisorSettings> = Object.freeze({
   visionProviders: Object.freeze(['hermes', 'claude']) as VisionProviderName[],
   dailyMessagesPerContact: 40, dailyLlmPerContact: 30, globalDailyLlm: 2000, globalDailyVision: 400, dailyLlmPerIp: 30, globalDailyLlmWeb: 400, globalDailyCold: 50,
   publicBase: 'https://skippercast.com', regionDefault: 'morro-bay', autoPublishAfter: 5,
-  socialEnabled: false, inboxEnabled: false,
+  socialEnabled: false, inboxEnabled: false, bestBets: false,
 });
 
 const CHANNELS: readonly AdvisorChannel[] = ['bluebubbles', 'twilio'];
@@ -82,6 +82,7 @@ export function advisorSettings(env: AdvisorVars = {}): AdvisorSettings {
     autoPublishAfter: count(env.ADVISOR_AUTO_PUBLISH_AFTER, d.autoPublishAfter),
     socialEnabled: flag(env.ADVISOR_SOCIAL_ENABLED, d.socialEnabled),
     inboxEnabled: flag(env.ADVISOR_INBOX_ENABLED, d.inboxEnabled),
+    bestBets: flag(env.ADVISOR_BEST_BETS, d.bestBets),
   };
 }
 

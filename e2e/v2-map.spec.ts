@@ -1151,6 +1151,8 @@ const pressedEntries = (page: Page) => page.locator('.ui-rail-toggle[aria-presse
 
 test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile switch applies that profile\'s layers', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
+  // Gap 3: a region with no seafloor publication shows Seafloor type off; this test is about the list, so the gate never answers.
+  await page.route(/\/feeds\/tiles\/seafloor\//, () => { /* never answered */ });
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor,currents'});
   await showLayers(page);
   // MB-13 (D5): Depth shading is always on, and Depth lines and Spots draw unless the list carries their off markers, so a link
@@ -1180,6 +1182,8 @@ test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile 
 });
 
 test('in 3D the Chart\'s entries and the base read "Chart only" and never toggle hidden layers', async ({page, pageErrors, v2}) => {
+  // Gap 3: a region with no seafloor publication shows Seafloor type off on the Chart; this test is about the 3D entries, so the gate never answers.
+  await page.route(/\/feeds\/tiles\/seafloor\//, () => { /* never answered */ });
   // Keep 3D available throughout the rail and axe checks, not just until the fetch deadline.
   await terrain3d(page, v2);
   await expect(page.locator('.app-terrain')).toBeVisible();
