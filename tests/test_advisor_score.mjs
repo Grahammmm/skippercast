@@ -342,7 +342,7 @@ test('get_best_bets: an advisory day is listed closed; a stale forecast or an in
 
 // ---- slice 3: the per-factor explainer (helps / neutral / hurts) behind every call ----
 
-const {factorsFor, GRADE_A, GRADE_B, UNTESTED} = await import('../server/advisor/score/explain.ts');
+const {factorsFor, GRADE_A, GRADE_B, UNTESTED, NOT_COMPARED, ALERTS_AT_LAST_CHECK} = await import('../server/advisor/score/explain.ts');
 const NAMES = ['sea comfort', 'forecast agreement', 'marine alerts', 'reef structure', 'moon and pressure'];
 const effects = fs => Object.fromEntries(fs.map(f => [f.factor, f.effect]));
 
@@ -366,12 +366,47 @@ test('explainer: a bumpy block is neutral, disagreeing models hurt, and the reef
   const fs = factorsFor(split);
   assert.deepEqual([fs[1].effect, fs[1].reading], ['hurts', 'forecast models disagree']);
   assert.equal(fs[0].reading.includes('disagree'), false, 'disagreement is its own factor, not a sea reading');
-  const one = factorsFor({...split, conditions: {...split.conditions, models_agree: null}});
-  assert.deepEqual([one[1].effect, one[1].reading], ['neutral', 'one forecast model only']);
   const graded = v => factorsFor({...split, habitat: {...split.habitat, value: v}})[3];
   assert.deepEqual([GRADE_A, GRADE_B].map(graded).map(f => f.effect), ['helps', 'neutral']);
   assert.deepEqual([graded(0.6).reading.split(',')[0], graded(0.6).effect], ['best reef marks average grade B', 'neutral']);
   assert.deepEqual([graded(0.54).reading.split(',')[0], graded(0.54).effect], ['best reef marks average grade C', 'hurts']);
+});
+
+test('explainer: forecast agreement is worded for the hours both models could be compared (real partial feeds)', () => {
+  const morning = by => row(build({by}), 'Morro Bay coast', DATE, 'morning');
+  const agreement = by => { const r = morning(by); assert.notEqual(r.rank, null, 'the block is still ranked'); return [factorsFor(r)[1], r.conditions.models_compared]; };
+  const six = t => t === at(DATE, 6);
+  // Control: all three hours have both models' wind and seas, and they agree.
+  assert.deepEqual(agreement(() => ({})), [{factor: 'forecast agreement', reading: 'forecast models agree', effect: 'helps', source: 'marine forecast'}, {paired: 3, second: 3, hours: 3}]);
+  // ECMWF wind present (and used) but no WAM seas in any hour: nothing could be compared; it is not "one model".
+  const [noWam, nWam] = agreement(() => ({wam: null, ecmwf_wind: 16, ecmwf_gust: 20}));
+  assert.deepEqual([noWam.reading, noWam.effect, nWam], [NOT_COMPARED, 'neutral', {paired: 0, second: 3, hours: 3}]);
+  // WAM seas only at 06:00: agreement in one comparable hour of three is reported as such and does not count as help.
+  const [oneHour, nOne] = agreement((_, t) => ({wam: six(t) ? 2 : null}));
+  assert.deepEqual([oneHour.reading, oneHour.effect, nOne], ['forecast models agree in the 1 of 3 hours both could be compared', 'neutral', {paired: 1, second: 3, hours: 3}]);
+  // The one comparable hour disagrees: it hurts, with the same scope.
+  const [split] = agreement((_, t) => ({wam: six(t) ? 2 : null, ecmwf_wind: six(t) ? 11 : 6}));
+  assert.deepEqual([split.reading, split.effect], ['forecast models disagree in the 1 of 3 hours both could be compared', 'hurts']);
+  // No second-model reading at all: only then "one forecast model only".
+  const [solo, nSolo] = agreement(() => ({wam: null, ecmwf_wind: null, ecmwf_gust: null}));
+  assert.deepEqual([solo.reading, solo.effect, nSolo], ['one forecast model only', 'neutral', {paired: 0, second: 0, hours: 3}]);
+});
+
+test('explainer: marine alerts describe the last NWS check, not a live all-clear for a later trip', async () => {
+  // An admissible older check (20 h, inside ALERT_CHECK_MAX_HOURS) and a ranked block on the next day.
+  const old = {sources: Object.fromEntries(Object.values(REGION.marine_zones).map(z =>
+    [`alerts-${z}`, {status: 'ok', checked_at: new Date(NOW - 20 * 3600000).toISOString(), data: {alerts: []}}]))};
+  const file = build({}, {daily: old});
+  assert.equal(file.advisories_checked, true);
+  const later = row(file, 'Pecho Rock', NEXT, 'afternoon');
+  assert.notEqual(later.rank, null);
+  const alerts = factorsFor(later)[2];
+  assert.deepEqual([alerts.factor, alerts.reading, alerts.effect], ['marine alerts', ALERTS_AT_LAST_CHECK, 'helps']);
+  assert.match(alerts.reading, /at the last NWS check/);
+  assert.match(alerts.reading, /check current NWS marine alerts before leaving/);
+  assert.equal(/^no marine advisory for these hours$/.test(alerts.reading), false, 'no unconditional all-clear');
+  assert.match(BEST_BETS_RULE, /last NWS check, not a live one: never call the trip clear of advisories; tell them to check current NWS marine alerts before leaving/);
+  assert.match((await bets()).note, /as of the last NWS check: never say the trip is clear of advisories/);
 });
 
 test('explainer: a row a gate closed or that has no rank explains nothing (no call, no reasons for one)', () => {

@@ -75,7 +75,7 @@ export const getBestBets: AdvisorTool = {
       advisories_checked: file.advisories_checked, forecast_issued: file.forecast_issued, forecast_age_hours: file.forecast_age_hours,
       limitations: file.limitations,
       note: [!file.advisories_checked ? 'NWS advisories could not be checked or the check is old: make no call, say so and point to the NWS forecast.'
-        : best.length ? 'Make one clear call from the first best bet (area, day, hours): say what helps and anything that hurts from its factors, in plain words, and its confidence_words word for word. Never give a neutral "not used" factor as a reason. It is a call on weather and seafloor structure, not a catch prediction.'
+        : best.length ? 'Make one clear call from the first best bet (area, day, hours): say what helps and anything that hurts from its factors, in plain words, and its confidence_words word for word. Never give a neutral "not used" factor as a reason. Marine alerts are as of the last NWS check: never say the trip is clear of advisories; tell them to check current NWS marine alerts before leaving. It is a call on weather and seafloor structure, not a catch prediction.'
         : 'No open block on these days: say so, with closed_days\' reasons.',
       closed.length ? 'Name the closed days and why.' : null,
       'Never a percentage, odds or a score number.'].filter(Boolean).join(' '),
