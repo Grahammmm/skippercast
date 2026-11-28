@@ -115,9 +115,9 @@ class Box:
         (directory / 'cmdline').write_bytes(b'\0'.join(a.encode() for a in argv) + b'\0')
 
     def run(self, *args, region='morro-bay', through='envelope'):
-        stage = STAGE_ORDER.index(through)
-        required = [*(ZONE_ARGS if stage >= STAGE_ORDER.index('zone') else []),
-                    *(['--basemap', str(self.basemap)] if stage >= STAGE_ORDER.index('shots') else [])]
+        stage = RR.STAGES.index(through)
+        required = [*(ZONE_ARGS if stage >= RR.STAGES.index('zone') else []),
+                    *(['--basemap', str(self.basemap)] if stage >= RR.STAGES.index('shots') else [])]
         return RR.main([region, '--out', str(self.out), '--through', through, *required, *args], self.cfg)
 
     def out_tree(self):
@@ -1119,7 +1119,7 @@ def test_c2_dry_run_prints_chain_and_guard_state_and_touches_nothing(box, capsys
 
 
 PLAN_STAGES = ('select mosaic.public tiles.public zone.public digests inventory contours '
-               'package shots qa envelope nearshore_vectors.public').split()
+               'package shots qa envelope nearshore_vectors.public survey_detail.public survey_gap.public').split()
 
 
 @pytest.mark.parametrize('saved', [
