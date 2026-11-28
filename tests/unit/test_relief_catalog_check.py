@@ -171,7 +171,6 @@ def test_c1_v1_contours_only(tree):
 
 
 STYLE = {'baked': 'f' * 64, 'contours': None, 'habitat': None, 'built_with': 'fixture-v1'}
-TERRAIN_WITH_FILE = 'terrain-only pointer (style.contours null) but catalog/depth-contours/test-bay.geojson exists'
 
 
 def test_c1_terrain_only_pointer_needs_no_contours(tree):
@@ -180,18 +179,24 @@ def test_c1_terrain_only_pointer_needs_no_contours(tree):
     assert check_catalog(tree) == expected()
 
 
-@pytest.mark.parametrize('content', [json.dumps(contours('test-bay')), '{'], ids=['matching', 'corrupt'])
-def test_c1_terrain_only_pointer_refuses_a_contour_file(tree, content):
-    """C1: Contours beside a terrain-only pointer were not reviewed with that release."""
+@pytest.mark.parametrize('content, reason', [
+    (json.dumps(contours('test-bay')), None),
+    (json.dumps(contours('other-bay')), WRONG_CONTOURS),
+    ('{', 'cannot read contours object for test-bay'),
+], ids=['matching', 'wrong provenance', 'corrupt'])
+def test_c1_terrain_only_pointer_still_checks_a_present_contour_file(tree, content, reason):
+    """C1: Only an absent file is excused; contours that are there must still match the region."""
     write_json(tree / POINTER, {**pointer(), 'style': STYLE})
     (tree / CONTOURS).parent.mkdir(parents=True)
     (tree / CONTOURS).write_text(content, encoding='utf-8')
-    assert check_catalog(tree) == expected(contours=TERRAIN_WITH_FILE)
+    assert check_catalog(tree) == (expected(contours=reason) if reason else expected())
 
 
-def test_c1_contour_style_still_needs_its_file(tree):
-    """C1: A pointer that pins a contour style keeps the strict contour check."""
-    write_json(tree / POINTER, {**pointer(), 'style': {**STYLE, 'contours': '9' * 64}})
+@pytest.mark.parametrize('style', [{**STYLE, 'contours': '9' * 64}, None], ids=['contour style pinned', 'no style'])
+def test_c1_other_pointers_still_need_their_contour_file(tree, style):
+    """C1: A pointer that pins a contour style, or has no style, keeps the strict contour check."""
+    doc = pointer() if style is None else {**pointer(), 'style': style}
+    write_json(tree / POINTER, doc)
     assert check_catalog(tree) == expected(contours='missing catalog/depth-contours/test-bay.geojson')
 
 

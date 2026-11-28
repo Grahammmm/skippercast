@@ -40,16 +40,11 @@ def _terrain_only(doc: dict) -> bool:
 
 
 def _contours_error(path: Path, region: object, terrain_only: bool) -> str:
-    if terrain_only:
-        # Terrain-only regions ship relief shading alone; a contour file beside such a
-        # pointer would be served without the release that reviewed it.
-        exists = path.exists() or path.is_symlink()
-        return f'terrain-only pointer (style.contours null) but catalog/depth-contours/{path.name} exists' \
-            if exists else ''
     try:
         provenance = _read_object(path).get('provenance')
     except FileNotFoundError:
-        return f'missing catalog/depth-contours/{path.name}'
+        # Terrain-only regions ship relief shading alone, so they have no contour file.
+        return '' if terrain_only and not path.is_symlink() else f'missing catalog/depth-contours/{path.name}'
     except (OSError, ValueError):
         return f'cannot read contours object for {path.stem}'
     if not isinstance(region, str) or not isinstance(provenance, dict) or provenance.get('region_id') != region:
@@ -60,8 +55,8 @@ def _contours_error(path: Path, region: object, terrain_only: bool) -> str:
 def check_catalog(root: str | Path) -> list[dict]:
     """Return five rows per pointer, ordered by filename; contours alone are allowed.
 
-    A pointer with style.contours null is terrain-only: its contours row passes only
-    when no contour file exists for it. Every other pointer needs matching contours.
+    A pointer with style.contours null is terrain-only: it may have no contour file, but
+    a contour file that is present is checked as for any other pointer.
     """
     root = Path(root)
     pointers = sorted(path for path in (root / _RELIEF).glob('*.json') if path.name != _SCHEMA)
