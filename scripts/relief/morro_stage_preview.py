@@ -28,18 +28,19 @@ if __name__ == '__main__':
     sys.dont_write_bytecode = True
 
 REGION = 'morro-bay'
-# The four contour-bearing Central Coast regions share ONE separate preview Worker and bucket of their
-# own (.github/workflows/central-stage-preview.yml), one region per run; Morro keeps its own. This
-# preview pins and serves a detail + overview contour pair, so the two terrain-only Central regions
-# (monterey-point-sur, santa-cruz-monterey-bay: no contours to pin) are not stage regions here and are
-# refused everywhere a region is checked, until a terrain-only stage path is built for them.
+# The six Central Coast regions share ONE separate preview Worker and bucket of their own
+# (.github/workflows/central-stage-preview.yml), one region per run; Morro keeps its own. The four
+# contour-bearing regions pin and serve a detail + overview contour pair; the two terrain-only regions
+# (no contours to pin) carry only their relief pointer and /sources credits.
 CENTRAL_REGIONS = ('big-sur-coast', 'cambria-san-simeon', 'south-big-sur-san-simeon', 'point-arguello-conception')
-REGIONS = (REGION, *CENTRAL_REGIONS)
+TERRAIN_ONLY_REGIONS = ('monterey-point-sur', 'santa-cruz-monterey-bay')
+STAGE_REGIONS = (*CENTRAL_REGIONS, *TERRAIN_ONLY_REGIONS)
+REGIONS = (REGION, *STAGE_REGIONS)
 # Each region may be previewed only on its own group's Worker and bucket, so a Central run can never
 # overwrite the Morro preview (or the other way round).
 STAGE_TARGETS = {REGION: ('skippercast-morro-stage', 'skippercast-feeds-stage'),
                  **{region: ('skippercast-central-stage', 'skippercast-feeds-central-stage')
-                    for region in CENTRAL_REGIONS}}
+                    for region in STAGE_REGIONS}}
 
 
 def pointer_path(region: str) -> str:

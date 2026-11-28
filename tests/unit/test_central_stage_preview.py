@@ -24,6 +24,8 @@ from skippercast.relief import package
 from tests._support import ROOT
 
 CENTRAL = preview.CENTRAL_REGIONS
+TERRAIN = preview.TERRAIN_ONLY_REGIONS
+STAGE = preview.STAGE_REGIONS
 WORKFLOW_PATH = ROOT / '.github/workflows/central-stage-preview.yml'
 WORKFLOW_TEXT = WORKFLOW_PATH.read_text()
 WORKFLOW = yaml.safe_load(WORKFLOW_TEXT)
@@ -89,40 +91,27 @@ def step(steps, name_prefix):
 
 # --- region targets ------------------------------------------------------------------------------
 
-def test_central_stage_regions_are_exactly_the_contour_bearing_central_regions():
-    # The preview pins and serves a contour pair, so the two terrain-only regions are not stage regions.
+def test_stage_regions_are_the_six_central_regions_of_which_two_are_terrain_only():
     six = set(CENTRAL_RELEASES)
-    assert len(six) == 6 and set(identities.TERRAIN_ONLY) < six
+    assert len(six) == 6 and set(STAGE) == six and len(STAGE) == 6
+    assert set(TERRAIN) == identities.TERRAIN_ONLY
     assert set(CENTRAL) == six - identities.TERRAIN_ONLY and len(CENTRAL) == 4
 
 
-@pytest.mark.parametrize('region', sorted(identities.TERRAIN_ONLY))
-def test_terrain_only_regions_are_refused_before_any_checkout_and_by_every_command(region, repo, base, tmp_path):
-    inputs = WORKFLOW[True]['workflow_dispatch']['inputs']['region']['options']
-    assert region not in inputs
-    for steps in (FETCH, STEPS):
-        assert region not in steps[0]['run']
-    with pytest.raises(preview.PreviewError, match='may carry'):
-        preview.check_region(region)
-    with pytest.raises(preview.PreviewError):
-        controller.data_paths(region)
-    with pytest.raises(ValueError):
-        overlay.inputs(region)
-    data = pointer_bytes(region)
-    sha = commit(repo, {preview.pointer_path(region): data}, f'{region} data')
-    with pytest.raises(SystemExit):
-        controller.main(['scope', '--tree', str(repo), '--base', base, '--sha', sha, '--region', region])
-    with pytest.raises(SystemExit):
-        preview.main(['plan', '--tree', str(repo), '--sha', sha, '--pointer-sha256', hashlib.sha256(data).hexdigest(),
-                      '--wrangler', str(ROOT / 'wrangler.jsonc'), '--region', region,
-                      '--worker', WORKER, '--bucket', BUCKET, '--out', str(tmp_path / 'plan')])
-    assert not (tmp_path / 'plan').exists()
+@pytest.mark.parametrize('region', TERRAIN)
+def test_terrain_only_regions_are_stage_regions_on_the_central_target(region):
+    assert region in WORKFLOW[True]['workflow_dispatch']['inputs']['region']['options']
+    assert preview.check_region(region) == region
+    assert preview.STAGE_TARGETS[region] == (WORKER, BUCKET)
+    # Only the pointer and the generated register: no contour import, contour files or region.json.
+    assert controller.data_paths(region) == {f'catalog/relief/{region}.json', 'dist/sources.html'}
+    assert overlay.inputs(region) == {'pointer': f'catalog/relief/{region}.json', 'catalogue': 'catalog/sources.json'}
 
 
 def test_every_central_region_has_the_one_central_target_and_morro_keeps_its_own():
-    assert set(preview.REGIONS) == {'morro-bay', *CENTRAL}
+    assert set(preview.REGIONS) == {'morro-bay', *STAGE}
     assert preview.STAGE_TARGETS['morro-bay'] == ('skippercast-morro-stage', 'skippercast-feeds-stage')
-    for region in CENTRAL:
+    for region in STAGE:
         assert preview.STAGE_TARGETS[region] == (WORKER, BUCKET)
     for worker, bucket in preview.STAGE_TARGETS.values():
         assert worker.endswith('-stage') and bucket.endswith('-stage')
@@ -139,7 +128,7 @@ def test_regions_outside_the_list_are_refused_everywhere(region, repo, base):
         controller.preview_tag({'region': region, 'envelope_sha256': 'e' * 64}, region)
 
 
-@pytest.mark.parametrize('region', CENTRAL)
+@pytest.mark.parametrize('region', STAGE)
 def test_plan_binds_the_region_pointer_to_the_central_target(repo, base, tmp_path, region):
     data = pointer_bytes(region)
     sha = commit(repo, {preview.pointer_path(region): data}, f'{region} data')
@@ -374,6 +363,52 @@ def test_scope_holds_any_other_file_for_a_central_region(repo, base, other):
         controller.scope(repo, base, sha, 'big-sur-coast')
 
 
+MONTEREY = 'monterey-point-sur'
+MONTEREY_JSON = f'dist/regions/{MONTEREY}/region.json'
+NEW_REGISTER = f'<html>reviewed\n{register.BEGIN}\nnew register\n{register.END}\n</html>\n'
+
+
+def terrain_base(repo, chart_files=()):
+    page = f'<html>reviewed\n{register.BEGIN}\nold register\n{register.END}\n</html>\n'
+    doc = json.dumps({'id': MONTEREY, 'chart_files': list(chart_files)}) + '\n'
+    return commit(repo, {'server/index.ts': 'export {}\n', 'dist/sources.html': page, MONTEREY_JSON: doc}, 'main')
+
+
+def test_scope_admits_a_terrain_only_pointer_and_its_register(repo):
+    base = terrain_base(repo)
+    files = {preview.pointer_path(MONTEREY): pointer_bytes(MONTEREY), 'dist/sources.html': NEW_REGISTER}
+    sha = commit(repo, files, 'monterey data')
+    assert controller.scope(repo, base, sha, MONTEREY) == sorted(files)
+    assert controller.main(['scope', '--tree', str(repo), '--base', base, '--sha', sha, '--region', MONTEREY]) == 0
+    with pytest.raises(controller.HoldError, match='outside the santa-cruz-monterey-bay data'):
+        controller.scope(repo, base, sha, 'santa-cruz-monterey-bay')
+
+
+@pytest.mark.parametrize('other', [preview.contours_path(MONTEREY), f'dist/regions/{MONTEREY}/depth-contours.geojson',
+                                   f'dist/regions/{MONTEREY}/depth-contours-overview.geojson', MONTEREY_JSON,
+                                   'catalog/sources.json', 'server/index.ts'])
+def test_scope_holds_contours_region_json_or_code_for_a_terrain_only_region(repo, other):
+    base = terrain_base(repo)
+    sha = commit(repo, {preview.pointer_path(MONTEREY): pointer_bytes(MONTEREY), other: '{"changed": 1}\n'}, 'more')
+    with pytest.raises(controller.HoldError, match=f'outside the {MONTEREY} data'):
+        controller.scope(repo, base, sha, MONTEREY)
+
+
+def test_scope_holds_a_terrain_only_chart_index_that_asks_for_contours(repo):
+    # Nothing on this stage pins or checks contour files, so the Chart must not request any.
+    base = terrain_base(repo, ['shoreline.geojson', 'depth-contours.geojson'])
+    sha = commit(repo, {preview.pointer_path(MONTEREY): pointer_bytes(MONTEREY)}, 'monterey data')
+    with pytest.raises(controller.HoldError, match='lists depth-contours.geojson for a terrain-only region'):
+        controller.scope(repo, base, sha, MONTEREY)
+
+
+def test_scope_holds_a_terrain_only_region_without_its_region_json(repo):
+    base = commit(repo, {'dist/sources.html': NEW_REGISTER}, 'main without region.json')
+    sha = commit(repo, {preview.pointer_path(MONTEREY): pointer_bytes(MONTEREY)}, 'monterey data')
+    with pytest.raises(controller.HoldError, match='region.json is missing'):
+        controller.scope(repo, base, sha, MONTEREY)
+
+
 # --- preview tag and pointer files ---------------------------------------------------------------
 
 def test_preview_tag_names_the_region_and_never_the_production_tag():
@@ -458,6 +493,68 @@ def test_overlay_holds_a_mismatched_contour_pin_for_a_central_candidate(tmp_path
     assert not (tmp_path / 'out').exists()
 
 
+def terrain_overlay(tmp_path, monkeypatch, *, style=None, register_contours=None):
+    """A terrain-only candidate tree with a real register render (the collector is stubbed, as in
+    test_central_sources_overlay.py); returns (args, out)."""
+    tree = tmp_path / 'tree'
+    (tree / 'dist').mkdir(parents=True)
+    (tree / 'dist/sources.html').write_text(f'<html><p>Before</p>\n{register.BEGIN}\nold\n{register.END}\n</html>\n')
+    sources = {'terrain': {'id': 'terrain', 'name': 'Terrain grid', 'provider': 'Agency', 'needs': [],
+                           'rights': {'attribution': 'Credit & terrain', 'public_display': 'allowed'}}}
+    pointer = {'region': MONTEREY, 'private': False, 'status': 'reviewed', 'release_sha256': 'b' * 64,
+               'native_support_by_zoom': {}, 'style': {'contours': style},
+               'sources': [{'id': 'terrain', 'attribution': 'Credit & terrain', 'survey_dates': ['unstated']}]}
+    blobs = {'pointer': json.dumps(pointer).encode(),
+             'catalogue': json.dumps({'schema_version': 1, 'sources': list(sources.values())}).encode()}
+    for name, path in overlay.inputs(MONTEREY).items():
+        (tree / path).parent.mkdir(parents=True, exist_ok=True)
+        (tree / path).write_bytes(blobs[name])
+    layers = {'Shoreline': {}} if register_contours is None else {register.DEPTH_CONTOURS: register_contours}
+    monkeypatch.setattr(overlay.register, 'collect', lambda _root: {
+        'sources': sources, 'needs': {}, 'runtime': [],
+        'regions': [{'id': MONTEREY, 'name': 'Monterey', 'status': 'active', 'layers': layers}]})
+    out = tmp_path / 'out'
+    args = ['--tree', str(tree), '--out', str(out), '--region', MONTEREY]
+    for name, raw in blobs.items():
+        args += [f'--{name}-sha256', hashlib.sha256(raw).hexdigest()]
+    return args, out
+
+
+def test_overlay_renders_terrain_only_shading_credits_without_contour_pins(tmp_path, monkeypatch, capsys):
+    args, out = terrain_overlay(tmp_path, monkeypatch)
+    assert overlay.main(args) == 0, capsys.readouterr().err
+    receipt = json.loads(capsys.readouterr().out)
+    assert (receipt['region'], receipt['shading_sources'], receipt['contour_sources']) == (MONTEREY, ['terrain'], [])
+    assert set(receipt) >= {'pointer_sha256', 'catalogue_sha256'} and 'detail_sha256' not in receipt
+    page = (out / 'sources.html').read_bytes()
+    assert receipt['html_sha256'] == hashlib.sha256(page).hexdigest()
+    assert b'Credit &amp; terrain' in page and b'Depth contours' not in page
+
+
+@pytest.mark.parametrize('name', ['detail', 'overview'])
+def test_overlay_refuses_a_contour_pin_for_a_terrain_only_region(tmp_path, monkeypatch, capsys, name):
+    args, out = terrain_overlay(tmp_path, monkeypatch)
+    with pytest.raises(SystemExit) as stop:
+        overlay.main([*args, f'--{name}-sha256', 'd' * 64])
+    assert stop.value.code == 2 and f'--{name}-sha256 does not apply to terrain-only' in capsys.readouterr().err
+    assert not out.exists()
+
+
+@pytest.mark.parametrize('kwargs, match', [({'style': 's' * 64}, 'terrain-only but its pointer pins a contour style'),
+                                           ({'register_contours': {'v1': ''}}, 'credits depth contours for terrain-only')])
+def test_overlay_holds_a_terrain_only_candidate_that_claims_contours(tmp_path, monkeypatch, capsys, kwargs, match):
+    args, out = terrain_overlay(tmp_path, monkeypatch, **kwargs)
+    assert overlay.main(args) == 2
+    assert match in capsys.readouterr().err
+    assert not out.exists()
+
+
+@pytest.mark.parametrize('region', TERRAIN)
+def test_shipped_terrain_only_chart_indexes_request_no_contours(region):
+    files = json.loads((ROOT / f'dist/regions/{region}/region.json').read_text())['chart_files']
+    assert not set(files) & set(controller.CONTOUR_FILES)
+
+
 # --- workflow ------------------------------------------------------------------------------------
 
 def test_workflow_is_manual_from_protected_main_with_a_fixed_region_list():
@@ -465,7 +562,9 @@ def test_workflow_is_manual_from_protected_main_with_a_fixed_region_list():
     assert list(triggers) == ['workflow_dispatch']
     inputs = triggers['workflow_dispatch']['inputs']
     assert set(inputs) == {'region', *MORRO[True]['workflow_dispatch']['inputs']}
-    assert inputs['region']['type'] == 'choice' and inputs['region']['options'] == list(CENTRAL)
+    assert inputs['region']['type'] == 'choice' and inputs['region']['options'] == list(STAGE)
+    # Contour pins are optional at dispatch; the preview guard requires them by region (tested below).
+    assert [name for name, spec in inputs.items() if not spec['required']] == ['detail_sha256', 'overview_sha256']
     assert WORKFLOW['permissions'] == {'contents': 'read'}
     assert list(WORKFLOW['jobs']) == ['fetch', 'preview']
     for job in WORKFLOW['jobs'].values():
@@ -482,11 +581,95 @@ def test_both_jobs_reject_an_unlisted_region_before_any_checkout():
     for steps in (FETCH, STEPS):
         first = steps[0]
         assert first['name'].startswith('Reject a non-main dispatch')
-        case = re.search(r'case "\$REGION" in\s+([^)]+)\)', first['run'])
-        assert case and case.group(1).split('|') == list(CENTRAL)
+        case = re.search(r'case "\$REGION" in\n(.*?)\n\s*esac', first['run'], re.S)
+        assert case
+        patterns = [line.strip().split(')')[0] for line in case.group(1).splitlines()]
+        assert patterns[-1] == '*' and '|'.join(patterns[:-1]).split('|') == list(STAGE)
         assert 'exit 1' in first['run']
         checkouts = [i for i, s in enumerate(steps) if str(s.get('uses', '')).startswith('actions/checkout@')]
         assert checkouts and min(checkouts) > 0
+
+
+def run_guard(tmp_path, region, **pins):
+    """Run the preview job's first step as the runner would (bash -e on a file), with stage-safe inputs."""
+    script = tmp_path / 'guard.sh'
+    script.write_text(STEPS[0]['run'])
+    github_env = tmp_path / 'github_env'
+    github_env.write_text('')
+    env = {'PATH': os.environ.get('PATH', ''), 'GITHUB_REF': 'refs/heads/main', 'GITHUB_REF_PROTECTED': 'true',
+           'HAS_TOKEN': 'true', 'HAS_ACCOUNT': 'true', 'HAS_R2': 'true', 'GITHUB_ENV': str(github_env),
+           'STAGE_WORKER': WORKER, 'STAGE_URL': f'https://{WORKER}.fixture-account.workers.dev',
+           'REGION': region, 'CANDIDATE': 'c' * 40, 'POINTER_SHA256': 'a' * 64, 'CATALOGUE_SHA256': 'b' * 64,
+           'DETAIL_SHA256': '', 'OVERVIEW_SHA256': '', **pins}
+    run = subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', str(script)], env=env,
+                         capture_output=True, text=True, timeout=30)
+    return run.returncode, run.stdout + run.stderr, github_env.read_text()
+
+
+@pytest.mark.parametrize('region', TERRAIN)
+def test_preview_guard_takes_a_terrain_only_region_without_contour_pins(tmp_path, region):
+    code, out, github_env = run_guard(tmp_path, region)
+    assert code == 0, out
+    assert github_env == 'CONTOURS=no\n'
+
+
+@pytest.mark.parametrize('pin', ['DETAIL_SHA256', 'OVERVIEW_SHA256'])
+@pytest.mark.parametrize('region', TERRAIN)
+def test_preview_guard_holds_a_contour_pin_for_a_terrain_only_region(tmp_path, region, pin):
+    code, out, github_env = run_guard(tmp_path, region, **{pin: 'd' * 64})
+    assert code == 1 and 'takes no detail or overview contour digest' in out and github_env == ''
+
+
+@pytest.mark.parametrize('pins', [{}, {'DETAIL_SHA256': 'd' * 64}, {'OVERVIEW_SHA256': 'e' * 64},
+                                  {'DETAIL_SHA256': 'd' * 64, 'OVERVIEW_SHA256': 'E' * 64}])
+@pytest.mark.parametrize('region', CENTRAL)
+def test_preview_guard_still_requires_both_contour_pins_for_a_contour_region(tmp_path, region, pins):
+    code, out, github_env = run_guard(tmp_path, region, **pins)
+    assert code == 1 and 'must be 64 lowercase hex digits' in out and github_env == ''
+    code, out, github_env = run_guard(tmp_path, region, DETAIL_SHA256='d' * 64, OVERVIEW_SHA256='e' * 64)
+    assert code == 0, out
+    assert github_env == 'CONTOURS=yes\n'
+
+
+def run_with_stub_python(tmp_path, name, contours):
+    """Run one preview step body with python3/curl stubs; return each python3 call's arguments."""
+    stubs = tmp_path / 'bin'
+    stubs.mkdir(exist_ok=True)
+    calls = tmp_path / 'calls'
+    (stubs / 'python3').write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" >> "{calls}"\necho {{}}\n')
+    (stubs / 'curl').write_text('#!/bin/sh\nexit 22\n')
+    for stub in stubs.iterdir():
+        stub.chmod(0o755)
+    plan = tmp_path / 'plan'
+    (plan / 'served').mkdir(parents=True, exist_ok=True)
+    script = tmp_path / 'step.sh'
+    script.write_text(STEPS[step(STEPS, name)]['run'].replace('sleep 10', 'true'))
+    env = {'PATH': f'{stubs}:{os.environ.get("PATH", "")}', 'CONTOURS': contours, 'REGION': 'monterey-point-sur',
+           'RUNNER_TEMP': str(tmp_path), 'PLAN_DIR': str(plan), 'CONTROLLER': str(tmp_path / 'controller'),
+           'STAGE_URL': 'https://stage.invalid', 'POINTER_SHA256': 'a' * 64, 'CATALOGUE_SHA256': 'b' * 64,
+           'DETAIL_SHA256': 'd' * 64, 'OVERVIEW_SHA256': 'e' * 64}
+    run = subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', str(script)], env=env, cwd=tmp_path,
+                         capture_output=True, text=True, timeout=120)
+    return run, calls.read_text().splitlines() if calls.exists() else []
+
+
+@pytest.mark.parametrize('contours', ['yes', 'no'])
+def test_overlay_step_passes_contour_pins_only_for_a_contour_region(tmp_path, contours):
+    run, calls = run_with_stub_python(tmp_path, "Render the candidate's /sources credits", contours)
+    assert run.returncode == 0, run.stderr
+    [call] = calls
+    assert f'--pointer-sha256 {"a" * 64} --catalogue-sha256 {"b" * 64}' in call
+    assert ('--detail-sha256' in call and '--overview-sha256' in call) == (contours == 'yes')
+
+
+@pytest.mark.parametrize('contours', ['yes', 'no'])
+def test_served_check_compares_contour_files_only_for_a_contour_region(tmp_path, contours):
+    run, _ = run_with_stub_python(tmp_path, 'Require the preview to serve exactly', contours)
+    # Nothing is served here, so the check always fails; only a contour region reports the contour pins.
+    assert run.returncode == 1
+    assert ('served detail contours differ from the pin' in run.stdout) == (contours == 'yes')
+    assert ('served overview contours differ from the pin' in run.stdout) == (contours == 'yes')
+    assert "served region.json is not the candidate's" in run.stdout
 
 
 def test_workflow_shell_reads_the_region_only_from_the_env():
