@@ -288,7 +288,8 @@ def legacy_config():
             "stations": {"nearshore_buoy": "46215", "nearshore_buoy_name": "Synthetic nearshore",
                          "offshore_buoy": "46028", "offshore_buoy_name": "Synthetic offshore",
                          "tide": "9412110", "tide_name": "Synthetic harbor", "tide_note": "Reference only"}},
-            "grids": {}, "watches": {}, "model_ids": [], "regulations": {}, "legal_source_ids": []}
+            "grids": {}, "watches": {}, "model_ids": [], "regulations": {}, "legal_source_ids": [],
+            "report_ports": {}}
 
 
 def legacy_source(ident, name, kind, url, max_age, loader, *args, **kwargs):
