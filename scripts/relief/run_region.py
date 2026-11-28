@@ -71,7 +71,7 @@ file in that directory. The run ends by printing the log as a step / state / sec
 previews the region's receipt-based rebuild plan. It runs nothing and creates no file or
 directory. Nothing here downloads, uploads, pushes or publishes, and this script writes
 only the lock file and the run logs inside ``OUT/<region>/`` and the two slot files. The stages
-themselves keep their own receipts. A run log that cannot be written is reported and does
+themselves keep their own receipts. A run log that cannot be written is reported on stderr and does
 not stop the chain.
 
 Exit codes: 0 chain complete (or dry run), 2 usage error or stage not available, 3 a guard
@@ -660,8 +660,11 @@ class RunLog:
             os.close(region_fd)
 
     def _warn(self, exc):
+        # stderr: stdout's last line is the run's result (completion, stop reason or R8 packet),
+        # and the final log write happens after it.
         self.broken = True
-        say(f'run_region: warning: cannot write the run log {self.path}: {exc} (the chain continues)')
+        print(f'run_region: warning: cannot write the run log {self.path}: {exc} (the chain continues)',
+              file=sys.stderr, flush=True)
 
     def step(self, name, code, state, seconds):
         self.doc['steps'].append({'step': name, 'exit': code, 'state': state, 'seconds': round(seconds, 1)})

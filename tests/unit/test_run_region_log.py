@@ -55,7 +55,7 @@ def test_redirected_runs_directory_is_refused_and_nothing_is_written_there(box, 
     assert box.run(through='tiles') == 0
     assert box.ran() == ['select', 'mosaic', 'tiles']
     assert list(elsewhere.iterdir()) == []
-    assert capsys.readouterr().out.count('run_region: warning: cannot write the run log') == 1
+    assert capsys.readouterr().err.count('run_region: warning: cannot write the run log') == 1
 
 
 def test_planted_link_at_the_log_path_is_replaced_not_followed(box, tmp_path):
@@ -111,8 +111,29 @@ def test_unwritable_log_is_reported_and_the_chain_still_runs(box, capsys):
     (box.out / 'morro-bay' / RR.RUNS_DIR).write_text('not a directory')
     assert box.run(through='tiles') == 0
     assert box.ran() == ['select', 'mosaic', 'tiles']
-    out = capsys.readouterr().out
-    assert out.count('run_region: warning: cannot write the run log') == 1
+    out = capsys.readouterr()
+    assert out.err.count('run_region: warning: cannot write the run log') == 1
+    assert 'warning' not in out.out
+
+
+@pytest.mark.parametrize('through, last', [
+    ('tiles', 'run_region: morro-bay complete through tiles'),
+    ('envelope', f'APPROVED release morro-bay envelope={"a" * 64}'),
+])
+def test_failed_final_log_write_keeps_the_last_stdout_line(box, capsys, monkeypatch, through, last):
+    # RETURN #3827 item 1: the last write (after the completion line / R8 packet) fails alone.
+    save = RR.RunLog.save
+
+    def full_disk_at_finish(self):
+        if self.doc['ended'] is None:
+            return save(self)
+        return self._warn(OSError(28, 'No space left on device'))
+
+    monkeypatch.setattr(RR.RunLog, 'save', full_disk_at_finish)
+    assert box.run(through=through) == 0
+    out = capsys.readouterr()
+    assert out.out.splitlines()[-1] == last
+    assert out.err.count('run_region: warning: cannot write the run log') == 1
 
 
 def test_interrupted_run_keeps_its_finished_steps(box, monkeypatch):
