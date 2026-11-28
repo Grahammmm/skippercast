@@ -58,11 +58,21 @@ processes (``python3 -u run_region.py`` included) is repeated before every stage
 When the cap state cannot be established (``/proc`` unreadable, slot directory not safely
 ours) the run is refused, exit 3.
 
+Every run that takes the region lock writes a run log ``OUT/<region>/runs/<UTC stamp>-p<pid>.json``
+(schema ``sc-run-log/1``): one row per step with its exit code, state and seconds, and the run's
+outcome (``complete``, ``stopped``, ``refused``, ``interrupted``; ``running`` while it runs). It is
+rewritten atomically after every step, so a killed run leaves the steps it finished. A step's
+state comes from its exit code: 0 ``ok``, 1 ``failed``, 2 ``not available``, 3 ``blocked``,
+4 ``held``, 5 ``busy`` (any other code ``failed``). The log is written only inside a real
+``OUT/<region>/runs`` directory (never through a symlink), via an exclusively created temporary
+file in that directory. The run ends by printing the log as a step / state / seconds table.
+
 ``--dry-run`` prints the chain and the state of every guard. With an output root it also
 previews the region's receipt-based rebuild plan. It runs nothing and creates no file or
 directory. Nothing here downloads, uploads, pushes or publishes, and this script writes
-only the lock file inside ``OUT/<region>/`` and the two slot files. The stages themselves keep
-their own receipts.
+only the lock file and the run logs inside ``OUT/<region>/`` and the two slot files. The stages
+themselves keep their own receipts. A run log that cannot be written is reported on stderr and does
+not stop the chain.
 
 Exit codes: 0 chain complete (or dry run), 2 usage error or stage not available, 3 a guard
 or input check refused, 5 region already running or two runs already on the box (3 when
@@ -70,6 +80,7 @@ that cannot be established), anything else is the code of the stage that failed.
 """
 import argparse
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 import errno
 import fcntl
 import hashlib
@@ -91,6 +102,9 @@ ZONE_STAGE_INPUTS = {'--coarse': 'coarse', '--water': 'water', '--coarse-source'
 REGION_ID = re.compile(r'[a-z0-9][a-z0-9-]{0,63}')  # the same rule as skippercast.relief.receipts
 HEX64 = re.compile(r'[0-9a-f]{64}')
 LOCK_NAME = '.run_region.lock'
+RUNS_DIR = 'runs'
+RUN_LOG_SCHEMA = 'sc-run-log/1'
+EXIT_STATES = {1: 'failed', 2: 'not available', 3: 'blocked', 4: 'held', 5: 'busy'}
 # file-valued options: the guard and the stage see the same spelling
 PATH_OPTIONS = ('region_config', 'coarse', 'water', 'basemap', 'qa_support', 'census')
 RECORD_FILES = frozenset(PATH_OPTIONS) - {'region_config'}
@@ -142,6 +156,7 @@ class Config:
     free_bytes: object = field(default=_default_free_bytes)
     pid: int = field(default_factory=os.getpid)
     r8_packet_py: Path = Path(__file__).resolve().with_name('r8_packet.py')
+    clock: object = field(default=lambda: datetime.now(timezone.utc))
 
 
 def effective_norm(option, environ=None):
@@ -599,6 +614,99 @@ def say(text):
     print(text, flush=True)
 
 
+def _iso(moment):
+    return moment.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
+def step_state(code):
+    """The run-log state of one finished step from its exit code (module docstring)."""
+    return EXIT_STATES.get(code, 'failed') if code else 'ok'
+
+
+class RunLog:
+    """``OUT/<region>/runs/<stamp>-p<pid>.json``, rewritten atomically after every step.
+
+    Every write goes through a descriptor of the verified ``runs`` directory: the directory
+    and the region directory are opened without following symlinks, the temporary file is
+    created exclusively (``O_EXCL | O_NOFOLLOW``) inside it and renamed in it, so neither a
+    redirected ``runs`` nor a planted temporary path can send the log elsewhere.
+    """
+
+    def __init__(self, cfg, out, region, through):
+        self.cfg = cfg
+        started = cfg.clock()
+        self.path = out / region / RUNS_DIR / f'{started.astimezone(timezone.utc):%Y%m%dT%H%M%SZ}-p{cfg.pid}.json'
+        self.doc = {'schema': RUN_LOG_SCHEMA, 'region': region, 'through': through, 'started': _iso(started),
+                    'ended': None, 'outcome': 'running', 'exit': None, 'reason': None, 'steps': []}
+        self.broken = False
+        self.dir_fd = None
+        try:
+            self.dir_fd = self._open_runs_dir(out, region)
+        except OSError as exc:
+            self._warn(exc)
+        self.save()
+
+    @staticmethod
+    def _open_runs_dir(out, region):
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        region_fd = os.open(Path(out) / region, flags)
+        try:
+            try:
+                os.mkdir(RUNS_DIR, 0o755, dir_fd=region_fd)
+            except FileExistsError:
+                pass
+            return os.open(RUNS_DIR, flags, dir_fd=region_fd)
+        finally:
+            os.close(region_fd)
+
+    def _warn(self, exc):
+        # stderr: stdout's last line is the run's result (completion, stop reason or R8 packet),
+        # and the final log write happens after it.
+        self.broken = True
+        print(f'run_region: warning: cannot write the run log {self.path}: {exc} (the chain continues)',
+              file=sys.stderr, flush=True)
+
+    def step(self, name, code, state, seconds):
+        self.doc['steps'].append({'step': name, 'exit': code, 'state': state, 'seconds': round(seconds, 1)})
+        self.save()
+
+    def finish(self, outcome, code, reason=None):
+        self.doc.update(ended=_iso(self.cfg.clock()), outcome=outcome, exit=code, reason=reason)
+        self.save()
+
+    def save(self):
+        if self.broken:
+            return
+        tmp = f'.{self.path.name}.tmp-{os.urandom(6).hex()}'
+        data = (json.dumps(self.doc, indent=1) + '\n').encode()
+        try:
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644, dir_fd=self.dir_fd)
+            try:
+                with os.fdopen(fd, 'wb') as handle:
+                    handle.write(data)
+                os.replace(tmp, self.path.name, src_dir_fd=self.dir_fd, dst_dir_fd=self.dir_fd)
+            except OSError:
+                try:
+                    os.unlink(tmp, dir_fd=self.dir_fd)
+                except OSError:
+                    pass
+                raise
+        except OSError as exc:
+            self._warn(exc)
+
+    def close(self):
+        if self.dir_fd is not None:
+            os.close(self.dir_fd)
+            self.dir_fd = None
+
+    def table(self):
+        rows = [(s['step'], s['state'], f'{s["seconds"]:.1f}') for s in self.doc['steps']]
+        width = max([len('step'), *(len(r[0]) for r in rows)])
+        lines = [f'run log {self.path}', f'  {"step":<{width}}  {"state":<13}  seconds']
+        lines += [f'  {step:<{width}}  {state:<13}  {seconds:>7}' for step, state, seconds in rows]
+        return '\n'.join(lines)
+
+
 def show_rebuild_plan(cfg, out, region):
     if __package__:
         from . import rebuild_plan as report
@@ -753,53 +861,69 @@ def run_locked(cfg, region, out, norm, through, extra, inputs, basemap):
     if fd is None:
         say(f'run_region: refused: region {region} already has a run (lock {lock_path(out, region)})')
         return EXIT_RUNNING
+    log = RunLog(cfg, out, region, through)
+
+    def end(outcome, code, reason):
+        # The table comes first, so the run's last line stays the reason it stopped.
+        log.finish(outcome, code, reason)
+        say(log.table())
+        say(f'run_region: {reason}')
+        return code
+
     try:
         for stage, attest in steps_through(through, extra):
             problems = refusal(cfg, out, norm, inputs, basemap)
             if problems:
-                say(f'run_region: refused before {stage}: ' + '; '.join(problems))
-                return EXIT_REFUSED
+                return end('refused', EXIT_REFUSED, f'refused before {stage}: ' + '; '.join(problems))
             if cap := run_cap_refusal(cfg):
                 code, detail = cap
-                say(f'run_region: refused before {stage}: {detail}')
-                return code
+                return end('refused', code, f'refused before {stage}: {detail}')
             if stage == 'zone':
                 try:
                     bind_zone_inputs(cfg, out, region, extra['zone'])
                 except (OSError, ValueError) as exc:
-                    say(f'run_region: refused before zone: {exc}')
-                    return EXIT_REFUSED
+                    return end('refused', EXIT_REFUSED, f'refused before zone: {exc}')
             command = stage_command(cfg, stage, region, out, extra)
             label = f'status for {attest}' if attest else stage
+            step = f'status:{attest}' if attest else stage
             say(f'run_region: stage {label}: ' + ' '.join(command))
             started = time.monotonic()
             try:
                 result = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=bool(attest))
             except OSError as exc:
-                say(f'run_region: STOPPED at {label}: cannot start the command: {exc}')
-                return 1
+                log.step(step, None, 'failed', time.monotonic() - started)
+                return end('stopped', 1, f'STOPPED at {label}: cannot start the command: {exc}')
             code = result.returncode
+            seconds = time.monotonic() - started
             if code == 0:
                 if attest:
                     try:
                         bind_handoff(cfg, out, region, extra, result.stdout, attest)
                     except (OSError, ValueError) as exc:
-                        say(f'run_region: STOPPED at {label}: {exc}')
-                        return EXIT_REFUSED
-                say(f'run_region: stage {label}: exit 0 ({time.monotonic() - started:.1f}s)')
+                        log.step(step, 0, 'failed', seconds)
+                        return end('stopped', EXIT_REFUSED, f'STOPPED at {label}: {exc}')
+                log.step(step, 0, step_state(0), seconds)
+                say(f'run_region: stage {label}: exit 0 ({seconds:.1f}s)')
                 continue
+            log.step(step, code, step_state(code), seconds)
             if attest and result.stderr:
                 say(result.stderr.decode(errors='replace').rstrip())
             if code == EXIT_USAGE:
-                say(f'run_region: STOPPED at {label}: not available (region.py exit 2: no such stage module '
-                    f'on this checkout, or a usage error; see its message above)')
-                return EXIT_USAGE
-            say(f'run_region: STOPPED at {label}: exit {code}')
-            return code if 0 < code < 256 else 1
+                return end('stopped', EXIT_USAGE, f'STOPPED at {label}: not available (region.py exit 2: no such '
+                           f'stage module on this checkout, or a usage error; see its message above)')
+            return end('stopped', code if 0 < code < 256 else 1, f'STOPPED at {label}: exit {code}')
+        say(log.table())
         say(f'run_region: {region} complete through {through}')
         # Keep the region lock until the packet has read the just-built evidence.
-        return print_r8_packet(cfg, region, out) if through == 'envelope' else 0
+        code = print_r8_packet(cfg, region, out) if through == 'envelope' else 0
+        log.finish('complete' if code == 0 else 'stopped', code,
+                   None if code == 0 else 'envelope written but R8 packet NOT READY')
+        return code
+    except KeyboardInterrupt:
+        log.finish('interrupted', 130, 'interrupted')
+        raise
     finally:
+        log.close()
         os.close(fd)  # releases the lock
 
 
