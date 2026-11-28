@@ -16,7 +16,8 @@
 //
 // Pure: no I/O, no clock, no model call. Nothing here is a catch probability, and the
 // output names only allowlisted public grounds and forecast point ids: never a
-// coordinate (tests/test_advisor_score.mjs checks it). Not registered as a tool yet.
+// coordinate (tests/test_advisor_score.mjs checks it). The reply path (tools/get_best_bets.ts, behind
+// ADVISOR_BEST_BETS) reads H from catalog/advisor/best-bet-grounds.json via scoresFromCatalog.
 import {ALERT_CHECK_UNAVAILABLE, advisoriesFrom, advisoryCheckTime, regionZones, windowConditions, windowEpochs, withForecastClock, type DayConditions} from '../answers/conditions.ts';
 import {forecastClock} from '../answers/forecast-clock.ts';
 import {COMFORT_WORD} from '../answers/comfort.ts';
@@ -125,18 +126,32 @@ export function conditionsFit(day: DayConditions, weights: Weights = WEIGHTS_V1,
     evidence: day.models_agree === true ? 'Moderate' : 'Low', reasons};
 }
 
-export interface BuildInput {
-  region: Region; intel: unknown; daily: unknown; grounds: readonly Ground[]; targets: readonly TargetIn[];
+/** A ground as the reply path reads it (catalog/advisor/best-bet-grounds.json): H already computed, no target ids. */
+export interface CatalogGround {name: string; ground_id: string; point: string; habitat: Part}
+
+/** The catalog entries for some grounds: H computed once offline, so the 1 MB atlas never loads on the reply path. */
+export function groundCatalog(grounds: readonly Ground[], targets: readonly TargetIn[]): CatalogGround[] {
+  return grounds.map(g => ({name: g.name, ground_id: g.ground_id, point: g.point, habitat: habitatFit(g, targets)}));
+}
+
+export interface CatalogInput {
+  region: Region; intel: unknown; daily: unknown; grounds: readonly CatalogGround[];
   dates: readonly string[]; now: number; weights?: Weights;
+}
+export interface BuildInput extends Omit<CatalogInput, 'grounds'> {grounds: readonly Ground[]; targets: readonly TargetIn[]}
+
+/** The score file from the raw grounds and atlas targets (the offline builder): the same rows as scoresFromCatalog. */
+export function buildScores(input: BuildInput): ScoreFile {
+  const {grounds, targets, ...rest} = input;
+  return scoresFromCatalog({...rest, grounds: groundCatalog(grounds, targets)});
 }
 
 /** The score file for every ground x date x block. Rows a gate closes, or with a part missing, keep their reasons and rank null. */
-export function buildScores(input: BuildInput): ScoreFile {
-  const {region, intel, daily, grounds, targets, dates, now} = input;
+export function scoresFromCatalog(input: CatalogInput): ScoreFile {
+  const {region, intel, daily, grounds, dates, now} = input;
   const weights = input.weights ?? WEIGHTS_V1;
   const tz = region.timezone, zones = regionZones(region), clock = forecastClock(intel, now);
   const checked = advisoryCheckTime((daily as {sources?: Record<string, unknown>} | null)?.sources, zones) !== null;
-  const habitat = new Map(grounds.map(g => [g.ground_id, habitatFit(g, targets)] as const));
   const rows: ScoreRow[] = [];
   for (const date of dates) for (const block of BLOCKS) {
     const window = {start: block.start, end: block.end};
@@ -149,7 +164,7 @@ export function buildScores(input: BuildInput): ScoreFile {
         const day = withForecastClock(windowConditions(intel as never, region, g.point, date, window, null, advisories, checked), clock);
         byPoint.set(g.point, conditionsFit(day, weights, advisories[0]?.event ?? null, checked));
       }
-      const c = byPoint.get(g.point)!, h = habitat.get(g.ground_id)!;
+      const c = byPoint.get(g.point)!, h = g.habitat;
       const open = c.gate === 'pass' && c.value !== null && h.value !== null;
       rows.push({area: g.name, ground_id: g.ground_id, point: g.point, date, block: block.id, gate: c.gate, conditions: c, habitat: h,
         rank: open ? round(weights.conditions * c.value! + weights.habitat * h.value!) : null, evidence: weakest(c.evidence, h.evidence)});

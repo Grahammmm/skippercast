@@ -39,7 +39,8 @@ const BUILT = ['update_profile', 'escalate', 'send_upload_link', 'send_contact_c
   'register_boat', 'add_crew', 'remove_crew',                                                                           // TA-I1 (tests/test_advisor_skippers.mjs)
   'read_count_board', 'propose_report', 'edit_report',                                                                  // TA-I2 (tests/test_advisor_reports.mjs)
   'identify_fish', 'share_angler_photo',                                                                                // TA-I3 (tests/test_advisor_fishid.mjs)
-  'propose_post'];                                                                                                      // TA-S1 (tests/test_advisor_social_drafts.mjs)
+  'propose_post',                                                                                                       // TA-S1 (tests/test_advisor_social_drafts.mjs)
+  'get_best_bets'];                                                                                                     // fishing friend 1b, behind ADVISOR_BEST_BETS (tests/test_advisor_score.mjs)
 
 test('the registry has every tool in 04 § Tools, once, with a valid schema and an intent', () => {
   assert.deepEqual(TOOLS.map(t => t.name).sort(), [...STUBS, ...BUILT].sort());

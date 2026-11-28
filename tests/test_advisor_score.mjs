@@ -170,3 +170,76 @@ test('the offline script writes the score file and prints the top three bets', (
   assert.match(out, /^morro-bay v1: 24 rows \(24 open\)/);
   assert.equal(out.trim().split('\n').length, 4);
 });
+
+// ---- slice 1b: the reply-path catalog, the ADVISOR_BEST_BETS switch, the prompt rule and get_best_bets ----
+
+globalThis.DEPLOYMENT = read('../deployments/production.json');
+const {groundCatalog, scoresFromCatalog} = await import('../server/advisor/score/best-bets.ts');
+const {TOOL_BY_NAME, toolsForRole} = await import('../server/advisor/tools/index.ts');
+const {SURE_WORDS} = await import('../server/advisor/tools/get_best_bets.ts');
+const {advisorSettings} = await import('../server/advisor/settings.ts');
+const {systemPrompt, BEST_BETS_RULE} = await import('../server/advisor/prompts/system.ts');
+const CATALOG = read('../catalog/advisor/best-bet-grounds.json');
+const ON = advisorSettings({ADVISOR_BEST_BETS: 'true'});
+const person = (over = {}) => ({id: 'c1', phone_hash: 'h', phone_enc: 'ENC', web_session: null, channel: 'imessage', role: 'angler', language: 'en', status: 'active', home_port: null, ...over});
+const valid = d => ({schema_version: 1, region_id: 'morro-bay', generated_at: new Date(NOW - 1800000).toISOString(), reports: [], health: {}, catch_probability: null, bite_score: null, ...d});
+const feeds = ({intel = feed(), day = daily()} = {}) => async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? valid(day) : Promise.reject(Error('no feed'));
+const bets = (input = {}, {language = 'en', ...f} = {}) => TOOL_BY_NAME.get('get_best_bets').run(input, {env: {}, contact: person(), message: {id: 'in1'}, db: null,
+  deps: {feeds: feeds(f)}, language, settings: ON, now: NOW}).then(o => o.result);
+
+test('the reply-path ground catalog is the builder\'s output for the reviewed files (drift fails), with no coordinate or target id', () => {
+  assert.deepEqual(CATALOG.regions['morro-bay'], groundCatalog(GROUNDS, TARGETS), 'rerun: node scripts/advisor/build-scores.mjs --grounds-out catalog/advisor/best-bet-grounds.json');
+  assert.equal(/latitude|longitude|SC26-|target_ids/.test(JSON.stringify(CATALOG)), false);
+  assert.equal(COORDINATE.test(JSON.stringify(CATALOG.regions)), false);
+  // The catalog path scores exactly as the raw builder does.
+  const opts = {region: REGION, intel: feed(), daily: daily(), dates: [DATE, NEXT], now: NOW};
+  assert.deepEqual(scoresFromCatalog({...opts, grounds: CATALOG.regions['morro-bay']}), buildScores({...opts, grounds: GROUNDS, targets: TARGETS}));
+});
+
+test('get_best_bets and its prompt rule are offered only with ADVISOR_BEST_BETS on; off, the cached prompt is unchanged', () => {
+  const names = (c, s) => toolsForRole(person(c), s).map(t => t.name);
+  for (const s of [undefined, advisorSettings(), advisorSettings({ADVISOR_BEST_BETS: 'yes'})]) assert.ok(!names({}, s).includes('get_best_bets'));
+  for (const role of ['angler', 'skipper', 'crew']) assert.ok(names({role}, ON).includes('get_best_bets'), role);
+  assert.deepEqual(names({}, ON).filter(n => n !== 'get_best_bets'), names({}, advisorSettings()), 'the switch adds one tool and removes none');
+  for (const lang of ['en', 'es']) {
+    assert.equal(systemPrompt(lang, {}), systemPrompt(lang));
+    assert.ok(!systemPrompt(lang).includes('get_best_bets') && systemPrompt(lang, {bestBets: true}).includes(BEST_BETS_RULE));
+    assert.ok(systemPrompt(lang, {bestBets: true}).includes('Never state odds, chances, percentages or a bite score'), 'the no-odds rule stays');
+  }
+  assert.match(BEST_BETS_RULE, /never a percentage, odds, a score number/);
+});
+
+test('get_best_bets: one clear call per open block, reasons and confidence in words, never a percentage or a coordinate', async () => {
+  const r = await bets();
+  assert.equal(r.dates.length, 7);
+  assert.equal(r.best_bets.length, 3);
+  const top = Object.entries(H).sort((a, b) => b[1] - a[1])[0][0];
+  assert.deepEqual(r.best_bets.map(b => [b.area, b.date, b.hours]), [[top, DATE, '06:00-09:00'], [top, DATE, '09:00-12:00'], [top, DATE, '12:00-15:00']]);
+  assert.ok(r.best_bets.every(b => b.day === 'today' && b.comfort === 'comfortable' && b.confidence_words === SURE_WORDS.en.Moderate
+    && b.reasons.some(x => /^wind /.test(x)) && b.reasons.includes('terrain grade measures structure, not fish')));
+  assert.deepEqual([r.closed_days, r.advisories_checked], [[], true]);
+  const text = JSON.stringify(r), data = JSON.stringify({...r, note: undefined});   // the note itself says "Never a percentage"
+  assert.equal(/\d\s*%/.test(text), false, text);
+  assert.equal(/percent|probability|hotspot|rank|latitude|longitude|SC26-/i.test(data), false, data);
+  assert.equal(COORDINATE.test(JSON.stringify(r.best_bets)), false);
+  assert.ok(text.length < 4000);
+  // A date word narrows the call; Spanish gets Spanish confidence words.
+  assert.ok((await bets({date: 'tomorrow'})).best_bets.every(b => b.date === NEXT));
+  assert.equal((await bets({}, {language: 'es'})).best_bets[0].confidence_words, SURE_WORDS.es.Moderate);
+});
+
+test('get_best_bets: an advisory day is listed closed; a stale forecast or an incomplete alert check makes no call; other regions are not covered', async () => {
+  const sca = [{event: 'Small Craft Advisory', onset: '2026-09-29T00:00:00-07:00', ends: '2026-09-29T23:00:00-07:00'}];
+  const shut = await bets({}, {day: daily(sca)});
+  assert.deepEqual(shut.closed_days, [{date: NEXT, day: 'tomorrow', why: 'Small Craft Advisory'}]);
+  assert.ok(shut.best_bets.every(b => b.date !== NEXT) && /closed days/.test(shut.note));
+  const stale = await bets({}, {intel: feed({ageH: 40})});
+  assert.equal(stale.error, 'forecast not usable');
+  assert.equal('best_bets' in stale, false);
+  const unchecked = await bets({}, {day: {sources: {}}});
+  assert.deepEqual([unchecked.best_bets, unchecked.advisories_checked], [[], false]);
+  assert.match(unchecked.note, /could not be checked: make no call/);
+  assert.equal((await bets({port: 'monterey'})).unavailable, true);
+  assert.equal((await bets({date: '2026-09-01'})).error, 'that date has passed');
+  assert.equal((await bets({date: '2026-10-20'})).beyond_horizon, true);
+});
