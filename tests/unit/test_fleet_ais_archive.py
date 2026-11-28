@@ -140,6 +140,38 @@ class ArchiveTest(unittest.TestCase):
         self.assertTrue(result.low_space)
         self.assertEqual(result.copied, 0)
 
+    def _small_disk(self, capacity):
+        """disk_usage for a file system of ``capacity`` bytes holding only the archive's files."""
+        def usage(path):
+            used = sum(p.stat().st_size for p in self.dest.iterdir() if p.is_file())
+            return shutil._ntuple_diskusage(capacity, used, capacity - used)
+        return usage
+
+    def test_late_growth_past_the_estimate_installs_nothing(self):
+        late, other = self.raw / "2026-11-27.sqlite", self.raw / "2026-11-26.sqlite"
+        self.store.write(positions=[pos(ms(2026, 11, 26)), pos(ms(2026, 11, 27))])
+        floor = 1_000_000
+        self.dest.mkdir(parents=True)
+        capacity = floor + archive_mod._cost(late) + archive_mod._cost(other) + 8192   # the estimate fits
+        real = archive_mod._snapshot
+
+        def late_receipts(src, tmp):   # the listener grows the day after the estimate, before the backup
+            if src == late:
+                with closing(sqlite3.connect(src)) as con, con:
+                    con.execute("CREATE TABLE IF NOT EXISTS pad (x BLOB)")
+                    con.execute("INSERT INTO pad VALUES (zeroblob(400000))")
+            real(src, tmp)
+
+        with mock.patch.object(archive_mod.shutil, "disk_usage", self._small_disk(capacity)), \
+                mock.patch.object(archive_mod, "_snapshot", late_receipts):
+            result = archive(self.raw, self.dest, today=TODAY, min_free_bytes=floor)
+        self.assertTrue(result.low_space)
+        self.assertEqual((result.copied, result.rows), (0, 0))
+        self.assertEqual([p.name for p in self.dest.iterdir()], [".archive.lock"], "no copy, no .part left")
+        with mock.patch.object(archive_mod.shutil, "disk_usage", self._small_disk(capacity + 500000)):
+            fits = archive(self.raw, self.dest, today=TODAY, min_free_bytes=floor)
+        self.assertEqual((fits.low_space, fits.copied), (False, 2))
+
     def test_floor_must_be_finite_and_not_negative(self):
         self.store.write(positions=[pos(ms(2026, 11, 27))])
         for bad in (float("nan"), float("inf"), -1.0):

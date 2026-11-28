@@ -13,8 +13,9 @@ Rules:
 - today's file is never copied (it is still being written);
 - nothing is ever deleted from the archive, and the store is only read;
 - one run at a time per archive directory (a lock file); a second run copies nothing and exits 1;
-- before copying, the archive's file system must keep ``--min-free-gb`` (finite, >= 0) free after
-  the snapshots it will write (each day file plus its ``-wal``); otherwise it copies nothing and
+- the archive's file system must keep ``--min-free-gb`` (finite, >= 0) free: checked first against
+  an estimate (each day file plus its ``-wal``), then against the staged snapshots themselves before
+  any is installed. If either check fails, no copy is installed, staged files are removed and it
   exits 1. Days the archive already holds in full cost nothing;
 - the copies hold vessel identifiers and positions: directories this command creates are 0700 and
   the copies 0600, whatever the umask.
@@ -126,19 +127,33 @@ def archive(raw: Path, dest: Path, today: date | None = None,
         if todo and shutil.disk_usage(dest).free - sum(_cost(src) for src in todo) < min_free_bytes:
             result.low_space = True
             return result
-        for src in todo:
-            out = dest / src.name
-            tmp = out.with_name(out.name + ".part")
-            _snapshot(src, tmp)
-            n = _rows(tmp)
-            if out.exists() and _rows(out) >= n:
-                tmp.unlink()
-                result.kept += 1
-                continue
-            os.replace(tmp, out)
-            result.copied += 1
-            result.rows += n
-        return result
+        # Stage the whole batch, then install it. The floor is checked against the staged snapshots
+        # themselves (a late receipt can grow a day after the estimate above); if any staged copy
+        # takes the file system below the floor, nothing is installed.
+        staged: list[tuple[Path, Path, int]] = []
+        try:
+            for src in todo:
+                out = dest / src.name
+                tmp = out.with_name(out.name + ".part")
+                _snapshot(src, tmp)
+                n = _rows(tmp)
+                if out.exists() and _rows(out) >= n:
+                    tmp.unlink()
+                    result.kept += 1
+                    continue
+                staged.append((tmp, out, n))
+                if shutil.disk_usage(dest).free < min_free_bytes:
+                    result.low_space = True
+                    return result
+            while staged:
+                tmp, out, n = staged.pop(0)
+                os.replace(tmp, out)
+                result.copied += 1
+                result.rows += n
+            return result
+        finally:
+            for tmp, _, _ in staged:
+                tmp.unlink(missing_ok=True)
     finally:
         os.close(lock_fd)
 
