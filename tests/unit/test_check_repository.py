@@ -24,10 +24,17 @@ check_repository = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(check_repository)
 
 
+def _walk_error(error):
+    """Parallel tests make and remove temp dirs under tests/fixtures, so a directory
+    can vanish mid-walk: skip only that. Any other error (EIO, EACCES) fails the scan."""
+    if not isinstance(error, FileNotFoundError):
+        raise error
+
+
 def repo_files():
-    """Every file under ROOT. os.walk skips a directory that vanishes mid-walk;
-    Path.rglob raises, and parallel tests make and remove temp dirs under tests/fixtures."""
-    for directory, _, names in os.walk(ROOT):
+    """Every file under ROOT. Path.rglob raises when a directory vanishes mid-walk;
+    os.walk with _walk_error skips a vanished directory and raises on every other error."""
+    for directory, _, names in os.walk(ROOT, onerror=_walk_error):
         for name in names:
             yield Path(directory, name)
 
