@@ -60,7 +60,7 @@ import {contourCopy, lookDepthKey, nearshoreRows, surveyDetailChips, SURVEY_DETA
 import {reliefDrawn, reliefFeatures, reliefLook, reliefSurveyView} from './MapStage.tsx';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CDFW_MPA_PAGE, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
-import {legendKey, seafloorState, seafloorView, surveySummary} from '../map/seafloor.ts';
+import {legendKey, seafloorState, seafloorUnpublished, seafloorView, surveySummary} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
 import {chlorophyllState} from '../map/chlorophyll.ts';
 import {PALETTE_TOKENS} from '../map/palette.ts';
@@ -460,7 +460,7 @@ function ReliefRow() {
         })}</span>
       </button>
     </> : null}
-    {layers.value.includes('seafloor') ? <p class="app-legend-note">{t('legend.relief.dimmed', lang)}</p> : null}
+    {layers.value.includes('seafloor') && !seafloorUnpublished.value ? <p class="app-legend-note">{t('legend.relief.dimmed', lang)}</p> : null}
   </li>;
 }
 
