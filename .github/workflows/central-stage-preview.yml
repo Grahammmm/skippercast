@@ -358,8 +358,10 @@ jobs:
             rm -f "$served/deploy.json" "$served/pointer.json" "$served/detail.geojson" "$served/overview.geojson" "$served/region.json" "$served/sources.html"
             curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/deploy.json" -o "$served/deploy.json" || echo '{}' > "$served/deploy.json"
             curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/catalog/relief/$REGION.json" -o "$served/pointer.json" || rm -f "$served/pointer.json"
-            curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/$REGION/depth-contours.geojson" -o "$served/detail.geojson" || rm -f "$served/detail.geojson"
-            curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/$REGION/depth-contours-overview.geojson" -o "$served/overview.geojson" || rm -f "$served/overview.geojson"
+            if [ "$CONTOURS" = yes ]; then
+              curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/$REGION/depth-contours.geojson" -o "$served/detail.geojson" || rm -f "$served/detail.geojson"
+              curl -fsS --proto '=https' --max-time 60 "$STAGE_URL/regions/$REGION/depth-contours-overview.geojson" -o "$served/overview.geojson" || rm -f "$served/overview.geojson"
+            fi
             curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/regions/$REGION/region.json" -o "$served/region.json" || rm -f "$served/region.json"
             curl -fsS --proto '=https' --max-time 20 "$STAGE_URL/sources" -o "$served/sources.html" || rm -f "$served/sources.html"
             ok=1
