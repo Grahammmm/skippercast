@@ -9,6 +9,7 @@ observation, not a release check. An interrupted attempt may still be active:
 this diagnostic does not probe or acquire stage locks.
 """
 import argparse
+from datetime import datetime
 import json
 from pathlib import Path
 import stat
@@ -108,8 +109,16 @@ class StageState(TypedDict):
     generation: str | None
 
 
+def started_at(doc):
+    """A receipt's attempt start time, or None if it has no readable one."""
+    try:
+        return datetime.strptime(doc['started'], '%Y-%m-%dT%H:%M:%SZ')
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 def taken_by_inventory(region: receipts.Region):
-    """The upstream keys the region's inventory receipt records, or None before a readable one exists.
+    """(upstream keys, attempt start) of the region's inventory receipt, or None before a readable one.
 
     The inventory receipt states which survey stages this region's release takes (run_region.py
     --survey); its outputs are not re-hashed here, so the first-incomplete view stays lazy.
@@ -123,25 +132,38 @@ def taken_by_inventory(region: receipts.Region):
         return None
     if doc is None or receipts.validate_receipt(doc, region.id, 'inventory', None):
         return None
-    return {receipts.Ref(row['stage'], row.get('scope')).key for row in doc['upstream']}
+    return {receipts.Ref(row['stage'], row.get('scope')).key for row in doc['upstream']}, started_at(doc)
 
 
 def stage_states(region: receipts.Region):
     """Every public stage of the region in rollout order, each with its receipt verdict (lazy).
 
     A survey stage that the region's inventory receipt does not take is 'skipped' (the run chose
-    --survey detail or none); before inventory has a readable receipt every survey stage is judged
-    by its own receipt, so a required one that never ran still reads 'missing'.
+    --survey detail or none) when it has no receipt or its receipt's attempt started before that
+    inventory's attempt (a leftover the later inventory superseded). Otherwise it is judged by its
+    own receipt, so a newer opt-in survey attempt that stopped before inventory shows held or
+    failed, and a done one that inventory has not taken yet makes inventory 'stale'. Before
+    inventory has a readable receipt every survey stage is judged by its own receipt, so a
+    required one that never ran still reads 'missing'.
     """
     reader = ReceiptReader(region)
-    taken = taken_by_inventory(region)
+    inventory = taken_by_inventory(region)
+    pending = []  # survey stages with a receipt newer than (or not ordered before) inventory's
     for stage in STAGES:
         ref = receipts.Ref(stage, 'public' if stage in SCOPED_STAGES else None)
-        if stage in SURVEY_STAGES and taken is not None and ref.key not in taken:
-            yield StageState(stage=ref.key, state='skipped', reason='not taken by the inventory receipt (--survey)',
-                             generation=None)
-            continue
-        verdict = reader.check(ref)
+        if stage in SURVEY_STAGES and inventory is not None and ref.key not in inventory[0]:
+            verdict = reader.check(ref)
+            began = started_at(verdict.receipt or {})
+            if verdict.state == 'missing' or (began and inventory[1] and began < inventory[1]):
+                yield StageState(stage=ref.key, state='skipped',
+                                 reason='not taken by the inventory receipt (--survey)', generation=None)
+                continue
+            pending.append(ref.key)
+        else:
+            verdict = reader.check(ref)
+        if stage == 'inventory' and pending and verdict.done:
+            verdict = receipts.Verdict('stale', f'not taken by inventory: newer {", ".join(pending)} attempt '
+                                       '(rerun the chain with its --survey choice)', verdict.receipt)
         yield StageState(stage=ref.key, state=verdict.state, reason=verdict.reason,
                          generation=(verdict.receipt or {}).get('generation'))
 

@@ -87,10 +87,12 @@ def test_first_missing_stage_ignores_later_receipts_and_other_scopes(tmp_path, s
     scope = 'public' if stage in SCOPED_STAGES else None
     # when the missing stage is a survey stage, inventory takes it, so its receipt is a required one
     takes = [dict(stage=name, scope='public', generation='0' * 64) for name in SURVEY_STAGES]
+    # otherwise inventory does not take them and they are leftovers from an earlier run
     for candidate in reversed(STAGES):
         if candidate != stage:
             record(region, candidate, scope='public' if candidate in SCOPED_STAGES else None,
-                   upstream=takes if candidate == 'inventory' and stage in SURVEY_STAGES else ())
+                   upstream=takes if candidate == 'inventory' and stage in SURVEY_STAGES else (),
+                   started='2026-11-28T04:00:00Z' if candidate in SURVEY_STAGES else '2026-11-28T05:00:00Z')
     if scope:
         record(region, stage, scope='private')
     row = rollout.region_status(region)
@@ -276,5 +278,63 @@ def test_a_leftover_survey_receipt_the_inventory_does_not_take_is_skipped(tmp_pa
     # An older detail-and-gap run left a now-stale survey_gap receipt; the current release dropped it.
     region = receipts.Region(tmp_path, 'dropped-gap')
     populate(region, survey=('survey_detail',))
-    record(region, 'survey_gap', scope='public', upstream=[dict(stage='zone', scope='public', generation='0' * 64)])
+    restamp(region, 'inventory', '2026-11-28T05:55:00Z')
+    record(region, 'survey_gap', scope='public', upstream=[dict(stage='zone', scope='public', generation='0' * 64)],
+           started='2026-11-28T04:00:00Z')
     assert rollout.region_status(region)['state'] == 'complete'
+    [entry] = json.loads(invoke(tmp_path, 'dropped-gap', '--stages', '--json'))
+    states = {row['stage']: row['state'] for row in entry['stages']}
+    assert (states['survey_gap.public'], states['inventory']) == ('skipped', 'done')
+
+
+def restamp(region, stage, started):
+    path = region.receipt_path(stage, 'public' if stage in SCOPED_STAGES else None)
+    doc = receipts.read_receipt(path)
+    assert doc is not None
+    doc['started'] = started
+    path.write_text(json.dumps(doc), encoding='utf-8')
+
+
+@pytest.mark.parametrize('status,fields', [('held', dict(held_reason='fixture: survey could not be produced')),
+                                           ('failed', dict(error='fixture error', rc=1))])
+def test_a_newer_survey_attempt_stopped_before_inventory_is_not_hidden(tmp_path, status, fields):
+    # Bug caught (#3832 RETURN at eb0bca2e): a completed no-survey run, then an opt-in survey run that
+    # stopped at survey_detail before replacing inventory: matrix said 'skipped', summary 'complete'.
+    region = receipts.Region(tmp_path, 'retry-fixture')
+    populate(region, survey=())
+    restamp(region, 'inventory', '2026-11-28T05:55:00Z')
+    zone = receipts.read_receipt(region.receipt_path('zone', 'public'))
+    record(region, 'survey_detail', scope='public', upstream=[dependency(zone)], status=status,
+           started='2026-11-28T06:01:00Z', **fields)
+    [summary] = json.loads(invoke(tmp_path, 'retry-fixture', '--json'))
+    assert (summary['stage'], summary['state']) == ('survey_detail.public', status)
+    [entry] = json.loads(invoke(tmp_path, 'retry-fixture', '--stages', '--json'))
+    states = {row['stage']: row['state'] for row in entry['stages']}
+    assert (states['survey_detail.public'], states['survey_gap.public']) == (status, 'skipped')
+    assert states['inventory'] == 'stale'
+
+
+def test_a_newer_done_survey_stage_inventory_has_not_taken_makes_inventory_stale(tmp_path):
+    # The opt-in run built survey_detail, then stopped before inventory: not complete, and inventory
+    # (not the survey stage) is what is out of date.
+    region = receipts.Region(tmp_path, 'half-run')
+    populate(region, survey=())
+    restamp(region, 'inventory', '2026-11-28T05:55:00Z')
+    zone = receipts.read_receipt(region.receipt_path('zone', 'public'))
+    record(region, 'survey_detail', scope='public', upstream=[dependency(zone)], started='2026-11-28T06:01:00Z')
+    row = rollout.region_status(region)
+    assert (row['stage'], row['state']) == ('inventory', 'stale')
+    assert 'survey_detail.public' in row['reason']
+    [entry] = json.loads(invoke(tmp_path, 'half-run', '--stages', '--json'))
+    states = {row['stage']: row['state'] for row in entry['stages']}
+    assert (states['survey_detail.public'], states['survey_gap.public']) == ('done', 'skipped')
+
+
+def test_an_unordered_survey_receipt_is_judged_by_its_own_receipt(tmp_path):
+    # Without start times the receipt cannot be shown to be older than inventory, so it is not skipped.
+    region = receipts.Region(tmp_path, 'no-times')
+    populate(region, survey=())
+    zone = receipts.read_receipt(region.receipt_path('zone', 'public'))
+    record(region, 'survey_gap', scope='public', upstream=[dependency(zone)], status='held', held_reason='x')
+    row = rollout.region_status(region)
+    assert (row['stage'], row['state']) == ('survey_gap.public', 'held')
