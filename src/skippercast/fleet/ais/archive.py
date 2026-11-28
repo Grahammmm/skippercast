@@ -98,7 +98,7 @@ def archive(raw: Path, dest: Path, today: date | None = None,
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m skippercast.fleet.ais archive",
                                  description="copy closed raw day files to the long-term archive")
-    ap.add_argument("--region", default="CA")
+    ap.add_argument("--region", required=True)
     ap.add_argument("--dest", default=os.environ.get(ENV, ""), help=f"archive root (default ${ENV})")
     ap.add_argument("--min-free-gb", type=float, default=DEFAULT_MIN_FREE_GB)
     args = ap.parse_args(argv)
