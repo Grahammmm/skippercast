@@ -128,7 +128,8 @@ def run_module(name, module, argv):
         parser.error(f'stage {stage} needs --scope, one of {", ".join(scopes)}')
     try:
         region = receipts.Region(args.out, args.region)
-        refs = [receipts.Ref.parse(text, args.scope) for text in getattr(module, 'UPSTREAM', ())]
+        upstream = module.upstream(args) if callable(getattr(module, 'upstream', None)) else getattr(module, 'UPSTREAM', ())
+        refs = [receipts.Ref.parse(text, args.scope) for text in upstream]
         digest = receipts.stage_digest(receipts.module_code_files(module))
     except receipts.ReceiptError as exc:
         parser.error(str(exc))
