@@ -171,12 +171,22 @@ def test_c1_v1_contours_only(tree):
 
 
 STYLE = {'baked': 'f' * 64, 'contours': None, 'habitat': None, 'built_with': 'fixture-v1'}
+MISSING = 'missing catalog/depth-contours/test-bay.geojson'
+CONFIG = 'regions/test-bay/region.json'
 
 
-def test_c1_terrain_only_pointer_needs_no_contours(tree):
-    """C1: A release that pins no contour style (terrain-only region) passes without a contour file."""
+@pytest.fixture
+def terrain(tree):
+    """test-bay as a terrain-only region: its config charts no contours and its pointer pins no contour style."""
+    write_json(tree / INDEX, {'regions': [{'id': 'test-bay', 'config': CONFIG}, {'id': 'other-bay'}]})
+    write_json(tree / 'dist' / CONFIG, {'id': 'test-bay', 'chart_files': ['shoreline.geojson']})
     write_json(tree / POINTER, {**pointer(), 'style': STYLE})
-    assert check_catalog(tree) == expected()
+    return tree
+
+
+def test_c1_terrain_only_pointer_needs_no_contours(terrain):
+    """C1: A terrain-only region (null contour style, config charts no contours) passes without a contour file."""
+    assert check_catalog(terrain) == expected()
 
 
 @pytest.mark.parametrize('content, reason', [
@@ -184,20 +194,62 @@ def test_c1_terrain_only_pointer_needs_no_contours(tree):
     (json.dumps(contours('other-bay')), WRONG_CONTOURS),
     ('{', 'cannot read contours object for test-bay'),
 ], ids=['matching', 'wrong provenance', 'corrupt'])
-def test_c1_terrain_only_pointer_still_checks_a_present_contour_file(tree, content, reason):
+def test_c1_terrain_only_pointer_still_checks_a_present_contour_file(terrain, content, reason):
     """C1: Only an absent file is excused; contours that are there must still match the region."""
-    write_json(tree / POINTER, {**pointer(), 'style': STYLE})
-    (tree / CONTOURS).parent.mkdir(parents=True)
-    (tree / CONTOURS).write_text(content, encoding='utf-8')
-    assert check_catalog(tree) == (expected(contours=reason) if reason else expected())
+    (terrain / CONTOURS).parent.mkdir(parents=True)
+    (terrain / CONTOURS).write_text(content, encoding='utf-8')
+    assert check_catalog(terrain) == (expected(contours=reason) if reason else expected())
+
+
+def test_c1_terrain_only_dangling_contour_link_is_missing(terrain):
+    """C1: A contour path that is a broken link is not an absent file."""
+    (terrain / CONTOURS).parent.mkdir(parents=True)
+    (terrain / CONTOURS).symlink_to(terrain / 'nowhere.geojson')
+    assert check_catalog(terrain) == expected(contours=MISSING)
 
 
 @pytest.mark.parametrize('style', [{**STYLE, 'contours': '9' * 64}, None], ids=['contour style pinned', 'no style'])
-def test_c1_other_pointers_still_need_their_contour_file(tree, style):
+def test_c1_other_pointers_still_need_their_contour_file(terrain, style):
     """C1: A pointer that pins a contour style, or has no style, keeps the strict contour check."""
-    doc = pointer() if style is None else {**pointer(), 'style': style}
-    write_json(tree / POINTER, doc)
-    assert check_catalog(tree) == expected(contours='missing catalog/depth-contours/test-bay.geojson')
+    write_json(terrain / POINTER, pointer() if style is None else {**pointer(), 'style': style})
+    assert check_catalog(terrain) == expected(contours=MISSING)
+
+
+@pytest.mark.parametrize('config, chart_files', [
+    (CONFIG, ['depth-contours-overview.geojson', 'depth-contours.geojson', 'shoreline.geojson']),
+    (CONFIG, ['depth-contours.geojson']),
+    (CONFIG, ['depth-contours-overview.geojson']),
+    (CONFIG, None),
+    (CONFIG, 'shoreline.geojson'),
+    ('regions/absent/region.json', []),
+    (None, []),
+    ('../regions/test-bay/region.json', []),
+], ids=['config charts contours', 'detail contours only', 'overview contours only', 'no chart_files',
+        'chart_files not a list', 'config file absent', 'no config in index', 'config outside dist'])
+def test_c1_null_style_alone_does_not_excuse_a_contour_region(terrain, config, chart_files):
+    """C1: The pointer alone cannot make a region terrain-only; its config must chart no contours."""
+    write_json(terrain / INDEX, {'regions': [{'id': 'test-bay', **({'config': config} if config else {})},
+                                             {'id': 'other-bay'}]})
+    region_json = {'id': 'test-bay'} if chart_files is None else {'id': 'test-bay', 'chart_files': chart_files}
+    write_json(terrain / 'dist' / CONFIG, region_json)
+    assert check_catalog(terrain) == expected(contours=MISSING)
+
+
+@pytest.mark.parametrize('region, reason', [
+    ('big-sur-coast', 'missing catalog/depth-contours/big-sur-coast.geojson'),
+    ('morro-bay', 'missing catalog/depth-contours/morro-bay.geojson'),
+    ('monterey-point-sur', None),
+    ('santa-cruz-monterey-bay', None),
+])
+def test_c1_repository_regions_null_style_without_contours(tree, region, reason):
+    """C1: With the repository's own region index and configs, a null contour style excuses a missing
+    contour file only for the terrain-only regions; contour regions (Big Sur, Morro Bay) still fail."""
+    shutil.copyfile(ROOT / INDEX, tree / INDEX)
+    config = Path('dist/regions') / region / 'region.json'
+    (tree / config).parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / config, tree / config)
+    write_json(tree / RELIEF / f'{region}.json', {**pointer(), 'region': region, 'style': STYLE})
+    assert check_catalog(tree) == (expected(region, contours=reason) if reason else expected(region))
 
 
 def test_c2_text_success_and_read_only(pair, capsys):

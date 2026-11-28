@@ -12,6 +12,9 @@ from skippercast.relief import package
 _RELIEF = Path('catalog/relief')
 _SCHEMA = 'pointer.schema.json'
 _INDEX = Path('dist/regions/index.json')
+# The contour files a region config's `chart_files` can list (platform/build.py CHART_FILES); the Chart asks
+# for a region's contours only when its region.json lists them.
+_CONTOUR_CHARTS = frozenset({'depth-contours.geojson', 'depth-contours-overview.geojson'})
 
 
 def _read_object(path: Path) -> dict:
@@ -26,17 +29,35 @@ def _validation_error(doc: dict, schema: dict) -> str:
     return ''
 
 
-def _release_regions(path: Path) -> set[str]:
+def _release_configs(path: Path) -> dict[str, object]:
+    """Region id -> its `config` path (relative to dist/) for every region the release index lists."""
     try:
-        return {row['id'] for row in _read_object(path)['regions']}
-    except (OSError, ValueError, KeyError, TypeError):
-        return set()
+        return {row['id']: row.get('config') for row in _read_object(path)['regions']}
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return {}
 
 
-def _terrain_only(doc: dict) -> bool:
-    """A pointer whose style explicitly pins no contours is a terrain-only release."""
+def _config_charts_no_contours(root: Path, config: object) -> bool:
+    """The region's own config (dist/<config>) lists its chart files and none is a contour file."""
+    if not isinstance(config, str) or Path(config).is_absolute() or '..' in Path(config).parts:
+        return False
+    try:
+        files = _read_object(root / 'dist' / config).get('chart_files')
+    except (OSError, ValueError, AttributeError):
+        return False
+    return (isinstance(files, list) and all(isinstance(name, str) for name in files)
+            and not _CONTOUR_CHARTS.intersection(files))
+
+
+def _terrain_only(doc: dict, root: Path, config: object) -> bool:
+    """Terrain-only needs both: the pointer pins no contour style, and the region config charts no contours.
+
+    The pointer alone cannot decide: a contour region (its region.json lists contour chart files) with a null
+    contour style is still a contour region whose Chart would ask for the missing file.
+    """
     style = doc.get('style')
-    return isinstance(style, dict) and 'contours' in style and style['contours'] is None
+    return (isinstance(style, dict) and 'contours' in style and style['contours'] is None
+            and _config_charts_no_contours(root, config))
 
 
 def _contours_error(path: Path, region: object, terrain_only: bool) -> str:
@@ -55,8 +76,9 @@ def _contours_error(path: Path, region: object, terrain_only: bool) -> str:
 def check_catalog(root: str | Path) -> list[dict]:
     """Return five rows per pointer, ordered by filename; contours alone are allowed.
 
-    A pointer with style.contours null is terrain-only: it may have no contour file, but
-    a contour file that is present is checked as for any other pointer.
+    A pointer with style.contours null whose region config (dist/regions/index.json `config`) lists no
+    contour chart files is terrain-only: it may have no contour file, but a contour file that is present
+    is checked as for any other pointer.
     """
     root = Path(root)
     pointers = sorted(path for path in (root / _RELIEF).glob('*.json') if path.name != _SCHEMA)
@@ -71,7 +93,7 @@ def check_catalog(root: str | Path) -> list[dict]:
         'required': ['previous'],
         'properties': {'previous': schema['properties']['previous']},
     }
-    regions = _release_regions(root / _INDEX)
+    configs = _release_configs(root / _INDEX)
     rows = []
     for path in pointers:
         region_id = path.stem
@@ -83,13 +105,13 @@ def check_catalog(root: str | Path) -> list[dict]:
         else:
             schema_error = _validation_error(doc, schema)
         region = doc.get('region')
-        listed = isinstance(region, str) and region in regions
+        listed = isinstance(region, str) and region in configs
         checks = (
             ('schema', schema_error),
             ('filename', '' if region == region_id else 'filename id does not match pointer region'),
             ('release-region', '' if listed else f'pointer region not listed in {_INDEX.as_posix()}'),
             ('contours', _contours_error(root / 'catalog/depth-contours' / f'{region_id}.geojson', region,
-                                         _terrain_only(doc))),
+                                         _terrain_only(doc, root, configs.get(region_id)))),
             ('lineage', 'previous must be null or match the pointer lineage schema'
              if _validation_error(doc, lineage_schema) else ''),
         )
