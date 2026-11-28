@@ -275,10 +275,14 @@ def test_scope_accepts_an_unchanged_chart_index_that_already_lists_both_contour_
     assert REGION_JSON not in controller.scope(repo, base, sha, 'big-sur-coast')
 
 
-# A region whose shipped region.json already lists Chart side files (Cambria-San Simeon on main lists these five).
+# A region whose shipped region.json already lists Chart side files (Cambria-San Simeon ships these five). The
+# fixture is that index without the contour pair, i.e. the base a first contour candidate starts from; it stays
+# the same after Cambria's own contours land on main.
 CAMBRIA = 'cambria-san-simeon'
 CAMBRIA_JSON = f'dist/regions/{CAMBRIA}/region.json'
-CAMBRIA_SHIPPED = json.loads((ROOT / CAMBRIA_JSON).read_text())
+_CAMBRIA_ON_MAIN = json.loads((ROOT / CAMBRIA_JSON).read_text())
+CAMBRIA_SHIPPED = {**_CAMBRIA_ON_MAIN,
+                   'chart_files': [n for n in _CAMBRIA_ON_MAIN['chart_files'] if n not in BOTH_CONTOURS]}
 
 
 def cambria_candidate(repo, chart_files):
